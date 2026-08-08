@@ -130,6 +130,7 @@ struct AppDatabase {
         V1InitialSchema.register(into: &migrator)
         V2AddRequestIdToSyncQueue.register(into: &migrator)
         V3WorkoutCollections.register(into: &migrator)
+        V4ActualsSessions.register(into: &migrator)
         return migrator
     }
 }

@@ -146,6 +146,9 @@ final class WatchItemViewModel: ObservableObject {
         self.prefsPersister = prefsPersister
     }
 
+    /// Avoid MainActor-isolated deinit + TaskLocal teardown crash under XCTest (Swift 6).
+    nonisolated deinit {}
+
     func setEnabled(_ row: WatchItemReadinessRow, _ enabled: Bool) {
         guard !isReplacing else { return }
         var next = tracker

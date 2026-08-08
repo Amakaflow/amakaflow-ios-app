@@ -103,6 +103,16 @@ class UITestEnvironment {
         Self.isTruthy("UITEST_SHOW_CREATE_WITH_AI_GENERATING")
     }
 
+    /// DEBUG visual host: AMA-2387 Actuals dogfood hub (no Clerk / live OAuth).
+    var showActualsDogfoodHost: Bool {
+        Self.isTruthy("AMA2387_DEMO") || Self.isTruthy("UITEST_SHOW_ACTUALS_DOGFOOD")
+    }
+
+    /// DEBUG: seed Actuals merge/map/fill-in cards on real Today (after connect or cold).
+    var actualsTodayDemo: Bool {
+        Self.isTruthy("AMA2387_TODAY_DEMO")
+    }
+
     /// Clerk-backed UI tests should sign in as a real Clerk test user instead of using header bypasses.
     var hasClerkTestUser: Bool {
         guard Self.value(for: "UITEST_CLERK_EMAIL")?.isEmpty == false,

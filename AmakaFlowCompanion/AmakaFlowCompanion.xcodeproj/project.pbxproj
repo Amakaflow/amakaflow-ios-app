@@ -214,6 +214,44 @@
 		AMA2386COPYTBLD /* WatchItemCopyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2386COPYTREF /* WatchItemCopyTests.swift */; };
 		AMA2386TRCKTBLD /* WatchItemChangeTrackerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2386TRCKTREF /* WatchItemChangeTrackerTests.swift */; };
 		AMA2386REPLTBLD /* WatchItemReplaceCoordinatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2386REPLTREF /* WatchItemReplaceCoordinatorTests.swift */; };
+		AMA2387COPYBLD /* ActualsCopy.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2387COPYREF /* ActualsCopy.swift */; };
+		AMA2387STOREBLD /* ActualsSourceConnectionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2387STOREREF /* ActualsSourceConnectionStore.swift */; };
+		AMA2387TEACHBLD /* ActualsTeachCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2387TEACHREF /* ActualsTeachCard.swift */; };
+		AMA2387CONNBLD /* ActualsConnectSourcesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2387CONNREF /* ActualsConnectSourcesView.swift */; };
+		AMA2387STORETBLD /* ActualsSourceConnectionStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2387STORETREF /* ActualsSourceConnectionStoreTests.swift */; };
+		AMA2387TEACHTBLD /* ActualsTeachCardVisibilityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2387TEACHTREF /* ActualsTeachCardVisibilityTests.swift */; };
+		AMA2387CONNTBLD /* ActualsConnectSourcesCopyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2387CONNTREF /* ActualsConnectSourcesCopyTests.swift */; };
+		AMA2387HKBLD /* ActualsHealthKitConnecting.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2387HKREF /* ActualsHealthKitConnecting.swift */; };
+		AMA2387PRIMBLD /* ActualsAppleHealthPrimerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2387PRIMREF /* ActualsAppleHealthPrimerView.swift */; };
+		AMA2387HKTBLD /* ActualsAppleHealthConnectTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2387HKTREF /* ActualsAppleHealthConnectTests.swift */; };
+		AMA2387AUTHBLD /* ActualsProviderAuthProviding.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2387AUTHREF /* ActualsProviderAuthProviding.swift */; };
+		AMA2387OAUTHBLD /* ActualsOAuthScopeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2387OAUTHREF /* ActualsOAuthScopeView.swift */; };
+		AMA2387AUTHTBLD /* ActualsProviderAuthTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2387AUTHTREF /* ActualsProviderAuthTests.swift */; };
+		AMA2387SYNCBLD /* ActualsSyncProgress.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2387SYNCREF /* ActualsSyncProgress.swift */; };
+		AMA2387BANBLD /* ActualsSyncCounterBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2387BANREF /* ActualsSyncCounterBanner.swift */; };
+		AMA2387SYNCTBLD /* ActualsSyncProgressTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2387SYNCTREF /* ActualsSyncProgressTests.swift */; };
+		AMA2387SESSBLD /* ActualsSessionModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2387SESSREF /* ActualsSessionModels.swift */; };
+		AMA2387MRGCLBLD /* ActualsMergeClassifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2387MRGCLREF /* ActualsMergeClassifier.swift */; };
+		AMA2387ASKBLD /* ActualsMergeAskCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2387ASKREF /* ActualsMergeAskCard.swift */; };
+		AMA2387MRGDBLD /* ActualsMergedDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2387MRGDREF /* ActualsMergedDetailView.swift */; };
+		AMA2387MRGTBLD /* ActualsMergeClassifierTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2387MRGTREF /* ActualsMergeClassifierTests.swift */; };
+		AMA2387MAPSBLD /* ActualsPlanMatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2387MAPSREF /* ActualsPlanMatcher.swift */; };
+		AMA2387MAPVBLD /* ActualsMapToPlanView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2387MAPVREF /* ActualsMapToPlanView.swift */; };
+		AMA2387MAPTBLD /* ActualsPlanMatcherTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2387MAPTREF /* ActualsPlanMatcherTests.swift */; };
+		AMA2387EXACBLD /* ExerciseActual.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2387EXACREF /* ExerciseActual.swift */; };
+		AMA2387FILLVMBLD /* ActualsFillInViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2387FILLVMREF /* ActualsFillInViewModel.swift */; };
+		AMA2387FILLVBLD /* ActualsFillInView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2387FILLVREF /* ActualsFillInView.swift */; };
+		AMA2387AREPOBLD /* ActualsRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2387AREPOREF /* ActualsRepository.swift */; };
+		AMA2387V4BLD /* V4_actuals_sessions.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2387V4REF /* V4_actuals_sessions.swift */; };
+		AMA2387FILLTBLD /* ActualsFillInTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2387FILLTREF /* ActualsFillInTests.swift */; };
+		AMA2387GHOSTBLD /* ActualsGhostFeed.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2387GHOSTREF /* ActualsGhostFeed.swift */; };
+		AMA2387VERCBLD /* ActualsVerifiedCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2387VERCREF /* ActualsVerifiedCard.swift */; };
+		AMA2387VERVBLD /* ActualsVerifiedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2387VERVREF /* ActualsVerifiedView.swift */; };
+		AMA2387VERGTBLD /* ActualsVerifiedGhostTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2387VERGTREF /* ActualsVerifiedGhostTests.swift */; };
+		AMA2387DOGFOODBLD /* ActualsDogfoodHubView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2387DOGFOODREF /* ActualsDogfoodHubView.swift */; };
+		AMA2387TODAYDEMBLD /* ActualsTodayDemoFeed.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2387TODAYDEMREF /* ActualsTodayDemoFeed.swift */; };
+		AMA2387CAPDRAFTBLD /* ActualsCaptureDraft.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2387CAPDRAFTREF /* ActualsCaptureDraft.swift */; };
+		AMA2387MATCHSAVEBLD /* ActualsMatchSaveView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2387MATCHSAVEREF /* ActualsMatchSaveView.swift */; };
 		WATCHTITLEBLD /* WatchWorkoutTitlePolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = WATCHTITLEREF /* WatchWorkoutTitlePolicy.swift */; };
 		AMA2375MODLBLD /* OnYourWatchesModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2375MODLREF /* OnYourWatchesModels.swift */; };
 		AMA2375QSTRBLD /* GarminWatchQueueStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2375QSTRREF /* GarminWatchQueueStore.swift */; };
@@ -886,6 +924,44 @@
 		AMA2386COPYTREF /* WatchItemCopyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WatchItemCopyTests.swift; path = AmakaFlowCompanionTests/WatchItemCopyTests.swift; sourceTree = "<group>"; };
 		AMA2386TRCKTREF /* WatchItemChangeTrackerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WatchItemChangeTrackerTests.swift; path = AmakaFlowCompanionTests/WatchItemChangeTrackerTests.swift; sourceTree = "<group>"; };
 		AMA2386REPLTREF /* WatchItemReplaceCoordinatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WatchItemReplaceCoordinatorTests.swift; path = AmakaFlowCompanionTests/WatchItemReplaceCoordinatorTests.swift; sourceTree = "<group>"; };
+		AMA2387COPYREF /* ActualsCopy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActualsCopy.swift; path = ../AmakaFlow/Models/ActualsCopy.swift; sourceTree = SOURCE_ROOT; };
+		AMA2387STOREREF /* ActualsSourceConnectionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActualsSourceConnectionStore.swift; path = ../AmakaFlow/Services/ActualsSourceConnectionStore.swift; sourceTree = SOURCE_ROOT; };
+		AMA2387TEACHREF /* ActualsTeachCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActualsTeachCard.swift; path = ../AmakaFlow/Views/Components/ActualsTeachCard.swift; sourceTree = SOURCE_ROOT; };
+		AMA2387CONNREF /* ActualsConnectSourcesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActualsConnectSourcesView.swift; path = ../AmakaFlow/Views/ActualsConnectSourcesView.swift; sourceTree = SOURCE_ROOT; };
+		AMA2387STORETREF /* ActualsSourceConnectionStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActualsSourceConnectionStoreTests.swift; path = AmakaFlowCompanionTests/ActualsSourceConnectionStoreTests.swift; sourceTree = "<group>"; };
+		AMA2387TEACHTREF /* ActualsTeachCardVisibilityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActualsTeachCardVisibilityTests.swift; path = AmakaFlowCompanionTests/ActualsTeachCardVisibilityTests.swift; sourceTree = "<group>"; };
+		AMA2387CONNTREF /* ActualsConnectSourcesCopyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActualsConnectSourcesCopyTests.swift; path = AmakaFlowCompanionTests/ActualsConnectSourcesCopyTests.swift; sourceTree = "<group>"; };
+		AMA2387HKREF /* ActualsHealthKitConnecting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActualsHealthKitConnecting.swift; path = ../AmakaFlow/Services/ActualsHealthKitConnecting.swift; sourceTree = SOURCE_ROOT; };
+		AMA2387PRIMREF /* ActualsAppleHealthPrimerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActualsAppleHealthPrimerView.swift; path = ../AmakaFlow/Views/ActualsAppleHealthPrimerView.swift; sourceTree = SOURCE_ROOT; };
+		AMA2387HKTREF /* ActualsAppleHealthConnectTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActualsAppleHealthConnectTests.swift; path = AmakaFlowCompanionTests/ActualsAppleHealthConnectTests.swift; sourceTree = "<group>"; };
+		AMA2387AUTHREF /* ActualsProviderAuthProviding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActualsProviderAuthProviding.swift; path = ../AmakaFlow/Services/ActualsProviderAuthProviding.swift; sourceTree = SOURCE_ROOT; };
+		AMA2387OAUTHREF /* ActualsOAuthScopeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActualsOAuthScopeView.swift; path = ../AmakaFlow/Views/ActualsOAuthScopeView.swift; sourceTree = SOURCE_ROOT; };
+		AMA2387AUTHTREF /* ActualsProviderAuthTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActualsProviderAuthTests.swift; path = AmakaFlowCompanionTests/ActualsProviderAuthTests.swift; sourceTree = "<group>"; };
+		AMA2387SYNCREF /* ActualsSyncProgress.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActualsSyncProgress.swift; path = ../AmakaFlow/Models/ActualsSyncProgress.swift; sourceTree = SOURCE_ROOT; };
+		AMA2387BANREF /* ActualsSyncCounterBanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActualsSyncCounterBanner.swift; path = ../AmakaFlow/Views/Components/ActualsSyncCounterBanner.swift; sourceTree = SOURCE_ROOT; };
+		AMA2387SYNCTREF /* ActualsSyncProgressTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActualsSyncProgressTests.swift; path = AmakaFlowCompanionTests/ActualsSyncProgressTests.swift; sourceTree = "<group>"; };
+		AMA2387SESSREF /* ActualsSessionModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActualsSessionModels.swift; path = ../AmakaFlow/Models/ActualsSessionModels.swift; sourceTree = SOURCE_ROOT; };
+		AMA2387MRGCLREF /* ActualsMergeClassifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActualsMergeClassifier.swift; path = ../AmakaFlow/Services/ActualsMergeClassifier.swift; sourceTree = SOURCE_ROOT; };
+		AMA2387ASKREF /* ActualsMergeAskCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActualsMergeAskCard.swift; path = ../AmakaFlow/Views/Components/ActualsMergeAskCard.swift; sourceTree = SOURCE_ROOT; };
+		AMA2387MRGDREF /* ActualsMergedDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActualsMergedDetailView.swift; path = ../AmakaFlow/Views/ActualsMergedDetailView.swift; sourceTree = SOURCE_ROOT; };
+		AMA2387MRGTREF /* ActualsMergeClassifierTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActualsMergeClassifierTests.swift; path = AmakaFlowCompanionTests/ActualsMergeClassifierTests.swift; sourceTree = "<group>"; };
+		AMA2387MAPSREF /* ActualsPlanMatcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActualsPlanMatcher.swift; path = ../AmakaFlow/Services/ActualsPlanMatcher.swift; sourceTree = SOURCE_ROOT; };
+		AMA2387MAPVREF /* ActualsMapToPlanView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActualsMapToPlanView.swift; path = ../AmakaFlow/Views/ActualsMapToPlanView.swift; sourceTree = SOURCE_ROOT; };
+		AMA2387MAPTREF /* ActualsPlanMatcherTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActualsPlanMatcherTests.swift; path = AmakaFlowCompanionTests/ActualsPlanMatcherTests.swift; sourceTree = "<group>"; };
+		AMA2387EXACREF /* ExerciseActual.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ExerciseActual.swift; path = ../AmakaFlow/Models/ExerciseActual.swift; sourceTree = SOURCE_ROOT; };
+		AMA2387FILLVMREF /* ActualsFillInViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActualsFillInViewModel.swift; path = ../AmakaFlow/ViewModels/ActualsFillInViewModel.swift; sourceTree = SOURCE_ROOT; };
+		AMA2387FILLVREF /* ActualsFillInView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActualsFillInView.swift; path = ../AmakaFlow/Views/ActualsFillInView.swift; sourceTree = SOURCE_ROOT; };
+		AMA2387AREPOREF /* ActualsRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActualsRepository.swift; path = ../AmakaFlow/Storage/Repositories/ActualsRepository.swift; sourceTree = SOURCE_ROOT; };
+		AMA2387V4REF /* V4_actuals_sessions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = V4_actuals_sessions.swift; path = ../AmakaFlow/Storage/Migrations/V4_actuals_sessions.swift; sourceTree = SOURCE_ROOT; };
+		AMA2387FILLTREF /* ActualsFillInTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActualsFillInTests.swift; path = AmakaFlowCompanionTests/ActualsFillInTests.swift; sourceTree = "<group>"; };
+		AMA2387GHOSTREF /* ActualsGhostFeed.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActualsGhostFeed.swift; path = ../AmakaFlow/Services/ActualsGhostFeed.swift; sourceTree = SOURCE_ROOT; };
+		AMA2387VERCREF /* ActualsVerifiedCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActualsVerifiedCard.swift; path = ../AmakaFlow/Views/Components/ActualsVerifiedCard.swift; sourceTree = SOURCE_ROOT; };
+		AMA2387VERVREF /* ActualsVerifiedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActualsVerifiedView.swift; path = ../AmakaFlow/Views/ActualsVerifiedView.swift; sourceTree = SOURCE_ROOT; };
+		AMA2387VERGTREF /* ActualsVerifiedGhostTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActualsVerifiedGhostTests.swift; path = AmakaFlowCompanionTests/ActualsVerifiedGhostTests.swift; sourceTree = "<group>"; };
+		AMA2387DOGFOODREF /* ActualsDogfoodHubView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActualsDogfoodHubView.swift; path = ../AmakaFlow/Views/ActualsDogfoodHubView.swift; sourceTree = SOURCE_ROOT; };
+		AMA2387TODAYDEMREF /* ActualsTodayDemoFeed.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActualsTodayDemoFeed.swift; path = ../AmakaFlow/Services/ActualsTodayDemoFeed.swift; sourceTree = SOURCE_ROOT; };
+		AMA2387CAPDRAFTREF /* ActualsCaptureDraft.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActualsCaptureDraft.swift; path = ../AmakaFlow/Models/ActualsCaptureDraft.swift; sourceTree = SOURCE_ROOT; };
+		AMA2387MATCHSAVEREF /* ActualsMatchSaveView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActualsMatchSaveView.swift; path = ../AmakaFlow/Views/ActualsMatchSaveView.swift; sourceTree = SOURCE_ROOT; };
 		WATCHTITLEREF /* WatchWorkoutTitlePolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WatchWorkoutTitlePolicy.swift; path = ../AmakaFlow/Models/WatchWorkoutTitlePolicy.swift; sourceTree = SOURCE_ROOT; };
 		AMA2375MODLREF /* OnYourWatchesModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = OnYourWatchesModels.swift; path = ../AmakaFlow/Models/OnYourWatchesModels.swift; sourceTree = SOURCE_ROOT; };
 		AMA2375QSTRREF /* GarminWatchQueueStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = GarminWatchQueueStore.swift; path = ../AmakaFlow/Services/GarminWatchQueueStore.swift; sourceTree = SOURCE_ROOT; };
@@ -1515,9 +1591,21 @@
 				AMA2388PRFREF /* WatchItemPrefsPersister.swift */,
 				AMA2375DEMOREF /* OnYourWatchesDemoSupport.swift */,
 				AMA2386REPLREF /* WatchItemReplaceCoordinator.swift */,
+				AMA2387STOREREF /* ActualsSourceConnectionStore.swift */,
+				AMA2387HKREF /* ActualsHealthKitConnecting.swift */,
+				AMA2387AUTHREF /* ActualsProviderAuthProviding.swift */,
+				AMA2387MRGCLREF /* ActualsMergeClassifier.swift */,
+				AMA2387MAPSREF /* ActualsPlanMatcher.swift */,
+				AMA2387GHOSTREF /* ActualsGhostFeed.swift */,
+				AMA2387TODAYDEMREF /* ActualsTodayDemoFeed.swift */,
+				AMA2387CAPDRAFTREF /* ActualsCaptureDraft.swift */,
 				AMA2375COPYREF /* OnYourWatchesCopy.swift */,
 				AMA2386COPYREF /* WatchItemCopy.swift */,
 				AMA2386TRCKREF /* WatchItemChangeTracker.swift */,
+				AMA2387COPYREF /* ActualsCopy.swift */,
+				AMA2387SYNCREF /* ActualsSyncProgress.swift */,
+				AMA2387SESSREF /* ActualsSessionModels.swift */,
+				AMA2387EXACREF /* ExerciseActual.swift */,
 				WATCHTITLEREF /* WatchWorkoutTitlePolicy.swift */,
 				AMA2375MODLREF /* OnYourWatchesModels.swift */,
 				AMA2367REPLREF /* IncompleteScheduleReplacing.swift */,
@@ -1527,7 +1615,9 @@
 				AMA1791V1REF /* V1_initial_schema.swift */,
 				AMA1823V2REF /* V2_add_request_id_to_sync_queue.swift */,
 				AMA2376V3REF /* V3_workout_collections.swift */,
+				AMA2387V4REF /* V4_actuals_sessions.swift */,
 				AMA2376REPREFO /* WorkoutCollectionsRepository.swift */,
+				AMA2387AREPOREF /* ActualsRepository.swift */,
 				A87B639F1BA04DF8A5301F4C /* UserDefaultsAcceptedMigration.swift */,
 				AMA1791LOCALRECREF /* LocalRecords.swift */,
 				AMA1791ACCEPTREPOREF /* AcceptedSuggestionsRepository.swift */,
@@ -1693,6 +1783,20 @@
 				AMA2386SHEETREF /* WatchItemSheet.swift */,
 				AMA2388PRTREF /* WatchItemSheet+Parts.swift */,
 				AMA2388OVLREF /* WatchItemDeliveredStepsOverlay.swift */,
+				AMA2387TEACHREF /* ActualsTeachCard.swift */,
+				AMA2387BANREF /* ActualsSyncCounterBanner.swift */,
+				AMA2387ASKREF /* ActualsMergeAskCard.swift */,
+				AMA2387CONNREF /* ActualsConnectSourcesView.swift */,
+				AMA2387PRIMREF /* ActualsAppleHealthPrimerView.swift */,
+				AMA2387OAUTHREF /* ActualsOAuthScopeView.swift */,
+				AMA2387MRGDREF /* ActualsMergedDetailView.swift */,
+				AMA2387MAPVREF /* ActualsMapToPlanView.swift */,
+				AMA2387FILLVREF /* ActualsFillInView.swift */,
+				AMA2387FILLVMREF /* ActualsFillInViewModel.swift */,
+				AMA2387VERCREF /* ActualsVerifiedCard.swift */,
+				AMA2387VERVREF /* ActualsVerifiedView.swift */,
+				AMA2387DOGFOODREF /* ActualsDogfoodHubView.swift */,
+				AMA2387MATCHSAVEREF /* ActualsMatchSaveView.swift */,
 				AMA2378SEQVREF001 /* EnrichmentSequenceScreen.swift */,
 				AMA2378WPICKREF001 /* EnrichmentWarmupPickScreen.swift */,
 				AMA2378RAMPVREF001 /* EnrichmentRampEditorScreen.swift */,
@@ -2082,6 +2186,16 @@
 				AMA2388RDYTREF /* WatchItemReadinessStoreTests.swift */,
 				AMA2388CTATREF /* WatchItemViewModelCTATests.swift */,
 				AMA2386REPLTREF /* WatchItemReplaceCoordinatorTests.swift */,
+				AMA2387STORETREF /* ActualsSourceConnectionStoreTests.swift */,
+				AMA2387TEACHTREF /* ActualsTeachCardVisibilityTests.swift */,
+				AMA2387CONNTREF /* ActualsConnectSourcesCopyTests.swift */,
+				AMA2387HKTREF /* ActualsAppleHealthConnectTests.swift */,
+				AMA2387AUTHTREF /* ActualsProviderAuthTests.swift */,
+				AMA2387SYNCTREF /* ActualsSyncProgressTests.swift */,
+				AMA2387MRGTREF /* ActualsMergeClassifierTests.swift */,
+				AMA2387MAPTREF /* ActualsPlanMatcherTests.swift */,
+				AMA2387FILLTREF /* ActualsFillInTests.swift */,
+				AMA2387VERGTREF /* ActualsVerifiedGhostTests.swift */,
 				AMA2376TESTREF /* WorkoutCollectionsRepositoryTests.swift */,
 				AMA2376CPTESTREF /* CollectionPresentationTests.swift */,
 				AMA2376STORTREF /* LibraryCollectionsStoreTests.swift */,
@@ -2601,7 +2715,9 @@
 				AMA1791V1BLD /* V1_initial_schema.swift in Sources */,
 				AMA1823V2BLD /* V2_add_request_id_to_sync_queue.swift in Sources */,
 				AMA2376V3BLD /* V3_workout_collections.swift in Sources */,
+				AMA2387V4BLD /* V4_actuals_sessions.swift in Sources */,
 				AMA2376REPBLO /* WorkoutCollectionsRepository.swift in Sources */,
+				AMA2387AREPOBLD /* ActualsRepository.swift in Sources */,
 				E2E9218685E5476B991B3979 /* UserDefaultsAcceptedMigration.swift in Sources */,
 				AMA1791LOCALRECBLD /* LocalRecords.swift in Sources */,
 				AMA1791ACCEPTREPOBLD /* AcceptedSuggestionsRepository.swift in Sources */,
@@ -2812,6 +2928,32 @@
 				AMA2386REPLBLD /* WatchItemReplaceCoordinator.swift in Sources */,
 				AMA2386VMBLD /* WatchItemViewModel.swift in Sources */,
 				AMA2386SHEETBLD /* WatchItemSheet.swift in Sources */,
+				AMA2387COPYBLD /* ActualsCopy.swift in Sources */,
+				AMA2387SYNCBLD /* ActualsSyncProgress.swift in Sources */,
+				AMA2387SESSBLD /* ActualsSessionModels.swift in Sources */,
+				AMA2387STOREBLD /* ActualsSourceConnectionStore.swift in Sources */,
+				AMA2387HKBLD /* ActualsHealthKitConnecting.swift in Sources */,
+				AMA2387AUTHBLD /* ActualsProviderAuthProviding.swift in Sources */,
+				AMA2387MRGCLBLD /* ActualsMergeClassifier.swift in Sources */,
+				AMA2387MAPSBLD /* ActualsPlanMatcher.swift in Sources */,
+				AMA2387GHOSTBLD /* ActualsGhostFeed.swift in Sources */,
+				AMA2387TODAYDEMBLD /* ActualsTodayDemoFeed.swift in Sources */,
+				AMA2387CAPDRAFTBLD /* ActualsCaptureDraft.swift in Sources */,
+				AMA2387MATCHSAVEBLD /* ActualsMatchSaveView.swift in Sources */,
+				AMA2387TEACHBLD /* ActualsTeachCard.swift in Sources */,
+				AMA2387BANBLD /* ActualsSyncCounterBanner.swift in Sources */,
+				AMA2387ASKBLD /* ActualsMergeAskCard.swift in Sources */,
+				AMA2387CONNBLD /* ActualsConnectSourcesView.swift in Sources */,
+				AMA2387PRIMBLD /* ActualsAppleHealthPrimerView.swift in Sources */,
+				AMA2387OAUTHBLD /* ActualsOAuthScopeView.swift in Sources */,
+				AMA2387MRGDBLD /* ActualsMergedDetailView.swift in Sources */,
+				AMA2387MAPVBLD /* ActualsMapToPlanView.swift in Sources */,
+				AMA2387EXACBLD /* ExerciseActual.swift in Sources */,
+				AMA2387FILLVMBLD /* ActualsFillInViewModel.swift in Sources */,
+				AMA2387FILLVBLD /* ActualsFillInView.swift in Sources */,
+				AMA2387VERCBLD /* ActualsVerifiedCard.swift in Sources */,
+				AMA2387VERVBLD /* ActualsVerifiedView.swift in Sources */,
+				AMA2387DOGFOODBLD /* ActualsDogfoodHubView.swift in Sources */,
 				WATCHTITLEBLD /* WatchWorkoutTitlePolicy.swift in Sources */,
 				AMA2375MODLBLD /* OnYourWatchesModels.swift in Sources */,
 				AMA2375QSTRBLD /* GarminWatchQueueStore.swift in Sources */,
@@ -3013,6 +3155,16 @@
 				AMA2388CTATBLD /* WatchItemViewModelCTATests.swift in Sources */,
 				AMA2386TRCKTBLD /* WatchItemChangeTrackerTests.swift in Sources */,
 				AMA2386REPLTBLD /* WatchItemReplaceCoordinatorTests.swift in Sources */,
+				AMA2387STORETBLD /* ActualsSourceConnectionStoreTests.swift in Sources */,
+				AMA2387TEACHTBLD /* ActualsTeachCardVisibilityTests.swift in Sources */,
+				AMA2387CONNTBLD /* ActualsConnectSourcesCopyTests.swift in Sources */,
+				AMA2387HKTBLD /* ActualsAppleHealthConnectTests.swift in Sources */,
+				AMA2387AUTHTBLD /* ActualsProviderAuthTests.swift in Sources */,
+				AMA2387SYNCTBLD /* ActualsSyncProgressTests.swift in Sources */,
+				AMA2387MRGTBLD /* ActualsMergeClassifierTests.swift in Sources */,
+				AMA2387MAPTBLD /* ActualsPlanMatcherTests.swift in Sources */,
+				AMA2387FILLTBLD /* ActualsFillInTests.swift in Sources */,
+				AMA2387VERGTBLD /* ActualsVerifiedGhostTests.swift in Sources */,
 				AMA2376TESTBLD /* WorkoutCollectionsRepositoryTests.swift in Sources */,
 				AMA2376CPTESTBLD /* CollectionPresentationTests.swift in Sources */,
 				AMA2376STORTBLD /* LibraryCollectionsStoreTests.swift in Sources */,

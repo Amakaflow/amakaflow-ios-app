@@ -25,6 +25,13 @@ final class LocalFirstStorageTests: XCTestCase {
         XCTAssertTrue(tables.contains("pinned_workouts"))
     }
 
+    func testV4MigrationCreatesActualsTables() throws {
+        let database = try AppDatabase.makeTestDatabase()
+        let tables = try database.tableNames()
+        XCTAssertTrue(tables.contains("actuals_sessions"))
+        XCTAssertTrue(tables.contains("actuals_exercise_rows"))
+    }
+
     func testFileBackedReopenPersistenceAndIdempotentMigration() throws {
         let tempURL = FileManager.default.temporaryDirectory
             .appendingPathComponent("amakaflow-local-first-\(UUID().uuidString).sqlite")

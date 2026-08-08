@@ -332,6 +332,9 @@ struct SocialImportFlowView: View {
 /// Screenshot / photo import entry (PhotosPicker → ingestSocialImage).
 struct ImageImportView: View {
     var onSaved: (() -> Void)?
+    /// AMA-2387 Map v2 — session banner + Done lands on match-save (skips Library detail).
+    var actualsActivity: ActualsUnmappedActivity?
+    var onCaptureComplete: ((ActualsCaptureDraft) -> Void)?
 
     @Environment(\.dismiss) private var dismiss
     @StateObject private var viewModel = SocialImportViewModel()
@@ -339,6 +342,8 @@ struct ImageImportView: View {
     @State private var processingStep = 0
     @State private var parsingController: BuildRevealController?
     @State private var parsingRevealDone = false
+
+    private var isActualsCapture: Bool { onCaptureComplete != nil }
 
     private let importSteps = [
         "Reading your screenshot…",
@@ -374,13 +379,14 @@ struct ImageImportView: View {
                             viewModel.reset()
                         },
                         onSaved: {
-                            onSaved?()
-                            dismiss()
+                            finishImport()
                         }
                     )
                 }
             case .preview, .saved:
-                if let draft = viewModel.draft {
+                if isActualsCapture, let draft = viewModel.draft {
+                    actualsPhotoDraftReady(draft)
+                } else if let draft = viewModel.draft {
                     SocialImportDetailPreviewView(
                         viewModel: viewModel,
                         draft: draft,
@@ -399,10 +405,11 @@ struct ImageImportView: View {
                         viewModel: viewModel,
                         onBack: { viewModel.reset() },
                         onSaved: {
-                            onSaved?()
-                            dismiss()
+                            finishImport()
                         }
                     )
+                } else if isActualsCapture, let draft = viewModel.draft {
+                    actualsPhotoDraftReady(draft)
                 } else if let draft = viewModel.draft {
                     SocialImportDetailPreviewView(
                         viewModel: viewModel,
@@ -446,8 +453,17 @@ struct ImageImportView: View {
     }
 
     private var pickerSheet: some View {
-        DDBottomSheetChrome(title: "Screenshot") {
+        DDBottomSheetChrome(title: isActualsCapture ? ActualsCopy.capturePhotoTitle : "Screenshot") {
             VStack(spacing: 12) {
+                if let actualsActivity {
+                    DDStatusBanner(
+                        style: .lime(
+                            title: ActualsCopy.captureBannerTitle,
+                            body: ActualsCaptureContext.bannerDetail(for: actualsActivity)
+                        )
+                    )
+                }
+
                 PhotosPicker(
                     selection: $pickerItem,
                     matching: .images,
@@ -456,14 +472,22 @@ struct ImageImportView: View {
                     DDDoorRow(
                         icon: "photo.on.rectangle.angled",
                         iconBackground: DailyDriver.purple,
-                        title: "Choose screenshot",
-                        subtitle: "Workout photo → editable draft"
+                        title: isActualsCapture
+                            ? ActualsCopy.capturePhotoChooseTitle
+                            : "Choose screenshot",
+                        subtitle: isActualsCapture
+                            ? ActualsCopy.capturePhotoChooseSub
+                            : "Workout photo → editable draft"
                     ) {}
                 }
                 .disabled(viewModel.phase == .importing)
                 .accessibilityIdentifier("image_import_picker")
 
-                Text("We send the image to the import service — you can edit the result before saving.")
+                Text(
+                    isActualsCapture
+                        ? ActualsCopy.capturePhotoHonesty
+                        : "We send the image to the import service — you can edit the result before saving."
+                )
                     .font(.system(size: 11))
                     .foregroundColor(Theme.Colors.textSecondary)
 
@@ -484,6 +508,47 @@ struct ImageImportView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
+    }
+
+    private func finishImport() {
+        if isActualsCapture, let draft = viewModel.draft {
+            completeActualsCapture(from: draft)
+            return
+        }
+        onSaved?()
+        dismiss()
+    }
+
+    @ViewBuilder
+    private func actualsPhotoDraftReady(_ draft: SocialImportDraft) -> some View {
+        Color.clear
+            .onAppear { completeActualsCapture(from: draft) }
+    }
+
+    private func completeActualsCapture(from draft: SocialImportDraft) {
+        guard let onCaptureComplete else {
+            onSaved?()
+            dismiss()
+            return
+        }
+        let fromBlocks = draft.blocks.flatMap(\.exercises).map(\.name)
+        let summaries = fromBlocks.isEmpty ? draft.exercises.map(\.name) : fromBlocks
+        let request = draft.toWorkoutSaveRequest()
+        let photoTitle = draft.title.trimmingCharacters(in: .whitespacesAndNewlines)
+        let fallbackTitle = actualsActivity?.title.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        onCaptureComplete(
+            ActualsCaptureDraft(
+                id: UUID().uuidString,
+                title: photoTitle.isEmpty ? fallbackTitle : photoTitle,
+                blockSummaries: summaries.isEmpty ? ["Imported moves"] : summaries,
+                estimatedMinutes: max(1, summaries.count * 5),
+                source: .photo,
+                sport: request.sport,
+                intervals: request.intervals,
+                blocks: request.blocks
+            )
+        )
+        dismiss()
     }
 
     private func loadAndImport(_ item: PhotosPickerItem?) async {
