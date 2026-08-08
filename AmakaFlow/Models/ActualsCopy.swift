@@ -177,8 +177,8 @@ enum ActualsCopy {
         "PLANNED · \(planned.displayLine)"
     }
 
-    static func fillInPlannedGhostKg(_ kg: Double) -> String {
-        let kgText = kg == floor(kg) ? "\(Int(kg))" : String(format: "%.1f", kg)
+    static func fillInPlannedGhostKg(_ kilograms: Double) -> String {
+        let kgText = kilograms == floor(kilograms) ? "\(Int(kilograms))" : String(format: "%.1f", kilograms)
         return "PLANNED \(kgText)"
     }
 
@@ -206,7 +206,7 @@ enum ActualsCopy {
     static let appleHealthReadTypes: [(title: String, why: String)] = [
         ("Workouts", "THE SESSIONS THEMSELVES"),
         ("Heart rate", "EFFORT — FEEDS RPE SUGGESTIONS"),
-        ("Active energy", "CALORIES ON YOUR CARDS"),
+        ("Active energy", "CALORIES ON YOUR CARDS")
     ]
 
     static let appleHealthTurnOnAllCoach =
@@ -227,22 +227,44 @@ enum ActualsCopy {
     static let oauthAuthorizeAccessibilityID = "af_actuals_oauth_authorize"
     static let oauthCancelAccessibilityID = "af_actuals_oauth_cancel"
 
-    /// Locked scope rows — `(granted, title, subtitle)`. Upload is always false / struck-through.
-    static func oauthScopes(for provider: ActualsSourceProvider) -> [(granted: Bool, title: String, subtitle: String)] {
+    /// Locked scope rows — upload is always false / struck-through.
+    static func oauthScopes(for provider: ActualsSourceProvider) -> [ActualsOAuthScopeRow] {
         switch provider {
         case .strava:
             return [
-                (true, "View data about your activities",
-                 "Runs, rides, workouts — including those synced from other apps"),
-                (true, "View your profile information", "Name and units only"),
-                (false, "Upload or edit your activities", oauthUploadNotRequested),
+                ActualsOAuthScopeRow(
+                    granted: true,
+                    title: "View data about your activities",
+                    subtitle: "Runs, rides, workouts — including those synced from other apps"
+                ),
+                ActualsOAuthScopeRow(
+                    granted: true,
+                    title: "View your profile information",
+                    subtitle: "Name and units only"
+                ),
+                ActualsOAuthScopeRow(
+                    granted: false,
+                    title: "Upload or edit your activities",
+                    subtitle: oauthUploadNotRequested
+                )
             ]
         case .garmin:
             return [
-                (true, "View data about your activities",
-                 "Runs, rides, strength — after Garmin Connect syncs"),
-                (true, "View your profile information", "Name and units only"),
-                (false, "Upload or edit your activities", oauthGarminUploadNotRequested),
+                ActualsOAuthScopeRow(
+                    granted: true,
+                    title: "View data about your activities",
+                    subtitle: "Runs, rides, strength — after Garmin Connect syncs"
+                ),
+                ActualsOAuthScopeRow(
+                    granted: true,
+                    title: "View your profile information",
+                    subtitle: "Name and units only"
+                ),
+                ActualsOAuthScopeRow(
+                    granted: false,
+                    title: "Upload or edit your activities",
+                    subtitle: oauthGarminUploadNotRequested
+                )
             ]
         case .appleHealth:
             return []
@@ -260,6 +282,12 @@ enum ActualsCopy {
     static func oauthAuthorizeHeadline(for provider: ActualsSourceProvider) -> String {
         "Authorize AmakaFlow to connect to \(sourceDisplayName(provider))"
     }
+}
+
+struct ActualsOAuthScopeRow: Equatable {
+    let granted: Bool
+    let title: String
+    let subtitle: String
 }
 
 enum ActualsTeachCardVisibility {

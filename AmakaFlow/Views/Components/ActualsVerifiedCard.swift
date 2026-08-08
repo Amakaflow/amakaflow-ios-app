@@ -48,8 +48,8 @@ extension ExerciseActual {
                 return "\(actualSets) × \(actualReps) · \(note)"
             }
         }
-        if let kg = actualWeightKg {
-            let kgText = kg == floor(kg) ? "\(Int(kg))" : String(format: "%.1f", kg)
+        if let kilograms = actualWeightKg {
+            let kgText = kilograms == floor(kilograms) ? "\(Int(kilograms))" : String(format: "%.1f", kilograms)
             return "\(actualSets) × \(actualReps) · \(kgText) KG"
         }
         return "\(actualSets) × \(actualReps)"

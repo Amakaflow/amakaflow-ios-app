@@ -212,17 +212,17 @@ struct ActualsFillInView: View {
                 increment: { viewModel.setActualReps(exerciseID: exercise.id, reps: exercise.actualReps + 1) }
             )
             if exercise.planned.weightKg != nil || exercise.actualWeightKg != nil {
-                let kg = exercise.actualWeightKg ?? exercise.planned.weightKg ?? 0
+                let kilograms = exercise.actualWeightKg ?? exercise.planned.weightKg ?? 0
                 let ghost: String? = {
-                    guard let planned = exercise.planned.weightKg, planned != kg else { return nil }
+                    guard let planned = exercise.planned.weightKg, planned != kilograms else { return nil }
                     return ActualsCopy.fillInPlannedGhostKg(planned)
                 }()
                 stepper(
                     label: "KG",
-                    valueText: kg == floor(kg) ? "\(Int(kg))" : String(format: "%.1f", kg),
+                    valueText: kilograms == floor(kilograms) ? "\(Int(kilograms))" : String(format: "%.1f", kilograms),
                     ghost: ghost,
-                    decrement: { viewModel.setActualWeightKg(exerciseID: exercise.id, kg: kg - 2.5) },
-                    increment: { viewModel.setActualWeightKg(exerciseID: exercise.id, kg: kg + 2.5) }
+                    decrement: { viewModel.setActualWeightKg(exerciseID: exercise.id, kilograms: kilograms - 2.5) },
+                    increment: { viewModel.setActualWeightKg(exerciseID: exercise.id, kilograms: kilograms + 2.5) }
                 )
             }
         }
@@ -348,7 +348,9 @@ private struct FillInCTAGlow: ViewModifier {
 #if DEBUG
 #Preview("Fill-in actuals") {
     let session = ActualsFillInSession.lowerBodyPosteriorSample()
-    let repo = ActualsRepository(database: try! AppDatabase.makeTestDatabase())
-    ActualsFillInView(viewModel: ActualsFillInViewModel(session: session, repository: repo))
+    if let database = try? AppDatabase.makeTestDatabase() {
+        let repo = ActualsRepository(database: database)
+        ActualsFillInView(viewModel: ActualsFillInViewModel(session: session, repository: repo))
+    }
 }
 #endif

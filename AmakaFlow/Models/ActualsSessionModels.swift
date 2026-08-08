@@ -90,7 +90,7 @@ struct ActualsSession: Identifiable, Equatable, Codable {
     var isMerged: Bool { sourceCount > 1 }
 
     var primaryRecording: ActualsSourceRecording? {
-        recordings.first(where: { $0.role == .primary }) ?? recordings.first
+        recordings.first { $0.role == .primary } ?? recordings.first
     }
 }
 

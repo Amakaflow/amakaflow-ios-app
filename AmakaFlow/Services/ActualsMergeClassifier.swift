@@ -21,26 +21,26 @@ enum ActualsMergeClassifier {
     // MARK: - Classify
 
     static func classify(
-        _ a: ActualsSourceRecording,
-        _ b: ActualsSourceRecording,
+        _ left: ActualsSourceRecording,
+        _ right: ActualsSourceRecording,
         memory: ActualsMergeMemory = ActualsMergeMemory()
     ) -> ActualsMergeDecision {
-        if memory.shouldKeepSeparate(idA: a.id, idB: b.id) {
+        if memory.shouldKeepSeparate(idA: left.id, idB: right.id) {
             return .separate
         }
-        if a.id == b.id { return .certain }
+        if left.id == right.id { return .certain }
 
-        if externalRefsMatch(a, b) {
+        if externalRefsMatch(left, right) {
             return .certain
         }
 
-        let startDelta = abs(a.startDate.timeIntervalSince(b.startDate))
-        let shapeOK = shapeAgrees(a, b)
+        let startDelta = abs(left.startDate.timeIntervalSince(right.startDate))
+        let shapeOK = shapeAgrees(left, right)
 
         if startDelta <= certainStartWindow, shapeOK {
             return .certain
         }
-        if startDelta <= uncertainStartWindow, looselyOverlaps(a, b) {
+        if startDelta <= uncertainStartWindow, looselyOverlaps(left, right) {
             return .uncertain
         }
         return .separate
@@ -54,7 +54,7 @@ enum ActualsMergeClassifier {
         sessionID: String = UUID().uuidString
     ) -> ActualsSession {
         let withRoles = assignRoles(recordings)
-        let title = withRoles.first(where: { $0.role == .primary })?.title
+        let title = withRoles.first { $0.role == .primary }?.title
             ?? withRoles.first?.title
             ?? "Session"
         return ActualsSession(id: sessionID, title: title, recordings: withRoles)
@@ -88,60 +88,60 @@ enum ActualsMergeClassifier {
 
     /// User chose Merge on an uncertain ask.
     static func applyUserMerge(
-        _ a: ActualsSourceRecording,
-        _ b: ActualsSourceRecording
+        _ left: ActualsSourceRecording,
+        _ right: ActualsSourceRecording
     ) -> ActualsSession {
-        merge([a, b])
+        merge([left, right])
     }
 
     /// User chose Keep both — sticky across re-syncs.
     static func applyKeepBoth(
-        _ a: ActualsSourceRecording,
-        _ b: ActualsSourceRecording,
+        _ left: ActualsSourceRecording,
+        _ right: ActualsSourceRecording,
         memory: inout ActualsMergeMemory
     ) {
-        memory.rememberKeepBoth(idA: a.id, idB: b.id)
+        memory.rememberKeepBoth(idA: left.id, idB: right.id)
     }
 
     // MARK: - Internals
 
     private static func externalRefsMatch(
-        _ a: ActualsSourceRecording,
-        _ b: ActualsSourceRecording
+        _ left: ActualsSourceRecording,
+        _ right: ActualsSourceRecording
     ) -> Bool {
-        guard let refA = a.externalRef, let refB = b.externalRef, !refA.isEmpty else {
+        guard let refA = left.externalRef, let refB = right.externalRef, !refA.isEmpty else {
             return false
         }
         return refA == refB
     }
 
     private static func shapeAgrees(
-        _ a: ActualsSourceRecording,
-        _ b: ActualsSourceRecording
+        _ left: ActualsSourceRecording,
+        _ right: ActualsSourceRecording
     ) -> Bool {
-        let longer = max(a.durationSeconds, b.durationSeconds)
+        let longer = max(left.durationSeconds, right.durationSeconds)
         guard longer > 0 else { return true }
-        let durationRatio = abs(a.durationSeconds - b.durationSeconds) / longer
+        let durationRatio = abs(left.durationSeconds - right.durationSeconds) / longer
         guard durationRatio <= durationTolerance else { return false }
 
-        if let da = a.distanceMeters, let db = b.distanceMeters {
-            let farther = max(da, db)
+        if let leftDistance = left.distanceMeters, let rightDistance = right.distanceMeters {
+            let farther = max(leftDistance, rightDistance)
             guard farther > 0 else { return true }
-            return abs(da - db) / farther <= distanceTolerance
+            return abs(leftDistance - rightDistance) / farther <= distanceTolerance
         }
         return true
     }
 
     private static func looselyOverlaps(
-        _ a: ActualsSourceRecording,
-        _ b: ActualsSourceRecording
+        _ left: ActualsSourceRecording,
+        _ right: ActualsSourceRecording
     ) -> Bool {
         // Time ranges overlap or abut within a few minutes.
-        let start = max(a.startDate, b.startDate)
-        let end = min(a.endDate, b.endDate)
+        let start = max(left.startDate, right.startDate)
+        let end = min(left.endDate, right.endDate)
         if end >= start { return true }
-        return abs(a.startDate.timeIntervalSince(b.startDate)) <= uncertainStartWindow
-            && shapeAgrees(a, b)
+        return abs(left.startDate.timeIntervalSince(right.startDate)) <= uncertainStartWindow
+            && shapeAgrees(left, right)
     }
 
     private static func precedes(

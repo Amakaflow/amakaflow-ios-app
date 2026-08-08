@@ -10,7 +10,8 @@
 #if DEBUG
 import SwiftUI
 
-/// Visual host for Actuals flow dogfood on Simulator.
+// Visual host for Actuals flow dogfood on Simulator.
+// swiftlint:disable:next type_body_length
 struct ActualsDogfoodHubView: View {
     @StateObject private var sourceStore: ActualsSourceConnectionStore
     @StateObject private var syncStore = ActualsSyncProgressStore()
@@ -28,8 +29,8 @@ struct ActualsDogfoodHubView: View {
         let defaults = UserDefaults(suiteName: suite) ?? .standard
         _sourceStore = StateObject(wrappedValue: ActualsSourceConnectionStore(defaults: defaults))
         // Ephemeral in-memory DB for this session's fill-in / ghosts.
-        let db = (try? AppDatabase.makeTestDatabase()) ?? AppDatabase.shared
-        repository = ActualsRepository(database: db)
+        let database = (try? AppDatabase.makeTestDatabase()) ?? AppDatabase.shared
+        repository = ActualsRepository(database: database)
     }
 
     var body: some View {
@@ -113,6 +114,7 @@ struct ActualsDogfoodHubView: View {
     }
 
     @ViewBuilder
+    // swiftlint:disable:next cyclomatic_complexity
     private func destination(for route: ActualsDogfoodRoute) -> some View {
         switch route {
         case .teach:
@@ -218,7 +220,7 @@ struct ActualsDogfoodHubView: View {
 
     private var editorGhostDemo: some View {
         let previous = DDEditorSeed.ghostLookup
-        let _ = { DDEditorSeed.ghostLookup = repository }()
+        _ = { DDEditorSeed.ghostLookup = repository }()
         let seed = DDEditorSeed.initialState(mode: .backfill, workout: nil)
         return ScrollView {
             VStack(alignment: .leading, spacing: 12) {
@@ -338,7 +340,7 @@ struct ActualsDogfoodHubView: View {
                 durationSeconds: 44 * 60,
                 streamRichness: 4
             ),
-            samplePhoneRecording,
+            samplePhoneRecording
         ])
     }
 
@@ -377,7 +379,7 @@ struct ActualsDogfoodHubView: View {
                 distanceMeters: 8_000,
                 type: .run,
                 targetAvgHR: 165
-            ),
+            )
         ]
     }
 

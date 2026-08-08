@@ -92,7 +92,7 @@ struct ActualsTeachCard: View {
 
 #if DEBUG
 #Preview("Actuals teach card") {
-    ActualsTeachCard(onConnect: {})
+    ActualsTeachCard {}
         .padding(18)
         .background(DailyDriver.screenBackground)
         .preferredColorScheme(.dark)

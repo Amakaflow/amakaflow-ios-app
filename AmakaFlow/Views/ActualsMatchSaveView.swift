@@ -298,8 +298,7 @@ struct ActualsMatchSaveView: View {
     )
     ActualsMatchSaveView(
         activity: activity,
-        draft: .sampleHyrox(),
-        onComplete: { _, _ in }
-    )
+        draft: .sampleHyrox()
+    ) { _, _ in }
 }
 #endif

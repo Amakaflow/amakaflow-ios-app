@@ -131,9 +131,10 @@ struct ActualsAppleHealthPrimerView<Store: ActualsSourceConnecting>: View where 
             let outcome = await healthKit.connect()
             ActualsAppleHealthConnectAction.apply(
                 outcome: outcome,
-                store: store,
-                openSettings: { healthKit.openHealthSettings() }
-            )
+                store: store
+            ) {
+                healthKit.openHealthSettings()
+            }
             if outcome == .granted {
                 ActualsLinkFeedback.announceLinked(.appleHealth)
             }

@@ -58,16 +58,19 @@ struct ActualsMapToPlanView: View {
                 }
                 .buttonStyle(.plain)
 
-                Button(action: {
-                    onKeepAsIs()
-                    dismiss()
-                }) {
-                    Text(ActualsCopy.mapKeepAsNamedCTA(title: activity.title))
-                        .ddDisplayText(12, weight: .bold)
-                        .foregroundColor(DailyDriver.foregroundDim)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 2)
-                }
+                Button(
+                    action: {
+                        onKeepAsIs()
+                        dismiss()
+                    },
+                    label: {
+                        Text(ActualsCopy.mapKeepAsNamedCTA(title: activity.title))
+                            .ddDisplayText(12, weight: .bold)
+                            .foregroundColor(DailyDriver.foregroundDim)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 2)
+                    }
+                )
                 .buttonStyle(.plain)
                 .accessibilityIdentifier(ActualsCopy.mapKeepAsIsAccessibilityID)
             }
@@ -79,42 +82,35 @@ struct ActualsMapToPlanView: View {
         .ddSuppressFloatingChrome()
         // Item/isPresented covers always have `activity` in scope — no empty if-let.
         .fullScreenCover(isPresented: $showCaptureBuilder) {
-            BuilderV3EntryView(
-                actualsActivity: activity,
-                onCaptureComplete: { draft in
-                    showCaptureBuilder = false
-                    // Let the builder cover dismiss, then present match-save.
-                    DispatchQueue.main.async {
-                        matchSaveDraft = draft
-                    }
+            BuilderV3EntryView(actualsActivity: activity) { draft in
+                showCaptureBuilder = false
+                // Let the builder cover dismiss, then present match-save.
+                DispatchQueue.main.async {
+                    matchSaveDraft = draft
                 }
-            )
+            }
             .background(DailyDriver.screenBackground.ignoresSafeArea())
             .ddSuppressFloatingChrome()
         }
         .fullScreenCover(isPresented: $showCapturePhoto) {
-            ImageImportView(
-                actualsActivity: activity,
-                onCaptureComplete: { draft in
-                    showCapturePhoto = false
-                    DispatchQueue.main.async {
-                        matchSaveDraft = draft
-                    }
+            ImageImportView(actualsActivity: activity) { draft in
+                showCapturePhoto = false
+                DispatchQueue.main.async {
+                    matchSaveDraft = draft
                 }
-            )
+            }
             .background(DailyDriver.screenBackground.ignoresSafeArea())
             .ddSuppressFloatingChrome()
         }
         .fullScreenCover(item: $matchSaveDraft) { draft in
             ActualsMatchSaveView(
                 activity: activity,
-                draft: draft,
-                onComplete: { finalDraft, alsoLibrary in
-                    matchSaveDraft = nil
-                    onCaptureMatched(finalDraft, alsoLibrary)
-                    dismiss()
-                }
-            )
+                draft: draft
+            ) { finalDraft, alsoLibrary in
+                matchSaveDraft = nil
+                onCaptureMatched(finalDraft, alsoLibrary)
+                dismiss()
+            }
             .background(DailyDriver.screenBackground.ignoresSafeArea())
             .ddSuppressFloatingChrome()
         }
@@ -205,8 +201,8 @@ struct ActualsMapToPlanView: View {
     }
 
     private var hrLabel: String {
-        guard let hr = activity.avgHR else { return "—" }
-        return "\(Int(hr.rounded()))"
+        guard let heartRate = activity.avgHR else { return "—" }
+        return "\(Int(heartRate.rounded()))"
     }
 
     private var movesLabel: String { "—" }
@@ -328,7 +324,7 @@ struct ActualsMapToPlanView: View {
             scheduledStart: start.addingTimeInterval(-180),
             durationSeconds: 48 * 60, distanceMeters: nil,
             type: .strength, targetAvgHR: nil
-        ),
+        )
     ]
     let matches = ActualsPlanMatcher.rank(activity: activity, candidates: candidates)
     ActualsMapToPlanView(

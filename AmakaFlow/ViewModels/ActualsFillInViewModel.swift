@@ -79,9 +79,9 @@ final class ActualsFillInViewModel: ObservableObject {
         session.exercises[index].confirmation = .adjusted
     }
 
-    func setActualWeightKg(exerciseID: String, kg: Double) {
+    func setActualWeightKg(exerciseID: String, kilograms: Double) {
         guard let index = session.exercises.firstIndex(where: { $0.id == exerciseID }) else { return }
-        session.exercises[index].actualWeightKg = max(0, kg)
+        session.exercises[index].actualWeightKg = max(0, kilograms)
         session.exercises[index].confirmation = .adjusted
     }
 

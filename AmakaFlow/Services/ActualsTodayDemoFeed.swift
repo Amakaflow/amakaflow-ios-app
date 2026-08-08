@@ -49,6 +49,7 @@ struct ActualsTodayDemoCard: Identifiable, Equatable {
 }
 
 @MainActor
+// swiftlint:disable:next type_body_length
 final class ActualsTodayDemoFeed: ObservableObject {
     @Published private(set) var isActive = false
     @Published var showMergeAsk = false
@@ -65,8 +66,8 @@ final class ActualsTodayDemoFeed: ObservableObject {
     init(repository: ActualsRepository? = nil) {
         if let repository {
             self.repository = repository
-        } else if let db = try? AppDatabase.makeTestDatabase() {
-            self.repository = ActualsRepository(database: db)
+        } else if let database = try? AppDatabase.makeTestDatabase() {
+            self.repository = ActualsRepository(database: database)
         } else {
             self.repository = ActualsRepository()
         }
@@ -124,8 +125,8 @@ final class ActualsTodayDemoFeed: ObservableObject {
 
     func prepareFillIn(from card: ActualsTodayDemoCard? = nil) {
         let source = card
-            ?? cards.first(where: { $0.kind == .fillInDebt })
-            ?? cards.first(where: { $0.kind == .merged })
+            ?? cards.first { $0.kind == .fillInDebt }
+            ?? cards.first { $0.kind == .merged }
         pendingFillInCardID = source?.id
         let session = source?.fillInSession
             ?? ActualsFillInSession.lowerBodyPosteriorSample(
@@ -171,32 +172,36 @@ final class ActualsTodayDemoFeed: ObservableObject {
     /// After match-save: keep the same timeline row (stable id) — never delete the session.
     /// Title becomes what they built; CTA becomes Log RPE.
     func applyCaptureMatched(draft: ActualsCaptureDraft, unmappedCardID: String = "today_demo_unmapped") {
-        let prior = cards.first(where: { $0.id == unmappedCardID })
+        let prior = cards.first { $0.id == unmappedCardID }
         let activity = prior?.activity ?? Self.unmappedCard().activity
         let timeLabel = prior?.timeLabel ?? "18:10"
         let matched = makeMatchedCard(
-            cardID: unmappedCardID,
-            timeLabel: timeLabel,
-            title: draft.title,
-            activity: activity,
-            blockSummaries: draft.blockSummaries,
-            sourceLabel: "Matched · \(ActualsCopy.sourceDisplayName(activity?.provider ?? .garmin))"
+            request: MatchedCardRequest(
+                cardID: unmappedCardID,
+                timeLabel: timeLabel,
+                title: draft.title,
+                activity: activity,
+                blockSummaries: draft.blockSummaries,
+                sourceLabel: "Matched · \(ActualsCopy.sourceDisplayName(activity?.provider ?? .garmin))"
+            )
         )
         upsertCard(matched, replacing: unmappedCardID, atFrontIfMissing: true)
     }
 
     /// Map → picked a library workout: keep the session row, attach that plan for RPE.
     func applyLibraryMatch(planTitle: String, unmappedCardID: String = "today_demo_unmapped") {
-        let prior = cards.first(where: { $0.id == unmappedCardID })
+        let prior = cards.first { $0.id == unmappedCardID }
         let activity = prior?.activity ?? Self.unmappedCard().activity
         let timeLabel = prior?.timeLabel ?? "18:10"
         let matched = makeMatchedCard(
-            cardID: unmappedCardID,
-            timeLabel: timeLabel,
-            title: planTitle,
-            activity: activity,
-            blockSummaries: [planTitle],
-            sourceLabel: "Matched · \(ActualsCopy.sourceDisplayName(activity?.provider ?? .garmin))"
+            request: MatchedCardRequest(
+                cardID: unmappedCardID,
+                timeLabel: timeLabel,
+                title: planTitle,
+                activity: activity,
+                blockSummaries: [planTitle],
+                sourceLabel: "Matched · \(ActualsCopy.sourceDisplayName(activity?.provider ?? .garmin))"
+            )
         )
         upsertCard(matched, replacing: unmappedCardID, atFrontIfMissing: true)
     }
@@ -215,14 +220,22 @@ final class ActualsTodayDemoFeed: ObservableObject {
         }
     }
 
-    private func makeMatchedCard(
-        cardID: String,
-        timeLabel: String,
-        title: String,
-        activity: ActualsUnmappedActivity?,
-        blockSummaries: [String],
-        sourceLabel: String
-    ) -> ActualsTodayDemoCard {
+    private struct MatchedCardRequest {
+        let cardID: String
+        let timeLabel: String
+        let title: String
+        let activity: ActualsUnmappedActivity?
+        let blockSummaries: [String]
+        let sourceLabel: String
+    }
+
+    private func makeMatchedCard(request: MatchedCardRequest) -> ActualsTodayDemoCard {
+        let cardID = request.cardID
+        let timeLabel = request.timeLabel
+        let title = request.title
+        let activity = request.activity
+        let blockSummaries = request.blockSummaries
+        let sourceLabel = request.sourceLabel
         let minutes: Int = {
             if let activity {
                 return max(1, Int((activity.durationSeconds / 60).rounded()))
@@ -233,8 +246,8 @@ final class ActualsTodayDemoFeed: ObservableObject {
         if let cal = activity?.calories {
             stats.append(("flame.fill", "\(Int(cal.rounded())) kcal"))
         }
-        if let hr = activity?.avgHR {
-            stats.append(("heart.fill", "\(hr)"))
+        if let heartRate = activity?.avgHR {
+            stats.append(("heart.fill", "\(heartRate)"))
         }
         let moveCount = max(blockSummaries.count, 1)
         stats.append(("dumbbell.fill", "\(moveCount) moves"))
@@ -260,7 +273,7 @@ final class ActualsTodayDemoFeed: ObservableObject {
                         id: "capture_main",
                         name: title,
                         planned: ExerciseActualPlanned(sets: 1, reps: 1, note: "AS BUILT")
-                    ),
+                    )
                 ]
                 : Array(exercises),
             rpe: nil,
@@ -289,7 +302,7 @@ final class ActualsTodayDemoFeed: ObservableObject {
         cards = [
             Self.unmappedCard(),
             Self.mergedCard(),
-            Self.fillInCard(),
+            Self.fillInCard()
         ]
     }
 
@@ -305,7 +318,7 @@ final class ActualsTodayDemoFeed: ObservableObject {
                 durationSeconds: 44 * 60,
                 streamRichness: 4
             ),
-            samplePhoneRecording,
+            samplePhoneRecording
         ], sessionID: "today_demo_merged")
         return ActualsTodayDemoCard(
             id: session.id,
@@ -315,7 +328,7 @@ final class ActualsTodayDemoFeed: ObservableObject {
             stats: [
                 ("clock", "44m"),
                 ("flame.fill", "612 kcal"),
-                ("heart.fill", "148"),
+                ("heart.fill", "148")
             ],
             sourceLabel: session.mergeBadge,
             session: session,
@@ -348,7 +361,7 @@ final class ActualsTodayDemoFeed: ObservableObject {
             stats: [
                 ("clock", "44m"),
                 ("flame.fill", "486 kcal"),
-                ("heart.fill", "151"),
+                ("heart.fill", "151")
             ],
             sourceLabel: "Synced from Garmin",
             session: nil,
@@ -368,7 +381,7 @@ final class ActualsTodayDemoFeed: ObservableObject {
             title: session.title,
             stats: [
                 ("clock", "48m"),
-                ("dumbbell.fill", "4 moves"),
+                ("dumbbell.fill", "4 moves")
             ],
             sourceLabel: "Apple Watch session",
             session: nil,
@@ -415,7 +428,7 @@ final class ActualsTodayDemoFeed: ObservableObject {
                 distanceMeters: nil,
                 type: .strength,
                 targetAvgHR: nil
-            ),
+            )
         ]
     }
 }

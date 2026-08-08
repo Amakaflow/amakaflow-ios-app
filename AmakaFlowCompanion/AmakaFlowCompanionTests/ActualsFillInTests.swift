@@ -40,7 +40,7 @@ final class ActualsFillInTests: XCTestCase {
             repository: repo
         )
         vm.markAdjust(exerciseID: "back_squat")
-        vm.setActualWeightKg(exerciseID: "back_squat", kg: 90)
+        vm.setActualWeightKg(exerciseID: "back_squat", kilograms: 90)
 
         let squat = vm.session.exercises.first { $0.id == "back_squat" }
         XCTAssertEqual(squat?.confirmation, .adjusted)
@@ -106,7 +106,7 @@ final class ActualsFillInTests: XCTestCase {
         )
         vm.markAllAsPlanned()
         vm.markAdjust(exerciseID: "back_squat")
-        vm.setActualWeightKg(exerciseID: "back_squat", kg: 90)
+        vm.setActualWeightKg(exerciseID: "back_squat", kilograms: 90)
         vm.selectRPE(8)
 
         XCTAssertTrue(try vm.save())

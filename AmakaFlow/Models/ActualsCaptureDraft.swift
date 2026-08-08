@@ -58,9 +58,9 @@ struct ActualsCaptureDraft: Identifiable, Equatable {
                     SocialImportExercise(name: "Ski erg", distanceMeters: 500),
                     SocialImportExercise(name: "Sled push", sets: 4, distanceMeters: 25),
                     SocialImportExercise(name: "Wall balls", sets: 3, reps: 25),
-                    SocialImportExercise(name: "Burpee broad jump", sets: 3, reps: 12),
+                    SocialImportExercise(name: "Burpee broad jump", sets: 3, reps: 12)
                 ]
-            ),
+            )
         ]
         return ActualsCaptureDraft(
             id: UUID().uuidString,
@@ -69,7 +69,7 @@ struct ActualsCaptureDraft: Identifiable, Equatable {
                 "Ski erg — 500 m",
                 "Sled push — 4 × 25 m",
                 "Wall balls — 3 × 25",
-                "Burpee broad jump — 3 × 12",
+                "Burpee broad jump — 3 × 12"
             ],
             estimatedMinutes: 45,
             source: .built,

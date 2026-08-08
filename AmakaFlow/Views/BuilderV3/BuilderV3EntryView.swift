@@ -45,7 +45,7 @@ struct BuilderV3EntryView: View {
                                                 type: "time",
                                                 name: seed.label,
                                                 seconds: 40 * 60
-                                            ),
+                                            )
                                         ],
                                         blocks: nil
                                     )

@@ -8,8 +8,11 @@
 //  Daily Driver Proto: DDTodayScreen — day scrubber + timeline cards.
 //
 
+// swiftlint:disable file_length
+
 import SwiftUI
 
+// swiftlint:disable:next type_body_length
 struct TodayDiaryView: View {
     @StateObject private var historyViewModel = ActivityHistoryViewModel()
     @ObservedObject private var watchConnectivity = WatchConnectivityManager.shared
@@ -250,6 +253,7 @@ struct TodayDiaryView: View {
     }
 
     @ViewBuilder
+    // swiftlint:disable:next cyclomatic_complexity
     private func actualsDestinationView(_ destination: ActualsTodayDestination) -> some View {
         switch destination {
         case .mergedDetail:

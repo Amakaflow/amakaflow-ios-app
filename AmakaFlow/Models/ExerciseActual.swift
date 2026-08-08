@@ -23,8 +23,8 @@ struct ExerciseActualPlanned: Equatable, Codable {
         if let note, !note.isEmpty, weightKg == nil {
             return "\(sets) × \(reps) · \(note)"
         }
-        if let kg = weightKg {
-            let kgText = kg == floor(kg) ? "\(Int(kg))" : String(format: "%.1f", kg)
+        if let kilograms = weightKg {
+            let kgText = kilograms == floor(kilograms) ? "\(Int(kilograms))" : String(format: "%.1f", kilograms)
             return "\(sets) × \(reps) · \(kgText) KG"
         }
         return "\(sets) × \(reps)"
@@ -109,7 +109,7 @@ struct ActualsFillInSession: Equatable {
                     id: "nordic_curl",
                     name: "Nordic curl",
                     planned: ExerciseActualPlanned(sets: 2, reps: 6, note: "SLOW")
-                ),
+                )
             ],
             rpe: nil,
             verified: false

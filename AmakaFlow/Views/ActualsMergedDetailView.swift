@@ -200,13 +200,15 @@ private struct MergedDetailFillInPreviewHost: View {
             onFillIn: { showFillIn = true }
         )
         .fullScreenCover(isPresented: $showFillIn) {
-            let repo = ActualsRepository(database: try! AppDatabase.makeTestDatabase())
-            ActualsFillInView(
-                viewModel: ActualsFillInViewModel(
-                    session: ActualsFillInSession.lowerBodyPosteriorSample(),
-                    repository: repo
+            if let database = try? AppDatabase.makeTestDatabase() {
+                let repo = ActualsRepository(database: database)
+                ActualsFillInView(
+                    viewModel: ActualsFillInViewModel(
+                        session: ActualsFillInSession.lowerBodyPosteriorSample(),
+                        repository: repo
+                    )
                 )
-            )
+            }
         }
     }
 }
@@ -227,7 +229,7 @@ private struct MergedDetailFillInPreviewHost: View {
             id: "s", provider: .strava, deviceKind: .phone,
             title: "Hyrox Sim", startDate: Date(),
             durationSeconds: 44 * 60, streamRichness: 2
-        ),
+        )
     ])
     MergedDetailFillInPreviewHost(session: session)
 }
