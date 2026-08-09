@@ -54,11 +54,10 @@ nonisolated final class BFFFriendsSharingService: FriendsSharingProviding, @unch
     @MainActor
     static func live() -> BFFFriendsSharingService {
         BFFFriendsSharingService(
-            baseURL: "\(AppEnvironment.current.mobileBFFURL)/v1",
-            bearerTokenProvider: {
-                try await AuthViewModel.shared.token()
-            }
-        )
+            baseURL: "\(AppEnvironment.current.mobileBFFURL)/v1"
+        ) {
+            try await AuthViewModel.shared.token()
+        }
     }
 
     // MARK: - FriendshipProviding
