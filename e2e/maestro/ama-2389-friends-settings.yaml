@@ -1,0 +1,64 @@
+# AMA-2389 — Profile → Friends row → list / Edit / Add
+appId: com.myamaka.AmakaFlowCompanion
+---
+- launchApp:
+    appId: com.myamaka.AmakaFlowCompanion
+    clearState: true
+    permissions:
+      notifications: deny
+    arguments:
+      UITEST_CLERK_TEST_SESSION: "user_id=user_ama2389_settings,email=claude+clerk_test@amakaflow.dev,name=AMA2389 Settings"
+      UITEST_SKIP_ONBOARDING: "true"
+      UITEST_SKIP_APPLE_WATCH: "true"
+      UITEST_USE_FIXTURES: "true"
+- waitForAnimationToEnd:
+    timeout: 5000
+- extendedWaitUntil:
+    visible:
+      id: "af_tabbar"
+    timeout: 60000
+- tapOn:
+    text: "Profile"
+    index: 0
+- waitForAnimationToEnd:
+    timeout: 3000
+- extendedWaitUntil:
+    visible:
+      id: "af_profile_friends_row"
+    timeout: 15000
+- takeScreenshot: docs/ama-2389-dogfood/08-settings-friends
+- tapOn:
+    id: "af_profile_friends_row"
+- waitForAnimationToEnd:
+    timeout: 3000
+- extendedWaitUntil:
+    visible:
+      id: "af_friends_list"
+    timeout: 15000
+- assertVisible:
+    id: "af_friends_inbox_teaser"
+- assertVisible: "Marcus O."
+- assertVisible: "Priya S."
+- assertVisible:
+    id: "af_friends_edit"
+- tapOn:
+    id: "af_friends_edit"
+- waitForAnimationToEnd:
+    timeout: 1500
+- assertVisible:
+    id: "af_friends_done"
+- assertVisible:
+    id: "af_friends_remove_toggle_priya_runs"
+- tapOn:
+    id: "af_friends_add"
+- waitForAnimationToEnd:
+    timeout: 3000
+- extendedWaitUntil:
+    visible: "Add a friend"
+    timeout: 10000
+- assertVisible:
+    id: "af_friends_search"
+- assertVisible:
+    id: "af_friends_invite_link"
+- assertVisible: "REQUESTS"
+- takeScreenshot: docs/ama-2389-dogfood/09-friends-add

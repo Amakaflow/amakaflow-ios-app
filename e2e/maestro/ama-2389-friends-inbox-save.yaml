@@ -1,0 +1,66 @@
+# AMA-2389 — ＋ → From friends → Look inside → Save to Library
+appId: com.myamaka.AmakaFlowCompanion
+---
+- launchApp:
+    appId: com.myamaka.AmakaFlowCompanion
+    clearState: true
+    permissions:
+      notifications: deny
+    arguments:
+      UITEST_CLERK_TEST_SESSION: "user_id=user_ama2389_inbox,email=claude+clerk_test@amakaflow.dev,name=AMA2389 Inbox"
+      UITEST_SKIP_ONBOARDING: "true"
+      UITEST_SKIP_APPLE_WATCH: "true"
+      UITEST_USE_FIXTURES: "true"
+- waitForAnimationToEnd:
+    timeout: 5000
+- extendedWaitUntil:
+    visible:
+      id: "af_tabbar"
+    timeout: 60000
+- tapOn:
+    text: "Library"
+    index: 0
+- waitForAnimationToEnd:
+    timeout: 3000
+- extendedWaitUntil:
+    visible:
+      id: "af_library_fab"
+    timeout: 15000
+- tapOn:
+    id: "af_library_fab"
+- extendedWaitUntil:
+    visible:
+      id: "create_workout_sheet"
+    timeout: 10000
+- extendedWaitUntil:
+    visible: "From friends"
+    timeout: 10000
+- takeScreenshot: docs/ama-2389-dogfood/01-add-from-friends
+- tapOn: "From friends"
+- waitForAnimationToEnd:
+    timeout: 3000
+- extendedWaitUntil:
+    visible: "From friends"
+    timeout: 15000
+- extendedWaitUntil:
+    visible: "Look inside"
+    timeout: 10000
+- tapOn:
+    text: "Look inside"
+    index: 0
+- waitForAnimationToEnd:
+    timeout: 3000
+- extendedWaitUntil:
+    visible: "Save to Library"
+    timeout: 10000
+- takeScreenshot: docs/ama-2389-dogfood/02-recv-detail
+- scrollUntilVisible:
+    element: "Save to Library"
+    direction: DOWN
+    timeout: 10000
+    visibilityPercentage: 50
+- tapOn: "Save to Library"
+- extendedWaitUntil:
+    visible: "Saved to Library"
+    timeout: 15000
+- takeScreenshot: docs/ama-2389-dogfood/03-save-toast

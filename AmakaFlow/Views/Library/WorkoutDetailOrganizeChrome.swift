@@ -20,12 +20,14 @@ struct WorkoutDetailOrganizeChrome: View {
     private let apiService: APIServiceProviding
 
     @State private var isPresentingAddToCollection = false
+    @State private var isPresentingFriendShare = false
     @State private var completions: [WorkoutCompletion] = []
     @State private var didLoadCompletions = false
     /// Gate chips until the first store reload finishes so Suggest/Social
     /// preview paths (fresh `LibraryCollectionsStore`) don't flash empty chips.
     @State private var didLoadCollections = false
     @State private var writeFailureMessage: String?
+    @ObservedObject private var friendsStore = FriendsSharingStore.shared
 
     init(
         workout: Workout,
@@ -68,6 +70,12 @@ struct WorkoutDetailOrganizeChrome: View {
             .presentationDetents([.medium, .large])
             .presentationDragIndicator(.hidden)
             .presentationBackground(DailyDriver.backgroundElevated)
+        }
+        .sheet(isPresented: $isPresentingFriendShare) {
+            WorkoutFriendShareSheet(workout: workout, store: friendsStore)
+                .presentationDetents(friendsSheetDetents)
+                .presentationDragIndicator(.visible)
+                .presentationBackground(DailyDriver.backgroundElevated)
         }
         .alert(
             "Couldn't update collections",
@@ -134,39 +142,15 @@ private extension WorkoutDetailOrganizeChrome {
         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 
-    /// Honest Share: prefers the source URL, falls back to the workout name as
-    /// plain text, and disables (no crash) only if the name itself is empty.
-    @ViewBuilder
+    /// AMA-2389: Share opens friend-send + system share sheet (existing tile).
     var shareTile: some View {
-        if let shareURL {
-            ShareLink(item: shareURL, subject: Text(workout.name)) {
-                tileLabel(icon: "square.and.arrow.up", title: "Share", isActive: false)
-            }
-            .accessibilityIdentifier("af_detail_share")
-        } else if let shareText {
-            ShareLink(item: shareText) {
-                tileLabel(icon: "square.and.arrow.up", title: "Share", isActive: false)
-            }
-            .accessibilityIdentifier("af_detail_share")
-        } else {
+        Button {
+            isPresentingFriendShare = true
+        } label: {
             tileLabel(icon: "square.and.arrow.up", title: "Share", isActive: false)
-                .opacity(0.4)
-                .accessibilityIdentifier("af_detail_share")
         }
-    }
-
-    var shareURL: URL? {
-        guard let sourceUrl = workout.sourceUrl?.trimmingCharacters(in: .whitespacesAndNewlines),
-              !sourceUrl.isEmpty,
-              let url = URL(string: sourceUrl),
-              let scheme = url.scheme?.lowercased(),
-              ["http", "https"].contains(scheme) else { return nil }
-        return url
-    }
-
-    var shareText: String? {
-        let trimmed = workout.name.trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmed.isEmpty ? nil : trimmed
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("af_detail_share")
     }
 }
 

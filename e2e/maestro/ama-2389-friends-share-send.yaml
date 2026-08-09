@@ -1,0 +1,65 @@
+# AMA-2389 — Library detail Share → pick friend → Send → toast
+appId: com.myamaka.AmakaFlowCompanion
+---
+- launchApp:
+    appId: com.myamaka.AmakaFlowCompanion
+    clearState: true
+    permissions:
+      notifications: deny
+    arguments:
+      UITEST_CLERK_TEST_SESSION: "user_id=user_ama2389_share,email=claude+clerk_test@amakaflow.dev,name=AMA2389 Share"
+      UITEST_SKIP_ONBOARDING: "true"
+      UITEST_SKIP_APPLE_WATCH: "true"
+      UITEST_USE_FIXTURES: "true"
+- waitForAnimationToEnd:
+    timeout: 5000
+- extendedWaitUntil:
+    visible:
+      id: "af_tabbar"
+    timeout: 60000
+- tapOn:
+    text: "Library"
+    index: 0
+- waitForAnimationToEnd:
+    timeout: 3000
+- extendedWaitUntil:
+    visible:
+      id: "af_library_fab"
+    timeout: 15000
+# Prefer filter over search (iOS keyboard autocorrect mangled "Along").
+- tapOn: "Instagram"
+- waitForAnimationToEnd:
+    timeout: 2000
+- extendedWaitUntil:
+    visible: "HIIT Follow-Along"
+    timeout: 15000
+- tapOn: "HIIT Follow-Along"
+- waitForAnimationToEnd:
+    timeout: 3000
+- extendedWaitUntil:
+    visible: "Start"
+    timeout: 15000
+- scrollUntilVisible:
+    element: "Share"
+    direction: DOWN
+    timeout: 15000
+    visibilityPercentage: 40
+- tapOn:
+    text: "Share"
+    index: 0
+- waitForAnimationToEnd:
+    timeout: 3000
+- extendedWaitUntil:
+    visible: "Pick a friend"
+    timeout: 15000
+- takeScreenshot: docs/ama-2389-dogfood/04-share-sheet
+- tapOn: "Marcus O."
+- waitForAnimationToEnd:
+    timeout: 1000
+- assertVisible: "Send to 1 friend"
+- tapOn: "Send to 1 friend"
+- extendedWaitUntil:
+    visible: "Sent to 1 friend"
+    timeout: 15000
+- takeScreenshot: docs/ama-2389-dogfood/05-send-toast
+- assertVisible: "Sent to 1 friend"
