@@ -352,7 +352,7 @@ final class BFFFriendsSharingServiceTests: XCTestCase {
 
             XCTAssertEqual(request.url?.path, "/v1/friends/requests")
             XCTAssertEqual(request.httpMethod, "POST")
-            let body = try XCTUnwrap(request.httpBody)
+            let body = try Self.httpBodyData(from: request)
             let json = try XCTUnwrap(
                 JSONSerialization.jsonObject(with: body) as? [String: Any]
             )
@@ -376,7 +376,7 @@ final class BFFFriendsSharingServiceTests: XCTestCase {
         MockURLProtocol.requestHandler = { request in
             XCTAssertEqual(request.httpMethod, "POST")
             XCTAssertEqual(request.url?.path, "/v1/shares")
-            let body = try XCTUnwrap(request.httpBody)
+            let body = try Self.httpBodyData(from: request)
             let json = try XCTUnwrap(
                 JSONSerialization.jsonObject(with: body) as? [String: Any]
             )
@@ -453,7 +453,7 @@ final class BFFFriendsSharingServiceTests: XCTestCase {
         MockURLProtocol.requestHandler = { request in
             let path = request.url?.path
             if path == "/v1/shares/share-1/save" {
-                let body = try XCTUnwrap(request.httpBody)
+                let body = try Self.httpBodyData(from: request)
                 let json = try XCTUnwrap(
                     JSONSerialization.jsonObject(with: body) as? [String: Any]
                 )
@@ -512,6 +512,31 @@ final class BFFFriendsSharingServiceTests: XCTestCase {
 
     private static func date(_ value: String) -> Date {
         ISO8601DateFormatter().date(from: value)!
+    }
+
+    private static func httpBodyData(from request: URLRequest) throws -> Data {
+        if let body = request.httpBody {
+            return body
+        }
+        guard let stream = request.httpBodyStream else {
+            return Data()
+        }
+
+        stream.open()
+        defer { stream.close() }
+        var data = Data()
+        var buffer = [UInt8](repeating: 0, count: 1024)
+        while stream.hasBytesAvailable {
+            let count = stream.read(&buffer, maxLength: buffer.count)
+            if count < 0 {
+                throw stream.streamError ?? URLError(.cannotDecodeContentData)
+            }
+            if count == 0 {
+                break
+            }
+            data.append(buffer, count: count)
+        }
+        return data
     }
 
     private static let snapshot = WorkoutShareSnapshot(
