@@ -858,10 +858,10 @@ extension UnifiedWorkoutDetailView {
     }
 
     fileprivate var sportHeroPill: String {
-        if workout.name.localizedCaseInsensitiveContains("hyrox") {
-            return "HYROX"
-        }
-        return displayedWorkout.sport.heroPill
+        WorkoutSportHonesty.heroPill(
+            sport: displayedWorkout.sport,
+            workoutName: displayedWorkout.name
+        )
     }
 
     fileprivate var heroGradientColors: [Color] {
@@ -875,7 +875,7 @@ extension UnifiedWorkoutDetailView {
         case .ai:
             return [Color(hex: "101C30"), Color(hex: "060A12"), Color(hex: "0A0A0B")]
         case .manual, .all:
-            switch workout.sport {
+            switch displayedWorkout.sport {
             case .running, .cycling, .swimming:
                 return [Color(hex: "0D2438"), Color(hex: "071522"), Color(hex: "0A0A0B")]
             case .cardio, .conditioning, .mixed:
@@ -890,7 +890,7 @@ extension UnifiedWorkoutDetailView {
         if WorkoutSourceProvenance.isExternal(resolvedSourceKey) {
             return "play.fill"
         }
-        switch workout.sport {
+        switch displayedWorkout.sport {
         case .running: return "figure.run"
         case .cycling: return "bicycle"
         case .strength, .mobility: return "dumbbell.fill"
@@ -1447,16 +1447,40 @@ extension UnifiedWorkoutDetailView {
             creatorName: displayedWorkout.creatorName,
             createdAt: displayedWorkout.createdAt,
             canonicalId: displayedWorkout.canonicalId,
-            canonicalSource: displayedWorkout.canonicalSource
+            canonicalSource: displayedWorkout.canonicalSource,
+            sportPersisted: true
         )
         do {
-            _ = try await AppDependencies.current.apiService.saveWorkout(
-                WorkoutSaveRequest.from(workout: updated)
+            let request = WorkoutSaveRequest.from(workout: updated)
+            let saved = try await AppDependencies.current.apiService.saveWorkout(request)
+            let confirmed = Workout(
+                id: saved.id.isEmpty ? updated.id : saved.id,
+                name: saved.name.isEmpty ? updated.name : saved.name,
+                sport: saved.sport == .other ? updated.sport : saved.sport,
+                duration: saved.duration > 0 ? saved.duration : updated.duration,
+                blocks: updated.blocks.isEmpty ? saved.blocks : updated.blocks,
+                description: updated.description ?? saved.description,
+                source: updated.source,
+                sourceUrl: updated.sourceUrl ?? saved.sourceUrl,
+                creatorName: updated.creatorName ?? saved.creatorName,
+                createdAt: updated.createdAt ?? saved.createdAt,
+                canonicalId: updated.canonicalId ?? saved.canonicalId,
+                canonicalSource: updated.canonicalSource ?? saved.canonicalSource,
+                sportPersisted: true
             )
-            displayedWorkout = updated
+            displayedWorkout = confirmed
+            _ = WorkoutLibraryDetailStore.save(
+                WorkoutLibraryDetailStore.detailWorkout(saved: confirmed, request: request)
+            )
             sportDisagreementDismissed = true
+            NotificationCenter.default.post(name: .libraryContentDidChange, object: nil)
+            DDToastCenter.shared.success(
+                "Workout type updated",
+                sub: confirmed.sport.displayName
+            )
         } catch {
             handoffStatus = "Couldn't update workout type"
+            DDToastCenter.shared.error("Couldn't update workout type")
         }
     }
 }

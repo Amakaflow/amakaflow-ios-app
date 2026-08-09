@@ -40,6 +40,38 @@ enum WorkoutSportHonesty {
         "Is this a \(stored.displayName.lowercased()) workout?"
     }
 
+    /// Hero / type-chip pill. Title is ignored — brands like HYROX are not wire sports.
+    static func heroPill(sport: WorkoutSport, workoutName: String) -> String {
+        _ = workoutName
+        return sport.heroPill
+    }
+
+    private static let machineSymbols: [String: String] = [
+        "bike": "bicycle",
+        "row": "figure.rower",
+        "ski": "figure.skiing.crosscountry",
+        "treadmill": "figure.run",
+        "elliptical": "figure.elliptical",
+        "stair": "figure.stair.stepper",
+        "jump": "figure.jumprope"
+    ]
+
+    /// SF Symbol for a circuit/exercise row (cardio machines ≠ dumbbell).
+    static func systemImage(forExerciseName name: String) -> String {
+        let lowered = name.lowercased()
+        if let kind = machineKind(lowered), let symbol = machineSymbols[kind] {
+            return symbol
+        }
+        if matchesRun(lowered) { return "figure.run" }
+        if matches(lowered, ["swim", "freestyle", "backstroke", "breaststroke"]) {
+            return "figure.pool.swim"
+        }
+        if matches(lowered, ["stretch", "mobility", "yoga", "foam roll"]) {
+            return "figure.flexibility"
+        }
+        return "dumbbell.fill"
+    }
+
     // MARK: - Helpers
 
     private struct ContentFlags {

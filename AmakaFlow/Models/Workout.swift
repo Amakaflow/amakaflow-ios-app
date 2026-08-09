@@ -298,25 +298,34 @@ enum WorkoutSport: String, Codable, CaseIterable, Identifiable, Hashable {
 
     /// Canonical + legacy wire values. Prefer over `init(rawValue:)` (exact match only).
     static func parse(_ rawValue: String) -> WorkoutSport {
-        switch rawValue.lowercased() {
+        let token = rawValue
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+            .replacingOccurrences(of: "_", with: "")
+            .replacingOccurrences(of: "-", with: "")
+            .replacingOccurrences(of: " ", with: "")
+        switch token {
         case "running", "run":
             return .running
         case "cycling", "bike", "biking", "ride":
             return .cycling
-        case "strength", "strengthtraining", "strength_training", "weights":
+        case "strength", "strengthtraining", "traditionalstrengthtraining",
+             "functionalstrengthtraining", "weights", "coretraining":
             return .strength
-        case "conditioning", "metcon":
+        case "conditioning", "metcon", "hiit", "highintensityintervaltraining":
             return .conditioning
         case "mobility", "yoga", "stretching", "flexibility":
             return .mobility
         case "swimming", "swim":
             return .swimming
-        case "cardio":
+        case "cardio", "rowing", "elliptical", "stairclimbing", "walking":
             return .cardio
-        case "hiit":
-            return .conditioning
-        case "mixed":
+        case "mixed", "mixedcardio", "swimbikerun":
             return .mixed
+        case "other", "hyrox":
+            // "hyrox" is a race brand, not a wire sport — fall through to other
+            // so the type chip never shows a fake HYROX option.
+            return .other
         default:
             return .other
         }
@@ -328,6 +337,8 @@ struct Workout: Identifiable, Codable, Hashable {
     let id: String
     let name: String
     let sport: WorkoutSport
+    /// AMA-2393 — `true` when wire `sport` was persisted (type chip / save), not inferred.
+    let sportPersisted: Bool?
     let duration: Int // seconds
     let blocks: [Block]
     let description: String?
@@ -367,11 +378,13 @@ struct Workout: Identifiable, Codable, Hashable {
         creatorName: String? = nil,
         createdAt: Date? = nil,
         canonicalId: String? = nil,
-        canonicalSource: CanonicalSource? = nil
+        canonicalSource: CanonicalSource? = nil,
+        sportPersisted: Bool? = nil
     ) {
         self.id = id
         self.name = name
         self.sport = sport
+        self.sportPersisted = sportPersisted
         self.duration = duration
         self.blocks = blocks
         self.description = description
@@ -396,11 +409,13 @@ struct Workout: Identifiable, Codable, Hashable {
         creatorName: String? = nil,
         createdAt: Date? = nil,
         canonicalId: String? = nil,
-        canonicalSource: CanonicalSource? = nil
+        canonicalSource: CanonicalSource? = nil,
+        sportPersisted: Bool? = nil
     ) {
         self.id = id
         self.name = name
         self.sport = sport
+        self.sportPersisted = sportPersisted
         self.duration = duration
         self.blocks = Workout.blocksFromLegacyIntervals(intervals)
         self.description = description
@@ -424,6 +439,7 @@ struct Workout: Identifiable, Codable, Hashable {
         } else {
             sport = .other
         }
+        sportPersisted = try container.decodeIfPresent(Bool.self, forKey: .sportPersisted)
         duration = try container.decodeIfPresent(Int.self, forKey: .duration) ?? 0
         description = try container.decodeIfPresent(String.self, forKey: .description)
         source = try container.decodeIfPresent(WorkoutSource.self, forKey: .source) ?? .other
@@ -450,6 +466,7 @@ struct Workout: Identifiable, Codable, Hashable {
         try container.encode(id, forKey: .id)
         try container.encode(name, forKey: .name)
         try container.encode(sport, forKey: .sport)
+        try container.encodeIfPresent(sportPersisted, forKey: .sportPersisted)
         try container.encode(duration, forKey: .duration)
         try container.encode(blocks, forKey: .blocks)
         try container.encodeIfPresent(description, forKey: .description)
@@ -466,6 +483,7 @@ struct Workout: Identifiable, Codable, Hashable {
         case creatorName, creator, createdAt, pushedAt
         case canonicalId, canonicalSource
         case workoutType = "workout_type"
+        case sportPersisted = "sport_persisted"
     }
 
     /// Convert legacy flat WorkoutInterval array into Block array.

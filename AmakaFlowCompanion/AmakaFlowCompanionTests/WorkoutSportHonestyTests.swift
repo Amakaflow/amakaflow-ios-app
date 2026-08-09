@@ -197,7 +197,36 @@ final class WorkoutSportHonestyTests: XCTestCase {
         let body = try APIService.mapperSaveBody(from: request, source: "manual")
         let data = try XCTUnwrap(body["workout_data"] as? [String: Any])
         XCTAssertEqual(data["sport"] as? String, "run")
-        XCTAssertEqual(data["workout_type"] as? String, "run")
+        XCTAssertNil(data["workout_type"])
+    }
+
+    func testWorkoutKitActivityAliasesParse() {
+        XCTAssertEqual(WorkoutSport.parse("traditionalStrengthTraining"), .strength)
+        XCTAssertEqual(WorkoutSport.parse("strengthTraining"), .strength)
+        XCTAssertEqual(WorkoutSport.parse("mixedCardio"), .mixed)
+        XCTAssertEqual(WorkoutSport.parse("highIntensityIntervalTraining"), .conditioning)
+        XCTAssertEqual(WorkoutSport.parse("hyrox"), .other)
+        XCTAssertEqual(WorkoutSport.parse("HYROX"), .other)
+    }
+
+    func testExerciseRowIconsDifferentiateCardioMachines() {
+        XCTAssertEqual(WorkoutSportHonesty.systemImage(forExerciseName: "Assault Bike"), "bicycle")
+        XCTAssertEqual(WorkoutSportHonesty.systemImage(forExerciseName: "Ski Erg"), "figure.skiing.crosscountry")
+        XCTAssertEqual(WorkoutSportHonesty.systemImage(forExerciseName: "Rowing Machine"), "figure.rower")
+        XCTAssertEqual(WorkoutSportHonesty.systemImage(forExerciseName: "Back Squat"), "dumbbell.fill")
+    }
+
+    func testHeroPillNeverUsesHyroxTitleHeuristic() {
+        let pill = WorkoutSportHonesty.heroPill(
+            sport: .strength,
+            workoutName: "HYROX — Lower body work"
+        )
+        XCTAssertEqual(pill, "STRENGTH")
+        XCTAssertNotEqual(pill, "HYROX")
+        XCTAssertEqual(
+            WorkoutSportHonesty.heroPill(sport: .conditioning, workoutName: "Hyrox workout"),
+            "CONDITIONING"
+        )
     }
 
     func testSaveRequestEncodesCanonicalSport() throws {
@@ -226,6 +255,6 @@ final class WorkoutSportHonestyTests: XCTestCase {
         let body = try APIService.mapperSaveBody(from: request, source: "manual")
         let data = try XCTUnwrap(body["workout_data"] as? [String: Any])
         XCTAssertEqual(data["sport"] as? String, "conditioning")
-        XCTAssertEqual(data["workout_type"] as? String, "conditioning")
+        XCTAssertNil(data["workout_type"])
     }
 }
