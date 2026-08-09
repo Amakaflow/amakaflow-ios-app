@@ -214,6 +214,7 @@
 		AMA2386REPLBLD /* WatchItemReplaceCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2386REPLREF /* WatchItemReplaceCoordinator.swift */; };
 		AMA2389MDLBLD /* FriendsSharingModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2389MDLREF /* FriendsSharingModels.swift */; };
 		AMA2389PRVBLD /* FriendsSharingProviding.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2389PRVREF /* FriendsSharingProviding.swift */; };
+		AMA2390BFFBLD /* BFFFriendsSharingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2390BFFREF /* BFFFriendsSharingService.swift */; };
 		AMA2389MEMBLD /* InMemoryFriendsSharingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2389MEMREF /* InMemoryFriendsSharingService.swift */; };
 		AMA2389SEEDBLD /* InMemoryFriendsSharingService+DemoSeed.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2389SEEDREF /* InMemoryFriendsSharingService+DemoSeed.swift */; };
 		AMA2389LINBLD /* WorkoutLineageStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2389LINREF /* WorkoutLineageStore.swift */; };
@@ -940,6 +941,7 @@
 		AMA2386REPLREF /* WatchItemReplaceCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WatchItemReplaceCoordinator.swift; path = ../AmakaFlow/Services/WatchItemReplaceCoordinator.swift; sourceTree = SOURCE_ROOT; };
 		AMA2389MDLREF /* FriendsSharingModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FriendsSharingModels.swift; path = ../AmakaFlow/Models/FriendsSharingModels.swift; sourceTree = SOURCE_ROOT; };
 		AMA2389PRVREF /* FriendsSharingProviding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FriendsSharingProviding.swift; path = ../AmakaFlow/Services/FriendsSharingProviding.swift; sourceTree = SOURCE_ROOT; };
+		AMA2390BFFREF /* BFFFriendsSharingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = BFFFriendsSharingService.swift; path = ../AmakaFlow/Services/BFFFriendsSharingService.swift; sourceTree = SOURCE_ROOT; };
 		AMA2389MEMREF /* InMemoryFriendsSharingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = InMemoryFriendsSharingService.swift; path = ../AmakaFlow/Services/InMemoryFriendsSharingService.swift; sourceTree = SOURCE_ROOT; };
 		AMA2389SEEDREF /* InMemoryFriendsSharingService+DemoSeed.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "InMemoryFriendsSharingService+DemoSeed.swift"; path = "../AmakaFlow/Services/InMemoryFriendsSharingService+DemoSeed.swift"; sourceTree = SOURCE_ROOT; };
 		AMA2389LINREF /* WorkoutLineageStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutLineageStore.swift; path = ../AmakaFlow/Services/WorkoutLineageStore.swift; sourceTree = SOURCE_ROOT; };
@@ -1624,6 +1626,7 @@
 				AMA2375DEMOREF /* OnYourWatchesDemoSupport.swift */,
 				AMA2386REPLREF /* WatchItemReplaceCoordinator.swift */,
 				AMA2389PRVREF /* FriendsSharingProviding.swift */,
+				AMA2390BFFREF /* BFFFriendsSharingService.swift */,
 				AMA2389MEMREF /* InMemoryFriendsSharingService.swift */,
 				AMA2389SEEDREF /* InMemoryFriendsSharingService+DemoSeed.swift */,
 				AMA2389LINREF /* WorkoutLineageStore.swift */,
@@ -2980,6 +2983,7 @@
 				AMA2386REPLBLD /* WatchItemReplaceCoordinator.swift in Sources */,
 				AMA2389MDLBLD /* FriendsSharingModels.swift in Sources */,
 				AMA2389PRVBLD /* FriendsSharingProviding.swift in Sources */,
+				AMA2390BFFBLD /* BFFFriendsSharingService.swift in Sources */,
 				AMA2389MEMBLD /* InMemoryFriendsSharingService.swift in Sources */,
 				AMA2389SEEDBLD /* InMemoryFriendsSharingService+DemoSeed.swift in Sources */,
 				AMA2389LINBLD /* WorkoutLineageStore.swift in Sources */,
