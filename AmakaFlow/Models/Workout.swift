@@ -2,6 +2,8 @@
 //  Workout.swift
 //  AmakaFlow
 //
+// swiftlint:disable file_length
+
 //  Data models matching TypeScript implementation
 //
 

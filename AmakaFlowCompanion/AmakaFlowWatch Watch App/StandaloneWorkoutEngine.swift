@@ -2,6 +2,8 @@
 //  StandaloneWorkoutEngine.swift
 //  AmakaFlowWatch Watch App
 //
+// swiftlint:disable file_length type_body_length
+
 //  Workout execution engine for standalone watch workouts with HealthKit integration
 //
 

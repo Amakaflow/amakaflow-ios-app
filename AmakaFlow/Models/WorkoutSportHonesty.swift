@@ -20,35 +20,13 @@ enum WorkoutSportHonesty {
             return .conditioning
         }
 
-        var hasLift = false
-        var hasCardio = false
-        var hasRun = false
-        var hasMobility = false
-        var hasSwim = false
-        var machineKinds = Set<String>()
-
+        var flags = ContentFlags()
         for block in work {
             for exercise in block.exercises {
-                classifyExercise(
-                    exercise,
-                    hasLift: &hasLift,
-                    hasCardio: &hasCardio,
-                    hasRun: &hasRun,
-                    hasMobility: &hasMobility,
-                    hasSwim: &hasSwim,
-                    machineKinds: &machineKinds
-                )
+                flags.ingest(exercise)
             }
         }
-
-        return decideSport(
-            hasLift: hasLift,
-            hasCardio: hasCardio,
-            hasRun: hasRun,
-            hasMobility: hasMobility,
-            hasSwim: hasSwim,
-            machineKinds: machineKinds
-        )
+        return flags.decideSport()
     }
 
     /// True when stored sport disagrees with content inference (show chip).
@@ -63,6 +41,69 @@ enum WorkoutSportHonesty {
     }
 
     // MARK: - Helpers
+
+    private struct ContentFlags {
+        var hasLift = false
+        var hasCardio = false
+        var hasRun = false
+        var hasMobility = false
+        var hasSwim = false
+        var machineKinds = Set<String>()
+
+        mutating func ingest(_ exercise: Exercise) {
+            let name = exercise.name.lowercased()
+            if let kind = machineKind(name) {
+                hasCardio = true
+                machineKinds.insert(kind)
+                return
+            }
+            if matches(name, ["swim", "freestyle", "backstroke", "breaststroke"]) {
+                hasSwim = true
+                return
+            }
+            if matchesRun(name) {
+                hasRun = true
+                return
+            }
+            if matches(name, ["stretch", "mobility", "yoga", "foam roll", "spinal", "spine"]) {
+                hasMobility = true
+                return
+            }
+            if exercise.sets != nil || exercise.reps != nil || matches(
+                name,
+                ["barbell", "dumbbell", "squat", "deadlift", "press", "curl", "lunge", "burpee"]
+            ) {
+                hasLift = true
+            }
+        }
+
+        func decideSport() -> WorkoutSport? {
+            if hasMobility && !hasLift && !hasCardio && !hasRun && !hasSwim {
+                return .mobility
+            }
+            if hasSwim && !hasLift && !hasCardio && !hasRun {
+                return .swimming
+            }
+            if hasRun && !hasLift && !hasCardio {
+                return .running
+            }
+            if hasCardio && !hasLift {
+                if machineKinds.count >= 2 {
+                    return .mixed
+                }
+                if machineKinds.contains("bike") { return .cycling }
+                if machineKinds.contains("treadmill") { return .running }
+                return .conditioning
+            }
+            if hasLift && hasCardio {
+                return .conditioning
+            }
+            if hasLift {
+                return .strength
+            }
+            return nil
+        }
+    }
 
     private static func isIntervalStructure(_ block: Block) -> Bool {
         switch block.structure {
@@ -84,75 +125,6 @@ enum WorkoutSportHonesty {
                 ["barbell", "dumbbell", "squat", "deadlift", "press", "curl", "lunge", "burpee"]
             )
         }
-    }
-
-    private static func classifyExercise(
-        _ exercise: Exercise,
-        hasLift: inout Bool,
-        hasCardio: inout Bool,
-        hasRun: inout Bool,
-        hasMobility: inout Bool,
-        hasSwim: inout Bool,
-        machineKinds: inout Set<String>
-    ) {
-        let name = exercise.name.lowercased()
-        if let kind = machineKind(name) {
-            hasCardio = true
-            machineKinds.insert(kind)
-            return
-        }
-        if matches(name, ["swim", "freestyle", "backstroke", "breaststroke"]) {
-            hasSwim = true
-            return
-        }
-        if matchesRun(name) {
-            hasRun = true
-            return
-        }
-        if matches(name, ["stretch", "mobility", "yoga", "foam roll"]) {
-            hasMobility = true
-            return
-        }
-        if exercise.sets != nil || exercise.reps != nil || matches(
-            name,
-            ["barbell", "dumbbell", "squat", "deadlift", "press", "curl", "lunge", "burpee"]
-        ) {
-            hasLift = true
-        }
-    }
-
-    private static func decideSport(
-        hasLift: Bool,
-        hasCardio: Bool,
-        hasRun: Bool,
-        hasMobility: Bool,
-        hasSwim: Bool,
-        machineKinds: Set<String>
-    ) -> WorkoutSport? {
-        if hasMobility && !hasLift && !hasCardio && !hasRun && !hasSwim {
-            return .mobility
-        }
-        if hasSwim && !hasLift && !hasCardio && !hasRun {
-            return .swimming
-        }
-        if hasRun && !hasLift && !hasCardio {
-            return .running
-        }
-        if hasCardio && !hasLift {
-            if machineKinds.count >= 2 {
-                return .mixed
-            }
-            if machineKinds.contains("bike") { return .cycling }
-            if machineKinds.contains("treadmill") { return .running }
-            return .conditioning
-        }
-        if hasLift && hasCardio {
-            return .conditioning
-        }
-        if hasLift {
-            return .strength
-        }
-        return nil
     }
 
     private static func isWarmupOrCooldown(_ block: Block) -> Bool {
