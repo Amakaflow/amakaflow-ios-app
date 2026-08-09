@@ -53,8 +53,12 @@ extension IncompleteScheduleReplacing {
            let match = rows.first(where: { $0.id.planID == keepingPlanID }) {
             return match
         }
-        let sorted = rows.sorted(by: IncompleteScheduleReplacerKeeper.isPreferredOrder)
-        return sorted.first { !excludedPlanIDs.contains($0.id.planID) } ?? sorted[0]
+        if let preferred = rows
+            .filter({ !excludedPlanIDs.contains($0.id.planID) })
+            .min(by: IncompleteScheduleReplacerKeeper.isPreferredOrder) {
+            return preferred
+        }
+        return rows.min(by: IncompleteScheduleReplacerKeeper.isPreferredOrder) ?? rows[0]
     }
 
     static func scheduleSortDate(_ row: WorkoutScheduleRow) -> Date {

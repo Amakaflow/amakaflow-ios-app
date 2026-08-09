@@ -5,6 +5,7 @@
 //  AMA-2287: WorkoutKit-primary Start → Workout on Apple Watch.
 //
 
+// swiftlint:disable file_length
 import Foundation
 import WatchConnectivity
 import WorkoutKitSync
@@ -134,7 +135,7 @@ struct LiveAppleWatchPairingReader: AppleWatchPairingReading {
 
 /// Coordinates mapper compose → preview → WorkoutKit schedule for Start → Apple.
 @MainActor
-final class AppleStartHandoffService {
+final class AppleStartHandoffService { // swiftlint:disable:this type_body_length
     private let pairingReader: any AppleWatchPairingReading
     private let workoutKitSaver: (any WorkoutKitSaving)?
     private let planProvider: (any WorkoutKitPlanProviding)?
@@ -377,9 +378,9 @@ final class AppleStartHandoffService {
                     titled: workoutName
                 )
                 let newlyAppeared = afterSave.filter { !preSaveIDs.contains($0.id.planID) }
+                // `min(by:)` matches preferred-first order (same as sorted().first).
                 let savedPlanID = newlyAppeared
-                    .sorted(by: IncompleteScheduleReplacerKeeper.isPreferredOrder)
-                    .first?
+                    .min(by: IncompleteScheduleReplacerKeeper.isPreferredOrder)?
                     .id.planID
                 try await incompleteScheduleReplacer.removeDuplicateIncompletePlans(
                     titled: workoutName,
