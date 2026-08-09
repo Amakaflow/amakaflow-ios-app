@@ -69,6 +69,16 @@ struct StravaSyncCompletedResultDTO: Codable, Equatable, Sendable {
     }
 }
 
+private struct BFFStravaSyncCompletedBody: Encodable {
+    let userId: String
+    let daysBack: Int
+
+    enum CodingKeys: String, CodingKey {
+        case userId = "user_id"
+        case daysBack = "days_back"
+    }
+}
+
 /// Production adapter for mobile-BFF `/v1/strava/*` (UPSTREAM_ROUTES).
 nonisolated final class BFFStravaClient: @unchecked Sendable {
     typealias BearerTokenProvider = @Sendable () async throws -> String?
@@ -122,7 +132,7 @@ nonisolated final class BFFStravaClient: @unchecked Sendable {
     /// POST `/v1/strava/sync-completed` — 30-day backfill on connect by default.
     func syncCompleted(daysBack: Int = 30) async throws -> StravaSyncCompletedResultDTO {
         let userId = try await requireUserID()
-        let body = SyncCompletedBody(userId: userId, daysBack: daysBack)
+        let body = BFFStravaSyncCompletedBody(userId: userId, daysBack: daysBack)
         let bodyData = try JSONEncoder().encode(body)
         return try await send(
             method: "POST",
@@ -133,16 +143,6 @@ nonisolated final class BFFStravaClient: @unchecked Sendable {
     }
 
     // MARK: - Private
-
-    private struct SyncCompletedBody: Encodable {
-        let userId: String
-        let daysBack: Int
-
-        enum CodingKeys: String, CodingKey {
-            case userId = "user_id"
-            case daysBack = "days_back"
-        }
-    }
 
     private func requireUserID() async throws -> String {
         guard let userId = try await userIDProvider(), !userId.isEmpty else {

@@ -27,7 +27,7 @@ enum StravaOAuthCallback {
         guard mentionsConnected else { return .failed }
 
         let status = components?.queryItems?
-            .first(where: { $0.name.lowercased() == "status" })?
+            .first { $0.name.lowercased() == "status" }?
             .value?
             .lowercased()
 
