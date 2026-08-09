@@ -423,7 +423,7 @@ struct WorkoutsView: View {
         case .strength: return "dumbbell.fill"
         case .mobility: return "figure.yoga"
         case .swimming: return "figure.pool.swim"
-        case .cardio: return "heart.fill"
+        case .cardio, .conditioning, .mixed: return "heart.fill"
         case .other: return "flag.fill"
         }
     }

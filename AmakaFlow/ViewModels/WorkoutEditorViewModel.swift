@@ -37,15 +37,9 @@ class WorkoutEditorViewModel: ObservableObject {
     private let preservedCreatorName: String?
 
     /// All sport types available in the picker
-    static let sportOptions: [(WorkoutSport, String)] = [
-        (.strength, "Strength"),
-        (.running, "Running"),
-        (.cycling, "Cycling"),
-        (.cardio, "HIIT / Cardio"),
-        (.mobility, "Yoga / Mobility"),
-        (.swimming, "Swimming"),
-        (.other, "Other")
-    ]
+    static let sportOptions: [(WorkoutSport, String)] = WorkoutSport.pickerOptions.map {
+        ($0, $0.displayName)
+    }
 
     // MARK: - Init
 

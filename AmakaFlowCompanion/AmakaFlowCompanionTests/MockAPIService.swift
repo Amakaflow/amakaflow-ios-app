@@ -520,7 +520,7 @@ class MockAPIService: APIServiceProviding {
         return Workout(
             id: "mock-saved-\(UUID().uuidString)",
             name: request.name,
-            sport: WorkoutSport(rawValue: request.sport) ?? .strength,
+            sport: WorkoutSport.parse(request.sport),
             duration: 1800,
             intervals: [],
             source: source,

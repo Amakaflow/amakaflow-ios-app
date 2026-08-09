@@ -164,7 +164,7 @@ private struct SportButton: View {
         case .strength: return "dumbbell.fill"
         case .mobility: return "figure.flexibility"
         case .swimming: return "figure.pool.swim"
-        case .cardio: return "heart.fill"
+        case .cardio, .conditioning, .mixed: return "heart.fill"
         case .other: return "sportscourt"
         }
     }

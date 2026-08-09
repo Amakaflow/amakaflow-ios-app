@@ -475,7 +475,7 @@ class SuggestWorkoutViewModel: ObservableObject {
 
         return Workout(
             name: response.name ?? "AI Suggested Workout",
-            sport: response.sport.flatMap(WorkoutSport.init(rawValue:)) ?? .strength,
+            sport: response.sport.map(WorkoutSport.parse) ?? .strength,
             duration: response.durationSeconds ?? intervals.reduce(0) { total, interval in
                 switch interval {
                 case .warmup(let seconds, _), .cooldown(let seconds, _), .time(let seconds, _):

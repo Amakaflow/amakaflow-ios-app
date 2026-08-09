@@ -73,7 +73,7 @@ struct WatchWorkoutRow: View {
         case .strength: return "dumbbell.fill"
         case .mobility: return "figure.yoga"
         case .swimming: return "figure.pool.swim"
-        case .cardio: return "figure.mixed.cardio"
+        case .cardio, .conditioning, .mixed: return "figure.mixed.cardio"
         case .other: return "figure.elliptical"
         }
     }

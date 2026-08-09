@@ -328,7 +328,7 @@ struct SocialImportDraft: Equatable {
             ? [Block(label: "Main block", structure: .straight, rounds: 1, exercises: exercises.map { $0.toExercise() })]
             : mappedBlocks
         let source = WorkoutSource(rawValue: platform.workoutSourceRawValue) ?? .other
-        let resolvedSport = WorkoutSport(rawValue: sport) ?? .strength
+        let resolvedSport = WorkoutSport.parse(sport)
         return Workout(
             id: "draft-\(UUID().uuidString)",
             name: title,

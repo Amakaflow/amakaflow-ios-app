@@ -7,6 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		AMA2393HONBLD /* WorkoutSportHonesty.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2393HONREF /* WorkoutSportHonesty.swift */; };
+		AMA2393PICKBLD /* WorkoutSportPickerSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2393PICKREF /* WorkoutSportPickerSheet.swift */; };
+		AMA2393TSTBLD /* WorkoutSportHonestyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2393TSTREF /* WorkoutSportHonestyTests.swift */; };
 		00CBD8759EE7C769D1D7F82B /* AgentInboxView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3EB7457100F5C1B6E4488558 /* AgentInboxView.swift */; };
 		056DCE6864994871816A3AF9 /* OpenAPIRuntime in Frameworks */ = {isa = PBXBuildFile; productRef = 5428DFDDAABA4C78929FAD58 /* OpenAPIRuntime */; };
 		0B82E5ED1C34442389BC7768 /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = 2F0C8DCE03694CF3A60D12F9 /* Sentry */; };
@@ -761,6 +764,9 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		AMA2393HONREF /* WorkoutSportHonesty.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutSportHonesty.swift; path = ../AmakaFlow/Models/WorkoutSportHonesty.swift; sourceTree = SOURCE_ROOT; };
+		AMA2393PICKREF /* WorkoutSportPickerSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutSportPickerSheet.swift; path = ../AmakaFlow/Views/WorkoutSportPickerSheet.swift; sourceTree = SOURCE_ROOT; };
+		AMA2393TSTREF /* WorkoutSportHonestyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutSportHonestyTests.swift; path = AmakaFlowCompanionTests/WorkoutSportHonestyTests.swift; sourceTree = "<group>"; };
 		0590FA2DB2E16FC868D6F303 /* SyncDashboardView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = SyncDashboardView.swift; path = ../AmakaFlow/Views/Settings/SyncDashboardView.swift; sourceTree = "<group>"; };
 		08D9B67C13E34BAE804A9359 /* HistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = HistoryView.swift; path = ../AmakaFlow/Views/HistoryView.swift; sourceTree = SOURCE_ROOT; };
 		0949526387D9FA932B940DF3 /* TrainingPreferencesViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = TrainingPreferencesViewModel.swift; path = ../AmakaFlow/ViewModels/TrainingPreferencesViewModel.swift; sourceTree = "<group>"; };
@@ -1748,6 +1754,7 @@
 				AMA2292DDFLOW00000A /* CreateFlowPresentation.swift */,
 				AMA2005LIBDVIEW0000A /* LibraryDetailView.swift */,
 				AMA2291UNIDETREF /* UnifiedWorkoutDetailView.swift */,
+				AMA2393PICKREF /* WorkoutSportPickerSheet.swift */,
 				AMA2312INFOREF /* DDExerciseInfoView.swift */,
 				AMA2293DDACT00000A /* DDActivityDetailView.swift */,
 				AMA2293DDPLAY00000A /* DDActivePlayerView.swift */,
@@ -1804,6 +1811,7 @@
 				F84E22772ED0D59B00459747 /* WorkoutsView.swift */,
 				F84E22732ED0D58300459747 /* WorkoutsViewModel.swift */,
 				F84E22712ED0D56C00459747 /* Workout.swift */,
+				AMA2393HONREF /* WorkoutSportHonesty.swift */,
 				AMA2389MDLREF /* FriendsSharingModels.swift */,
 				89321AF9D21D441198437105 /* DevicePreference.swift */,
 				BL0CK5W1FT00000001 /* Block.swift */,
@@ -2239,6 +2247,7 @@
 				AMA2386REPLTREF /* WatchItemReplaceCoordinatorTests.swift */,
 				AMA2387STORETREF /* ActualsSourceConnectionStoreTests.swift */,
 				AMA2387TEACHTREF /* ActualsTeachCardVisibilityTests.swift */,
+				AMA2393TSTREF /* WorkoutSportHonestyTests.swift */,
 				AMA2387CONNTREF /* ActualsConnectSourcesCopyTests.swift */,
 				AMA2387HKTREF /* ActualsAppleHealthConnectTests.swift */,
 				AMA2387AUTHTREF /* ActualsProviderAuthTests.swift */,
@@ -2752,6 +2761,8 @@
 				AMA14100005BLDFILE /* StageIndicator.swift in Sources */,
 				F84E22702ED0D55600459747 /* Theme.swift in Sources */,
 				F84E22722ED0D56C00459747 /* Workout.swift in Sources */,
+				AMA2393HONBLD /* WorkoutSportHonesty.swift in Sources */,
+				AMA2393PICKBLD /* WorkoutSportPickerSheet.swift in Sources */,
 				AMA2373COPYBLD /* CreateWithAICopy.swift in Sources */,
 				AMA2373PRESBLD /* CreateWithAIDraftPresentation.swift in Sources */,
 				AMA2373GENVBLD /* CreateWithAIGeneratingView.swift in Sources */,
@@ -3225,6 +3236,7 @@
 				AMA2386REPLTBLD /* WatchItemReplaceCoordinatorTests.swift in Sources */,
 				AMA2387STORETBLD /* ActualsSourceConnectionStoreTests.swift in Sources */,
 				AMA2387TEACHTBLD /* ActualsTeachCardVisibilityTests.swift in Sources */,
+				AMA2393TSTBLD /* WorkoutSportHonestyTests.swift in Sources */,
 				AMA2387CONNTBLD /* ActualsConnectSourcesCopyTests.swift in Sources */,
 				AMA2387HKTBLD /* ActualsAppleHealthConnectTests.swift in Sources */,
 				AMA2387AUTHTBLD /* ActualsProviderAuthTests.swift in Sources */,

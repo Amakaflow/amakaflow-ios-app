@@ -126,7 +126,7 @@ extension APIService {
     ) -> [String: Any] {
         let allowed: Set<String> = [
             "title", "description", "duration", "duration_minutes",
-            "type", "workout_type", "blocks", "intervals", "metadata"
+            "type", "workout_type", "sport", "blocks", "intervals", "metadata"
         ]
         var sanitized = workoutData.filter { allowed.contains($0.key) }
         sanitized["title"] = title

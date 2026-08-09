@@ -56,6 +56,10 @@ struct UnifiedWorkoutDetailView: View {
     @State private var isDeleting = false
     /// AMA-2373: guards `autoStartOnAppear` so it only fires once per presentation.
     @State private var hasAutoStarted = false
+    /// AMA-2393 — editable type chip + quiet disagreement prompt.
+    @State private var showingSportPicker = false
+    @State private var sportDisagreementDismissed = false
+    @State private var isSavingSport = false
 
     @Environment(\.scenePhase) private var scenePhase
     private let handoffStore = GarminHandoffStateStore()
@@ -244,6 +248,21 @@ struct UnifiedWorkoutDetailView: View {
             }
             }
         )
+        .sheet(isPresented: $showingSportPicker) {
+            WorkoutSportPickerSheet(
+                selected: displayedWorkout.sport,
+                footnote: "Changes how watches record it.",
+                onSelect: { sport in
+                    showingSportPicker = false
+                    Task { await applySportSelection(sport) }
+                },
+                onCancel: {
+                    sportDisagreementDismissed = true
+                    showingSportPicker = false
+                }
+            )
+            .presentationDetents([.medium])
+        }
         .sheet(isPresented: $showingGarminPairing) {
             NavigationStack {
                 DevicesView()
@@ -360,21 +379,58 @@ struct UnifiedWorkoutDetailView: View {
 
                 Spacer()
 
-                HStack(spacing: 7) {
-                    ForEach(heroPills, id: \.self) { pill in
-                        Text(pill)
-                            .font(.system(size: 8.5, weight: .medium, design: .monospaced))
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack(spacing: 7) {
+                        ForEach(heroPillsExceptSport, id: \.self) { pill in
+                            Text(pill)
+                                .font(.system(size: 8.5, weight: .medium, design: .monospaced))
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 9)
+                                .padding(.vertical, 4)
+                                .background(Color.black.opacity(0.5))
+                                .clipShape(Capsule())
+                        }
+                        Button {
+                            showingSportPicker = true
+                        } label: {
+                            HStack(spacing: 4) {
+                                Text(sportHeroPill)
+                                    .font(.system(size: 8.5, weight: .medium, design: .monospaced))
+                                Image(systemName: "chevron.down")
+                                    .font(.system(size: 7, weight: .bold))
+                            }
                             .foregroundColor(.white)
                             .padding(.horizontal, 9)
                             .padding(.vertical, 4)
                             .background(Color.black.opacity(0.5))
                             .clipShape(Capsule())
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(isSavingSport)
+                        .accessibilityLabel("Workout type, \(displayedWorkout.sport.displayName)")
+                        .accessibilityHint("Changes how watches record it")
+                        .accessibilityIdentifier("af_workout_detail_sport_chip")
+                    }
+
+                    if showSportDisagreementChip {
+                        Button {
+                            showingSportPicker = true
+                        } label: {
+                            Text(WorkoutSportHonesty.disagreementPrompt(stored: displayedWorkout.sport))
+                                .font(.system(size: 10, weight: .medium))
+                                .foregroundColor(.white.opacity(0.9))
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 5)
+                                .background(Color.white.opacity(0.12))
+                                .clipShape(Capsule())
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityIdentifier("af_workout_detail_sport_disagreement")
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 16)
                 .padding(.bottom, 12)
-                .accessibilityHidden(true)
             }
         }
         .frame(height: 190)
@@ -706,6 +762,10 @@ extension UnifiedWorkoutDetailView {
     }
 
     fileprivate var heroPills: [String] {
+        heroPillsExceptSport + [sportHeroPill]
+    }
+
+    fileprivate var heroPillsExceptSport: [String] {
         var pills: [String] = [sourceHeroPill]
 
         if workout.exerciseCount > 0 {
@@ -720,9 +780,12 @@ extension UnifiedWorkoutDetailView {
         } else {
             pills.append(ddHeroDurationLabel)
         }
-
-        pills.append(sportHeroPill)
         return pills
+    }
+
+    fileprivate var showSportDisagreementChip: Bool {
+        guard importContext == nil, !sportDisagreementDismissed else { return false }
+        return WorkoutSportHonesty.disagrees(stored: displayedWorkout.sport, blocks: displayedWorkout.blocks)
     }
 
     fileprivate var ddHeroDurationLabel: String {
@@ -798,15 +861,7 @@ extension UnifiedWorkoutDetailView {
         if workout.name.localizedCaseInsensitiveContains("hyrox") {
             return "HYROX"
         }
-        switch workout.sport {
-        case .strength: return "STRENGTH"
-        case .running: return "RUN"
-        case .cycling: return "RIDE"
-        case .cardio: return "HIIT"
-        case .mobility: return "MOBILITY"
-        case .swimming: return "SWIM"
-        case .other: return "WORKOUT"
-        }
+        return displayedWorkout.sport.heroPill
     }
 
     fileprivate var heroGradientColors: [Color] {
@@ -823,7 +878,7 @@ extension UnifiedWorkoutDetailView {
             switch workout.sport {
             case .running, .cycling, .swimming:
                 return [Color(hex: "0D2438"), Color(hex: "071522"), Color(hex: "0A0A0B")]
-            case .cardio:
+            case .cardio, .conditioning, .mixed:
                 return [Color(hex: "2A3505"), Color(hex: "141B03"), Color(hex: "0A0A0B")]
             default:
                 return [Color(hex: "2A3505"), Color(hex: "141B03"), Color(hex: "0A0A0B")]
@@ -840,7 +895,7 @@ extension UnifiedWorkoutDetailView {
         case .cycling: return "bicycle"
         case .strength, .mobility: return "dumbbell.fill"
         case .swimming: return "figure.pool.swim"
-        case .cardio: return "flame.fill"
+        case .cardio, .conditioning, .mixed: return "flame.fill"
         case .other: return "dumbbell.fill"
         }
     }
@@ -1368,6 +1423,41 @@ extension UnifiedWorkoutDetailView {
             creatorName: displayedWorkout.creatorName,
             createdAt: displayedWorkout.createdAt
         )
+    }
+
+    /// AMA-2393 — persist explicit sport from the type chip (never silent rewrite).
+    @MainActor
+    fileprivate func applySportSelection(_ sport: WorkoutSport) async {
+        guard !isSavingSport else { return }
+        guard sport != displayedWorkout.sport else {
+            sportDisagreementDismissed = true
+            return
+        }
+        isSavingSport = true
+        defer { isSavingSport = false }
+        let updated = Workout(
+            id: displayedWorkout.id,
+            name: displayedWorkout.name,
+            sport: sport,
+            duration: displayedWorkout.duration,
+            blocks: displayedWorkout.blocks,
+            description: displayedWorkout.description,
+            source: displayedWorkout.source,
+            sourceUrl: displayedWorkout.sourceUrl,
+            creatorName: displayedWorkout.creatorName,
+            createdAt: displayedWorkout.createdAt,
+            canonicalId: displayedWorkout.canonicalId,
+            canonicalSource: displayedWorkout.canonicalSource
+        )
+        do {
+            _ = try await AppDependencies.current.apiService.saveWorkout(
+                WorkoutSaveRequest.from(workout: updated)
+            )
+            displayedWorkout = updated
+            sportDisagreementDismissed = true
+        } catch {
+            handoffStatus = "Couldn't update workout type"
+        }
     }
 }
 

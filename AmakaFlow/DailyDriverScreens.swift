@@ -595,7 +595,7 @@ enum DDLibraryPresentation {
         case .strength: return "dumbbell.fill"
         case .mobility: return "figure.flexibility"
         case .swimming: return "figure.pool.swim"
-        case .cardio: return "flame.fill"
+        case .cardio, .conditioning, .mixed: return "flame.fill"
         case .other: return "bolt.fill"
         }
     }

@@ -5,6 +5,8 @@
 //  Workout execution engine for standalone watch workouts with HealthKit integration
 //
 
+// swiftlint:disable file_length
+
 import Combine
 import Foundation
 import HealthKit
@@ -12,6 +14,7 @@ import WatchConnectivity
 import WatchKit
 
 @MainActor
+// swiftlint:disable:next type_body_length
 final class StandaloneWorkoutEngine: ObservableObject {
     static let shared = StandaloneWorkoutEngine()
 
@@ -438,8 +441,10 @@ final class StandaloneWorkoutEngine: ObservableObject {
             return .yoga
         case .swimming:
             return .swimming
-        case .cardio:
+        case .cardio, .mixed:
             return .mixedCardio
+        case .conditioning:
+            return .highIntensityIntervalTraining
         case .other:
             return .other
         }

@@ -2,6 +2,8 @@
 //  Workout.swift
 //  AmakaFlow
 //
+// swiftlint:disable file_length
+
 //  Data models matching TypeScript implementation
 //
 
@@ -233,35 +235,90 @@ struct WorkoutSourceProvenance: Equatable {
 }
 
 // MARK: - Workout Sport Type
-enum WorkoutSport: String, Codable {
-    case running
-    case cycling
+/// App-level sport label (AMA-2393). Canonical wire values match mapper
+/// `WorkoutSport`; aliases decode for older payloads.
+enum WorkoutSport: String, Codable, CaseIterable, Identifiable, Hashable {
     case strength
-    case mobility
-    case swimming
+    case conditioning
     case cardio
+    case running = "run"
+    case cycling = "ride"
+    case swimming = "swim"
+    case mobility
+    case mixed
     case other
+
+    var id: String { rawValue }
+
+    /// Hero / picker label.
+    var displayName: String {
+        switch self {
+        case .strength: return "Strength"
+        case .conditioning: return "Conditioning"
+        case .cardio: return "Cardio"
+        case .running: return "Run"
+        case .cycling: return "Ride"
+        case .swimming: return "Swim"
+        case .mobility: return "Mobility"
+        case .mixed: return "Mixed"
+        case .other: return "Other"
+        }
+    }
+
+    /// Mono hero pill token.
+    var heroPill: String {
+        switch self {
+        case .strength: return "STRENGTH"
+        case .conditioning: return "CONDITIONING"
+        case .cardio: return "CARDIO"
+        case .running: return "RUN"
+        case .cycling: return "RIDE"
+        case .swimming: return "SWIM"
+        case .mobility: return "MOBILITY"
+        case .mixed: return "MIXED"
+        case .other: return "WORKOUT"
+        }
+    }
+
+    /// Choices offered by the editable type chip sheet.
+    static var pickerOptions: [WorkoutSport] {
+        [.strength, .conditioning, .cardio, .running, .cycling, .swimming, .mobility, .mixed]
+    }
 
     init(from decoder: Decoder) throws {
         let container = try decoder.singleValueContainer()
         let rawValue = try container.decode(String.self)
+        self = Self.parse(rawValue)
+    }
 
-        // Handle alternative values from backend
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(rawValue)
+    }
+
+    /// Canonical + legacy wire values. Prefer over `init(rawValue:)` (exact match only).
+    static func parse(_ rawValue: String) -> WorkoutSport {
         switch rawValue.lowercased() {
         case "running", "run":
-            self = .running
-        case "cycling", "bike", "biking":
-            self = .cycling
+            return .running
+        case "cycling", "bike", "biking", "ride":
+            return .cycling
         case "strength", "strengthtraining", "strength_training", "weights":
-            self = .strength
+            return .strength
+        case "conditioning", "metcon":
+            return .conditioning
         case "mobility", "yoga", "stretching", "flexibility":
-            self = .mobility
+            return .mobility
         case "swimming", "swim":
-            self = .swimming
-        case "cardio", "hiit":
-            self = .cardio
+            return .swimming
+        case "cardio":
+            return .cardio
+        case "hiit":
+            return .conditioning
+        case "mixed":
+            return .mixed
         default:
-            self = .other
+            return .other
         }
     }
 }
@@ -360,7 +417,13 @@ struct Workout: Identifiable, Codable, Hashable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decode(String.self, forKey: .id)
         name = try container.decode(String.self, forKey: .name)
-        sport = try container.decodeIfPresent(WorkoutSport.self, forKey: .sport) ?? .other
+        if let decoded = try container.decodeIfPresent(WorkoutSport.self, forKey: .sport) {
+            sport = decoded
+        } else if let legacy = try container.decodeIfPresent(String.self, forKey: .workoutType) {
+            sport = WorkoutSport.parse(legacy)
+        } else {
+            sport = .other
+        }
         duration = try container.decodeIfPresent(Int.self, forKey: .duration) ?? 0
         description = try container.decodeIfPresent(String.self, forKey: .description)
         source = try container.decodeIfPresent(WorkoutSource.self, forKey: .source) ?? .other
@@ -402,6 +465,7 @@ struct Workout: Identifiable, Codable, Hashable {
         case id, name, sport, duration, blocks, intervals, description, source, sourceUrl
         case creatorName, creator, createdAt, pushedAt
         case canonicalId, canonicalSource
+        case workoutType = "workout_type"
     }
 
     /// Convert legacy flat WorkoutInterval array into Block array.

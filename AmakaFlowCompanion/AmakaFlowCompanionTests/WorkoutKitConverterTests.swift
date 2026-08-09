@@ -39,8 +39,12 @@ final class WorkoutKitConverterTests: XCTestCase {
         XCTAssertEqual(converter.mapSportType(.swimming), "swimming")
     }
 
-    func testCardioMapsToMixedCardio() {
-        XCTAssertEqual(converter.mapSportType(.cardio), "mixedCardio")
+    func testCardioMapsToOtherForLocalWKPlanDTO() {
+        // AMA-2393: local WKPlanDTO SportType has no mixedCardio/HIIT wire value.
+        // Mapper `activity` remains the honesty source for Apple push + RECORDS AS.
+        XCTAssertEqual(converter.mapSportType(.cardio), "other")
+        XCTAssertEqual(converter.mapSportType(.conditioning), "other")
+        XCTAssertEqual(converter.mapSportType(.mixed), "other")
     }
 
     func testOtherMapsToOther() {
