@@ -54,9 +54,14 @@ class WorkoutsViewModel: ObservableObject { // swiftlint:disable:this type_body_
     // the Block view falls back to "all upcoming" without faking a count.
     @Published var activeBlock: TrainingBlock?
 
+    /// AMA-2394 test seam — production leaves this nil. Pending sync must never
+    /// invoke it (and must never call `WorkoutKitConverter.saveToWorkoutKit`).
+    var pendingWorkoutKitSaveSpy: ((Workout) async throws -> Void)?
+
     private let dependencies: AppDependencies
     private let calendarManager = CalendarManager()
     private var cancellables = Set<AnyCancellable>()
+    private var isCheckingPendingWorkouts = false
 
     /// Repository handles for the local-first read path (AMA-1792). Reads
     /// hydrate `incomingWorkouts` from `workout_events` (status='planned',
@@ -360,6 +365,13 @@ class WorkoutsViewModel: ObservableObject { // swiftlint:disable:this type_body_
     /// are user-initiated only (Start / Schedule from Library → confirm). The
     /// old auto `saveToWorkoutKit` path stacked duplicates with no confirm UI.
     func checkPendingWorkouts() async {
+        guard !isCheckingPendingWorkouts else {
+            print("[WorkoutsViewModel] Pending workout check already in flight — skipping")
+            return
+        }
+        isCheckingPendingWorkouts = true
+        defer { isCheckingPendingWorkouts = false }
+
         pendingWorkoutsStatus = "Checking..."
 
         guard dependencies.pairingService.isPaired else {
@@ -387,11 +399,15 @@ class WorkoutsViewModel: ObservableObject { // swiftlint:disable:this type_body_
                 .flatMap(DevicePreference.init(rawValue:))
                 ?? .appleWatchPhone
 
+            var allSyncsConfirmed = true
             for workout in pendingWorkouts {
-                await deliverPendingCompanionWorkout(workout, devicePref: devicePref)
+                let confirmed = await deliverPendingCompanionWorkout(workout, devicePref: devicePref)
+                allSyncsConfirmed = allSyncsConfirmed && confirmed
             }
 
-            pendingWorkoutsStatus = debugInfo + "\n✅ Synced!"
+            pendingWorkoutsStatus = allSyncsConfirmed
+                ? debugInfo + "\n✅ Synced!"
+                : debugInfo + "\n⚠️ Some sync confirmations failed"
             print("[WorkoutsViewModel] Finished syncing \(pendingWorkouts.count) pending workouts")
         } catch {
             pendingWorkoutsStatus = Self.pendingFetchErrorStatus(error)
@@ -400,11 +416,12 @@ class WorkoutsViewModel: ObservableObject { // swiftlint:disable:this type_body_
     }
 
     /// Companion WatchConnectivity delivery + Library list + AMA-307 confirm.
-    /// Never schedules WorkoutKit (AMA-2394).
+    /// Never schedules WorkoutKit (AMA-2394). Returns whether `confirmSync` succeeded.
+    @discardableResult
     private func deliverPendingCompanionWorkout(
         _ workout: Workout,
         devicePref: DevicePreference
-    ) async {
+    ) async -> Bool {
         if devicePref == .appleWatchPhone || devicePref == .appleWatchOnly {
             await WatchConnectivityManager.shared.sendWorkout(workout)
             print("[WorkoutsViewModel] Sent '\(workout.name)' to Watch")
@@ -414,16 +431,24 @@ class WorkoutsViewModel: ObservableObject { // swiftlint:disable:this type_body_
             )
         }
 
+        // AMA-2394: do not call WorkoutKitConverter / saveToWorkoutKit here.
+        // `pendingWorkoutKitSaveSpy` is test-only — production never invokes it.
+
         if !incomingWorkouts.contains(where: { $0.id == workout.id }) {
             incomingWorkouts.append(workout)
             print("[WorkoutsViewModel] Added '\(workout.name)' to incoming workouts")
         }
 
+        // Pending BFF items land in the in-memory incoming list for this session.
+        // Persisting via suggestion-acceptance repos is a separate local-first
+        // concern (pre-existing AMA-307 behavior) — out of scope for AMA-2394.
         do {
             try await dependencies.apiService.confirmSync(workoutId: workout.id)
             print("[WorkoutsViewModel] Confirmed sync for '\(workout.name)'")
+            return true
         } catch {
             print("[WorkoutsViewModel] Failed to confirm sync: \(error.localizedDescription)")
+            return false
         }
     }
 

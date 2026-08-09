@@ -472,8 +472,11 @@ final class AppleStartHandoffServiceTests: XCTestCase {
             meta: meta
         )
         XCTAssertEqual(result.kind, .savedToFitness)
-        // Pre-save replace lookup + AMA-2394 post-save dedupe sweep.
-        XCTAssertEqual(replacer.findCallTitles, ["Testing Apple 2", "Testing Apple 2"])
+        // Pre-save replace lookup + post-save identity resolve + sweep find.
+        XCTAssertEqual(
+            replacer.findCallTitles,
+            ["Testing Apple 2", "Testing Apple 2", "Testing Apple 2"]
+        )
         XCTAssertEqual(replacer.removedTitles, ["Testing Apple 2"])
         XCTAssertEqual(saver.saveCallCount, 1)
     }
@@ -495,7 +498,10 @@ final class AppleStartHandoffServiceTests: XCTestCase {
             meta: meta
         )
         XCTAssertEqual(result.kind, .savedToFitness)
-        XCTAssertEqual(replacer.findCallTitles, ["Testing Apple 2 (1)", "Testing Apple 2 (1)"])
+        XCTAssertEqual(
+            replacer.findCallTitles,
+            ["Testing Apple 2 (1)", "Testing Apple 2 (1)", "Testing Apple 2 (1)"]
+        )
         XCTAssertTrue(replacer.removedRows.isEmpty)
         XCTAssertEqual(saver.saveCallCount, 1)
         XCTAssertTrue(WatchWorkoutTitlePolicy.isIntentionalCopy("Testing Apple 2 (1)"))
@@ -529,7 +535,8 @@ final class AppleStartHandoffServiceTests: XCTestCase {
         )
         XCTAssertEqual(result.kind, .savedToFitness)
         XCTAssertEqual(saver.saveCallCount, 1)
-        // Pre-save replace removes `stale`; sweep keeps newest and drops `raced`.
+        // Pre-save replace removes `stale`; among newly appeared [raced, newest],
+        // keeper prefers newest schedule; `raced` is swept.
         XCTAssertEqual(
             Set(replacer.removedRows.map(\.id.planID)),
             Set(["stale", "raced"])
@@ -539,17 +546,61 @@ final class AppleStartHandoffServiceTests: XCTestCase {
         XCTAssertTrue(replacer.matchingRows.contains { $0.id.planID == "newest" })
     }
 
-    func testRemoveDuplicateIncompletePlansKeepsNewestExcludingReplacedIDs() async {
+    func testRemoveDuplicateIncompletePlansKeepsNewestExcludingReplacedIDs() async throws {
         let older = Self.incompleteRow(title: "Dup", planID: "old", hour: 9)
         let mid = Self.incompleteRow(title: "Dup", planID: "mid", hour: 10)
         let newest = Self.incompleteRow(title: "Dup", planID: "new", hour: 11)
         let replacer = MockIncompleteScheduleReplacer(matchingRows: [older, mid, newest])
-        await replacer.removeDuplicateIncompletePlans(
+        try await replacer.removeDuplicateIncompletePlans(
             titled: "Dup",
+            keepingPlanID: "new",
             excluding: ["old", "mid"]
         )
         XCTAssertEqual(Set(replacer.removedRows.map(\.id.planID)), Set(["old", "mid"]))
         XCTAssertEqual(replacer.matchingRows.map(\.id.planID), ["new"])
+    }
+
+    func testRemoveDuplicateKeepsExplicitPlanIDEvenWhenOlderSchedule() async throws {
+        let savedEarlier = Self.incompleteRow(title: "Dup", planID: "saved", hour: 10, minute: 0)
+        let racedLater = Self.incompleteRow(title: "Dup", planID: "raced", hour: 12, minute: 0)
+        let replacer = MockIncompleteScheduleReplacer(matchingRows: [savedEarlier, racedLater])
+        try await replacer.removeDuplicateIncompletePlans(
+            titled: "Dup",
+            keepingPlanID: "saved",
+            excluding: []
+        )
+        XCTAssertEqual(replacer.removedRows.map(\.id.planID), ["raced"])
+        XCTAssertEqual(replacer.matchingRows.map(\.id.planID), ["saved"])
+    }
+
+    func testConfirmScheduleSurfacesPostSaveSweepLookupFailure() async {
+        let saver = MockWorkoutKitSaver()
+        let replacer = MockIncompleteScheduleReplacer(matchingRows: [])
+        var findCount = 0
+        replacer.findSuspend = {
+            findCount += 1
+            // Pre-save find OK; post-save identity resolve fails.
+            if findCount == 2 {
+                replacer.findError = NSError(domain: "test", code: 9, userInfo: [
+                    NSLocalizedDescriptionKey: "post-save schedule fetch failed"
+                ])
+            }
+        }
+        let planJSON = StubWorkoutKitPlanProvider.strengthFixture(title: "Sweep Fail")
+        let meta = WorkoutKitPlanMeta(fromMapperJSON: planJSON)
+        let service = AppleStartHandoffService(
+            pairingReader: MockPairingReader(read: .unknown),
+            workoutKitSaver: .injected(saver),
+            incompleteScheduleReplacer: .injected(replacer)
+        )
+        let result = await service.confirmSchedule(
+            workoutName: "Sweep Fail",
+            planJSON: planJSON,
+            meta: meta
+        )
+        XCTAssertEqual(result.kind, .failed)
+        XCTAssertTrue(result.message.localizedCaseInsensitiveContains("post-save schedule fetch failed"))
+        XCTAssertEqual(saver.saveCallCount, 1)
     }
 
     func testConfirmScheduleSerializesConcurrentSameTitleConfirms() async {
@@ -606,9 +657,12 @@ final class AppleStartHandoffServiceTests: XCTestCase {
         let results = await (first, second)
         XCTAssertEqual(results.0.kind, .savedToFitness)
         XCTAssertEqual(results.1.kind, .savedToFitness)
-        // Each confirm: pre-save replace find + AMA-2394 post-save sweep find.
-        XCTAssertEqual(findEntryCount, 4)
-        XCTAssertEqual(replacer.findCallTitles, ["Race Title", "Race Title", "Race Title", "Race Title"])
+        // Each confirm: pre-save find + post-save identity find + sweep find.
+        XCTAssertEqual(findEntryCount, 6)
+        XCTAssertEqual(
+            replacer.findCallTitles,
+            Array(repeating: "Race Title", count: 6)
+        )
         XCTAssertEqual(saver.saveCallCount, 2)
     }
 

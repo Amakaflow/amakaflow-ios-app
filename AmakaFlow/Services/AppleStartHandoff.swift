@@ -363,17 +363,28 @@ final class AppleStartHandoffService {
                 }
             }
             try await workoutKitSaver.saveMapperPlanJSON(planJSON)
-            let replacedIDs = Set(replacements.map(\.id.planID))
+            let preSaveIDs = Set(replacements.map(\.id.planID))
             if let incompleteScheduleReplacer {
                 if !replacements.isEmpty {
                     await incompleteScheduleReplacer.remove(rows: replacements)
                 }
-                // AMA-2394 — sweep leftover incomplete same-title rows (races,
-                // legacy auto-sync). Keep the newest plan that is not a
-                // pre-save replacement id.
-                await incompleteScheduleReplacer.removeDuplicateIncompletePlans(
+                // Identify the plan(s) that appeared from this confirm (not in the
+                // pre-save set). Prefer that identity over schedule-time heuristics
+                // so a raced duplicate with a later date cannot displace the save.
+                // Lookup failures must surface — do not report clean success when
+                // duplicate cleanup could not run (AMA-2394 / CodeRabbit).
+                let afterSave = try await incompleteScheduleReplacer.findIncompletePlans(
+                    titled: workoutName
+                )
+                let newlyAppeared = afterSave.filter { !preSaveIDs.contains($0.id.planID) }
+                let savedPlanID = newlyAppeared
+                    .sorted(by: IncompleteScheduleReplacerKeeper.isPreferredOrder)
+                    .first?
+                    .id.planID
+                try await incompleteScheduleReplacer.removeDuplicateIncompletePlans(
                     titled: workoutName,
-                    excluding: replacedIDs
+                    keepingPlanID: savedPlanID,
+                    excluding: preSaveIDs
                 )
             }
             if let libraryWorkoutID {
@@ -381,7 +392,7 @@ final class AppleStartHandoffService {
                     workoutName: workoutName,
                     libraryWorkoutID: libraryWorkoutID,
                     planJSON: planJSON,
-                    excludedPlanIDs: replacedIDs
+                    excludedPlanIDs: preSaveIDs
                 )
             }
             return AppleStartHandoffCopy.scheduledInWorkoutMessage(
