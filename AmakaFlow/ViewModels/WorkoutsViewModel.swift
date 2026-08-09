@@ -351,7 +351,12 @@ class WorkoutsViewModel: ObservableObject {
         await WatchConnectivityManager.shared.sendWorkout(workout)
     }
 
-    /// Check for pending workouts from iOS companion endpoint and sync to Watch + WorkoutKit
+    /// Check for pending workouts from the BFF sync queue and deliver to the
+    /// AmakaFlow Watch companion (WatchConnectivity) when device prefs allow.
+    ///
+    /// AMA-2394: does **not** schedule into Apple WorkoutKit. WorkoutKit plans
+    /// are user-initiated only (Start / Schedule from Library → confirm). The
+    /// old auto `saveToWorkoutKit` path stacked duplicates with no confirm UI.
     func checkPendingWorkouts() async {
         pendingWorkoutsStatus = "Checking..."
 
@@ -392,34 +397,13 @@ class WorkoutsViewModel: ObservableObject {
             let devicePref = UserDefaults.standard.string(forKey: DefaultsKey.devicePreference.rawValue).flatMap { DevicePreference(rawValue: $0) } ?? .appleWatchPhone
 
             for workout in pendingWorkouts {
-                var syncSuccessful = true
-                var syncError: String?
-
-                // Only sync to Apple Watch if user has selected Apple Watch mode
+                // Only sync to AmakaFlow Watch companion if user has selected Apple Watch mode.
+                // Never auto-schedule WorkoutKit here (AMA-2394).
                 if devicePref == .appleWatchPhone || devicePref == .appleWatchOnly {
                     await WatchConnectivityManager.shared.sendWorkout(workout)
                     print("[WorkoutsViewModel] Sent '\(workout.name)' to Watch")
                 } else {
                     print("[WorkoutsViewModel] Skipping Watch sync for '\(workout.name)' - device preference is \(devicePref.rawValue)")
-                }
-
-                // Save to WorkoutKit (iOS 18+)
-                // Skip in test mode to avoid WorkoutKit authorization system dialog
-                #if DEBUG
-                let skipWorkoutKit = UITestEnvironment.shared.hasClerkTestUser
-                    || UITestEnvironment.shared.useFixtures
-                #else
-                let skipWorkoutKit = false
-                #endif
-                if !skipWorkoutKit, #available(iOS 18.0, *) {
-                    do {
-                        try await WorkoutKitConverter.shared.saveToWorkoutKit(workout)
-                        print("[WorkoutsViewModel] Saved '\(workout.name)' to WorkoutKit")
-                    } catch {
-                        print("[WorkoutsViewModel] Failed to save to WorkoutKit: \(error.localizedDescription)")
-                        syncSuccessful = false
-                        syncError = "WorkoutKit save failed: \(error.localizedDescription)"
-                    }
                 }
 
                 // Add to local workouts list if not already present
@@ -428,22 +412,13 @@ class WorkoutsViewModel: ObservableObject {
                     print("[WorkoutsViewModel] Added '\(workout.name)' to incoming workouts")
                 }
 
-                // Confirm or report sync status to backend (AMA-307)
-                if syncSuccessful {
-                    do {
-                        try await dependencies.apiService.confirmSync(workoutId: workout.id)
-                        print("[WorkoutsViewModel] Confirmed sync for '\(workout.name)'")
-                    } catch {
-                        print("[WorkoutsViewModel] Failed to confirm sync: \(error.localizedDescription)")
-                        // Non-fatal - workout was still synced locally
-                    }
-                } else if let error = syncError {
-                    do {
-                        try await dependencies.apiService.reportSyncFailed(workoutId: workout.id, error: error)
-                        print("[WorkoutsViewModel] Reported sync failure for '\(workout.name)'")
-                    } catch {
-                        print("[WorkoutsViewModel] Failed to report sync failure: \(error.localizedDescription)")
-                    }
+                // Confirm sync status to backend (AMA-307) — companion delivery only.
+                do {
+                    try await dependencies.apiService.confirmSync(workoutId: workout.id)
+                    print("[WorkoutsViewModel] Confirmed sync for '\(workout.name)'")
+                } catch {
+                    print("[WorkoutsViewModel] Failed to confirm sync: \(error.localizedDescription)")
+                    // Non-fatal - workout was still synced locally
                 }
             }
 

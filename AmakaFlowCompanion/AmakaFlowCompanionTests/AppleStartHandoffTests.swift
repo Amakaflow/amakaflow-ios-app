@@ -472,7 +472,8 @@ final class AppleStartHandoffServiceTests: XCTestCase {
             meta: meta
         )
         XCTAssertEqual(result.kind, .savedToFitness)
-        XCTAssertEqual(replacer.findCallTitles, ["Testing Apple 2"])
+        // Pre-save replace lookup + AMA-2394 post-save dedupe sweep.
+        XCTAssertEqual(replacer.findCallTitles, ["Testing Apple 2", "Testing Apple 2"])
         XCTAssertEqual(replacer.removedTitles, ["Testing Apple 2"])
         XCTAssertEqual(saver.saveCallCount, 1)
     }
@@ -494,13 +495,61 @@ final class AppleStartHandoffServiceTests: XCTestCase {
             meta: meta
         )
         XCTAssertEqual(result.kind, .savedToFitness)
-        XCTAssertEqual(replacer.findCallTitles, ["Testing Apple 2 (1)"])
+        XCTAssertEqual(replacer.findCallTitles, ["Testing Apple 2 (1)", "Testing Apple 2 (1)"])
         XCTAssertTrue(replacer.removedRows.isEmpty)
         XCTAssertEqual(saver.saveCallCount, 1)
         XCTAssertTrue(WatchWorkoutTitlePolicy.isIntentionalCopy("Testing Apple 2 (1)"))
         XCTAssertFalse(
             WatchWorkoutTitlePolicy.isSameScheduledTitle("Testing Apple 2", "Testing Apple 2 (1)")
         )
+    }
+
+    func testConfirmScheduleSweepsLeftoverSameTitleDuplicates() async {
+        let saver = MockWorkoutKitSaver()
+        let stale = Self.incompleteRow(title: "Bike ski row repeats", planID: "stale", hour: 11, minute: 52)
+        let raced = Self.incompleteRow(title: "Bike ski row repeats", planID: "raced", hour: 11, minute: 57)
+        let newest = Self.incompleteRow(title: "Bike ski row repeats", planID: "newest", hour: 11, minute: 58)
+        let replacer = MockIncompleteScheduleReplacer(matchingRows: [stale])
+        // After the first save, simulate a race that left an extra incomplete plan
+        // alongside the new schedule (legacy auto-sync / double schedule).
+        saver.onSave = {
+            replacer.matchingRows = [stale, raced, newest]
+        }
+        let planJSON = StubWorkoutKitPlanProvider.strengthFixture(title: "Bike ski row repeats")
+        let meta = WorkoutKitPlanMeta(fromMapperJSON: planJSON)
+        let service = AppleStartHandoffService(
+            pairingReader: MockPairingReader(read: .unknown),
+            workoutKitSaver: .injected(saver),
+            incompleteScheduleReplacer: .injected(replacer)
+        )
+        let result = await service.confirmSchedule(
+            workoutName: "Bike ski row repeats",
+            planJSON: planJSON,
+            meta: meta
+        )
+        XCTAssertEqual(result.kind, .savedToFitness)
+        XCTAssertEqual(saver.saveCallCount, 1)
+        // Pre-save replace removes `stale`; sweep keeps newest and drops `raced`.
+        XCTAssertEqual(
+            Set(replacer.removedRows.map(\.id.planID)),
+            Set(["stale", "raced"])
+        )
+        XCTAssertFalse(replacer.matchingRows.contains { $0.id.planID == "stale" })
+        XCTAssertFalse(replacer.matchingRows.contains { $0.id.planID == "raced" })
+        XCTAssertTrue(replacer.matchingRows.contains { $0.id.planID == "newest" })
+    }
+
+    func testRemoveDuplicateIncompletePlansKeepsNewestExcludingReplacedIDs() async {
+        let older = Self.incompleteRow(title: "Dup", planID: "old", hour: 9)
+        let mid = Self.incompleteRow(title: "Dup", planID: "mid", hour: 10)
+        let newest = Self.incompleteRow(title: "Dup", planID: "new", hour: 11)
+        let replacer = MockIncompleteScheduleReplacer(matchingRows: [older, mid, newest])
+        await replacer.removeDuplicateIncompletePlans(
+            titled: "Dup",
+            excluding: ["old", "mid"]
+        )
+        XCTAssertEqual(Set(replacer.removedRows.map(\.id.planID)), Set(["old", "mid"]))
+        XCTAssertEqual(replacer.matchingRows.map(\.id.planID), ["new"])
     }
 
     func testConfirmScheduleSerializesConcurrentSameTitleConfirms() async {
@@ -557,8 +606,9 @@ final class AppleStartHandoffServiceTests: XCTestCase {
         let results = await (first, second)
         XCTAssertEqual(results.0.kind, .savedToFitness)
         XCTAssertEqual(results.1.kind, .savedToFitness)
-        XCTAssertEqual(findEntryCount, 2)
-        XCTAssertEqual(replacer.findCallTitles, ["Race Title", "Race Title"])
+        // Each confirm: pre-save replace find + AMA-2394 post-save sweep find.
+        XCTAssertEqual(findEntryCount, 4)
+        XCTAssertEqual(replacer.findCallTitles, ["Race Title", "Race Title", "Race Title", "Race Title"])
         XCTAssertEqual(saver.saveCallCount, 2)
     }
 
@@ -637,15 +687,21 @@ final class AppleStartHandoffServiceTests: XCTestCase {
         XCTAssertEqual(reader.statusCallCount, 2, "prepare + confirm both evaluate the live cap")
     }
 
-    private static func incompleteRow(title: String) -> WorkoutScheduleRow {
-        WorkoutScheduleRow(
+    private static func incompleteRow(
+        title: String,
+        planID: String? = nil,
+        hour: Int = 9,
+        minute: Int = 0
+    ) -> WorkoutScheduleRow {
+        let components = DateComponents(year: 2026, month: 8, day: 1, hour: hour, minute: minute)
+        return WorkoutScheduleRow(
             id: WorkoutScheduleRowID(
-                planID: "incomplete-\(title)",
-                date: DateComponents(year: 2026, month: 8, day: 1, hour: 9)
+                planID: planID ?? "incomplete-\(title)",
+                date: components
             ),
             title: title,
-            dateComponents: DateComponents(year: 2026, month: 8, day: 1, hour: 9),
-            scheduledAt: nil,
+            dateComponents: components,
+            scheduledAt: Calendar.current.date(from: components),
             isComplete: false
         )
     }
@@ -774,6 +830,8 @@ private final class MockWorkoutKitSaver: WorkoutKitSaving, @unchecked Sendable {
     /// Attempts, incremented before any throw — tests assert 0 to prove fail-fast.
     private(set) var saveCallCount = 0
     var errorToThrow: Error?
+    /// AMA-2394 tests: mutate schedule state mid-save to simulate races.
+    var onSave: (() -> Void)?
 
     /// Compatibility for older assertions that used workout.name.
     var savedWorkoutNames: [String] { savedPlanTitles }
@@ -783,6 +841,7 @@ private final class MockWorkoutKitSaver: WorkoutKitSaving, @unchecked Sendable {
         if let errorToThrow { throw errorToThrow }
         let title = (try? JSONSerialization.jsonObject(with: data) as? [String: Any])?["title"] as? String
         savedPlanTitles.append(title ?? "untitled")
+        onSave?()
     }
 }
 
@@ -816,6 +875,8 @@ private final class MockIncompleteScheduleReplacer: IncompleteScheduleReplacing,
 
     func remove(rows: [WorkoutScheduleRow]) async {
         removedRows.append(contentsOf: rows)
+        let ids = Set(rows.map(\.id))
+        matchingRows.removeAll { ids.contains($0.id) }
     }
 }
 

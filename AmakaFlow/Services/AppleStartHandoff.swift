@@ -363,16 +363,25 @@ final class AppleStartHandoffService {
                 }
             }
             try await workoutKitSaver.saveMapperPlanJSON(planJSON)
-            if let incompleteScheduleReplacer, !replacements.isEmpty {
-                await incompleteScheduleReplacer.remove(rows: replacements)
+            let replacedIDs = Set(replacements.map(\.id.planID))
+            if let incompleteScheduleReplacer {
+                if !replacements.isEmpty {
+                    await incompleteScheduleReplacer.remove(rows: replacements)
+                }
+                // AMA-2394 — sweep leftover incomplete same-title rows (races,
+                // legacy auto-sync). Keep the newest plan that is not a
+                // pre-save replacement id.
+                await incompleteScheduleReplacer.removeDuplicateIncompletePlans(
+                    titled: workoutName,
+                    excluding: replacedIDs
+                )
             }
             if let libraryWorkoutID {
-                let excluded = Set(replacements.map(\.id.planID))
                 await recordPlanLink(
                     workoutName: workoutName,
                     libraryWorkoutID: libraryWorkoutID,
                     planJSON: planJSON,
-                    excludedPlanIDs: excluded
+                    excludedPlanIDs: replacedIDs
                 )
             }
             return AppleStartHandoffCopy.scheduledInWorkoutMessage(
