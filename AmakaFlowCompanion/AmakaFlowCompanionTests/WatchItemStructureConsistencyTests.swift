@@ -298,4 +298,88 @@ final class WatchItemStructureConsistencyTests: XCTestCase {
         XCTAssertEqual(persisted?.readiness, prefsReadiness)
         XCTAssertEqual(persisted?.snapshotPills.first, WatchItemCopy.stepsPill(count: 4))
     }
+
+    /// Replace path: unchecking Rest must clear prior rest chips from the overlay.
+    func testSectionsReflectingDeliveredClearsRestChipsWhenRestDisabled() {
+        let prior = [
+            PreviewSection(
+                accent: .work,
+                band: "Circuit",
+                tag: "6 ROUNDS",
+                steps: [
+                    PreviewStep(number: 1, title: "Bike", detail: "3:00", restChip: nil),
+                    PreviewStep(number: 2, title: "Ski", detail: "3:00", restChip: "REST 60S")
+                ]
+            )
+        ]
+        let rebuilt = WatchItemViewModel.sectionsReflectingDelivered(
+            readiness: WatchItemReadinessState(
+                mobilityEnabled: false,
+                warmupsEnabled: false,
+                restEnabled: false,
+                cooldownEnabled: false
+            ),
+            config: WatchItemConfigState(
+                mobilityActivities: [],
+                cooldownActivities: [],
+                perExerciseRamps: [],
+                restOpen: false,
+                restSec: 60
+            ),
+            priorSections: prior
+        )
+        XCTAssertTrue(rebuilt.flatMap(\.steps).allSatisfy { $0.restChip == nil })
+    }
+
+    /// Replace path: Rest edits must regenerate chips from delivered config.
+    func testSectionsReflectingDeliveredRebuildsRestChipsFromConfig() {
+        let prior = [
+            PreviewSection(
+                accent: .work,
+                band: "Circuit",
+                tag: "6 ROUNDS",
+                steps: [
+                    PreviewStep(number: 1, title: "Bike", detail: "3:00", restChip: "REST 60S"),
+                    PreviewStep(number: 2, title: "Ski", detail: "3:00", restChip: "REST 60S")
+                ]
+            )
+        ]
+        let open = WatchItemViewModel.sectionsReflectingDelivered(
+            readiness: WatchItemReadinessState(
+                mobilityEnabled: false,
+                warmupsEnabled: false,
+                restEnabled: true,
+                cooldownEnabled: false
+            ),
+            config: WatchItemConfigState(
+                mobilityActivities: [],
+                cooldownActivities: [],
+                perExerciseRamps: [],
+                restOpen: true,
+                restSec: 90
+            ),
+            priorSections: prior
+        )
+        XCTAssertNil(open[0].steps[0].restChip)
+        XCTAssertEqual(open[0].steps[1].restChip, "REST · YOU END IT")
+
+        let timed = WatchItemViewModel.sectionsReflectingDelivered(
+            readiness: WatchItemReadinessState(
+                mobilityEnabled: false,
+                warmupsEnabled: false,
+                restEnabled: true,
+                cooldownEnabled: false
+            ),
+            config: WatchItemConfigState(
+                mobilityActivities: [],
+                cooldownActivities: [],
+                perExerciseRamps: [],
+                restOpen: false,
+                restSec: 120
+            ),
+            priorSections: prior
+        )
+        XCTAssertNil(timed[0].steps[0].restChip)
+        XCTAssertEqual(timed[0].steps[1].restChip, "REST 120S")
+    }
 }

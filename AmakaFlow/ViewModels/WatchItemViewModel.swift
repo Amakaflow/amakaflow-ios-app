@@ -389,17 +389,25 @@ extension WatchItemViewModel {
             }
         }
 
+        // Rest chips must follow the delivered readiness/config — never stale
+        // prior chips after Rest is unchecked or timed/open rest is edited.
+        let deliveredRestChip = readiness.restEnabled
+            ? restChipLabel(restOpen: config.restOpen, restSec: config.restSec)
+            : nil
+
         let workBands = priorSections.filter {
             $0.accent == .work && !$0.band.uppercased().contains("WARM")
         }
         for band in workBands {
+            let lastIndex = band.steps.indices.last
             sections.append(
                 PreviewSection(
                     accent: .work,
                     band: band.band,
                     tag: band.tag,
-                    steps: band.steps.map {
-                        appendNumbered($0.title, detail: $0.detail, restChip: $0.restChip)
+                    steps: band.steps.enumerated().map { index, step in
+                        let chip = (index == lastIndex) ? deliveredRestChip : nil
+                        return appendNumbered(step.title, detail: step.detail, restChip: chip)
                     },
                     caption: band.caption
                 )
@@ -420,5 +428,11 @@ extension WatchItemViewModel {
         }
 
         return sections.isEmpty ? priorSections : sections
+    }
+
+    /// Matches plan-preview chips (`REST 60S` / `REST · YOU END IT`).
+    static func restChipLabel(restOpen: Bool, restSec: Int) -> String {
+        if restOpen { return "REST · YOU END IT" }
+        return "REST \(max(restSec, 1))S"
     }
 }

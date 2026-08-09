@@ -165,7 +165,9 @@ final class WorkoutEnrichmentPushPlannerTests: XCTestCase {
                     "rest_between_rounds_sec": 60,
                     "field_provenance": [
                         "rest_sec": "user",
-                        "rest_open": "user"
+                        "rest_open": "user",
+                        "rest_between_rounds_sec": "user",
+                        "notes": "user"
                     ],
                     "exercises": [["name": "Assault Bike", "duration_sec": 180]]
                 ]
@@ -176,6 +178,27 @@ final class WorkoutEnrichmentPushPlannerTests: XCTestCase {
         XCTAssertNil(block?["rest_sec"])
         XCTAssertNil(block?["rest_open"])
         XCTAssertNil(block?["rest_between_rounds_sec"])
+        // Unrelated provenance (e.g. notes) must survive Rest opt-out.
+        let prov = block?["field_provenance"] as? [String: Any]
+        XCTAssertEqual(prov?.keys.sorted(), ["notes"])
+        XCTAssertEqual(prov?["notes"] as? String, "user")
+    }
+
+    func testClearBlockRestIntentDropsEmptyProvenance() {
+        let blocksJSON: [String: Any] = [
+            "blocks": [
+                [
+                    "label": "Main",
+                    "type": "sets",
+                    "rest_sec": 90,
+                    "field_provenance": ["rest_sec": "enrichment_default"],
+                    "exercises": [["name": "Bench Press", "reps": 5]]
+                ]
+            ]
+        ]
+        let cleared = WorkoutEnrichmentMutations.clearBlockRestIntent(in: blocksJSON)
+        let block = (cleared["blocks"] as? [[String: Any]])?.first
+        XCTAssertNil(block?["rest_sec"])
         XCTAssertNil(block?["field_provenance"])
     }
 
