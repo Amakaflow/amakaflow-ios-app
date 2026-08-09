@@ -29,7 +29,7 @@ extension FixtureAPIService {
             saved = Workout(
                 id: workoutId,
                 name: request.name,
-                sport: WorkoutSport(rawValue: request.sport) ?? .strength,
+                sport: WorkoutSport.parse(request.sport),
                 duration: 0,
                 blocks: mappedBlocks,
                 description: request.description,
@@ -43,7 +43,7 @@ extension FixtureAPIService {
             saved = Workout(
                 id: workoutId,
                 name: request.name,
-                sport: WorkoutSport(rawValue: request.sport) ?? .strength,
+                sport: WorkoutSport.parse(request.sport),
                 duration: 0,
                 intervals: intervals,
                 source: source,

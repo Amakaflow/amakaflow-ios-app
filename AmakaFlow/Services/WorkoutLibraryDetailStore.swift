@@ -60,7 +60,7 @@ enum WorkoutLibraryDetailStore {
         return Workout(
             id: saved.id,
             name: request.name.isEmpty ? saved.name : request.name,
-            sport: WorkoutSport(rawValue: request.sport) ?? saved.sport,
+            sport: WorkoutSport.parse(request.sport),
             duration: saved.duration > 0 ? saved.duration : 0,
             blocks: blocks,
             description: request.description ?? saved.description,

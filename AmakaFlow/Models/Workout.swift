@@ -233,37 +233,91 @@ struct WorkoutSourceProvenance: Equatable {
 }
 
 // MARK: - Workout Sport Type
-enum WorkoutSport: String, Codable {
-    case running
-    case cycling
+/// App-level sport label (AMA-2393). Canonical wire values match mapper
+/// `WorkoutSport`; aliases decode for older payloads.
+enum WorkoutSport: String, Codable, CaseIterable, Identifiable, Hashable {
     case strength
-    case mobility
-    case swimming
+    case conditioning
     case cardio
+    case running = "run"
+    case cycling = "ride"
+    case swimming = "swim"
+    case mobility
+    case mixed
     case other
+
+    var id: String { rawValue }
+
+    /// Hero / picker label.
+    var displayName: String {
+        switch self {
+        case .strength: return "Strength"
+        case .conditioning: return "Conditioning"
+        case .cardio: return "Cardio"
+        case .running: return "Run"
+        case .cycling: return "Ride"
+        case .swimming: return "Swim"
+        case .mobility: return "Mobility"
+        case .mixed: return "Mixed"
+        case .other: return "Other"
+        }
+    }
+
+    /// Mono hero pill token.
+    var heroPill: String {
+        switch self {
+        case .strength: return "STRENGTH"
+        case .conditioning: return "CONDITIONING"
+        case .cardio: return "CARDIO"
+        case .running: return "RUN"
+        case .cycling: return "RIDE"
+        case .swimming: return "SWIM"
+        case .mobility: return "MOBILITY"
+        case .mixed: return "MIXED"
+        case .other: return "WORKOUT"
+        }
+    }
+
+    /// Choices offered by the editable type chip sheet.
+    static var pickerOptions: [WorkoutSport] {
+        [.strength, .conditioning, .cardio, .running, .cycling, .swimming, .mobility, .mixed]
+    }
 
     init(from decoder: Decoder) throws {
         let container = try decoder.singleValueContainer()
         let rawValue = try container.decode(String.self)
+        self = Self.parse(rawValue)
+    }
 
-        // Handle alternative values from backend
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(rawValue)
+    }
+
+    /// Canonical + legacy wire values. Prefer over `init(rawValue:)` (exact match only).
+    static func parse(_ rawValue: String) -> WorkoutSport {
         switch rawValue.lowercased() {
         case "running", "run":
-            self = .running
-        case "cycling", "bike", "biking":
-            self = .cycling
+            return .running
+        case "cycling", "bike", "biking", "ride":
+            return .cycling
         case "strength", "strengthtraining", "strength_training", "weights":
-            self = .strength
+            return .strength
+        case "conditioning", "metcon":
+            return .conditioning
         case "mobility", "yoga", "stretching", "flexibility":
-            self = .mobility
+            return .mobility
         case "swimming", "swim":
-            self = .swimming
+            return .swimming
         case "cardio", "hiit":
-            self = .cardio
+            return .cardio
+        case "mixed":
+            return .mixed
         default:
-            self = .other
+            return .other
         }
     }
+
 }
 
 // MARK: - Workout Model

@@ -95,31 +95,48 @@ struct PreviewSection: Equatable, Identifiable {
 /// (`NATIVE WORKOUT APP · {SPORT} · {N} STEPS`). Parses `sportType` directly
 /// from the mapper JSON since `WKPlanDTO.sportType` isn't a public property.
 enum WorkoutKitSportLabel {
-    private struct Payload: Decodable { let sportType: String? }
+    private struct Payload: Decodable {
+        let sportType: String?
+        let activity: String?
+    }
 
     private static let knownLabels: [String: String] = [
         "traditionalStrengthTraining": "STRENGTH",
         "functionalStrengthTraining": "STRENGTH",
         "strengthTraining": "STRENGTH",
         "highIntensityIntervalTraining": "HIIT",
+        "mixedCardio": "MIXED CARDIO",
+        "flexibility": "FLEXIBILITY",
+        "rowing": "ROWING",
+        "elliptical": "ELLIPTICAL",
+        "stairClimbing": "STAIR CLIMBING",
         "running": "RUN",
         "cycling": "BIKE",
         "swimming": "SWIM",
         "walking": "WALK",
         "coreTraining": "CORE",
         "yoga": "YOGA",
+        "swimBikeRun": "MULTISPORT",
         "other": "WORKOUT"
     ]
 
+    /// Prefer honest `activity` (AMA-2393); fall back to legacy `sportType`.
     static func label(from planJSON: Data) -> String {
-        guard
-            let payload = try? JSONDecoder().decode(Payload.self, from: planJSON),
-            let raw = payload.sportType,
-            !raw.isEmpty
-        else {
+        guard let payload = try? JSONDecoder().decode(Payload.self, from: planJSON) else {
             return "WORKOUT"
         }
-        return knownLabels[raw] ?? spacedUppercase(raw)
+        if let raw = payload.activity, !raw.isEmpty {
+            return knownLabels[raw] ?? spacedUppercase(raw)
+        }
+        if let raw = payload.sportType, !raw.isEmpty {
+            return knownLabels[raw] ?? spacedUppercase(raw)
+        }
+        return "WORKOUT"
+    }
+
+    /// Apple Workout app display name for the `RECORDS AS:` preview line.
+    static func recordsAsLabel(from planJSON: Data) -> String {
+        label(from: planJSON)
     }
 
     private static func spacedUppercase(_ raw: String) -> String {

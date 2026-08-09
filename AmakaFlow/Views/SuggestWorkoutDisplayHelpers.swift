@@ -39,10 +39,6 @@ extension SuggestReadinessLevel {
 }
 
 extension WorkoutSport {
-    var displayName: String {
-        rawValue.capitalized
-    }
-
     var symbolName: String {
         switch self {
         case .running: return "figure.run"
@@ -50,7 +46,7 @@ extension WorkoutSport {
         case .strength: return "dumbbell.fill"
         case .mobility: return "figure.flexibility"
         case .swimming: return "figure.pool.swim"
-        case .cardio: return "heart.fill"
+        case .cardio, .conditioning, .mixed: return "heart.fill"
         case .other: return "figure.mixed.cardio"
         }
     }

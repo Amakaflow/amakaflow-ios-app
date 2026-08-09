@@ -26,6 +26,16 @@ enum BuilderV3Category: String, CaseIterable, Equatable, Sendable {
         }
     }
 
+    /// AMA-2393 C3 — type picker choice → persisted app sport.
+    var workoutSport: WorkoutSport {
+        switch self {
+        case .lift: return .strength
+        case .conditioning: return .conditioning
+        case .run: return .running
+        case .recover: return .mobility
+        }
+    }
+
     /// Section accent (mockup: green Lift · orange Conditioning · blue Run).
     var accentHex: String {
         switch self {

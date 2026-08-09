@@ -258,6 +258,8 @@ private extension Workout {
         case .mobility: return "Mobility"
         case .swimming: return "Swimming"
         case .cardio: return "Cardio"
+        case .conditioning: return "Conditioning"
+        case .mixed: return "Mixed"
         case .other: return "Other"
         }
     }

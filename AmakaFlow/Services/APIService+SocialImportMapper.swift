@@ -26,6 +26,8 @@ extension APIService {
 
         var workoutData: [String: Any] = [
             "title": request.name,
+            // AMA-2393 — persist explicit sport; workout_type kept for legacy readers
+            "sport": request.sport,
             "workout_type": request.sport,
             "blocks": blockPayload
         ]
@@ -292,7 +294,7 @@ extension APIService {
             return Workout(
                 id: workoutId,
                 name: request.name,
-                sport: WorkoutSport(rawValue: request.sport) ?? .strength,
+                sport: WorkoutSport.parse(request.sport),
                 duration: 0,
                 blocks: mappedBlocks,
                 description: request.description,
@@ -330,7 +332,7 @@ extension APIService {
         return Workout(
             id: workoutId,
             name: request.name,
-            sport: WorkoutSport(rawValue: request.sport) ?? .strength,
+            sport: WorkoutSport.parse(request.sport),
             duration: 0,
             intervals: intervals,
             description: request.description,

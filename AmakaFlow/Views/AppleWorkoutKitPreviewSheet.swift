@@ -225,6 +225,12 @@ struct AppleWorkoutKitPreviewSheet: View {
                     .tracking(0.4)
                     .foregroundColor(DailyDriver.foregroundDim)
                     .accessibilityIdentifier("af_apple_wk_composition_line")
+                // AMA-2393 — honest Apple activity before push
+                Text("RECORDS AS: \(sportLabel)")
+                    .font(.system(size: 8.5, weight: .semibold, design: .monospaced))
+                    .tracking(0.4)
+                    .foregroundColor(DailyDriver.foregroundDim)
+                    .accessibilityIdentifier("af_apple_wk_records_as")
             }
             Spacer(minLength: 0)
         }

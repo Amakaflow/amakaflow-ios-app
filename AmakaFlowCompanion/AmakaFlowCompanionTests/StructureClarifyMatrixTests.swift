@@ -155,7 +155,7 @@ final class StructureClarifyMatrixTests: XCTestCase {
                 Workout(
                     id: "wk-\(sport)",
                     name: "Sport \(sport)",
-                    sport: WorkoutSport(rawValue: sport) ?? .other,
+                    sport: WorkoutSport.parse(sport),
                     duration: 600,
                     intervals: [],
                     source: .instagram
@@ -227,7 +227,7 @@ final class StructureClarifyMatrixTests: XCTestCase {
                 Workout(
                     id: "combo-\(combo.sport)-\(combo.type.rawValue)",
                     name: "Combo",
-                    sport: WorkoutSport(rawValue: combo.sport) ?? .other,
+                    sport: WorkoutSport.parse(combo.sport),
                     duration: 900,
                     intervals: [],
                     source: .instagram
