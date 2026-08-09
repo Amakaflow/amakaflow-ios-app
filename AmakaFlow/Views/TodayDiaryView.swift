@@ -109,9 +109,22 @@ struct TodayDiaryView: View {
                     )
                 }
                 #endif
+                // AMA-2391: feed is in-memory — re-pull Strava when already linked.
+                if actualsSources.isConnected(.strava), !actualsDemo.isActive {
+                    await actualsDemo.handleProviderConnected(
+                        .strava,
+                        sync: actualsSyncProgress
+                    )
+                }
             }
             .refreshable {
                 await historyViewModel.refreshCompletions()
+                if actualsSources.isConnected(.strava) {
+                    await actualsDemo.handleProviderConnected(
+                        .strava,
+                        sync: actualsSyncProgress
+                    )
+                }
             }
             .sheet(item: $selectedCompletionId) { completionId in
                 DDActivityDetailView(completionId: completionId)
@@ -214,7 +227,8 @@ struct TodayDiaryView: View {
 
     private func iconName(for card: ActualsTodayDemoCard) -> String {
         switch card.kind {
-        case .unmapped: return "figure.run"
+        case .unmapped:
+            return Self.symbolName(for: card.activity?.type)
         case .merged: return "applewatch"
         case .fillInDebt: return "figure.strengthtraining.traditional"
         case .verified:
@@ -226,11 +240,24 @@ struct TodayDiaryView: View {
 
     private func iconBackground(for card: ActualsTodayDemoCard) -> Color {
         switch card.kind {
-        case .unmapped: return DailyDriver.stravaBrand
+        case .unmapped:
+            return card.sourceProvider == .strava
+                ? DailyDriver.stravaBrand
+                : DailyDriver.card2
         case .merged: return DailyDriver.blue
         case .fillInDebt: return DailyDriver.lime
         case .verified:
             return card.session != nil ? DailyDriver.blue : DailyDriver.lime
+        }
+    }
+
+    /// SF Symbol for Strava/unmapped activity types (not always a run).
+    private static func symbolName(for type: ActualsWorkoutType?) -> String {
+        switch type {
+        case .run: return "figure.run"
+        case .ride: return "bicycle"
+        case .strength: return "dumbbell.fill"
+        case .other, .none: return "figure.mixed.cardio"
         }
     }
 
