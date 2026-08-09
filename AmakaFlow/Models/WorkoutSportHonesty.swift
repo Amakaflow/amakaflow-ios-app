@@ -9,6 +9,20 @@
 
 import Foundation
 
+/// AMA-2395 — display modality for the per-exercise icon chip. Derived from the
+/// SAME name tables `WorkoutSportHonesty` uses for sport inference (AMA-2393):
+/// one source of truth, imported not copied.
+enum WorkoutModality: String, CaseIterable {
+    /// Ski / row / bike / assault / spin / treadmill / elliptical / stair.
+    case cardioMachine
+    case run
+    case lift
+    /// Bodyweight movements + jump rope.
+    case bodyweight
+    /// Nothing matched — renders the neutral lift chip.
+    case unknown
+}
+
 enum WorkoutSportHonesty {
     /// Lightweight content inference used only for the quiet disagreement chip.
     /// Never writes sport — flag only.
@@ -71,6 +85,71 @@ enum WorkoutSportHonesty {
         }
         return "dumbbell.fill"
     }
+
+    // MARK: - Modality (AMA-2395 icon chips)
+
+    /// Cardio-machine kind (`ski` / `row` / `bike` / `treadmill` / …) or nil.
+    /// The AMA-2395 pace table keys off this so there is one machine table.
+    static func machineKindKey(forName rawName: String) -> String? {
+        machineKind(rawName.lowercased())
+    }
+
+    /// Display modality for one exercise. Order matters: cardio machines first
+    /// (a "Ski Erg" is never a lift), then run, then bodyweight, then lifts.
+    static func modality(for exercise: Exercise) -> WorkoutModality {
+        // A bodyweight load tag only wins when the name isn't a machine
+        // (a bodyweight-tagged Assault Bike is still a bike).
+        if exercise.load?.unit.lowercased() == "bodyweight",
+           machineKind(exercise.name.lowercased()) == nil {
+            return .bodyweight
+        }
+        return modality(
+            forName: exercise.name,
+            hasSetsOrReps: exercise.sets != nil || exercise.reps != nil
+        )
+    }
+
+    /// Name-only modality — used where no `Exercise` is in hand (band titles).
+    static func modality(forName rawName: String, hasSetsOrReps: Bool = false) -> WorkoutModality {
+        let name = rawName.lowercased()
+        if let kind = machineKind(name) {
+            // Jump rope lives in the machine table for sport inference but reads
+            // as a bodyweight (amber bolt) chip.
+            return kind == "jump" ? .bodyweight : .cardioMachine
+        }
+        if matchesRun(name) { return .run }
+        if matches(name, bodyweightNeedles) { return .bodyweight }
+        if matches(name, liftNeedles) { return .lift }
+        return hasSetsOrReps ? .lift : .unknown
+    }
+
+    /// Dominant modality across a set of exercises — drives derived band names
+    /// (`CONDITIONING` / `CORE` / `ACCESSORIES`) for untitled mixed blocks.
+    static func dominantModality(of exercises: [Exercise]) -> WorkoutModality {
+        var counts: [WorkoutModality: Int] = [:]
+        for exercise in exercises {
+            counts[modality(for: exercise), default: 0] += 1
+        }
+        guard let best = counts.values.max(), best > 0 else { return .unknown }
+        // Ties resolve in a stable, meaningful order rather than dictionary order.
+        let priority: [WorkoutModality] = [.cardioMachine, .run, .lift, .bodyweight, .unknown]
+        return priority.first { counts[$0] == best } ?? .unknown
+    }
+
+    private static let bodyweightNeedles = [
+        "plank", "push-up", "push up", "pushup", "pull-up", "pull up", "pullup",
+        "sit-up", "sit up", "situp", "crunch", "mountain climber", "jumping jack",
+        "air squat", "hollow", "dead bug", "bird dog", "glute bridge", "wall sit",
+        "jump rope", "skipping", "bear crawl", "inchworm", "v-up", "toes to bar",
+        "hanging leg raise", "flutter kick", "russian twist", "superman"
+    ]
+
+    private static let liftNeedles = [
+        "barbell", "dumbbell", "kettlebell", "cable", "machine press", "smith",
+        "squat", "deadlift", "press", "curl", "lunge", "burpee", "row",
+        "fly", "raise", "extension", "pulldown", "thruster", "clean", "snatch",
+        "jerk", "hip thrust", "shrug", "calf raise"
+    ]
 
     // MARK: - Helpers
 

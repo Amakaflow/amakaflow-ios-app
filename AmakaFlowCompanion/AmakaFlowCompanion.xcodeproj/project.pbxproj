@@ -8,6 +8,8 @@
 
 /* Begin PBXBuildFile section */
 		AMA2393HONBLD /* WorkoutSportHonesty.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2393HONREF /* WorkoutSportHonesty.swift */; };
+		AMA2395BNDBLD /* WorkoutBandGrouping.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2395BNDREF /* WorkoutBandGrouping.swift */; };
+		AMA2395ESTBLD /* WorkoutDurationEstimator.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2395ESTREF /* WorkoutDurationEstimator.swift */; };
 		AMA2393PICKBLD /* WorkoutSportPickerSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2393PICKREF /* WorkoutSportPickerSheet.swift */; };
 		AMA2393TSTBLD /* WorkoutSportHonestyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2393TSTREF /* WorkoutSportHonestyTests.swift */; };
 		00CBD8759EE7C769D1D7F82B /* AgentInboxView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3EB7457100F5C1B6E4488558 /* AgentInboxView.swift */; };
@@ -769,6 +771,8 @@
 
 /* Begin PBXFileReference section */
 		AMA2393HONREF /* WorkoutSportHonesty.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutSportHonesty.swift; path = ../AmakaFlow/Models/WorkoutSportHonesty.swift; sourceTree = SOURCE_ROOT; };
+		AMA2395BNDREF /* WorkoutBandGrouping.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutBandGrouping.swift; path = ../AmakaFlow/Models/WorkoutBandGrouping.swift; sourceTree = SOURCE_ROOT; };
+		AMA2395ESTREF /* WorkoutDurationEstimator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutDurationEstimator.swift; path = ../AmakaFlow/Models/WorkoutDurationEstimator.swift; sourceTree = SOURCE_ROOT; };
 		AMA2393PICKREF /* WorkoutSportPickerSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutSportPickerSheet.swift; path = ../AmakaFlow/Views/WorkoutSportPickerSheet.swift; sourceTree = SOURCE_ROOT; };
 		AMA2393TSTREF /* WorkoutSportHonestyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutSportHonestyTests.swift; path = AmakaFlowCompanionTests/WorkoutSportHonestyTests.swift; sourceTree = "<group>"; };
 		0590FA2DB2E16FC868D6F303 /* SyncDashboardView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = SyncDashboardView.swift; path = ../AmakaFlow/Views/Settings/SyncDashboardView.swift; sourceTree = "<group>"; };
@@ -1823,6 +1827,8 @@
 				F84E22732ED0D58300459747 /* WorkoutsViewModel.swift */,
 				F84E22712ED0D56C00459747 /* Workout.swift */,
 				AMA2393HONREF /* WorkoutSportHonesty.swift */,
+				AMA2395BNDREF /* WorkoutBandGrouping.swift */,
+				AMA2395ESTREF /* WorkoutDurationEstimator.swift */,
 				AMA2389MDLREF /* FriendsSharingModels.swift */,
 				89321AF9D21D441198437105 /* DevicePreference.swift */,
 				BL0CK5W1FT00000001 /* Block.swift */,
@@ -2774,6 +2780,8 @@
 				F84E22702ED0D55600459747 /* Theme.swift in Sources */,
 				F84E22722ED0D56C00459747 /* Workout.swift in Sources */,
 				AMA2393HONBLD /* WorkoutSportHonesty.swift in Sources */,
+				AMA2395BNDBLD /* WorkoutBandGrouping.swift in Sources */,
+				AMA2395ESTBLD /* WorkoutDurationEstimator.swift in Sources */,
 				AMA2393PICKBLD /* WorkoutSportPickerSheet.swift in Sources */,
 				AMA2373COPYBLD /* CreateWithAICopy.swift in Sources */,
 				AMA2373PRESBLD /* CreateWithAIDraftPresentation.swift in Sources */,

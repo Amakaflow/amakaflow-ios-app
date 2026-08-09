@@ -10,6 +10,63 @@ import XCTest
 
 final class WorkoutSportHonestyTests: XCTestCase {
 
+    // MARK: - AMA-2395 modality chips (same classifier list as the sport inference)
+
+    private func named(_ name: String, sets: Int? = nil, reps: String? = nil) -> Exercise {
+        Exercise(
+            name: name, canonicalName: nil, sets: sets, reps: reps,
+            durationSeconds: nil, load: nil, restSeconds: nil, distance: nil,
+            notes: nil, supersetGroup: nil
+        )
+    }
+
+    /// The dumbbell-on-Ski-Erg bug: cardio machines get the cardio chip.
+    func testCardioMachinesAreNeverLifts() {
+        for name in ["Ski Erg", "SkiErg", "Rowing Machine", "Assault Bike", "Spin / Indoor Bike",
+                     "Treadmill", "Elliptical", "Stair Climber"] {
+            XCTAssertEqual(
+                WorkoutSportHonesty.modality(for: named(name)), .cardioMachine,
+                "\(name) must wear the cardio chip, not a dumbbell"
+            )
+        }
+    }
+
+    func testLiftsRunsAndBodyweightSplitCorrectly() {
+        XCTAssertEqual(WorkoutSportHonesty.modality(for: named("Back Squat")), .lift)
+        XCTAssertEqual(WorkoutSportHonesty.modality(for: named("Dumbbell Row")), .lift)
+        XCTAssertEqual(WorkoutSportHonesty.modality(for: named("Ring Row")), .lift)
+        XCTAssertEqual(WorkoutSportHonesty.modality(for: named("Tempo Run")), .run)
+        XCTAssertEqual(WorkoutSportHonesty.modality(for: named("Plank")), .bodyweight)
+        XCTAssertEqual(WorkoutSportHonesty.modality(for: named("Jump Rope")), .bodyweight)
+    }
+
+    /// Unknown names fall back to the neutral chip, not a wrong guess — unless
+    /// sets/reps prove it is countable work.
+    func testUnknownNamesFallBackToNeutral() {
+        XCTAssertEqual(WorkoutSportHonesty.modality(for: named("Farmer Carry")), .unknown)
+        XCTAssertEqual(WorkoutSportHonesty.modality(for: named("Sled Drag", sets: 3, reps: "10")), .lift)
+    }
+
+    func testDominantModalityDrivesDerivedSectionNames() {
+        XCTAssertEqual(
+            WorkoutSportHonesty.dominantModality(of: [named("Rowing Machine"), named("Assault Bike")]),
+            .cardioMachine
+        )
+        XCTAssertEqual(
+            WorkoutSportHonesty.dominantModality(of: [named("Plank"), named("Hollow Hold")]),
+            .bodyweight
+        )
+        XCTAssertEqual(WorkoutSportHonesty.dominantModality(of: []), .unknown)
+    }
+
+    /// The estimator's pace table keys off the SAME machine table.
+    func testMachineKindKeyIsSharedWithThePaceTable() {
+        XCTAssertEqual(WorkoutSportHonesty.machineKindKey(forName: "Ski Erg"), "ski")
+        XCTAssertEqual(WorkoutSportHonesty.machineKindKey(forName: "Rowing"), "row")
+        XCTAssertEqual(WorkoutSportHonesty.machineKindKey(forName: "Assault Bike"), "bike")
+        XCTAssertNil(WorkoutSportHonesty.machineKindKey(forName: "Back Squat"))
+    }
+
     func testBikeSkiRowInfersMixedNotStrength() {
         let blocks = [
             Block(
