@@ -235,3 +235,69 @@ struct LocalPinnedWorkout: Codable, FetchableRecord, MutablePersistableRecord, I
         case pinnedAt = "pinned_at"
     }
 }
+
+/// AMA-2387: verified fill-in session (local-first; sync later).
+struct LocalActualsSession: Codable, FetchableRecord, MutablePersistableRecord, Identifiable, Equatable {
+    static let databaseTableName = "actuals_sessions"
+    static let persistenceConflictPolicy = PersistenceConflictPolicy(insert: .replace, update: .replace)
+
+    var id: String
+    var title: String
+    var subtitle: String
+    var rpe: Int?
+    var verified: Bool
+    var savedAt: Date
+    var createdAt: Date
+
+    enum Columns: String, ColumnExpression {
+        case id, title, subtitle, rpe, verified
+        case savedAt = "saved_at", createdAt = "created_at"
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case id, title, subtitle, rpe, verified
+        case savedAt = "saved_at"
+        case createdAt = "created_at"
+    }
+}
+
+struct LocalActualsExerciseRow: Codable, FetchableRecord, MutablePersistableRecord, Identifiable, Equatable {
+    static let databaseTableName = "actuals_exercise_rows"
+    static let persistenceConflictPolicy = PersistenceConflictPolicy(insert: .replace, update: .replace)
+
+    var id: String
+    var sessionId: String
+    var exerciseKey: String
+    var name: String
+    var plannedSets: Int
+    var plannedReps: Int
+    var plannedWeightKg: Double?
+    var plannedNote: String?
+    var confirmation: String
+    var actualSets: Int
+    var actualReps: Int
+    var actualWeightKg: Double?
+    var position: Int
+
+    enum Columns: String, ColumnExpression {
+        case id, sessionId = "session_id", exerciseKey = "exercise_key", name
+        case plannedSets = "planned_sets", plannedReps = "planned_reps"
+        case plannedWeightKg = "planned_weight_kg", plannedNote = "planned_note"
+        case confirmation
+        case actualSets = "actual_sets", actualReps = "actual_reps"
+        case actualWeightKg = "actual_weight_kg", position
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case id, name, confirmation, position
+        case sessionId = "session_id"
+        case exerciseKey = "exercise_key"
+        case plannedSets = "planned_sets"
+        case plannedReps = "planned_reps"
+        case plannedWeightKg = "planned_weight_kg"
+        case plannedNote = "planned_note"
+        case actualSets = "actual_sets"
+        case actualReps = "actual_reps"
+        case actualWeightKg = "actual_weight_kg"
+    }
+}

@@ -16,6 +16,9 @@ struct DDEditorView: View {
     var onBuilderV3ChangeType: (() -> Void)?
     var onSaved: (() -> Void)?
     var onBackfillSaved: (() -> Void)?
+    var actualsCaptureComplete: ((ActualsCaptureDraft) -> Void)?
+    var actualsSessionBanner: DDStatusBanner.Style?
+    var actualsSuggestedTitle: String?
 
     init(
         mode: DDEditorMode = .new,
@@ -24,7 +27,10 @@ struct DDEditorView: View {
         builderV3Seed: BuilderV3TypeSeed? = nil,
         onBuilderV3ChangeType: (() -> Void)? = nil,
         onSaved: (() -> Void)? = nil,
-        onBackfillSaved: (() -> Void)? = nil
+        onBackfillSaved: (() -> Void)? = nil,
+        actualsCaptureComplete: ((ActualsCaptureDraft) -> Void)? = nil,
+        actualsSessionBanner: DDStatusBanner.Style? = nil,
+        actualsSuggestedTitle: String? = nil
     ) {
         self.mode = mode
         self.workout = workout
@@ -33,6 +39,9 @@ struct DDEditorView: View {
         self.onBuilderV3ChangeType = onBuilderV3ChangeType
         self.onSaved = onSaved
         self.onBackfillSaved = onBackfillSaved
+        self.actualsCaptureComplete = actualsCaptureComplete
+        self.actualsSessionBanner = actualsSessionBanner
+        self.actualsSuggestedTitle = actualsSuggestedTitle
     }
 
     var body: some View {
@@ -45,7 +54,10 @@ struct DDEditorView: View {
                 preset: preset,
                 builderV3Seed: builderV3Seed,
                 onBuilderV3ChangeType: onBuilderV3ChangeType,
-                onSaved: onSaved
+                onSaved: onSaved,
+                actualsCaptureComplete: actualsCaptureComplete,
+                actualsSessionBanner: actualsSessionBanner,
+                actualsSuggestedTitle: actualsSuggestedTitle
             )
         }
     }

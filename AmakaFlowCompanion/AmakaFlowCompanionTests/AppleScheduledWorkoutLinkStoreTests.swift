@@ -55,9 +55,30 @@ final class AppleScheduledWorkoutLinkStoreTests: XCTestCase {
         XCTAssertNil(store.workoutID(forPlanID: "plan-1"))
     }
 
+    func testStaleLibraryLinkPreservesCachedPlanJSON() {
+        let json = Data(#"{"title":"Gone","sportType":"traditionalStrengthTraining","intervals":[]}"#.utf8)
+        store.record(planID: "plan-1", workoutID: "deleted", title: "Gone", planJSON: json)
+        let resolved = store.resolve(
+            planID: "plan-1",
+            title: "Gone",
+            library: [("w-2", "Other")]
+        )
+        XCTAssertNil(resolved)
+        XCTAssertNil(store.workoutID(forPlanID: "plan-1"))
+        XCTAssertEqual(store.planJSON(forPlanID: "plan-1"), json)
+    }
+
     func testEmptyLibraryKeepsExistingLink() {
         store.record(planID: "plan-1", workoutID: "w-1", title: "Full Body")
         let resolved = store.resolve(planID: "plan-1", title: "Full Body", library: [])
         XCTAssertEqual(resolved, "w-1")
+    }
+
+    func testRecordCachesPlanJSONAndPreservesOnTitleOnlyUpdate() {
+        let json = Data(#"{"title":"Bike ski row","intervals":[]}"#.utf8)
+        store.record(planID: "plan-1", workoutID: "w-1", title: "Bike ski row", planJSON: json)
+        XCTAssertEqual(store.planJSON(forPlanID: "plan-1"), json)
+        store.record(planID: "plan-1", workoutID: "w-1", title: "Bike ski row")
+        XCTAssertEqual(store.planJSON(forPlanID: "plan-1"), json)
     }
 }

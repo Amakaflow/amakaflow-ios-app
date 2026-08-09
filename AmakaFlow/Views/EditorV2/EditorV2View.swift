@@ -17,6 +17,11 @@ struct EditorV2View: View {
     /// Called after a successful save (before dismiss). Used by Builder v3 to
     /// reload the library after lift/conditioning/recover drafts land.
     var onSaved: (() -> Void)?
+    /// AMA-2387 Map v2 — when set, Done builds a capture draft (no Library persist).
+    var actualsCaptureComplete: ((ActualsCaptureDraft) -> Void)?
+    var actualsSessionBanner: DDStatusBanner.Style?
+    /// Prefill for Map v2 capture (e.g. wearable title) — user can rename.
+    var actualsSuggestedTitle: String?
 
     @Environment(\.dismiss) private var dismiss
     @StateObject var saveModel: WorkoutEditorViewModel
@@ -50,17 +55,31 @@ struct EditorV2View: View {
         preset: WorkoutTypeItem? = nil,
         builderV3Seed: BuilderV3TypeSeed? = nil,
         onBuilderV3ChangeType: (() -> Void)? = nil,
-        onSaved: (() -> Void)? = nil
+        onSaved: (() -> Void)? = nil,
+        actualsCaptureComplete: ((ActualsCaptureDraft) -> Void)? = nil,
+        actualsSessionBanner: DDStatusBanner.Style? = nil,
+        actualsSuggestedTitle: String? = nil
     ) {
         self.mode = mode
         self.workout = workout
         self.builderV3Seed = builderV3Seed
         self.onBuilderV3ChangeType = onBuilderV3ChangeType
         self.onSaved = onSaved
+        self.actualsCaptureComplete = actualsCaptureComplete
+        self.actualsSessionBanner = actualsSessionBanner
+        self.actualsSuggestedTitle = actualsSuggestedTitle
         let presetSeed = preset.map(WorkoutTypePresetEditorSeed.init)
-        let initialSession = presetSeed.map { EditorV2Session(title: $0.title) }
+        var initialSession = presetSeed.map { EditorV2Session(title: $0.title) }
             ?? builderV3Seed.map { BuilderV3TypeRegistry.makeEditorSession(for: $0) }
             ?? EditorV2Session.from(mode: mode, workout: workout)
+        // Actuals capture: start from the finished session’s name — user renames freely.
+        if actualsCaptureComplete != nil {
+            let suggested = (actualsSuggestedTitle ?? "")
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            if !suggested.isEmpty {
+                initialSession.title = suggested
+            }
+        }
         self.builderV3InitialTitle = builderV3Seed != nil ? initialSession.title : nil
         _session = State(initialValue: initialSession)
         _matchController = StateObject(
@@ -90,6 +109,11 @@ struct EditorV2View: View {
             DailyDriver.screenBackground.ignoresSafeArea()
             VStack(spacing: 0) {
                 header
+                if let actualsSessionBanner {
+                    DDStatusBanner(style: actualsSessionBanner)
+                        .padding(.horizontal, 18)
+                        .padding(.top, 8)
+                }
                 ScrollView {
                     EditorV2Content.main(
                         session: session,
@@ -124,7 +148,9 @@ struct EditorV2View: View {
             }
             if !isReorderMode, !session.exercises.isEmpty {
                 DDEditorSaveBar(
-                    title: "Save workout",
+                    title: actualsCaptureComplete != nil
+                        ? ActualsCopy.captureBuilderDoneCTA
+                        : "Save workout",
                     isSaving: saveModel.isSaving,
                     action: saveTapped
                 )

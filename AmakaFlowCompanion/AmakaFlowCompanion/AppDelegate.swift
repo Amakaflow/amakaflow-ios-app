@@ -24,7 +24,8 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
     #if DEBUG
     if UITestEnvironment.shared.hasClerkTestUser
         || UITestEnvironment.shared.useFixtures
-        || UITestEnvironment.shared.showCreateWithAIGeneratingHost {
+        || UITestEnvironment.shared.showCreateWithAIGeneratingHost
+        || UITestEnvironment.shared.showActualsDogfoodHost {
       print("[AppDelegate] Test mode — skipping push notification registration")
     }
     if AuthViewModel.uiTestRealSessionRequested() {
@@ -34,6 +35,7 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
     if UITestEnvironment.shared.hasClerkTestUser
         || UITestEnvironment.shared.useFixtures
         || UITestEnvironment.shared.showCreateWithAIGeneratingHost
+        || UITestEnvironment.shared.showActualsDogfoodHost
         || AuthViewModel.uiTestRealSessionRequested() {
       return true
     }

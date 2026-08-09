@@ -197,6 +197,7 @@ class ActivityHistoryViewModel: ObservableObject {
 
         // If not authenticated, show empty state (no mock data).
         // DEBUG: seed handoff timeline so simulator verification works without pairing/backend.
+        // AMA-2387: skip when UITEST_FIXTURE_STATE=empty so the teach card can show.
         if !hasAuth {
             #if DEBUG
             seedDebugTodayDiarySample(reason: "unpaired")
@@ -213,7 +214,8 @@ class ActivityHistoryViewModel: ObservableObject {
             let fetched = try await dependencies.apiService.fetchCompletions(limit: pageSize, offset: 0)
             #if DEBUG
             let now = nowProvider()
-            if TodayDiary.completionsForToday(fetched, now: now, calendar: calendar).isEmpty {
+            if TodayDiary.completionsForToday(fetched, now: now, calendar: calendar).isEmpty,
+               !shouldSuppressDebugTodaySeed {
                 let sample = WorkoutCompletion.todayDiarySampleData(now: now, calendar: calendar)
                 completions = fetched + sample
                 hasMoreData = fetched.count >= pageSize
@@ -340,7 +342,20 @@ class ActivityHistoryViewModel: ObservableObject {
     // MARK: - DEBUG Today fixtures
 
 #if DEBUG
+    /// AMA-2387: empty fixture dogfood must stay empty so the teach card can appear.
+    private var shouldSuppressDebugTodaySeed: Bool {
+        UITestEnvironment.shared.fixtureState == "empty"
+    }
+
     private func seedDebugTodayDiarySample(reason: String, clearError: Bool = false) {
+        if shouldSuppressDebugTodaySeed {
+            completions = []
+            hasMoreData = false
+            currentOffset = 0
+            if clearError { errorMessage = nil }
+            logger.info("loadCompletions: suppressed DEBUG today seed (\(reason); UITEST_FIXTURE_STATE=empty)")
+            return
+        }
         completions = WorkoutCompletion.todayDiarySampleData(now: nowProvider(), calendar: calendar)
         hasMoreData = false
         currentOffset = completions.count

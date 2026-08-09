@@ -332,6 +332,28 @@ extension EditorV2View {
 
     func saveTapped() {
         let trimmedTitle = session.title.trimmingCharacters(in: .whitespacesAndNewlines)
+        // AMA-2387 Map v2 — capture Done returns a draft for match-save (no Library yet).
+        if let actualsCaptureComplete {
+            guard !trimmedTitle.isEmpty else {
+                showToast(ActualsCopy.captureNameRequiredToast)
+                return
+            }
+            let summaries = session.exercises.map(\.name).filter { !$0.isEmpty }
+            let blocks = session.toSocialImportBlocks()
+            let draft = ActualsCaptureDraft(
+                id: UUID().uuidString,
+                title: trimmedTitle,
+                blockSummaries: summaries.isEmpty ? ["Untitled block"] : summaries,
+                estimatedMinutes: max(1, summaries.count * 8),
+                source: .built,
+                sport: saveModel.sport.rawValue,
+                intervals: session.toSaveIntervals(),
+                blocks: blocks.isEmpty ? nil : blocks
+            )
+            // Parent dismisses the capture cover after receiving the draft.
+            actualsCaptureComplete(draft)
+            return
+        }
         saveModel.name = trimmedTitle
         saveModel.intervals = session.toSaveIntervals()
         session.mintMissingExerciseIDs()
