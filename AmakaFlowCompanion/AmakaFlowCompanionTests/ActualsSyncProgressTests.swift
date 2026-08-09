@@ -47,6 +47,23 @@ final class ActualsSyncProgressTests: XCTestCase {
         XCTAssertNil(store.progress)
     }
 
+    func testBeginPullingShowsLookbackBeforeTotalKnown() {
+        let store = ActualsSyncProgressStore()
+        store.beginPulling()
+        XCTAssertTrue(store.progress?.shouldShowBanner == true)
+        XCTAssertTrue(store.progress?.isAwaitingTotal == true)
+        XCTAssertEqual(
+            store.progress?.displayString,
+            "PULLING YOUR LAST 30 DAYS… ▍"
+        )
+        store.beginBackfill(total: 3)
+        XCTAssertFalse(store.progress?.isAwaitingTotal == true)
+        XCTAssertEqual(
+            store.progress?.displayString,
+            "PULLING YOUR LAST 30 DAYS… 0 OF 3 SESSIONS ▍"
+        )
+    }
+
     func testDoesNotExceedTotal() {
         let store = ActualsSyncProgressStore()
         store.beginBackfill(total: 2)
