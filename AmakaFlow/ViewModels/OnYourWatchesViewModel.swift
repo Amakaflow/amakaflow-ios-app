@@ -59,9 +59,17 @@ final class OnYourWatchesViewModel: ObservableObject {
 
         var next = OnYourWatchesSnapshot.empty
         next.showsGarmin = garminPairing()
-        next.showsApple = pairingReader.pairingReadForCopy() != .confirmedUnpaired && scheduler != nil
+        let pairing = pairingReader.pairingReadForCopy()
 
+        // WorkoutKit schedule lives on the phone — fetch whenever the scheduler
+        // exists, even if WatchConnectivity says unpaired (simulator / watch
+        // offline). Then show Apple if paired/unknown OR anything is scheduled.
         let appleError = await Self.fillApple(into: &next, scheduler: scheduler, calendar: calendar)
+        next.showsApple = Self.shouldShowApple(
+            pairing: pairing,
+            schedulerAvailable: scheduler != nil,
+            scheduledCount: next.appleScheduledCount
+        )
         await Self.fillGarmin(
             into: &next,
             queueStore: queueStore,
@@ -71,12 +79,24 @@ final class OnYourWatchesViewModel: ObservableObject {
         statusMessage = appleError
     }
 
+    /// Hide Apple only when we're sure there's no watch *and* nothing on the
+    /// Workout schedule. Scheduled plans must stay reachable after Send.
+    static func shouldShowApple(
+        pairing: AppleWatchPairingRead,
+        schedulerAvailable: Bool,
+        scheduledCount: Int
+    ) -> Bool {
+        guard schedulerAvailable else { return false }
+        if scheduledCount > 0 { return true }
+        return pairing != .confirmedUnpaired
+    }
+
     private static func fillApple(
         into next: inout OnYourWatchesSnapshot,
         scheduler: (any WorkoutKitScheduleManaging)?,
         calendar: Calendar
     ) async -> String? {
-        guard next.showsApple, let scheduler else { return nil }
+        guard let scheduler else { return nil }
         next.appleMaxAllowed = scheduler.maxAllowedCount
         let auth = await scheduler.authorizationState
         guard auth != .denied else { return nil }

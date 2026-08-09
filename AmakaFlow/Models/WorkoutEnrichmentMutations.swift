@@ -71,6 +71,34 @@ enum WorkoutEnrichmentMutations {
         return out
     }
 
+    /// AMA-2390 — remove block-level rest intent so an unchecked Rest offer on
+    /// the enhance sheet can opt out of rest that was authored or previously
+    /// enriched onto the workout (not only `enrichment_default` provenance).
+    static func clearBlockRestIntent(in blocksJSON: [String: Any]) -> [String: Any] {
+        guard let rawBlocks = blocksJSON["blocks"] as? [[String: Any]] else { return blocksJSON }
+        var blocks: [[String: Any]] = []
+        blocks.reserveCapacity(rawBlocks.count)
+        for var block in rawBlocks {
+            block.removeValue(forKey: restSecKey)
+            block.removeValue(forKey: restOpenKey)
+            block.removeValue(forKey: "rest_between_rounds_sec")
+            if var prov = block["field_provenance"] as? [String: Any] {
+                prov.removeValue(forKey: restSecKey)
+                prov.removeValue(forKey: restOpenKey)
+                prov.removeValue(forKey: "rest_between_rounds_sec")
+                if prov.isEmpty {
+                    block.removeValue(forKey: "field_provenance")
+                } else {
+                    block["field_provenance"] = prov
+                }
+            }
+            blocks.append(block)
+        }
+        var out = blocksJSON
+        out["blocks"] = blocks
+        return out
+    }
+
     /// AMA-2365 — remove enrichment-owned soft sections / rest / warmup_sets so
     /// cancel or a second sync starts clean (never stacks Jump Rope).
     /// Author soft sections without `enrichment_kind` / enrichment provenance stay.

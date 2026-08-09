@@ -146,11 +146,14 @@ extension WatchItemViewModel {
         let useDemo = OnYourWatchesDemoSupport.isEnabled
         let fromPrefsConfig = prefs.map { config(from: $0) }
         let fromPrefsReadiness = prefs.map { readiness(from: $0) }
-        let defaultsConfig = config(from: .defaults)
-        let defaultsReadiness = readiness(from: .defaults)
+        // AMA-2390 — without a delivered snapshot or caller prefs, mirror what
+        // the watch actually has (planJSON sections). Never invent mobility /
+        // warm-ups / timed rest from WorkoutPreferences.defaults.
+        let deliveredShapeReadiness = readinessReflectingDelivered(stepSections)
+        let deliveredShapeConfig = configReflectingDelivered(stepSections)
 
         let fallbackConfig = fromPrefsConfig
-            ?? (useDemo ? demoConfig(isApple: isApple, title: title) : defaultsConfig)
+            ?? (useDemo ? demoConfig(isApple: isApple, title: title) : deliveredShapeConfig)
         let fallbackReadiness = fromPrefsReadiness
             ?? (useDemo
                 ? WatchItemReadinessState(
@@ -159,7 +162,7 @@ extension WatchItemViewModel {
                     restEnabled: true,
                     cooldownEnabled: false
                 )
-                : defaultsReadiness)
+                : deliveredShapeReadiness)
 
         var delivered = readinessStore.loadDelivered(workoutID: storeKey)
         var draftSnap = readinessStore.loadDraft(workoutID: storeKey)
@@ -216,8 +219,13 @@ extension WatchItemViewModel {
             }
         }
 
-        // Persist authentic baselines — replace stale demo delivered, or seed from prefs.
-        if replacedStaleDemoDelivered || (delivered == nil && prefs != nil) {
+        // Persist authentic baselines — replace stale demo, seed from prefs, or
+        // stamp the planJSON-derived shape so the next open doesn't fall back to
+        // standing defaults (ghost MOBILITY / TIMED REST after Send as-is).
+        let shouldStampDelivered = replacedStaleDemoDelivered
+            || (delivered == nil && prefs != nil)
+            || (delivered == nil && !useDemo && !stepSections.isEmpty)
+        if shouldStampDelivered {
             readinessStore.saveDelivered(
                 workoutID: storeKey,
                 snapshot: WatchItemReadinessSnapshot(
@@ -228,7 +236,7 @@ extension WatchItemViewModel {
                 )
             )
         }
-        if draftSnap == nil, prefs != nil || replacedStaleDemoDelivered {
+        if draftSnap == nil, shouldStampDelivered {
             readinessStore.saveDraft(
                 workoutID: storeKey,
                 snapshot: WatchItemReadinessSnapshot(
@@ -289,6 +297,24 @@ extension WatchItemViewModel {
         )
     }
 
+    /// Readiness toggles that match bands/chips already on the delivered plan.
+    static func readinessReflectingDelivered(_ sections: [PreviewSection]) -> WatchItemReadinessState {
+        WatchItemReadinessState(
+            mobilityEnabled: sections.contains { $0.accent == .mobility },
+            warmupsEnabled: sections.contains { section in
+                section.band.uppercased().contains("WARM")
+                    || section.steps.contains { $0.title == PreviewStep.warmupSetTitle }
+            },
+            restEnabled: sections.contains { section in
+                section.steps.contains { step in
+                    guard let chip = step.restChip else { return false }
+                    return !chip.isEmpty
+                }
+            },
+            cooldownEnabled: sections.contains { $0.accent == .cooldown }
+        )
+    }
+
     static func config(from prefs: WorkoutPreferences) -> WatchItemConfigState {
         WatchItemConfigState(
             mobilityActivities: prefs.sessionWarmup.activities,
@@ -299,6 +325,47 @@ extension WatchItemViewModel {
             restOpen: prefs.betweenSetRest.restOpen,
             restSec: WorkoutEnrichmentPushCopy.normalizedRestSec(prefs.betweenSetRest.restSec ?? 60)
         )
+    }
+
+    /// Config shaped from delivered sections (rest chip → timed/open; else neutral).
+    static func configReflectingDelivered(_ sections: [PreviewSection]) -> WatchItemConfigState {
+        let restChip = sections
+            .flatMap(\.steps)
+            .compactMap(\.restChip)
+            .first { !$0.isEmpty }
+        let restOpen = restChip == "REST · YOU END IT"
+        let restSec: Int
+        if let restChip, let parsed = parseRestChipSeconds(restChip) {
+            restSec = parsed
+        } else {
+            restSec = 60
+        }
+        let mobility = sections
+            .filter { $0.accent == .mobility }
+            .flatMap(\.steps)
+            .map { EnrichmentActivityPref(name: $0.title, durationSec: nil) }
+        let cooldown = sections
+            .filter { $0.accent == .cooldown }
+            .flatMap(\.steps)
+            .map { EnrichmentActivityPref(name: $0.title, durationSec: nil) }
+        return WatchItemConfigState(
+            mobilityActivities: mobility,
+            cooldownActivities: cooldown.isEmpty
+                ? WorkoutEnrichmentMutations.defaultCooldownActivities()
+                : cooldown,
+            perExerciseRamps: [],
+            restOpen: restOpen,
+            restSec: WorkoutEnrichmentPushCopy.normalizedRestSec(restSec)
+        )
+    }
+
+    private static func parseRestChipSeconds(_ chip: String) -> Int? {
+        // "REST 60S" / "REST 60s"
+        let upper = chip.uppercased()
+        guard upper.hasPrefix("REST ") else { return nil }
+        let token = upper.dropFirst(5).trimmingCharacters(in: .whitespaces)
+        guard token.hasSuffix("S") else { return nil }
+        return Int(token.dropLast())
     }
 
     static func appleStateLine(for row: WorkoutScheduleRow, calendar: Calendar) -> String {
@@ -357,87 +424,5 @@ extension WatchItemViewModel {
         let total = deliveredStepTotal ?? max(enrichmentSteps, 1)
         pills.insert(WatchItemCopy.stepsPill(count: total), at: 0)
         return pills
-    }
-
-    /// Rebuild the read-only preview from the newly delivered draft while
-    /// preserving prior WORK bands (exercise rows the enrichment draft doesn't own).
-    static func sectionsReflectingDelivered(
-        readiness: WatchItemReadinessState,
-        config: WatchItemConfigState,
-        priorSections: [PreviewSection]
-    ) -> [PreviewSection] {
-        var sections: [PreviewSection] = []
-        var nextNumber = 1
-
-        func appendNumbered(_ title: String, detail: String? = nil, restChip: String? = nil) -> PreviewStep {
-            let step = PreviewStep(
-                number: nextNumber,
-                title: title,
-                detail: detail,
-                restChip: restChip
-            )
-            nextNumber += 1
-            return step
-        }
-
-        if readiness.mobilityEnabled {
-            let names = config.mobilityActivities.map(\.name)
-            let labels = names.isEmpty ? ["Mobility"] : names
-            sections.append(
-                PreviewSection(
-                    accent: .mobility,
-                    band: "MOBILITY",
-                    tag: nil,
-                    steps: labels.map { appendNumbered($0) }
-                )
-            )
-        }
-
-        if readiness.warmupsEnabled {
-            let enabledRamps = config.perExerciseRamps.filter(\.enabled)
-            for ramp in enabledRamps {
-                let details = ["~40%", "~60%", "~80%"]
-                sections.append(
-                    PreviewSection(
-                        accent: .work,
-                        band: "WARM-UP · \(ramp.exerciseRef.uppercased())",
-                        tag: nil,
-                        steps: details.map { appendNumbered(PreviewStep.warmupSetTitle, detail: $0) }
-                    )
-                )
-            }
-        }
-
-        let workBands = priorSections.filter {
-            $0.accent == .work && !$0.band.uppercased().contains("WARM")
-        }
-        for band in workBands {
-            sections.append(
-                PreviewSection(
-                    accent: .work,
-                    band: band.band,
-                    tag: band.tag,
-                    steps: band.steps.map {
-                        appendNumbered($0.title, detail: $0.detail, restChip: $0.restChip)
-                    },
-                    caption: band.caption
-                )
-            )
-        }
-
-        if readiness.cooldownEnabled {
-            let names = config.cooldownActivities.map(\.name)
-            let labels = names.isEmpty ? ["Cooldown"] : names
-            sections.append(
-                PreviewSection(
-                    accent: .cooldown,
-                    band: "COOLDOWN",
-                    tag: nil,
-                    steps: labels.map { appendNumbered($0) }
-                )
-            )
-        }
-
-        return sections.isEmpty ? priorSections : sections
     }
 }

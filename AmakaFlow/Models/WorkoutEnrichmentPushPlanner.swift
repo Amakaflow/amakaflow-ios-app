@@ -91,11 +91,11 @@ enum WorkoutEnrichmentPushPlanner {
     /// Offer rows for a workout about to be pushed.
     ///
     /// Soft kinds (mobility / warm-up sets) are offered when missing and
-    /// enabled in prefs. **Between-set rest** and **cooldown** are always
-    /// offered when missing so the enhance sheet can opt in on this push even
-    /// if Settings has the standing offer off (starts unchecked). Sheet row
-    /// order matches design Surface 1: Mobility → Warm-up sets → Rest →
-    /// Cooldown. Tombstoned kinds start unchecked.
+    /// enabled in prefs. **Between-set rest** is always offered (unless Apple
+    /// omit) — including when blocks already have rest — so the athlete can
+    /// keep or clear it. **Cooldown** is always offered when missing. Sheet
+    /// row order: Mobility → Warm-up sets → Rest → Cooldown. Tombstoned kinds
+    /// start unchecked (except Rest already on the workout, which stays checked).
     static func plan(
         blocks: [SocialImportBlock],
         tombstones: [EnrichmentTombstone],
@@ -160,22 +160,26 @@ enum WorkoutEnrichmentPushPlanner {
             }
         }
 
-        // Always offer Rest when the workout has no rest intent — Garmin FIT
-        // needs `rest_open` / `rest_sec` on blocks. Prefs.enabled only controls
-        // the default check (off → show unchecked so this push can still opt in).
-        // Apple delivery `rest_mode=omit` skips the offer (AMA-2362 / CodeRabbit).
-        if !hasBlockRestIntent(in: blocks),
-           !WorkoutEnrichmentPushCopy.shouldSkipRestOffer(target: target) {
+        // Always offer Rest unless Apple `rest_mode=omit` (AMA-2362). Prefs.enabled
+        // only controls the default check when the workout has no rest yet.
+        // When blocks already carry rest intent, still show the row (checked) so
+        // the athlete can keep, change, or opt out — hiding it made Rest
+        // unavoidable on Apple Watch while the sheet looked like "Send as-is".
+        if !WorkoutEnrichmentPushCopy.shouldSkipRestOffer(target: target) {
             let tombstoned = WorkoutEnrichmentPresence.isTombstoned(
                 .betweenSetRest,
                 tombstones: tombstones
             )
+            let alreadyHasRest = hasBlockRestIntent(in: blocks)
             let prefsWantRest = prefs.betweenSetRest.enabled
+            // Presence wins: rest on the workout starts checked even after a prior
+            // reject tombstone, so unchecking can clear it this push.
+            let isChecked = alreadyHasRest || (prefsWantRest && !tombstoned)
             offers.append(
                 Offer(
                     kind: .betweenSetRest,
-                    isChecked: prefsWantRest && !tombstoned,
-                    wasTombstoned: tombstoned,
+                    isChecked: isChecked,
+                    wasTombstoned: tombstoned && !alreadyHasRest,
                     detail: WorkoutEnrichmentPushCopy.restDetail(
                         prefs.betweenSetRest,
                         target: target
@@ -219,10 +223,11 @@ enum WorkoutEnrichmentPushPlanner {
     /// Between-set rest enrichment writes **block** `rest_open` / `rest_sec` for
     /// Garmin FIT (AMA-2344). Per-exercise `rest_sec` from ingest or client
     /// defaults is a separate prescription and must not hide the push-sheet offer.
+    /// `rest_open == false` alone is not intent — only open rest or a timed
+    /// `rest_sec` counts (AMA-2390 readiness parity).
     static func hasBlockRestIntent(in blocks: [SocialImportBlock]) -> Bool {
         blocks.contains { block in
             if block.restOpen == true { return true }
-            if block.restOpen == false { return true }
             return block.restSec != nil
         }
     }
