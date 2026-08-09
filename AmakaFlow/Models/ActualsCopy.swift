@@ -50,6 +50,9 @@ enum ActualsCopy {
     /// Freshly linked this session (screens-actuals3.jsx SYLinkedScreen).
     static let linkedJustNowBadge = "LINKED ✓ JUST NOW"
     static let connectButton = "Connect"
+    /// Apple Health after deny / prompt-with-no-grant evidence — opens Settings.
+    static let openHealthSettingsButton = "Open Settings"
+    static let appleHealthSettingsAccessibilityID = "af_actuals_apple_settings"
 
     // MARK: - Sync / backfill (ACTUALS.md §5)
 

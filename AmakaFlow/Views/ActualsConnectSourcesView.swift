@@ -121,10 +121,17 @@ struct ActualsConnectSourcesView<Store: ActualsSourceConnecting>: View where Sto
                     .foregroundColor(DailyDriver.lime)
                     .fixedSize()
             } else {
+                let opensSettings = provider == .appleHealth
+                    && (healthKit.authorizationState == .denied
+                        || healthKit.authorizationState == .promptCompleted)
                 Button {
                     connectTapped(provider)
                 } label: {
-                    Text(ActualsCopy.connectButton)
+                    Text(
+                        opensSettings
+                            ? ActualsCopy.openHealthSettingsButton
+                            : ActualsCopy.connectButton
+                    )
                         .ddDisplayText(12, weight: .bold)
                         .foregroundColor(DailyDriver.ink)
                         .padding(.horizontal, 14)
@@ -134,7 +141,11 @@ struct ActualsConnectSourcesView<Store: ActualsSourceConnecting>: View where Sto
                 }
                 .buttonStyle(.plain)
                 .fixedSize()
-                .accessibilityIdentifier(provider.accessibilityConnectID)
+                .accessibilityIdentifier(
+                    opensSettings
+                        ? ActualsCopy.appleHealthSettingsAccessibilityID
+                        : provider.accessibilityConnectID
+                )
             }
         }
         .padding(.horizontal, 14)
