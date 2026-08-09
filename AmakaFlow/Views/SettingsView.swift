@@ -466,9 +466,11 @@ struct SettingsView: View {
     private var ddFriendsSection: some View {
         SettingsSectionCard(
             title: "Friends",
-            subtitle: friendsStore.unhandledShareCount > 0
-                ? "\(friendsStore.unhandledShareCount) workouts waiting"
-                : "\(friendsStore.acceptedFriends.count) friends · swap workouts",
+            subtitle: FriendsCopy.profileEntrySubtitle(
+                friendCount: friendsStore.acceptedFriends.count,
+                waitingCount: friendsStore.unhandledShareCount,
+                requestCount: friendsStore.incomingRequests.count
+            ).lowercased(),
             icon: "person.2.fill",
             iconBackground: DailyDriver.lime,
             rowCount: 1
@@ -482,11 +484,13 @@ struct SettingsView: View {
                     title: "Friends",
                     detail: friendsStore.unhandledShareCount > 0
                         ? FriendsCopy.fromFriendsSubtitle(names: friendsStore.senderNamesForBadge)
-                        : "Add · requests · privacy"
+                        : (friendsStore.incomingRequests.isEmpty
+                            ? "Add · requests · privacy"
+                            : "\(friendsStore.incomingRequests.count) pending request\(friendsStore.incomingRequests.count == 1 ? "" : "s")")
                 ) {
                     HStack(spacing: 8) {
                         FriendsWaitingBadge(
-                            badgeValue: friendsStore.unhandledShareCount,
+                            badgeValue: friendsStore.profileAttentionCount,
                             accessibilityId: "af_friends_settings_row_badge"
                         )
                         Image(systemName: "chevron.right")

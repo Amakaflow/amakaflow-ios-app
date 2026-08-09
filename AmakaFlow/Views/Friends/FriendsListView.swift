@@ -23,6 +23,14 @@ struct FriendsListView: View {
                     && store.outgoingRequests.isEmpty {
                     teachEmpty
                 } else {
+                    if !store.incomingRequests.isEmpty {
+                        Text("REQUESTS")
+                            .font(.system(size: 8.5, weight: .medium, design: .monospaced))
+                            .foregroundColor(DailyDriver.foregroundDim)
+                        ForEach(store.incomingRequests) { request in
+                            incomingRequestCard(request)
+                        }
+                    }
                     if store.unhandledShareCount >= 1 {
                         inboxTeaser
                     }
@@ -161,6 +169,65 @@ struct FriendsListView: View {
         }
         .buttonStyle(.plain)
         .accessibilityIdentifier("af_friends_inbox_teaser")
+    }
+
+    private func incomingRequestCard(_ request: Friendship) -> some View {
+        HStack(spacing: 11) {
+            FriendAvatarChip(
+                name: request.peer.displayName,
+                accent: friendAccentColor(request.peer.accentRaw)
+            )
+            VStack(alignment: .leading, spacing: 2) {
+                Text(request.peer.displayName)
+                    .ddDisplayText(13, weight: .bold)
+                Text("WANTS TO BE FRIENDS")
+                    .font(.system(size: 8, weight: .medium, design: .monospaced))
+                    .foregroundColor(DailyDriver.foregroundDim)
+            }
+            Spacer(minLength: 0)
+            Button {
+                Task {
+                    do {
+                        try await store.accept(request)
+                    } catch {
+                        actionError = error.localizedDescription
+                    }
+                }
+            } label: {
+                Text("Accept")
+                    .ddDisplayText(11.5, weight: .bold)
+                    .foregroundColor(DailyDriver.ink)
+                    .padding(.horizontal, 13)
+                    .padding(.vertical, 7)
+                    .background(DailyDriver.lime)
+                    .clipShape(Capsule(style: .continuous))
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("af_friends_request_accept")
+
+            Button {
+                Task {
+                    do {
+                        try await store.decline(request)
+                    } catch {
+                        actionError = error.localizedDescription
+                    }
+                }
+            } label: {
+                Text("Decline")
+                    .ddDisplayText(11.5, weight: .bold)
+                    .foregroundColor(DailyDriver.foregroundDim)
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("af_friends_request_decline")
+        }
+        .padding(13)
+        .background(DailyDriver.card)
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(DailyDriver.lime.opacity(0.45), lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 
     @ViewBuilder

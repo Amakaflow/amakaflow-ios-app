@@ -162,7 +162,8 @@ struct ProfileHubView: View {
             // AMA-2389 mockup: Friends management lives on Profile (not only Settings).
             ProfileFriendsEntryRow(
                 friendCount: friendsStore.acceptedFriends.count,
-                waitingCount: friendsStore.unhandledShareCount
+                waitingCount: friendsStore.unhandledShareCount,
+                requestCount: friendsStore.incomingRequests.count
             ) {
                 path.append(ProfileHubRoute.friends)
             }

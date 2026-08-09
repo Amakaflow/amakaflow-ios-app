@@ -100,6 +100,7 @@ struct AFTabSelectionState: Equatable {
 
 struct ContentView: View {
     @EnvironmentObject var viewModel: WorkoutsViewModel
+    @ObservedObject private var friendsStore = FriendsSharingStore.shared
     @State private var tabState = AFTabSelectionState(selectedTab: .today)
     @State private var showingWorkoutPlayer = false
     @State private var showSyncDashboard = false
@@ -113,6 +114,11 @@ struct ContentView: View {
 
     private var selectedTab: AFTab { tabState.selectedTab }
 
+    private var tabBadgeCounts: [AFTab: Int] {
+        let attention = friendsStore.profileAttentionCount
+        return attention >= 1 ? [.profile: attention] : [:]
+    }
+
     var body: some View {
         ZStack {
             DailyDriver.screenBackground.ignoresSafeArea()
@@ -121,7 +127,11 @@ struct ContentView: View {
             if !suppressFloatingChrome {
                 VStack {
                     Spacer()
-                    DDFloatingTabBar(selectedTab: selectedTab, onSelect: selectTab)
+                    DDFloatingTabBar(
+                        selectedTab: selectedTab,
+                        badgeCounts: tabBadgeCounts,
+                        onSelect: selectTab
+                    )
                 }
 
                 VStack {
@@ -148,6 +158,7 @@ struct ContentView: View {
         .tint(DailyDriver.lime)
         .task {
             await viewModel.checkPendingWorkouts()
+            await friendsStore.reload()
         }
         .onReceive(NotificationCenter.default.publisher(for: .refreshPendingWorkouts)) { _ in
             Task {

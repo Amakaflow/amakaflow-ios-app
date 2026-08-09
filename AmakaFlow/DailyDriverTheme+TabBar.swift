@@ -11,6 +11,7 @@ import SwiftUI
 
 struct DDFloatingTabBar: View {
     let selectedTab: AFTab
+    var badgeCounts: [AFTab: Int] = [:]
     let onSelect: (AFTab) -> Void
 
     var body: some View {
@@ -20,9 +21,24 @@ struct DDFloatingTabBar: View {
                     onSelect(tab)
                 } label: {
                     VStack(spacing: 3) {
-                        Image(systemName: selectedTab == tab ? tab.activeIcon : tab.inactiveIcon)
-                            .font(.system(size: 20, weight: .semibold))
-                            .foregroundColor(selectedTab == tab ? DailyDriver.lime : DailyDriver.foregroundDim)
+                        ZStack(alignment: .topTrailing) {
+                            Image(systemName: selectedTab == tab ? tab.activeIcon : tab.inactiveIcon)
+                                .font(.system(size: 20, weight: .semibold))
+                                .foregroundColor(selectedTab == tab ? DailyDriver.lime : DailyDriver.foregroundDim)
+                                .frame(width: 28, height: 24)
+                            let badge = badgeCounts[tab, default: 0]
+                            if badge >= 1 {
+                                Text(badge > 9 ? "9+" : "\(badge)")
+                                    .font(.system(size: 9, weight: .heavy))
+                                    .foregroundColor(DailyDriver.ink)
+                                    .padding(.horizontal, 4)
+                                    .frame(minWidth: 14, minHeight: 14)
+                                    .background(DailyDriver.lime)
+                                    .clipShape(Capsule(style: .continuous))
+                                    .offset(x: 8, y: -6)
+                                    .accessibilityIdentifier("\(tab.accessibilityIdentifier)_badge")
+                            }
+                        }
                         Text(tab.title)
                             .ddDisplayText(10, weight: .semibold)
                             .foregroundColor(selectedTab == tab ? DailyDriver.lime : DailyDriver.foregroundDim)
