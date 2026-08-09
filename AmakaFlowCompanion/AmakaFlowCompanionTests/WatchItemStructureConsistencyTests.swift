@@ -62,33 +62,38 @@ final class WatchItemStructureConsistencyTests: XCTestCase {
     }
 
     func testAppleFactoryUsesCachedPlanJSONNotDemoSteps() {
-        let sections = WatchItemViewModel.resolvedStepSections(
-            stepSections: [],
-            planJSON: bikeSkiRowPlanJSON,
-            title: "Bike ski row"
-        )
-        let seeded = WatchItemViewModel.seed(
-            storeKey: "lib-bike",
+        linkStore.record(
+            planID: "plan-bike",
+            workoutID: "lib-bike",
             title: "Bike ski row",
-            isApple: true,
-            prefs: .defaults,
+            planJSON: bikeSkiRowPlanJSON
+        )
+        let row = WorkoutScheduleRow(
+            id: WorkoutScheduleRowID(
+                planID: "plan-bike",
+                date: DateComponents(year: 2026, month: 8, day: 8, hour: 17, minute: 35)
+            ),
+            title: "Bike ski row",
+            dateComponents: DateComponents(year: 2026, month: 8, day: 8, hour: 17, minute: 35),
+            scheduledAt: Date(),
+            isComplete: false
+        )
+        let vm = WatchItemViewModel.apple(
+            row: row,
+            linkStore: linkStore,
             readinessStore: readinessStore,
-            deliveredStepTotal: sections.reduce(0) { $0 + $1.steps.count },
-            stepSections: sections
+            library: [("lib-bike", "Bike ski row")],
+            prefs: .defaults
         )
-        XCTAssertEqual(sections.count, 1)
-        XCTAssertEqual(sections[0].band, "Circuit")
-        XCTAssertEqual(sections[0].tag, "8 ROUNDS")
-        XCTAssertEqual(sections[0].steps.count, 4)
-        XCTAssertFalse(sections.flatMap(\.steps).contains { $0.title.contains("Bench") })
-        XCTAssertEqual(seeded.pills.first, WatchItemCopy.stepsPill(count: 4))
-        let tracker = WatchItemChangeTracker(
-            baseline: seeded.baseline,
-            config: seeded.baselineConfig,
-            draft: seeded.draft,
-            draftConfig: seeded.draftConfig
-        )
-        XCTAssertEqual(tracker.changeCount, 0)
+        XCTAssertEqual(vm.stepSections.count, 1)
+        XCTAssertEqual(vm.stepSections[0].band, "Circuit")
+        XCTAssertEqual(vm.stepSections[0].tag, "8 ROUNDS")
+        XCTAssertEqual(vm.stepSections[0].steps.count, 4)
+        XCTAssertFalse(vm.stepSections.flatMap(\.steps).contains { $0.title.contains("Bench") })
+        XCTAssertEqual(vm.snapshotPills.first, WatchItemCopy.stepsPill(count: 4))
+        XCTAssertEqual(vm.workoutID, "lib-bike")
+        XCTAssertEqual(vm.applePlanID, "plan-bike")
+        XCTAssertEqual(vm.changeCount, 0)
     }
 
     /// Send-as-is / no prefs → Watch Item must not invent MOBILITY / TIMED REST.

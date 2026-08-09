@@ -338,3 +338,87 @@ final class WatchItemViewModel: ObservableObject {
         }
     }
 }
+
+extension WatchItemViewModel {
+    /// Rebuild the read-only preview from the newly delivered draft while
+    /// preserving prior WORK bands (exercise rows the enrichment draft doesn't own).
+    static func sectionsReflectingDelivered(
+        readiness: WatchItemReadinessState,
+        config: WatchItemConfigState,
+        priorSections: [PreviewSection]
+    ) -> [PreviewSection] {
+        var sections: [PreviewSection] = []
+        var nextNumber = 1
+
+        func appendNumbered(_ title: String, detail: String? = nil, restChip: String? = nil) -> PreviewStep {
+            let step = PreviewStep(
+                number: nextNumber,
+                title: title,
+                detail: detail,
+                restChip: restChip
+            )
+            nextNumber += 1
+            return step
+        }
+
+        if readiness.mobilityEnabled {
+            let names = config.mobilityActivities.map(\.name)
+            let labels = names.isEmpty ? ["Mobility"] : names
+            sections.append(
+                PreviewSection(
+                    accent: .mobility,
+                    band: "MOBILITY",
+                    tag: nil,
+                    steps: labels.map { appendNumbered($0) }
+                )
+            )
+        }
+
+        if readiness.warmupsEnabled {
+            let enabledRamps = config.perExerciseRamps.filter(\.enabled)
+            for ramp in enabledRamps {
+                let details = ["~40%", "~60%", "~80%"]
+                sections.append(
+                    PreviewSection(
+                        accent: .work,
+                        band: "WARM-UP · \(ramp.exerciseRef.uppercased())",
+                        tag: nil,
+                        steps: details.map { appendNumbered(PreviewStep.warmupSetTitle, detail: $0) }
+                    )
+                )
+            }
+        }
+
+        let workBands = priorSections.filter {
+            $0.accent == .work && !$0.band.uppercased().contains("WARM")
+        }
+        for band in workBands {
+            sections.append(
+                PreviewSection(
+                    accent: .work,
+                    band: band.band,
+                    tag: band.tag,
+                    steps: band.steps.map {
+                        appendNumbered($0.title, detail: $0.detail, restChip: $0.restChip)
+                    },
+                    caption: band.caption
+                )
+            )
+        }
+
+        if readiness.cooldownEnabled {
+            let names = config.cooldownActivities.map(\.name)
+            let labels = names.isEmpty ? ["Cooldown"] : names
+            sections.append(
+                PreviewSection(
+                    accent: .cooldown,
+                    band: "COOLDOWN",
+                    tag: nil,
+                    steps: labels.map { appendNumbered($0) }
+                )
+            )
+        }
+
+        return sections.isEmpty ? priorSections : sections
+    }
+}

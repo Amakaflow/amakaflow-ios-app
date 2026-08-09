@@ -245,3 +245,44 @@ enum WorkoutKitPlanStepSummary {
         return base
     }
 }
+
+// MARK: - Preview section formatting (shared with +Sections)
+
+func bandDurationTag(from details: [String?]) -> String? {
+    var totalSeconds = 0
+    var matched = false
+    for detail in details {
+        guard let detail else { continue }
+        if let minutes = parseMinutes(detail) {
+            totalSeconds += minutes * 60
+            matched = true
+        } else if let seconds = parseSeconds(detail) {
+            totalSeconds += seconds
+            matched = true
+        }
+    }
+    guard matched, totalSeconds > 0 else { return nil }
+    let minutes = max(1, Int((Double(totalSeconds) / 60.0).rounded()))
+    return "~\(minutes) MIN"
+}
+
+private func parseMinutes(_ detail: String) -> Int? {
+    let lower = detail.lowercased()
+    guard lower.contains("min") else { return nil }
+    let digits = lower.prefix(while:) { $0.isNumber || $0 == " " }.filter(\.isNumber)
+    return Int(String(digits))
+}
+
+/// Accept only `durationLabel` seconds form (`"120s"`), never `"10 reps"`.
+private func parseSeconds(_ detail: String) -> Int? {
+    let lower = detail.lowercased()
+    guard lower.hasSuffix("s") else { return nil }
+    let digits = String(lower.dropLast())
+    guard !digits.isEmpty, digits.allSatisfy(\.isNumber) else { return nil }
+    return Int(digits)
+}
+
+func uppercaseDetail(_ detail: String?) -> String? {
+    guard let detail, !detail.isEmpty else { return nil }
+    return detail.uppercased()
+}

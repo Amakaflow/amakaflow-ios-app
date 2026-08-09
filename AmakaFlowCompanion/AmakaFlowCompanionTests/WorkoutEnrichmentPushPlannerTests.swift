@@ -368,7 +368,10 @@ final class WorkoutEnrichmentPushPlannerTests: XCTestCase {
             tombstones: [],
             prefs: .defaults
         )
-        XCTAssertFalse(plan.hasOffers)
+        // AMA-2390: Rest stays offered (checked) when block rest already exists so
+        // Send as-is / unchecked can clear author rest intent.
+        XCTAssertEqual(plan.offers.map(\.kind), [.betweenSetRest])
+        XCTAssertEqual(plan.offer(.betweenSetRest)?.isChecked, true)
     }
 
     // MARK: - Applying the decision
