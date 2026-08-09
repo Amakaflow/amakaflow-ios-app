@@ -24,11 +24,12 @@ extension APIService {
             blockPayload = [["label": "Main", "exercises": exercises]]
         }
 
+        let canonicalSport = WorkoutSport.parse(request.sport).rawValue
         var workoutData: [String: Any] = [
             "title": request.name,
             // AMA-2393 — persist explicit sport; workout_type kept for legacy readers
-            "sport": request.sport,
-            "workout_type": request.sport,
+            "sport": canonicalSport,
+            "workout_type": canonicalSport,
             "blocks": blockPayload
         ]
         if let description = request.description?.trimmingCharacters(in: .whitespacesAndNewlines), !description.isEmpty {

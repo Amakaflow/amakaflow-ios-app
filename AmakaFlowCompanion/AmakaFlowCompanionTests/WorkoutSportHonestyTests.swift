@@ -134,6 +134,60 @@ final class WorkoutSportHonestyTests: XCTestCase {
         XCTAssertEqual(WorkoutSportHonesty.inferSport(from: blocks), .mixed)
     }
 
+    func testEmomWithLiftsInfersConditioning() {
+        let blocks = [
+            Block(
+                label: "Main",
+                structure: .emom,
+                rounds: 10,
+                exercises: [
+                    Exercise(
+                        name: "KB Swing", canonicalName: nil, sets: 1, reps: "15",
+                        durationSeconds: nil, load: nil, restSeconds: nil, distance: nil,
+                        notes: nil, supersetGroup: nil
+                    ),
+                    Exercise(
+                        name: "Rowing Machine", canonicalName: nil, sets: nil, reps: nil,
+                        durationSeconds: 60, load: nil, restSeconds: nil, distance: nil,
+                        notes: nil, supersetGroup: nil
+                    ),
+                ]
+            )
+        ]
+        XCTAssertEqual(WorkoutSportHonesty.inferSport(from: blocks), .conditioning)
+    }
+
+    func testAliasSportCanonicalizedOnSave() throws {
+        var request = WorkoutSaveRequest.from(
+            workout: Workout(
+                name: "Tempo",
+                sport: .running,
+                duration: 1200,
+                blocks: [
+                    Block(
+                        label: "Main",
+                        structure: .straight,
+                        rounds: 1,
+                        exercises: [
+                            Exercise(
+                                name: "Easy Run", canonicalName: nil, sets: nil, reps: nil,
+                                durationSeconds: 1200, load: nil, restSeconds: nil, distance: nil,
+                                notes: nil, supersetGroup: nil
+                            )
+                        ]
+                    )
+                ],
+                source: .manual
+            )
+        )
+        // Legacy alias must canonicalize to wire value "run" on the mapper body.
+        request.sport = "running"
+        let body = try APIService.mapperSaveBody(from: request, source: "manual")
+        let data = try XCTUnwrap(body["workout_data"] as? [String: Any])
+        XCTAssertEqual(data["sport"] as? String, "run")
+        XCTAssertEqual(data["workout_type"] as? String, "run")
+    }
+
     func testSaveRequestEncodesCanonicalSport() throws {
         let workout = Workout(
             name: "Bike ski row",

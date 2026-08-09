@@ -95,12 +95,12 @@ struct EditorV2View: View {
         if let workout {
             _saveModel = StateObject(wrappedValue: WorkoutEditorViewModel(workout: workout))
         } else {
-            let vm = WorkoutEditorViewModel()
+            let editorViewModel = WorkoutEditorViewModel()
             // AMA-2393 C3 — Builder v3 type picker must persist its sport choice
             if let builderV3Seed {
-                vm.sport = builderV3Seed.category.workoutSport
+                editorViewModel.sport = builderV3Seed.category.workoutSport
             }
-            _saveModel = StateObject(wrappedValue: vm)
+            _saveModel = StateObject(wrappedValue: editorViewModel)
         }
     }
 

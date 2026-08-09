@@ -125,10 +125,10 @@ class WorkoutKitConverter {
             return "other" // WorkoutKit doesn't have mobility, use other
         case .swimming:
             return "swimming"
-        case .cardio, .mixed:
-            return "mixedCardio"
-        case .conditioning:
-            return "highIntensityIntervalTraining"
+        // WorkoutKitSync SportType only knows strength/run/ride/swim/other.
+        // Mapper `activity` remains the honesty source for Apple push + RECORDS AS.
+        case .cardio, .conditioning, .mixed:
+            return "other"
         case .other:
             return "other"
         }

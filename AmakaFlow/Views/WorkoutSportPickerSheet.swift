@@ -25,17 +25,20 @@ struct WorkoutSportPickerSheet: View {
 
                 List {
                     ForEach(WorkoutSport.pickerOptions, id: \.self) { sport in
-                        Button(action: { onSelect(sport) }) {
-                            HStack {
-                                Text(sport.displayName)
-                                    .foregroundColor(DailyDriver.foreground)
-                                Spacer()
-                                if sport == selected {
-                                    Image(systemName: "checkmark")
-                                        .foregroundColor(Color(hex: "7AB953"))
+                        Button(
+                            action: { onSelect(sport) },
+                            label: {
+                                HStack {
+                                    Text(sport.displayName)
+                                        .foregroundColor(DailyDriver.foreground)
+                                    Spacer()
+                                    if sport == selected {
+                                        Image(systemName: "checkmark")
+                                            .foregroundColor(Color(hex: "7AB953"))
+                                    }
                                 }
                             }
-                        }
+                        )
                         .accessibilityIdentifier("af_sport_picker_\(sport.rawValue)")
                     }
                 }

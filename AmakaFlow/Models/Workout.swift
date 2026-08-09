@@ -309,15 +309,16 @@ enum WorkoutSport: String, Codable, CaseIterable, Identifiable, Hashable {
             return .mobility
         case "swimming", "swim":
             return .swimming
-        case "cardio", "hiit":
+        case "cardio":
             return .cardio
+        case "hiit":
+            return .conditioning
         case "mixed":
             return .mixed
         default:
             return .other
         }
     }
-
 }
 
 // MARK: - Workout Model
@@ -414,7 +415,13 @@ struct Workout: Identifiable, Codable, Hashable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decode(String.self, forKey: .id)
         name = try container.decode(String.self, forKey: .name)
-        sport = try container.decodeIfPresent(WorkoutSport.self, forKey: .sport) ?? .other
+        if let decoded = try container.decodeIfPresent(WorkoutSport.self, forKey: .sport) {
+            sport = decoded
+        } else if let legacy = try container.decodeIfPresent(String.self, forKey: .workoutType) {
+            sport = WorkoutSport.parse(legacy)
+        } else {
+            sport = .other
+        }
         duration = try container.decodeIfPresent(Int.self, forKey: .duration) ?? 0
         description = try container.decodeIfPresent(String.self, forKey: .description)
         source = try container.decodeIfPresent(WorkoutSource.self, forKey: .source) ?? .other
@@ -456,6 +463,7 @@ struct Workout: Identifiable, Codable, Hashable {
         case id, name, sport, duration, blocks, intervals, description, source, sourceUrl
         case creatorName, creator, createdAt, pushedAt
         case canonicalId, canonicalSource
+        case workoutType = "workout_type"
     }
 
     /// Convert legacy flat WorkoutInterval array into Block array.

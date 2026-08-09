@@ -29,6 +29,8 @@ final class StructureClarifyMatrixTests: XCTestCase {
         WorkoutSport.running.rawValue,
         WorkoutSport.cycling.rawValue,
         WorkoutSport.cardio.rawValue,
+        WorkoutSport.conditioning.rawValue,
+        WorkoutSport.mixed.rawValue,
         WorkoutSport.mobility.rawValue,
         WorkoutSport.swimming.rawValue,
         WorkoutSport.other.rawValue

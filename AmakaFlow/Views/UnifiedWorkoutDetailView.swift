@@ -406,6 +406,7 @@ struct UnifiedWorkoutDetailView: View {
                             .clipShape(Capsule())
                         }
                         .buttonStyle(.plain)
+                        .disabled(isSavingSport)
                         .accessibilityLabel("Workout type, \(displayedWorkout.sport.displayName)")
                         .accessibilityHint("Changes how watches record it")
                         .accessibilityIdentifier("af_workout_detail_sport_chip")
@@ -1427,6 +1428,7 @@ extension UnifiedWorkoutDetailView {
     /// AMA-2393 — persist explicit sport from the type chip (never silent rewrite).
     @MainActor
     fileprivate func applySportSelection(_ sport: WorkoutSport) async {
+        guard !isSavingSport else { return }
         guard sport != displayedWorkout.sport else {
             sportDisagreementDismissed = true
             return
@@ -1458,7 +1460,6 @@ extension UnifiedWorkoutDetailView {
         }
     }
 }
-
 
 /// AMA-2346: Start + enrichment share one sheet identity so SwiftUI cannot
 /// dismiss Start and present enrichment out of order with push/openApp.
