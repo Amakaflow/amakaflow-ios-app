@@ -157,6 +157,18 @@ final class WorkoutSportHonestyTests: XCTestCase {
         XCTAssertEqual(WorkoutSportHonesty.inferSport(from: blocks), .conditioning)
     }
 
+    func testLegacyWorkoutTypeDecodesWhenSportAbsent() throws {
+        let decoder = JSONDecoder()
+        let runningJSON = """
+        {"id":"w1","name":"Tempo","workout_type":"running","duration":1200,"blocks":[]}
+        """.data(using: .utf8)!
+        let hiitJSON = """
+        {"id":"w2","name":"EMOM","workout_type":"hiit","duration":600,"blocks":[]}
+        """.data(using: .utf8)!
+        XCTAssertEqual(try decoder.decode(Workout.self, from: runningJSON).sport, .running)
+        XCTAssertEqual(try decoder.decode(Workout.self, from: hiitJSON).sport, .conditioning)
+    }
+
     func testAliasSportCanonicalizedOnSave() throws {
         var request = WorkoutSaveRequest.from(
             workout: Workout(

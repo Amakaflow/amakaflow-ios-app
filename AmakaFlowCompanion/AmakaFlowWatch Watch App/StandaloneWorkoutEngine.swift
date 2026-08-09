@@ -2,10 +2,10 @@
 //  StandaloneWorkoutEngine.swift
 //  AmakaFlowWatch Watch App
 //
-// swiftlint:disable file_length type_body_length
-
 //  Workout execution engine for standalone watch workouts with HealthKit integration
 //
+
+// swiftlint:disable file_length
 
 import Combine
 import Foundation
@@ -14,6 +14,7 @@ import WatchConnectivity
 import WatchKit
 
 @MainActor
+// swiftlint:disable:next type_body_length
 final class StandaloneWorkoutEngine: ObservableObject {
     static let shared = StandaloneWorkoutEngine()
 
