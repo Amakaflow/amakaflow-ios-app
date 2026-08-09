@@ -127,6 +127,10 @@ final class ActualsTodayDemoFeed: ObservableObject {
     ) async {
         do {
             let result = try await client.syncCompleted(daysBack: 30)
+            // Logical BFF failure: do not activate Today, map activities, or invent progress.
+            guard result.success else {
+                throw StravaLogicalSyncFailure(message: result.message)
+            }
             isActive = true
             showMergeAsk = false
             let activities = result.activities
@@ -140,6 +144,10 @@ final class ActualsTodayDemoFeed: ObservableObject {
                 sync.clear()
             }
             cards = Self.cards(from: activities)
+        } catch is StravaLogicalSyncFailure {
+            showMergeAsk = false
+            cards = []
+            sync.clear()
         } catch {
             // Connected server-side; rail stays honest-empty until the next refresh.
             isActive = true
@@ -628,4 +636,10 @@ final class ActualsTodayDemoFeed: ObservableObject {
             )
         ]
     }
+}
+
+/// BFF returned HTTP 200 with `success: false` — not a transport failure.
+private struct StravaLogicalSyncFailure: LocalizedError {
+    let message: String
+    var errorDescription: String? { message }
 }

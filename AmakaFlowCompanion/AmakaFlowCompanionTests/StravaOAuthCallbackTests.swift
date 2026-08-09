@@ -65,4 +65,79 @@ final class StravaOAuthCallbackTests: XCTestCase {
         XCTAssertEqual(cards[0].kind, .unmapped)
         XCTAssertEqual(cards[0].sourceProvider, .strava)
     }
+
+    func testApplyLibraryMatchUpdatesLiveStravaCardID() async throws {
+        MockURLProtocol.reset()
+        defer { MockURLProtocol.reset() }
+
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime]
+        let today = formatter.string(from: Date())
+        let successJSON = """
+        {
+          "success": true,
+          "synced_count": 1,
+          "activities": [{
+            "strava_id": 2,
+            "name": "Today ride",
+            "type": "Ride",
+            "distance_km": 20,
+            "duration_min": 55,
+            "start_date": "\(today)",
+            "description": ""
+          }],
+          "message": "ok"
+        }
+        """.data(using: .utf8)!
+        MockURLProtocol.setResponse(statusCode: 200, data: successJSON)
+
+        let client = BFFStravaClient(
+            baseURL: "https://mock.test/v1",
+            session: MockURLProtocol.mockSession(),
+            bearerTokenProvider: { "test-token" },
+            userIDProvider: { "user-1" }
+        )
+        let db = try AppDatabase.makeTestDatabase()
+        let feed = ActualsTodayDemoFeed(repository: ActualsRepository(database: db))
+        let sync = ActualsSyncProgressStore()
+        await feed.activateFromStravaSync(sync: sync, client: client)
+        XCTAssertEqual(feed.cards.map(\.id), ["strava_2"])
+
+        feed.applyLibraryMatch(planTitle: "Tempo ride", unmappedCardID: "strava_2")
+
+        XCTAssertEqual(feed.cards.count, 1)
+        XCTAssertEqual(feed.cards[0].id, "strava_2")
+        XCTAssertEqual(feed.cards[0].title, "Tempo ride")
+        XCTAssertEqual(feed.cards[0].kind, .fillInDebt)
+        XCTAssertFalse(
+            feed.cards.contains(where: { $0.id == "today_demo_unmapped" }),
+            "Live Strava match must not create/update the demo fallback card"
+        )
+    }
+
+    func testLogicalSyncFailureDoesNotActivateFeedOrProgress() async throws {
+        MockURLProtocol.reset()
+        defer { MockURLProtocol.reset() }
+
+        let failureJSON = """
+        {"success":false,"synced_count":0,"activities":[],"message":"strava token expired"}
+        """.data(using: .utf8)!
+        MockURLProtocol.setResponse(statusCode: 200, data: failureJSON)
+
+        let client = BFFStravaClient(
+            baseURL: "https://mock.test/v1",
+            session: MockURLProtocol.mockSession(),
+            bearerTokenProvider: { "test-token" },
+            userIDProvider: { "user-1" }
+        )
+        let db = try AppDatabase.makeTestDatabase()
+        let feed = ActualsTodayDemoFeed(repository: ActualsRepository(database: db))
+        let sync = ActualsSyncProgressStore()
+
+        await feed.activateFromStravaSync(sync: sync, client: client)
+
+        XCTAssertFalse(feed.isActive, "Logical BFF failure must not activate the Today rail")
+        XCTAssertTrue(feed.cards.isEmpty)
+        XCTAssertNil(sync.progress, "Logical failure must not start backfill progress")
+    }
 }
