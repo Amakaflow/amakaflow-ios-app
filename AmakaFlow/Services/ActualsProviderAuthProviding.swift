@@ -2,8 +2,9 @@
 //  ActualsProviderAuthProviding.swift
 //  AmakaFlow
 //
-//  AMA-2387: Strava / Garmin OAuth via BFF — stub until backend ships.
+//  AMA-2387 / AMA-2391: Strava / Garmin OAuth via BFF.
 //  Never request activity:write / upload scopes (design-handoff/ACTUALS.md).
+//  Live: `BFFActualsProviderAuth`. Stub: previews + UITEST_USE_FIXTURES.
 //
 
 import Foundation
@@ -16,8 +17,7 @@ enum ActualsProviderAuthOutcome: Equatable {
 }
 
 protocol ActualsProviderAuthProviding: AnyObject {
-    /// Starts provider OAuth (real ASWebAuthenticationSession + BFF later).
-    /// Stub returns cancel/success without network.
+    /// Starts provider OAuth (ASWebAuthenticationSession + BFF for Strava).
     func authorize(_ provider: ActualsSourceProvider) async -> ActualsProviderAuthOutcome
 }
 
@@ -41,8 +41,8 @@ enum ActualsProviderAuthAction {
 
 // MARK: - Stub (no network — UI drives cancel/authorize)
 
-/// Stub auth used until the mobile-BFF OAuth endpoints exist.
-/// DEBUG Authorize → `.success` for dogfood. Release → `.failed` (never fake a link).
+/// Stub auth for previews / UITEST fixtures (and DEBUG dogfood when selected).
+/// DEBUG Authorize → `.success`. Release → `.failed` (never fake a link).
 @MainActor
 final class StubActualsProviderAuth: ActualsProviderAuthProviding {
     /// Test override — when set, consumed once on the next `authorize`.

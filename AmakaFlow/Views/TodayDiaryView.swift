@@ -117,14 +117,15 @@ struct TodayDiaryView: View {
                 DDActivityDetailView(completionId: completionId)
             }
             .navigationDestination(isPresented: $showConnectSources) {
-                ActualsConnectSourcesView(store: actualsSources) { _ in
+                ActualsConnectSourcesView(store: actualsSources) { provider in
                     // Children already markConnected + announce on real grant/success.
-                    #if DEBUG
-                    if ActualsTodayDemoFeed.shouldAutoActivate {
-                        actualsDemo.activateAfterConnect(sync: actualsSyncProgress)
-                    }
-                    #endif
                     showConnectSources = false
+                    Task {
+                        await actualsDemo.handleProviderConnected(
+                            provider,
+                            sync: actualsSyncProgress
+                        )
+                    }
                 }
             }
             .navigationDestination(item: $actualsDestination) { destination in
@@ -240,10 +241,11 @@ struct TodayDiaryView: View {
             activeMergedSession = session
             actualsDestination = .mergedDetail
         case .unmapped:
-            // Activity must ride on the destination — separate @State races to a blank push.
+            // Activity + card id must ride on the destination — separate @State races to a blank push,
+            // and live Strava rows (strava_*) must keep their identity through Map → match.
             let activity = card.activity ?? ActualsTodayDemoFeed.sampleUnmappedActivity()
             activeUnmapped = activity
-            actualsDestination = .mapToPlan(activity)
+            actualsDestination = .mapToPlan(cardID: card.id, activity: activity)
         case .fillInDebt:
             actualsDemo.prepareFillIn(from: card)
             guard actualsDemo.fillInViewModel != nil else { return }
@@ -287,7 +289,7 @@ struct TodayDiaryView: View {
             } else {
                 missingDestinationFallback("Couldn't open that session.")
             }
-        case .mapToPlan(let activity):
+        case .mapToPlan(let cardID, let activity):
             ActualsMapToPlanView(
                 activity: activity,
                 matches: ActualsPlanMatcher.rank(
@@ -296,8 +298,11 @@ struct TodayDiaryView: View {
                 ),
                 onSelect: { match in
                     // Keep the session on Today — attach the plan, then RPE.
-                    actualsDemo.applyLibraryMatch(planTitle: match.candidate.title)
-                    if let matched = actualsDemo.cards.first(where: { $0.id == "today_demo_unmapped" }) {
+                    actualsDemo.applyLibraryMatch(
+                        planTitle: match.candidate.title,
+                        unmappedCardID: cardID
+                    )
+                    if let matched = actualsDemo.cards.first(where: { $0.id == cardID }) {
                         actualsDemo.prepareFillIn(from: matched)
                     }
                     guard actualsDemo.fillInViewModel != nil else {
@@ -310,7 +315,7 @@ struct TodayDiaryView: View {
                     actualsDestination = nil
                 },
                 onCaptureMatched: { draft, _ in
-                    actualsDemo.applyCaptureMatched(draft: draft)
+                    actualsDemo.applyCaptureMatched(draft: draft, unmappedCardID: cardID)
                     actualsDestination = nil
                     activeUnmapped = nil
                 }
@@ -551,8 +556,8 @@ struct TodayDiaryView: View {
 
 private enum ActualsTodayDestination: Hashable, Identifiable {
     case mergedDetail
-    /// Payload is the activity — avoids blank Map when @State races.
-    case mapToPlan(ActualsUnmappedActivity)
+    /// Card id + activity — avoids blank Map when @State races, and keeps live Strava rows addressable.
+    case mapToPlan(cardID: String, activity: ActualsUnmappedActivity)
     case matchSave
     case fillIn
     case verified
@@ -560,8 +565,8 @@ private enum ActualsTodayDestination: Hashable, Identifiable {
     var id: String {
         switch self {
         case .mergedDetail: return "mergedDetail"
-        case .mapToPlan(let activity):
-            return "mapToPlan-\(activity.title)-\(activity.startDate.timeIntervalSince1970)"
+        case .mapToPlan(let cardID, let activity):
+            return "mapToPlan-\(cardID)-\(activity.startDate.timeIntervalSince1970)"
         case .matchSave: return "matchSave"
         case .fillIn: return "fillIn"
         case .verified: return "verified"

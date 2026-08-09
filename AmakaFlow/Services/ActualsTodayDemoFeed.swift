@@ -103,6 +103,137 @@ final class ActualsTodayDemoFeed: ObservableObject {
         #endif
     }
 
+    /// AMA-2391: after Strava OAuth succeeds, pull sync-completed into the Today rail.
+    /// Demo flag (`AMA2387_TODAY_DEMO`) still wins in DEBUG for fixture dogfood.
+    func handleProviderConnected(
+        _ provider: ActualsSourceProvider,
+        sync: ActualsSyncProgressStore,
+        client: BFFStravaClient? = nil
+    ) async {
+        #if DEBUG
+        if Self.shouldAutoActivate {
+            activateAfterConnect(sync: sync)
+            return
+        }
+        #endif
+        guard provider == .strava else { return }
+        await activateFromStravaSync(sync: sync, client: client ?? BFFStravaClient.live())
+    }
+
+    /// Replace demo cards with Strava sync-completed activities (30-day backfill).
+    func activateFromStravaSync(
+        sync: ActualsSyncProgressStore,
+        client: BFFStravaClient
+    ) async {
+        do {
+            let result = try await client.syncCompleted(daysBack: 30)
+            // Logical BFF failure: do not activate Today, map activities, or invent progress.
+            guard result.success else {
+                throw StravaLogicalSyncFailure(message: result.message)
+            }
+            isActive = true
+            showMergeAsk = false
+            let activities = result.activities
+            let total = max(result.syncedCount, activities.count)
+            if total > 0 {
+                sync.beginBackfill(total: total)
+                for _ in activities {
+                    sync.recordIngestedSession()
+                }
+            } else {
+                sync.clear()
+            }
+            cards = Self.cards(from: activities)
+        } catch is StravaLogicalSyncFailure {
+            showMergeAsk = false
+            cards = []
+            sync.clear()
+        } catch {
+            // Connected server-side; rail stays honest-empty until the next refresh.
+            isActive = true
+            showMergeAsk = false
+            cards = []
+            sync.clear()
+        }
+    }
+
+    /// Map API activities → unmapped Today cards (prefer calendar-today, else recent).
+    static func cards(from activities: [StravaCompletedActivityDTO]) -> [ActualsTodayDemoCard] {
+        let parsed = activities.compactMap { activity -> (StravaCompletedActivityDTO, Date)? in
+            guard let date = parseStravaStartDate(activity.startDate) else { return nil }
+            return (activity, date)
+        }
+        .sorted { $0.1 > $1.1 }
+
+        let calendar = Calendar.current
+        let todays = parsed.filter { calendar.isDateInToday($0.1) }
+        let chosen = todays.isEmpty ? Array(parsed.prefix(8)) : todays
+        return chosen.map { card(from: $0.0, startDate: $0.1) }
+    }
+
+    private static func card(
+        from activity: StravaCompletedActivityDTO,
+        startDate: Date
+    ) -> ActualsTodayDemoCard {
+        let durationSeconds = TimeInterval(activity.durationMin * 60)
+        let distanceMeters = activity.distanceKm > 0 ? activity.distanceKm * 1_000 : nil
+        let workoutType = workoutType(from: activity.type)
+        let unmapped = ActualsUnmappedActivity(
+            title: activity.name,
+            provider: .strava,
+            startDate: startDate,
+            durationSeconds: durationSeconds,
+            distanceMeters: distanceMeters,
+            calories: nil,
+            avgHR: nil,
+            type: workoutType
+        )
+        var stats: [(icon: String, value: String)] = [
+            ("clock", "\(max(1, activity.durationMin))m")
+        ]
+        if let distanceMeters {
+            let kilometers = distanceMeters / 1_000
+            let distanceText = kilometers >= 10
+                ? String(format: "%.0f km", kilometers)
+                : String(format: "%.1f km", kilometers)
+            stats.append(("figure.run", distanceText))
+        }
+        return ActualsTodayDemoCard(
+            id: "strava_\(activity.stravaId)",
+            kind: .unmapped,
+            timeLabel: cardTimeFormatter.string(from: startDate),
+            title: activity.name,
+            stats: stats,
+            sourceLabel: "Synced from \(ActualsCopy.sourceDisplayName(.strava))",
+            sourceProvider: .strava,
+            session: nil,
+            activity: unmapped,
+            fillInSession: nil
+        )
+    }
+
+    private static func workoutType(from raw: String) -> ActualsWorkoutType {
+        switch raw.lowercased() {
+        case "run", "virtualrun", "trailrun":
+            return .run
+        case "ride", "virtualride", "ebikeride", "gravelride":
+            return .ride
+        case "weighttraining", "workout", "crossfit", "yoga":
+            return .strength
+        default:
+            return .other
+        }
+    }
+
+    private static func parseStravaStartDate(_ raw: String) -> Date? {
+        let fractional = ISO8601DateFormatter()
+        fractional.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        if let date = fractional.date(from: raw) { return date }
+        let plain = ISO8601DateFormatter()
+        plain.formatOptions = [.withInternetDateTime]
+        return plain.date(from: raw)
+    }
+
     /// Cold-start demo: pretend a source is already linked and Today has Actuals debt.
     func activateColdStart(
         sources: ActualsSourceConnectionStore,
@@ -505,4 +636,10 @@ final class ActualsTodayDemoFeed: ObservableObject {
             )
         ]
     }
+}
+
+/// BFF returned HTTP 200 with `success: false` — not a transport failure.
+private struct StravaLogicalSyncFailure: LocalizedError {
+    let message: String
+    var errorDescription: String? { message }
 }

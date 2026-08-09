@@ -26,7 +26,7 @@ struct ActualsOAuthScopeView<Store: ActualsSourceConnecting>: View where Store: 
     ) {
         self.provider = provider
         self.store = store
-        self.auth = auth ?? StubActualsProviderAuth()
+        self.auth = auth ?? ActualsProviderAuthFactory.makeDefault()
         self.onFinished = onFinished
     }
 
@@ -180,7 +180,6 @@ struct ActualsOAuthScopeView<Store: ActualsSourceConnecting>: View where Store: 
         isWorking = true
         authorizeError = nil
         Task { @MainActor in
-            // Stub today; real ASWebAuthenticationSession + BFF later.
             let outcome = await auth.authorize(provider)
             ActualsProviderAuthAction.apply(outcome: outcome, provider: provider, store: store)
             isWorking = false

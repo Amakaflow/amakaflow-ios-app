@@ -204,10 +204,13 @@ enum AppEnvironment: String, CaseIterable {
     }
 
 
+    /// Direct strava-sync-api host (legacy athlete/activity reads).
+    /// OAuth initiate + sync-completed go through `mobileBFFURL` `/v1/strava/*`.
+    /// Staging custom DNS is not live yet — use the Render service hostname.
     var stravaAPIURL: String {
         switch self {
         case .development: return "http://localhost:8000"
-        case .staging: return "https://strava-sync-api.staging.amakaflow.com"
+        case .staging: return "https://amakaflow-strava-sync-api.onrender.com"
         case .production: return "https://strava-sync-api.amakaflow.com"
         }
     }
