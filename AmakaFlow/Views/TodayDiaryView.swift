@@ -451,27 +451,23 @@ struct TodayDiaryView: View {
                 .frame(maxWidth: .infinity)
                 .accessibilityIdentifier("af_today_empty_state")
 
-            if showsEmptyConnectSourcesCTA {
-                Button {
-                    showConnectSources = true
-                } label: {
-                    Text(ActualsCopy.teachCTA)
-                        .ddDisplayText(14, weight: .bold)
-                        .foregroundColor(DailyDriver.ink)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 13)
-                        .background(DailyDriver.lime)
-                        .clipShape(Capsule())
-                }
-                .buttonStyle(.plain)
-                .accessibilityIdentifier(ActualsCopy.teachCTAAccessibilityID)
+            // Always offer Connect Sources on empty Today — not only first-time teach.
+            // Row state on that screen still reflects what's already linked.
+            Button {
+                showConnectSources = true
+            } label: {
+                Text(ActualsCopy.teachCTA)
+                    .ddDisplayText(14, weight: .bold)
+                    .foregroundColor(DailyDriver.ink)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 13)
+                    .background(DailyDriver.lime)
+                    .clipShape(Capsule())
             }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier(ActualsCopy.teachCTAAccessibilityID)
         }
         .padding(.top, 26)
-    }
-
-    private var showsEmptyConnectSourcesCTA: Bool {
-        ActualsSourceProvider.allCases.contains { !actualsSources.isConnected($0) }
     }
 
     private var timeline: some View {
