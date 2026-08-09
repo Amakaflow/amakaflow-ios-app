@@ -14,7 +14,6 @@
 import Foundation
 
 enum WorkoutCaptionPresentation {
-
     /// The untouched caption, shown when the card is expanded.
     static func expanded(_ raw: String?) -> String {
         (raw ?? "").trimmingCharacters(in: .whitespacesAndNewlines)

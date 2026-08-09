@@ -8,6 +8,9 @@
 
 /* Begin PBXBuildFile section */
 		AMA2393HONBLD /* WorkoutSportHonesty.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2393HONREF /* WorkoutSportHonesty.swift */; };
+		AMA2395PRXBLD /* WorkoutBandPrescription.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2395PRXREF /* WorkoutBandPrescription.swift */; };
+		AMA2395SECBLD /* WorkoutBandGrouping+Sections.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2395SECREF /* WorkoutBandGrouping+Sections.swift */; };
+		AMA2395EMTBLD /* WorkoutDurationEstimate.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2395EMTREF /* WorkoutDurationEstimate.swift */; };
 		AMA2395ANABLD /* WorkoutDetailAnatomy.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2395ANAREF /* WorkoutDetailAnatomy.swift */; };
 		AMA2395CAPBLD /* WorkoutCaptionPresentation.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2395CAPREF /* WorkoutCaptionPresentation.swift */; };
 		AMA2395BNDBLD /* WorkoutBandGrouping.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2395BNDREF /* WorkoutBandGrouping.swift */; };
@@ -777,6 +780,9 @@
 
 /* Begin PBXFileReference section */
 		AMA2393HONREF /* WorkoutSportHonesty.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutSportHonesty.swift; path = ../AmakaFlow/Models/WorkoutSportHonesty.swift; sourceTree = SOURCE_ROOT; };
+		AMA2395PRXREF /* WorkoutBandPrescription.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutBandPrescription.swift; path = ../AmakaFlow/Models/WorkoutBandPrescription.swift; sourceTree = SOURCE_ROOT; };
+		AMA2395SECREF /* WorkoutBandGrouping+Sections.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "WorkoutBandGrouping+Sections.swift"; path = "../AmakaFlow/Models/WorkoutBandGrouping+Sections.swift"; sourceTree = SOURCE_ROOT; };
+		AMA2395EMTREF /* WorkoutDurationEstimate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutDurationEstimate.swift; path = ../AmakaFlow/Models/WorkoutDurationEstimate.swift; sourceTree = SOURCE_ROOT; };
 		AMA2395ANAREF /* WorkoutDetailAnatomy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutDetailAnatomy.swift; path = ../AmakaFlow/Views/Components/WorkoutDetailAnatomy.swift; sourceTree = SOURCE_ROOT; };
 		AMA2395CAPREF /* WorkoutCaptionPresentation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutCaptionPresentation.swift; path = ../AmakaFlow/Models/WorkoutCaptionPresentation.swift; sourceTree = SOURCE_ROOT; };
 		AMA2395BNDREF /* WorkoutBandGrouping.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutBandGrouping.swift; path = ../AmakaFlow/Models/WorkoutBandGrouping.swift; sourceTree = SOURCE_ROOT; };
@@ -1839,6 +1845,9 @@
 				F84E22732ED0D58300459747 /* WorkoutsViewModel.swift */,
 				F84E22712ED0D56C00459747 /* Workout.swift */,
 				AMA2393HONREF /* WorkoutSportHonesty.swift */,
+				AMA2395PRXREF /* WorkoutBandPrescription.swift */,
+				AMA2395SECREF /* WorkoutBandGrouping+Sections.swift */,
+				AMA2395EMTREF /* WorkoutDurationEstimate.swift */,
 				AMA2395ANAREF /* WorkoutDetailAnatomy.swift */,
 				AMA2395CAPREF /* WorkoutCaptionPresentation.swift */,
 				AMA2395BNDREF /* WorkoutBandGrouping.swift */,
@@ -2803,6 +2812,9 @@
 				F84E22702ED0D55600459747 /* Theme.swift in Sources */,
 				F84E22722ED0D56C00459747 /* Workout.swift in Sources */,
 				AMA2393HONBLD /* WorkoutSportHonesty.swift in Sources */,
+				AMA2395PRXBLD /* WorkoutBandPrescription.swift in Sources */,
+				AMA2395SECBLD /* WorkoutBandGrouping+Sections.swift in Sources */,
+				AMA2395EMTBLD /* WorkoutDurationEstimate.swift in Sources */,
 				AMA2395ANABLD /* WorkoutDetailAnatomy.swift in Sources */,
 				AMA2395CAPBLD /* WorkoutCaptionPresentation.swift in Sources */,
 				AMA2395BNDBLD /* WorkoutBandGrouping.swift in Sources */,
