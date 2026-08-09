@@ -45,7 +45,7 @@ final class ActualsAppleHealthConnectTests: XCTestCase {
         XCTAssertEqual(ActualsCopy.appleHealthReadTypes[0].title, "Workouts")
         XCTAssertEqual(ActualsCopy.appleHealthReadTypes[0].why, "THE SESSIONS THEMSELVES")
         XCTAssertEqual(ActualsCopy.appleHealthReadTypes[1].title, "Heart rate")
-        XCTAssertEqual(ActualsCopy.appleHealthReadTypes[1].why, "EFFORT — FEEDS RPE SUGGESTIONS")
+        XCTAssertEqual(ActualsCopy.appleHealthReadTypes[1].why, "EFFORT — SHOWN ON YOUR SESSION CARDS")
         XCTAssertEqual(ActualsCopy.appleHealthReadTypes[2].title, "Active energy")
         XCTAssertEqual(ActualsCopy.appleHealthReadTypes[2].why, "CALORIES ON YOUR CARDS")
     }
@@ -71,6 +71,24 @@ final class ActualsAppleHealthConnectTests: XCTestCase {
         XCTAssertEqual(outcome, .granted)
         XCTAssertTrue(store.isConnected(.appleHealth))
         XCTAssertFalse(healthKit.didOpenHealthSettings)
+    }
+
+    // MARK: - Prompt completed → stay disconnected
+
+    func testPromptCompletedDoesNotMarkConnected() async {
+        let store = ActualsSourceConnectionStore(defaults: defaults)
+        let healthKit = MockActualsHealthKitConnector(connectOutcomes: [.promptCompleted])
+
+        let outcome = await healthKit.connect()
+        ActualsAppleHealthConnectAction.apply(
+            outcome: outcome,
+            store: store,
+            openSettings: { healthKit.openHealthSettings() }
+        )
+
+        XCTAssertEqual(outcome, .promptCompleted)
+        XCTAssertFalse(store.isConnected(.appleHealth))
+        XCTAssertEqual(healthKit.authorizationState, .promptCompleted)
     }
 
     // MARK: - Deny → stay disconnected
@@ -129,6 +147,34 @@ final class ActualsAppleHealthConnectTests: XCTestCase {
         let outcome = await live.connect()
         XCTAssertEqual(outcome, .needsSettings)
         live.openHealthSettings()
+        XCTAssertEqual(opened.first?.absoluteString, UIApplication.openSettingsURLString)
+    }
+
+    // MARK: - Second connect after promptCompleted → Settings
+
+    func testSecondConnectAfterPromptCompletedNeedsSettingsAndStaysDisconnected() async {
+        defaults.set(
+            ActualsHealthKitReadAuthorizationState.promptCompleted.rawValue,
+            forKey: "ama2387.actuals.appleHealth.authState"
+        )
+        var opened: [URL] = []
+        let live = LiveActualsHealthKitConnector(
+            defaults: defaults,
+            openURL: { opened.append($0) }
+        )
+        XCTAssertEqual(live.authorizationState, .promptCompleted)
+
+        let store = ActualsSourceConnectionStore(defaults: defaults)
+        let outcome = await live.connect()
+        ActualsAppleHealthConnectAction.apply(
+            outcome: outcome,
+            store: store,
+            openSettings: { live.openHealthSettings() }
+        )
+
+        XCTAssertEqual(outcome, .needsSettings)
+        XCTAssertFalse(store.isConnected(.appleHealth))
+        XCTAssertEqual(live.authorizationState, .promptCompleted)
         XCTAssertEqual(opened.first?.absoluteString, UIApplication.openSettingsURLString)
     }
 }

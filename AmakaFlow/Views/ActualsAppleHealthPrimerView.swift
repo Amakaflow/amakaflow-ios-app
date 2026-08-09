@@ -140,8 +140,11 @@ struct ActualsAppleHealthPrimerView<Store: ActualsSourceConnecting>: View where 
             }
             isRequesting = false
             switch outcome {
-            case .granted, .denied:
+            case .granted:
                 onFinished()
+                dismiss()
+            case .denied, .promptCompleted:
+                // Stay disconnected — HealthKit does not confirm read grants.
                 dismiss()
             case .needsSettings:
                 // Stay on primer so user can retry after flipping Settings.

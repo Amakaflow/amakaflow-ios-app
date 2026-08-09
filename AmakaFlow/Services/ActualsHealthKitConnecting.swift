@@ -11,19 +11,24 @@ import UIKit
 
 /// Result of an Actuals Apple Health connect attempt.
 enum ActualsHealthKitAuthOutcome: Equatable {
-    /// User granted read access — caller should `markConnected(.appleHealth)`.
+    /// Read access confirmed (mock / evidence path) — caller may `markConnected(.appleHealth)`.
     case granted
     /// User denied (or HealthKit unavailable) — leave disconnected.
     case denied
     /// Already determined denied; iOS will not re-prompt — open Settings → Health.
     case needsSettings
+    /// System prompt finished; HealthKit does not expose read grant/deny — stay disconnected.
+    case promptCompleted
 }
 
 /// Read-authorization state we persist locally (HealthKit does not expose read grant/deny).
 enum ActualsHealthKitReadAuthorizationState: String, Equatable {
     case notDetermined
+    /// Only set when we have a confirmed grant (mock / future evidence path).
     case authorized
     case denied
+    /// System sheet completed; access remains unknown.
+    case promptCompleted
 }
 
 protocol ActualsHealthKitConnecting: AnyObject {
@@ -46,7 +51,7 @@ enum ActualsAppleHealthConnectAction {
         switch outcome {
         case .granted:
             store.markConnected(.appleHealth)
-        case .denied:
+        case .denied, .promptCompleted:
             break
         case .needsSettings:
             openSettings()
@@ -84,7 +89,8 @@ final class LiveActualsHealthKitConnector: ActualsHealthKitConnecting {
         }
         if let raw = defaults.string(forKey: Keys.state),
            let stored = ActualsHealthKitReadAuthorizationState(rawValue: raw) {
-            authorizationState = stored
+            // Migrate older builds that incorrectly persisted `.authorized` after the sheet.
+            authorizationState = stored == .authorized ? .promptCompleted : stored
         } else {
             authorizationState = .notDetermined
         }
@@ -95,6 +101,10 @@ final class LiveActualsHealthKitConnector: ActualsHealthKitConnecting {
         case .authorized:
             return .granted
         case .denied:
+            return .needsSettings
+        case .promptCompleted:
+            // Already prompted with no read evidence — route retry to Settings
+            // (iOS will not re-show the HealthKit sheet). Stay disconnected.
             return .needsSettings
         case .notDetermined:
             break
@@ -107,11 +117,9 @@ final class LiveActualsHealthKitConnector: ActualsHealthKitConnecting {
 
         do {
             try await healthStore.requestAuthorization(toShare: [], read: Self.readTypes)
-            // HealthKit does not report read grant/deny. Treat a successful prompt as granted;
-            // ingest will no-op if the user toggled types off. Deny path is covered by mock +
-            // UITEST / explicit markDenied for dogfood.
-            authorizationState = .authorized
-            return .granted
+            // HealthKit does not report read grant/deny. Do not claim connected.
+            authorizationState = .promptCompleted
+            return .promptCompleted
         } catch {
             authorizationState = .denied
             return .denied
@@ -163,6 +171,9 @@ final class MockActualsHealthKitConnector: ActualsHealthKitConnecting {
 
     func connect() async -> ActualsHealthKitAuthOutcome {
         connectCallCount += 1
+        guard !connectOutcomes.isEmpty else {
+            return .denied
+        }
         let index = min(connectCallCount - 1, connectOutcomes.count - 1)
         let outcome = connectOutcomes[index]
         switch outcome {
@@ -170,6 +181,8 @@ final class MockActualsHealthKitConnector: ActualsHealthKitConnecting {
             authorizationState = .authorized
         case .denied:
             authorizationState = .denied
+        case .promptCompleted:
+            authorizationState = .promptCompleted
         case .needsSettings:
             break
         }

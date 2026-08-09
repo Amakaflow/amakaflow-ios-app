@@ -156,7 +156,7 @@ extension ActualsRepository: ActualsGhostLookingUp {
                 INNER JOIN actuals_sessions s ON s.id = r.session_id
                 WHERE s.verified = 1
                   AND (r.exercise_key = ? OR lower(r.name) = lower(?))
-                ORDER BY s.saved_at DESC
+                ORDER BY s.saved_at DESC, s.rowid DESC
                 LIMIT 1
                 """,
                 arguments: [exerciseKey, nameGuess]

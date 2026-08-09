@@ -50,6 +50,20 @@ final class ActualsVerifiedGhostTests: XCTestCase {
         XCTAssertTrue(rdl.planDelta.isAsPlanned)
     }
 
+    func testSetsChangeWithSameLoadIsAdjusted() {
+        let squat = ExerciseActual(
+            id: "back_squat",
+            name: "Back squat",
+            planned: ExerciseActualPlanned(sets: 4, reps: 8, weightKg: 85),
+            confirmation: .adjusted,
+            actualSets: 3,
+            actualReps: 8,
+            actualWeightKg: 85
+        )
+        XCTAssertEqual(squat.planDelta.label, ActualsCopy.verifiedAdjustedDelta)
+        XCTAssertFalse(squat.planDelta.isAsPlanned)
+    }
+
     func testVerifiedRowsMatchHandoffSample() {
         var session = ActualsFillInSession.lowerBodyPosteriorSample()
         session.exercises[0].confirmation = .adjusted
@@ -147,5 +161,30 @@ final class ActualsVerifiedGhostTests: XCTestCase {
     func testExerciseKeyNormalization() {
         XCTAssertEqual(ActualsGhostFeed.exerciseKey(forName: "Back squat"), "back_squat")
         XCTAssertEqual(ActualsGhostFeed.exerciseKey(forName: "Romanian deadlift"), "romanian_deadlift")
+    }
+
+    func testMarkingVerifiedPreservesSourceProvider() {
+        var fill = ActualsFillInSession.lowerBodyPosteriorSample(id: "provider_card")
+        fill.rpe = 8
+        let card = ActualsTodayDemoCard(
+            id: fill.id,
+            kind: .fillInDebt,
+            timeLabel: "07:52",
+            title: fill.title,
+            stats: [("clock", "48m")],
+            sourceLabel: "Apple Watch session",
+            sourceProvider: .appleHealth,
+            session: nil,
+            activity: nil,
+            fillInSession: fill
+        )
+        let verified = card.markingVerified(with: fill)
+        XCTAssertEqual(verified.kind, .verified)
+        XCTAssertEqual(verified.sourceProvider, .appleHealth)
+        XCTAssertEqual(verified.sourceLabel, "Verified · RPE 8")
+        XCTAssertEqual(
+            ActualsCopy.sourceDisplayName(verified.sourceProvider ?? .garmin),
+            "Apple Health"
+        )
     }
 }

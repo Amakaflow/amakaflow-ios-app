@@ -177,7 +177,7 @@ struct ActualsMergedDetailView: View {
         switch provider {
         case .appleHealth: return DailyDriver.card2
         case .garmin: return DailyDriver.blue
-        case .strava: return Color(hex: "FC4C02")
+        case .strava: return DailyDriver.stravaBrand
         }
     }
 

@@ -32,7 +32,10 @@ final class ActualsFillInViewModel: ObservableObject {
 
     /// All rows confirmed and RPE chosen — only then may we set `verified`.
     var canSave: Bool {
-        unconfirmedCount == 0 && session.rpe != nil && !session.exercises.isEmpty
+        guard unconfirmedCount == 0, !session.exercises.isEmpty, let rpe = session.rpe else {
+            return false
+        }
+        return (1...10).contains(rpe)
     }
 
     var saveCTATitle: String {
@@ -40,7 +43,10 @@ final class ActualsFillInViewModel: ObservableObject {
             return "Confirm \(unconfirmedCount) more to save"
         }
         if let rpe = session.rpe {
-            return "Save session · RPE \(rpe)"
+            if (1...10).contains(rpe) {
+                return "Save session · RPE \(rpe)"
+            }
+            return "Pick RPE to save"
         }
         return "Pick RPE to save"
     }
@@ -98,9 +104,13 @@ final class ActualsFillInViewModel: ObservableObject {
     func save() throws -> Bool {
         lastSaveError = nil
         guard canSave else {
-            lastSaveError = unconfirmedCount > 0
-                ? "\(unconfirmedCount) exercises unconfirmed"
-                : "RPE required"
+            if unconfirmedCount > 0 {
+                lastSaveError = "\(unconfirmedCount) exercises unconfirmed"
+            } else if let rpe = session.rpe, !(1...10).contains(rpe) {
+                lastSaveError = "RPE must be between 1 and 10"
+            } else {
+                lastSaveError = "RPE required"
+            }
             return false
         }
         do {

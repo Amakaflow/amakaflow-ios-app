@@ -74,6 +74,21 @@ final class ActualsFillInTests: XCTestCase {
         XCTAssertTrue(vm.canSave)
     }
 
+    func testInvalidPreloadedRPEDoesNotEnableSave() {
+        var session = ActualsFillInSession.lowerBodyPosteriorSample()
+        session.exercises = session.exercises.map { exercise in
+            var copy = exercise
+            copy.confirmation = .asPlanned
+            return copy
+        }
+        session.rpe = 11
+        let viewModel = ActualsFillInViewModel(session: session, repository: repo)
+        XCTAssertFalse(viewModel.canSave)
+        session.rpe = 0
+        let zeroRPE = ActualsFillInViewModel(session: session, repository: repo)
+        XCTAssertFalse(zeroRPE.canSave)
+    }
+
     func testSaveRequiresRPEEvenWhenAllConfirmed() throws {
         let vm = ActualsFillInViewModel(
             session: ActualsFillInSession.lowerBodyPosteriorSample(),

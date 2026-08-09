@@ -17,6 +17,7 @@ enum ActualsCopy {
     static let teachTrustLine = "~30 SECONDS · READ-ONLY · UNPLUG ANYTIME"
     static let teachManualAlt = "or log a session manually with ＋"
     static let teachCardAccessibilityID = "af_actuals_teach_card"
+    static let teachCTAAccessibilityID = "af_actuals_connect_cta"
 
     // MARK: - Connect sources
 
@@ -49,6 +50,9 @@ enum ActualsCopy {
     /// Freshly linked this session (screens-actuals3.jsx SYLinkedScreen).
     static let linkedJustNowBadge = "LINKED ✓ JUST NOW"
     static let connectButton = "Connect"
+    /// Apple Health after deny / prompt-with-no-grant evidence — opens Settings.
+    static let openHealthSettingsButton = "Open Settings"
+    static let appleHealthSettingsAccessibilityID = "af_actuals_apple_settings"
 
     // MARK: - Sync / backfill (ACTUALS.md §5)
 
@@ -144,6 +148,10 @@ enum ActualsCopy {
     static let matchSaveFooter = "Next: how hard was it? (RPE) — then the session shows Verified ✓"
     static let matchSaveToastMatched = "Session matched"
     static let matchSaveToastMatchedSub = "Attached to this finished session — counted once"
+    static let matchSaveLibraryFailed = "Library save failed — fix and retry, or turn off Library."
+    static let fillInSaveFailedTitle = "Couldn't save session"
+    static let oauthAuthorizeFailed =
+        "Couldn't complete authorization. Check the connection and try again."
     static let matchSaveAccessibilityID = "af_actuals_match_save"
     static let matchSaveLibraryToggleID = "af_actuals_match_save_library"
     static let matchSaveCTAAccessibilityID = "af_actuals_match_save_cta"
@@ -205,7 +213,7 @@ enum ActualsCopy {
     /// Locked WHY tags — title + mono reason (exact JSX).
     static let appleHealthReadTypes: [(title: String, why: String)] = [
         ("Workouts", "THE SESSIONS THEMSELVES"),
-        ("Heart rate", "EFFORT — FEEDS RPE SUGGESTIONS"),
+        ("Heart rate", "EFFORT — SHOWN ON YOUR SESSION CARDS"),
         ("Active energy", "CALORIES ON YOUR CARDS")
     ]
 

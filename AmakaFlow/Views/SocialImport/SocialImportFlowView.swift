@@ -342,6 +342,7 @@ struct ImageImportView: View {
     @State private var processingStep = 0
     @State private var parsingController: BuildRevealController?
     @State private var parsingRevealDone = false
+    @State private var didCompleteActualsCapture = false
 
     private var isActualsCapture: Bool { onCaptureComplete != nil }
 
@@ -526,6 +527,8 @@ struct ImageImportView: View {
     }
 
     private func completeActualsCapture(from draft: SocialImportDraft) {
+        guard !didCompleteActualsCapture else { return }
+        didCompleteActualsCapture = true
         guard let onCaptureComplete else {
             onSaved?()
             dismiss()
@@ -548,7 +551,8 @@ struct ImageImportView: View {
                 blocks: request.blocks
             )
         )
-        dismiss()
+        // Parent Map cover transitions .photo → .matchSave; dismissing here tears it down.
+        // See ActualsPhotoCaptureHandoff.shouldDismissImporter(hasCaptureCompleteHandler:).
     }
 
     private func loadAndImport(_ item: PhotosPickerItem?) async {

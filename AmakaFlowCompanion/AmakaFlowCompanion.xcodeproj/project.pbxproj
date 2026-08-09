@@ -205,6 +205,7 @@
 		AMA2360STEPSBLD01 /* WorkoutKitPlanStepSummary.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2360STEPSREF01 /* WorkoutKitPlanStepSummary.swift */; };
 		AMA2374SECTSBLD01 /* WorkoutKitPlanStepSummary+Sections.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2374SECTSREF01 /* WorkoutKitPlanStepSummary+Sections.swift */; };
 		AMA2374DDBANDBLD1 /* DailyDriverTheme+WatchBands.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2374DDBANDREF1 /* DailyDriverTheme+WatchBands.swift */; };
+		AMA2387BRANDBLD1 /* DailyDriverTheme+BrandAccents.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2387BRANDREF1 /* DailyDriverTheme+BrandAccents.swift */; };
 		AMA2389DOORBLD /* DailyDriverTheme+DoorRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2389DOORREF /* DailyDriverTheme+DoorRow.swift */; };
 		AMA2389TABBLD /* DailyDriverTheme+TabBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2389TABREF /* DailyDriverTheme+TabBar.swift */; };
 		AMA2375COPYBLD /* OnYourWatchesCopy.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2375COPYREF /* OnYourWatchesCopy.swift */; };
@@ -930,6 +931,7 @@
 		AMA2360STEPSREF01 /* WorkoutKitPlanStepSummary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutKitPlanStepSummary.swift; path = ../AmakaFlow/Models/WorkoutKitPlanStepSummary.swift; sourceTree = SOURCE_ROOT; };
 		AMA2374SECTSREF01 /* WorkoutKitPlanStepSummary+Sections.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "WorkoutKitPlanStepSummary+Sections.swift"; path = "../AmakaFlow/Models/WorkoutKitPlanStepSummary+Sections.swift"; sourceTree = SOURCE_ROOT; };
 		AMA2374DDBANDREF1 /* DailyDriverTheme+WatchBands.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "DailyDriverTheme+WatchBands.swift"; path = "../AmakaFlow/DailyDriverTheme+WatchBands.swift"; sourceTree = SOURCE_ROOT; };
+		AMA2387BRANDREF1 /* DailyDriverTheme+BrandAccents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "DailyDriverTheme+BrandAccents.swift"; path = "../AmakaFlow/DailyDriverTheme+BrandAccents.swift"; sourceTree = SOURCE_ROOT; };
 		AMA2389DOORREF /* DailyDriverTheme+DoorRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "DailyDriverTheme+DoorRow.swift"; path = "../AmakaFlow/DailyDriverTheme+DoorRow.swift"; sourceTree = SOURCE_ROOT; };
 		AMA2389TABREF /* DailyDriverTheme+TabBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "DailyDriverTheme+TabBar.swift"; path = "../AmakaFlow/DailyDriverTheme+TabBar.swift"; sourceTree = SOURCE_ROOT; };
 		AMA2375COPYREF /* OnYourWatchesCopy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = OnYourWatchesCopy.swift; path = ../AmakaFlow/Models/OnYourWatchesCopy.swift; sourceTree = SOURCE_ROOT; };
@@ -1850,6 +1852,7 @@
 				F84E226E2ED0D55600459747 /* Theme.swift */,
 				AMA2292DDTHEME0000A /* DailyDriverTheme.swift */,
 				AMA2374DDBANDREF1 /* DailyDriverTheme+WatchBands.swift */,
+				AMA2387BRANDREF1 /* DailyDriverTheme+BrandAccents.swift */,
 				AMA2389DOORREF /* DailyDriverTheme+DoorRow.swift */,
 				AMA2389TABREF /* DailyDriverTheme+TabBar.swift */,
 				AMA2292DDSCREENS00A /* DailyDriverScreens.swift */,
@@ -2968,6 +2971,7 @@
 				AMA2360STEPSBLD01 /* WorkoutKitPlanStepSummary.swift in Sources */,
 				AMA2374SECTSBLD01 /* WorkoutKitPlanStepSummary+Sections.swift in Sources */,
 				AMA2374DDBANDBLD1 /* DailyDriverTheme+WatchBands.swift in Sources */,
+				AMA2387BRANDBLD1 /* DailyDriverTheme+BrandAccents.swift in Sources */,
 				AMA2389DOORBLD /* DailyDriverTheme+DoorRow.swift in Sources */,
 				AMA2389TABBLD /* DailyDriverTheme+TabBar.swift in Sources */,
 				AMA2375COPYBLD /* OnYourWatchesCopy.swift in Sources */,

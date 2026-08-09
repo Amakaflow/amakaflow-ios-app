@@ -7,6 +7,8 @@
 //  Activate after Connect, or launch with AMA2387_TODAY_DEMO=true.
 //
 
+// swiftlint:disable file_length
+
 import Combine
 import Foundation
 
@@ -25,6 +27,8 @@ struct ActualsTodayDemoCard: Identifiable, Equatable {
     let title: String
     let stats: [(icon: String, value: String)]
     let sourceLabel: String
+    /// Originating provider — preserved across verified rewrite of `sourceLabel`.
+    let sourceProvider: ActualsSourceProvider?
     let session: ActualsSession?
     let activity: ActualsUnmappedActivity?
     let fillInSession: ActualsFillInSession?
@@ -41,6 +45,9 @@ struct ActualsTodayDemoCard: Identifiable, Equatable {
             title: title,
             stats: stats,
             sourceLabel: "Verified · RPE \(saved.rpe ?? 0)",
+            sourceProvider: sourceProvider
+                ?? activity?.provider
+                ?? session?.primaryRecording?.provider,
             session: session,
             activity: nil,
             fillInSession: saved
@@ -64,13 +71,8 @@ final class ActualsTodayDemoFeed: ObservableObject {
     let repository: ActualsRepository
 
     init(repository: ActualsRepository? = nil) {
-        if let repository {
-            self.repository = repository
-        } else if let database = try? AppDatabase.makeTestDatabase() {
-            self.repository = ActualsRepository(database: database)
-        } else {
-            self.repository = ActualsRepository()
-        }
+        // Persist verified saves with the shared DB — never silently invent an in-memory queue.
+        self.repository = repository ?? ActualsRepository()
     }
 
     /// Avoid MainActor-isolated deinit + TaskLocal teardown crash under XCTest (Swift 6).
@@ -79,14 +81,16 @@ final class ActualsTodayDemoFeed: ObservableObject {
     /// Launch flag: skip empty teach and land populated Actuals Today immediately.
     static var shouldAutoActivate: Bool {
         #if DEBUG
-        UITestEnvironment.isTruthy("AMA2387_TODAY_DEMO")
+        UITestEnvironment.shared.actualsTodayDemo
         #else
         false
         #endif
     }
 
     /// After a real Connect from Today — honest counter + demo sessions land in-shell.
+    /// No-op outside DEBUG (and cold-start / connect require `shouldAutoActivate`).
     func activateAfterConnect(sync: ActualsSyncProgressStore) {
+        #if DEBUG
         guard !isActive else { return }
         isActive = true
         sync.beginBackfill(total: 4)
@@ -94,6 +98,9 @@ final class ActualsTodayDemoFeed: ObservableObject {
         sync.recordIngestedSession()
         loadSampleContent()
         showMergeAsk = true
+        #else
+        _ = sync
+        #endif
     }
 
     /// Cold-start demo: pretend a source is already linked and Today has Actuals debt.
@@ -101,6 +108,8 @@ final class ActualsTodayDemoFeed: ObservableObject {
         sources: ActualsSourceConnectionStore,
         sync: ActualsSyncProgressStore
     ) {
+        #if DEBUG
+        guard Self.shouldAutoActivate else { return }
         guard !isActive else { return }
         if !sources.hasAnySourceConnected {
             sources.markConnected(.strava)
@@ -109,6 +118,10 @@ final class ActualsTodayDemoFeed: ObservableObject {
         // Cold start: finish the counter so the banner can clear after a beat.
         sync.recordIngestedSession()
         sync.recordIngestedSession()
+        #else
+        _ = sources
+        _ = sync
+        #endif
     }
 
     func applyMerge() {
@@ -126,6 +139,18 @@ final class ActualsTodayDemoFeed: ObservableObject {
         showMergeAsk = false
     }
 
+    /// Split restores each recording as its own Today card and sticky-keeps them separate.
+    func applySplit(
+        restored: [ActualsSourceRecording],
+        fromMergedSessionID: String
+    ) {
+        applyKeepBoth()
+        cards.removeAll { $0.id == fromMergedSessionID || $0.kind == .merged }
+        for recording in restored.reversed() {
+            cards.insert(Self.card(from: recording), at: 0)
+        }
+    }
+
     func prepareFillIn(from card: ActualsTodayDemoCard? = nil) {
         let source = card
             ?? cards.first { $0.kind == .fillInDebt }
@@ -136,7 +161,7 @@ final class ActualsTodayDemoFeed: ObservableObject {
                 id: "today_demo_fill_\(UUID().uuidString.prefix(6))"
             )
         var seeded = session
-        if seeded.exercises.first?.confirmation == nil {
+        if !seeded.exercises.isEmpty, seeded.exercises[0].confirmation == nil {
             seeded.exercises[0].confirmation = .adjusted
             seeded.exercises[0].actualWeightKg = 90
         }
@@ -290,6 +315,7 @@ final class ActualsTodayDemoFeed: ObservableObject {
             title: title,
             stats: stats,
             sourceLabel: sourceLabel,
+            sourceProvider: activity?.provider ?? .garmin,
             session: nil,
             activity: activity,
             fillInSession: fillSession
@@ -297,6 +323,48 @@ final class ActualsTodayDemoFeed: ObservableObject {
     }
 
     // MARK: - Samples
+
+    private static func card(from recording: ActualsSourceRecording) -> ActualsTodayDemoCard {
+        let minutes = max(1, Int((recording.durationSeconds / 60).rounded()))
+        var stats: [(icon: String, value: String)] = [("clock", "\(minutes)m")]
+        if let distance = recording.distanceMeters {
+            let kilometers = distance / 1_000
+            let distanceText = kilometers >= 10
+                ? String(format: "%.0f km", kilometers)
+                : String(format: "%.1f km", kilometers)
+            stats.append(("figure.run", distanceText))
+        }
+        let activity = ActualsUnmappedActivity(
+            title: recording.title,
+            provider: recording.provider,
+            startDate: recording.startDate,
+            durationSeconds: recording.durationSeconds,
+            distanceMeters: recording.distanceMeters,
+            calories: nil,
+            avgHR: nil,
+            type: .strength
+        )
+        let time = Self.cardTimeFormatter.string(from: recording.startDate)
+        return ActualsTodayDemoCard(
+            id: recording.id,
+            kind: .unmapped,
+            timeLabel: time,
+            title: recording.title,
+            stats: stats,
+            sourceLabel: "Synced from \(ActualsCopy.sourceDisplayName(recording.provider))",
+            sourceProvider: recording.provider,
+            session: nil,
+            activity: activity,
+            fillInSession: nil
+        )
+    }
+
+    private static let cardTimeFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "HH:mm"
+        return formatter
+    }()
 
     private func loadSampleContent() {
         mergeLeft = Self.sampleWatchRecording
@@ -334,6 +402,7 @@ final class ActualsTodayDemoFeed: ObservableObject {
                 ("heart.fill", "148")
             ],
             sourceLabel: session.mergeBadge,
+            sourceProvider: session.primaryRecording?.provider ?? .appleHealth,
             session: session,
             activity: nil,
             fillInSession: nil
@@ -367,6 +436,7 @@ final class ActualsTodayDemoFeed: ObservableObject {
                 ("heart.fill", "151")
             ],
             sourceLabel: "Synced from Garmin",
+            sourceProvider: activity.provider,
             session: nil,
             activity: activity,
             fillInSession: nil
@@ -387,6 +457,7 @@ final class ActualsTodayDemoFeed: ObservableObject {
                 ("dumbbell.fill", "4 moves")
             ],
             sourceLabel: "Apple Watch session",
+            sourceProvider: .appleHealth,
             session: nil,
             activity: nil,
             fillInSession: session

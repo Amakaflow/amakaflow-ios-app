@@ -30,12 +30,13 @@ enum ActualsMergeClassifier {
         }
         if left.id == right.id { return .certain }
 
-        if externalRefsMatch(left, right) {
-            return .certain
-        }
-
         let startDelta = abs(left.startDate.timeIntervalSince(right.startDate))
         let shapeOK = shapeAgrees(left, right)
+
+        // External ref is a confidence signal only — still require ±2 min + shape.
+        if externalRefsMatch(left, right), startDelta <= certainStartWindow, shapeOK {
+            return .certain
+        }
 
         if startDelta <= certainStartWindow, shapeOK {
             return .certain

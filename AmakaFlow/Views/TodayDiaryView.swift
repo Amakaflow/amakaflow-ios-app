@@ -26,6 +26,7 @@ struct TodayDiaryView: View {
     @State private var activeMergedSession: ActualsSession?
     @State private var activeUnmapped: ActualsUnmappedActivity?
     @State private var verifiedSession: ActualsFillInSession?
+    @State private var verifiedSourceName = ActualsCopy.sourceDisplayName(.strava)
 
     private var today: Date { Date() }
 
@@ -116,10 +117,13 @@ struct TodayDiaryView: View {
                 DDActivityDetailView(completionId: completionId)
             }
             .navigationDestination(isPresented: $showConnectSources) {
-                ActualsConnectSourcesView(store: actualsSources) { provider in
-                    actualsSources.markConnected(provider)
-                    ActualsLinkFeedback.announceLinked(provider)
-                    actualsDemo.activateAfterConnect(sync: actualsSyncProgress)
+                ActualsConnectSourcesView(store: actualsSources) { _ in
+                    // Children already markConnected + announce on real grant/success.
+                    #if DEBUG
+                    if ActualsTodayDemoFeed.shouldAutoActivate {
+                        actualsDemo.activateAfterConnect(sync: actualsSyncProgress)
+                    }
+                    #endif
                     showConnectSources = false
                 }
             }
@@ -221,7 +225,7 @@ struct TodayDiaryView: View {
 
     private func iconBackground(for card: ActualsTodayDemoCard) -> Color {
         switch card.kind {
-        case .unmapped: return Color(red: 252 / 255, green: 76 / 255, blue: 2 / 255)
+        case .unmapped: return DailyDriver.stravaBrand
         case .merged: return DailyDriver.blue
         case .fillInDebt: return DailyDriver.lime
         case .verified:
@@ -247,6 +251,7 @@ struct TodayDiaryView: View {
         case .verified:
             if let saved = card.fillInSession {
                 verifiedSession = saved
+                verifiedSourceName = sourceDisplayName(for: card)
                 actualsDestination = .verified
             }
         }
@@ -260,9 +265,13 @@ struct TodayDiaryView: View {
             if let session = activeMergedSession {
                 ActualsMergedDetailView(
                     session: session,
-                    onSplit: { _ in
-                        actualsDemo.applyKeepBoth()
+                    onSplit: { restored in
+                        actualsDemo.applySplit(
+                            restored: restored,
+                            fromMergedSessionID: session.id
+                        )
                         actualsDestination = nil
+                        activeMergedSession = nil
                     },
                     onFillIn: {
                         if let merged = actualsDemo.cards.first(where: { $0.kind == .merged }) {
@@ -316,6 +325,11 @@ struct TodayDiaryView: View {
                     viewModel: viewModel,
                     onSaved: { session in
                         verifiedSession = session
+                        if let card = actualsDemo.cards.first(where: {
+                            $0.id == actualsDemo.pendingFillInCardID || $0.fillInSession?.id == session.id
+                        }) {
+                            verifiedSourceName = sourceDisplayName(for: card)
+                        }
                         actualsDemo.markVerified(saved: session)
                         actualsDestination = .verified
                     },
@@ -328,12 +342,22 @@ struct TodayDiaryView: View {
             }
         case .verified:
             if let session = verifiedSession {
-                ActualsVerifiedView(session: session, sourceName: "Strava")
+                ActualsVerifiedView(session: session, sourceName: verifiedSourceName)
                     .navigationBarBackButtonHidden(true)
             } else {
                 missingDestinationFallback(nil)
             }
         }
+    }
+
+    private func sourceDisplayName(for card: ActualsTodayDemoCard) -> String {
+        // Prefer the stored provider — verified cards rewrite sourceLabel to "Verified · RPE N".
+        if let provider = card.sourceProvider
+            ?? card.activity?.provider
+            ?? card.session?.primaryRecording?.provider {
+            return ActualsCopy.sourceDisplayName(provider)
+        }
+        return ActualsCopy.sourceDisplayName(.appleHealth)
     }
 
     /// Never push an empty view — that was the blank Fill in screen.

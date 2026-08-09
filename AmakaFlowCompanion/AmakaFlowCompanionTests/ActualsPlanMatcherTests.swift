@@ -135,7 +135,7 @@ final class ActualsPlanMatcherTests: XCTestCase {
         )
         let strength = ActualsPlanCandidate(
             id: "lift", title: "Lower body", sourceLabel: "PLAN",
-            scheduledStart: noon, durationSeconds: 2400, distanceMeters: nil,
+            scheduledStart: noon, durationSeconds: 2400, distanceMeters: 5000,
             type: .strength, targetAvgHR: nil
         )
         let ranked = ActualsPlanMatcher.rank(activity: activity, candidates: [strength, run])
@@ -150,12 +150,4 @@ final class ActualsPlanMatcherTests: XCTestCase {
         XCTAssertEqual(ActualsCopy.mapCandidateAccessibilityID(2), "af_actuals_map_candidate_2")
     }
 
-    func testKeepAsIsOutcomeStillCountsSemantically() {
-        // Document the product rule: keep-as-is is an explicit outcome, not a discard.
-        let outcome = ActualsPlanMatchOutcome.keepAsIs
-        XCTAssertEqual(outcome, .keepAsIs)
-        if case .mapped = outcome {
-            XCTFail("keep-as-is must not be mapped")
-        }
-    }
 }

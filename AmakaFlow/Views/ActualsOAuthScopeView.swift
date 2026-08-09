@@ -16,8 +16,7 @@ struct ActualsOAuthScopeView<Store: ActualsSourceConnecting>: View where Store: 
 
     @Environment(\.dismiss) private var dismiss
     @State private var isWorking = false
-
-    private let stravaOrange = Color(hex: "FC4C02")
+    @State private var authorizeError: String?
 
     init(
         provider: ActualsSourceProvider,
@@ -42,6 +41,14 @@ struct ActualsOAuthScopeView<Store: ActualsSourceConnecting>: View where Store: 
 
                     scopeCard
                         .padding(.top, 14)
+
+                    if let authorizeError {
+                        Text(authorizeError)
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundColor(DailyDriver.amber)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .padding(.top, 12)
+                    }
 
                     Button(action: authorizeTapped) {
                         Text(ActualsCopy.oauthAuthorizeCTA)
@@ -111,7 +118,7 @@ struct ActualsOAuthScopeView<Store: ActualsSourceConnecting>: View where Store: 
         HStack(spacing: 10) {
             DDIconChip(
                 systemName: provider == .strava ? "figure.run" : "applewatch",
-                background: provider == .strava ? stravaOrange : DailyDriver.blue,
+                background: provider == .strava ? DailyDriver.stravaBrand : DailyDriver.blue,
                 size: 34
             )
             VStack(alignment: .leading, spacing: 2) {
@@ -163,7 +170,7 @@ struct ActualsOAuthScopeView<Store: ActualsSourceConnecting>: View where Store: 
     }
 
     private var authorizeColor: Color {
-        provider == .strava ? stravaOrange : DailyDriver.blue
+        provider == .strava ? DailyDriver.stravaBrand : DailyDriver.blue
     }
 
     // MARK: - Actions
@@ -171,23 +178,28 @@ struct ActualsOAuthScopeView<Store: ActualsSourceConnecting>: View where Store: 
     private func authorizeTapped() {
         guard !isWorking else { return }
         isWorking = true
+        authorizeError = nil
         Task { @MainActor in
             // Stub today; real ASWebAuthenticationSession + BFF later.
             let outcome = await auth.authorize(provider)
             ActualsProviderAuthAction.apply(outcome: outcome, provider: provider, store: store)
-            if outcome == .success {
-                ActualsLinkFeedback.announceLinked(provider)
-            }
             isWorking = false
-            onFinished()
-            dismiss()
+            switch outcome {
+            case .success:
+                ActualsLinkFeedback.announceLinked(provider)
+                onFinished()
+                dismiss()
+            case .cancelled:
+                dismiss()
+            case .failed:
+                authorizeError = ActualsCopy.oauthAuthorizeFailed
+            }
         }
     }
 
     private func cancelTapped() {
         guard !isWorking else { return }
         // Cancel = nothing linked (no authorize call, no markConnected).
-        onFinished()
         dismiss()
     }
 }

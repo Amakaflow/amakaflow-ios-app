@@ -30,7 +30,8 @@ struct ActualsMatchSaveView: View {
         let incoming = draft.title.trimmingCharacters(in: .whitespacesAndNewlines)
         let placeholder = activity.title.trimmingCharacters(in: .whitespacesAndNewlines)
         let initial: String = {
-            if incoming.isEmpty || incoming.localizedCaseInsensitiveCompare("Captured session") == .orderedSame {
+            if incoming.isEmpty
+                || incoming.localizedCaseInsensitiveCompare(ActualsCaptureDraft.placeholderTitle) == .orderedSame {
                 return placeholder
             }
             return incoming
@@ -268,8 +269,14 @@ struct ActualsMatchSaveView: View {
                     )
                 } catch {
                     await MainActor.run {
-                        saveError = "Library save failed — session still matched."
+                        isSaving = false
+                        saveError = ActualsCopy.matchSaveLibraryFailed
+                        DDToastCenter.shared.error(
+                            ActualsCopy.matchSaveLibraryFailed,
+                            sub: nil
+                        )
                     }
+                    return
                 }
             }
             DDToastCenter.shared.success(
