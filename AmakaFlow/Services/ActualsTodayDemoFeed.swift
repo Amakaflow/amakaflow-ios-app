@@ -149,8 +149,8 @@ final class ActualsTodayDemoFeed: ObservableObject {
             cards = []
             sync.clear()
         } catch {
-            // Connected server-side; rail stays honest-empty until the next refresh.
-            isActive = true
+            // Tokens missing / network — leave the empty Today + Connect CTA visible.
+            isActive = false
             showMergeAsk = false
             cards = []
             sync.clear()
@@ -213,12 +213,14 @@ final class ActualsTodayDemoFeed: ObservableObject {
     }
 
     private static func workoutType(from raw: String) -> ActualsWorkoutType {
+        // Strava `sport_type` / legacy `type` (case-insensitive).
         switch raw.lowercased() {
-        case "run", "virtualrun", "trailrun":
+        case "run", "virtualrun", "trailrun", "walk", "hike":
             return .run
-        case "ride", "virtualride", "ebikeride", "gravelride":
+        case "ride", "virtualride", "ebikeride", "gravelride", "mountainbikeride":
             return .ride
-        case "weighttraining", "workout", "crossfit", "yoga":
+        case "weighttraining", "workout", "crossfit", "yoga",
+             "highintensityintervaltraining", "elliptical":
             return .strength
         default:
             return .other
