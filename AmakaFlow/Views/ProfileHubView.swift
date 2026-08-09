@@ -11,6 +11,8 @@ enum ProfileHubRoute: Hashable {
     case settings
     case history
     case coach
+    /// AMA-2389: Friends management (add / remove / requests).
+    case friends
 }
 
 struct ProfileHubView: View {
@@ -20,6 +22,7 @@ struct ProfileHubView: View {
     @EnvironmentObject private var pairingService: PairingService
     @AppStorage(DefaultsKey.userDisplayName.rawValue) private var displayNameOverride: String = ""
     @StateObject private var historyViewModel = ActivityHistoryViewModel()
+    @ObservedObject private var friendsStore = FriendsSharingStore.shared
     @State private var weekExpanded = false
     @State private var showingBackfill = false
     @AppStorage("dd_profile_backfill_completed") private var backfillCompleted = false
@@ -78,7 +81,10 @@ struct ProfileHubView: View {
                 .padding(.bottom, 120)
             }
             .background(DailyDriver.screenBackground.ignoresSafeArea())
-            .navigationBarHidden(true)
+            // Keep title for pushed screens' back label ("< Profile") while hiding chrome on the hub.
+            .navigationTitle("Profile")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar(.hidden, for: .navigationBar)
             .preferredColorScheme(.dark)
             .navigationDestination(for: ProfileHubRoute.self) { route in
                 switch route {
@@ -94,10 +100,13 @@ struct ProfileHubView: View {
                                 .opacity(0.01)
                                 .accessibilityIdentifier("coach_screen")
                         }
+                case .friends:
+                    FriendsListView(store: friendsStore)
                 }
             }
             .task {
                 await historyViewModel.loadCompletions()
+                await friendsStore.reload()
             }
             .overlay(alignment: .top) {
                 Text(" ")
@@ -150,6 +159,15 @@ struct ProfileHubView: View {
             weekDots
                 .padding(.top, 12)
 
+            // AMA-2389 mockup: Friends management lives on Profile (not only Settings).
+            ProfileFriendsEntryRow(
+                friendCount: friendsStore.acceptedFriends.count,
+                waitingCount: friendsStore.unhandledShareCount
+            ) {
+                path.append(ProfileHubRoute.friends)
+            }
+            .padding(.top, 14)
+
             if !backfillCompleted {
                 DDInsightBanner(
                     title: "Monday's strength needs weights",
@@ -160,8 +178,13 @@ struct ProfileHubView: View {
                 .padding(.top, 14)
             }
 
-            thisWeekSection
-                .padding(.top, 20)
+            ProfileThisWeekSection(
+                entries: weekListCompletions,
+                weekExpanded: $weekExpanded
+            ) {
+                path.append(ProfileHubRoute.history)
+            }
+            .padding(.top, 20)
         }
         .padding(.horizontal, 18)
     }
@@ -249,204 +272,68 @@ struct ProfileHubView: View {
         if usesProfileFixture {
             return ("3 🔥", "day streak · best 6")
         }
-        let streak = computeDayStreak(from: profileCompletions)
+        let streak = profileComputeDayStreak(from: profileCompletions, today: today)
         if streak.current > 0 {
             return ("\(streak.current) 🔥", "day streak · best \(streak.best)")
         }
         return ("—", "day streak · best —")
     }
 
-    private func computeDayStreak(from completions: [WorkoutCompletion]) -> (current: Int, best: Int) {
-        let calendar = Calendar.current
-        let activeDays = Set(
-            completions.map { calendar.startOfDay(for: $0.startedAt) }
-        )
-        guard !activeDays.isEmpty else { return (0, 0) }
-
-        var current = 0
-        var cursor = calendar.startOfDay(for: today)
-        while activeDays.contains(cursor) {
-            current += 1
-            guard let previous = calendar.date(byAdding: .day, value: -1, to: cursor) else { break }
-            cursor = previous
-        }
-
-        let sortedDays = activeDays.sorted()
-        var best = 0
-        var run = 0
-        var prior: Date?
-        for day in sortedDays {
-            if let prior,
-               let next = calendar.date(byAdding: .day, value: 1, to: prior),
-               calendar.isDate(day, inSameDayAs: next) {
-                run += 1
-            } else {
-                run = 1
-            }
-            best = max(best, run)
-            prior = day
-        }
-        return (current, best)
-    }
-
     private var weekDots: some View {
-        let labels = ["M", "T", "W", "T", "F", "S", "S"]
-        if usesProfileFixture {
-            return DDWeekDots(labels: labels, activeIndices: [0, 1])
-        }
-        let calendar = Calendar.current
-        let activeDays = Set(
-            weekCompletions.map { calendar.component(.weekday, from: $0.startedAt) }
-                .map { weekdayIndex(from: $0) }
+        profileWeekDots(
+            usesFixture: usesProfileFixture,
+            weekCompletions: weekCompletions
         )
-        return DDWeekDots(labels: labels, activeIndices: activeDays)
-    }
-
-    private func weekdayIndex(from weekday: Int) -> Int {
-        // Calendar weekday: 1 = Sunday. Design labels start Monday.
-        ((weekday + 5) % 7)
-    }
-
-    private var thisWeekSection: some View {
-        let entries = weekListCompletions
-        let shown = weekExpanded ? entries : Array(entries.prefix(3))
-
-        return VStack(alignment: .leading, spacing: 10) {
-            HStack {
-                Text("This week")
-                    .ddDisplayText(15, weight: .bold)
-                    .foregroundColor(DailyDriver.foreground)
-                Spacer()
-                if entries.count > 3 {
-                    Button(weekExpanded ? "Show less" : "See all (\(entries.count))") {
-                        weekExpanded.toggle()
-                    }
-                    .ddDisplayText(12, weight: .bold)
-                    .foregroundColor(DailyDriver.foregroundMuted)
-                }
-            }
-
-            if shown.isEmpty {
-                Text("No sessions yet this week.")
-                    .font(Theme.Typography.caption)
-                    .foregroundColor(DailyDriver.foregroundMuted)
-                    .padding(.vertical, 8)
-            } else {
-                ForEach(shown) { completion in
-                    weekActivityRow(completion)
-                }
-            }
-        }
-    }
-
-    private func weekActivityRow(_ completion: WorkoutCompletion) -> some View {
-        Button {
-            path.append(ProfileHubRoute.history)
-        } label: {
-            HStack(spacing: 12) {
-                DDIconChip(
-                    systemName: completion.profileIconName,
-                    background: completion.profileIconBackground,
-                    size: 34
-                )
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(completion.workoutName)
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundColor(DailyDriver.foreground)
-                        .lineLimit(1)
-                    Text(completion.profileMetaLine)
-                        .font(.system(size: 10))
-                        .foregroundColor(DailyDriver.foregroundDim)
-                        .lineLimit(1)
-                }
-                Spacer(minLength: 0)
-                VStack(alignment: .trailing, spacing: 0) {
-                    Text(completion.profileBigValue)
-                        .ddDisplayText(18, weight: .heavy)
-                        .foregroundColor(DailyDriver.foreground)
-                    Text(completion.profileUnitLabel)
-                        .font(.system(size: 9, weight: .semibold))
-                        .foregroundColor(DailyDriver.foregroundDim)
-                }
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundColor(DailyDriver.foregroundDim)
-            }
-            .padding(.horizontal, 13)
-            .padding(.vertical, 11)
-            .background(DailyDriver.card)
-            .overlay(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .stroke(DailyDriver.border, lineWidth: 1)
-            )
-            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-        }
-        .buttonStyle(.plain)
     }
 }
 
-private extension WorkoutCompletion {
-    var profileIconName: String {
-        if distanceMeters != nil { return "figure.run" }
-        if workoutName.localizedCaseInsensitiveContains("amrap") { return "bolt.fill" }
-        return "figure.cooldown"
+// Free helpers keep ProfileHubView under SwiftLint type_body_length.
+private func profileComputeDayStreak(
+    from completions: [WorkoutCompletion],
+    today: Date
+) -> (current: Int, best: Int) {
+    let calendar = Calendar.current
+    let activeDays = Set(completions.map { calendar.startOfDay(for: $0.startedAt) })
+    guard !activeDays.isEmpty else { return (0, 0) }
+
+    var current = 0
+    var cursor = calendar.startOfDay(for: today)
+    while activeDays.contains(cursor) {
+        current += 1
+        guard let previous = calendar.date(byAdding: .day, value: -1, to: cursor) else { break }
+        cursor = previous
     }
 
-    var profileIconBackground: Color {
-        if distanceMeters != nil { return DailyDriver.blue }
-        if workoutName.localizedCaseInsensitiveContains("amrap") { return DailyDriver.purple }
-        return DailyDriver.blue
-    }
-
-    var workoutTypeIconName: String {
-        if distanceMeters != nil { return "figure.run" }
-        return "dumbbell.fill"
-    }
-
-    var profileBigValue: String {
-        if let distanceMeters, distanceMeters > 0 {
-            return String(format: "%.1f", Double(distanceMeters) / 1000.0)
-        }
-        let minutes = durationSeconds / 60
-        return "\(minutes)"
-    }
-
-    var profileUnitLabel: String {
-        distanceMeters != nil ? "KM" : "MIN"
-    }
-
-    var profileMetaLine: String {
-        let day = startedAt.formatted(.dateTime.weekday(.abbreviated)).uppercased()
-        let minutes = max(1, durationSeconds / 60)
-        let duration: String
-        if minutes >= 60 {
-            duration = "\(minutes / 60)H \(minutes % 60)M"
+    let sortedDays = activeDays.sorted()
+    var best = 0
+    var run = 0
+    var prior: Date?
+    for day in sortedDays {
+        if let prior,
+           let next = calendar.date(byAdding: .day, value: 1, to: prior),
+           calendar.isDate(day, inSameDayAs: next) {
+            run += 1
         } else {
-            duration = "\(minutes) MIN"
+            run = 1
         }
-        var parts = [day, duration]
-        if let hr = avgHeartRate {
-            parts.append("\(hr) BPM")
-        }
-        switch source {
-        case .garmin: parts.append("GARMIN")
-        case .appleWatch: parts.append("APPLE WATCH")
-        case .phone: parts.append("ON PHONE")
-        case .manual: break
-        }
-        if isSyncedToStrava, source != .garmin {
-            parts.append("STRAVA")
-        }
-        return parts.joined(separator: " · ")
+        best = max(best, run)
+        prior = day
     }
+    return (current, best)
 }
 
-#if DEBUG
-#Preview("Profile hub") {
-    ProfileHubView(
-        navigateToSyncDashboard: .constant(false),
-        path: .constant(NavigationPath())
+private func profileWeekDots(
+    usesFixture: Bool,
+    weekCompletions: [WorkoutCompletion]
+) -> DDWeekDots {
+    let labels = ["M", "T", "W", "T", "F", "S", "S"]
+    if usesFixture {
+        return DDWeekDots(labels: labels, activeIndices: [0, 1])
+    }
+    let calendar = Calendar.current
+    let activeDays = Set(
+        weekCompletions.map { calendar.component(.weekday, from: $0.startedAt) }
+            .map { weekday in ((weekday + 5) % 7) }
     )
-    .environmentObject(PairingService.shared)
+    return DDWeekDots(labels: labels, activeIndices: activeDays)
 }
-#endif

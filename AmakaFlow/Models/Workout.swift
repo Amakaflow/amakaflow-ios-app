@@ -140,12 +140,12 @@ enum WorkoutSource: String, Codable {
     case stryd
     case gymClass = "gym_class"
 
-    // AMA-2285: youtube / image / ai / coach now show provenance badges.
-    // `amaka` and `other` remain for fixtures / unknown payloads.
+    // AMA-2285: youtube / image / ai / coach badges; `amaka`/`other` for fixtures.
     case youtube
     case image
     case ai
     case coach
+    case friend // AMA-2389 snapshot copy from a friend share
     case amaka
     case other
 
@@ -181,7 +181,7 @@ struct WorkoutSourceProvenance: Equatable {
             "garmin": "Garmin",
             "runna": "Runna",
             "stryd": "Stryd",
-            "gym_class": "Gym Class"
+            "gym_class": "Gym Class", "friend": "Friend"
         ]
         guard let label = labels[normalized] else { return nil }
         return WorkoutSourceProvenance(rawValue: normalized, label: label)
