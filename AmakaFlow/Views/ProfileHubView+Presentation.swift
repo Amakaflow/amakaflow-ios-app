@@ -3,6 +3,7 @@
 //  AmakaFlow
 //
 //  AMA-2292 / AMA-2389: Profile hub presentation helpers (keeps ProfileHubView under lint caps).
+//  CI trigger marker
 //
 
 import SwiftUI
