@@ -53,7 +53,7 @@ enum WorkoutSportHonesty {
         "treadmill": "figure.run",
         "elliptical": "figure.elliptical",
         "stair": "figure.stair.stepper",
-        "jump": "figure.jumprope",
+        "jump": "figure.jumprope"
     ]
 
     /// SF Symbol for a circuit/exercise row (cardio machines ≠ dumbbell).
