@@ -40,6 +40,37 @@ enum WorkoutSportHonesty {
         "Is this a \(stored.displayName.lowercased()) workout?"
     }
 
+    /// SF Symbol for a circuit/exercise row (cardio machines ≠ dumbbell).
+    static func systemImage(forExerciseName name: String) -> String {
+        let lowered = name.lowercased()
+        switch machineKind(lowered) {
+        case "bike":
+            return "bicycle"
+        case "row":
+            return "figure.rower"
+        case "ski":
+            return "figure.skiing.crosscountry"
+        case "treadmill":
+            return "figure.run"
+        case "elliptical":
+            return "figure.elliptical"
+        case "stair":
+            return "figure.stair.stepper"
+        case "jump":
+            return "figure.jumprope"
+        default:
+            break
+        }
+        if matchesRun(lowered) { return "figure.run" }
+        if matches(lowered, ["swim", "freestyle", "backstroke", "breaststroke"]) {
+            return "figure.pool.swim"
+        }
+        if matches(lowered, ["stretch", "mobility", "yoga", "foam roll"]) {
+            return "figure.flexibility"
+        }
+        return "dumbbell.fill"
+    }
+
     // MARK: - Helpers
 
     private struct ContentFlags {

@@ -298,25 +298,34 @@ enum WorkoutSport: String, Codable, CaseIterable, Identifiable, Hashable {
 
     /// Canonical + legacy wire values. Prefer over `init(rawValue:)` (exact match only).
     static func parse(_ rawValue: String) -> WorkoutSport {
-        switch rawValue.lowercased() {
+        let token = rawValue
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+            .replacingOccurrences(of: "_", with: "")
+            .replacingOccurrences(of: "-", with: "")
+            .replacingOccurrences(of: " ", with: "")
+        switch token {
         case "running", "run":
             return .running
         case "cycling", "bike", "biking", "ride":
             return .cycling
-        case "strength", "strengthtraining", "strength_training", "weights":
+        case "strength", "strengthtraining", "traditionalstrengthtraining",
+             "functionalstrengthtraining", "weights", "coretraining":
             return .strength
-        case "conditioning", "metcon":
+        case "conditioning", "metcon", "hiit", "highintensityintervaltraining":
             return .conditioning
         case "mobility", "yoga", "stretching", "flexibility":
             return .mobility
         case "swimming", "swim":
             return .swimming
-        case "cardio":
+        case "cardio", "rowing", "elliptical", "stairclimbing", "walking":
             return .cardio
-        case "hiit":
-            return .conditioning
-        case "mixed":
+        case "mixed", "mixedcardio", "swimbikerun":
             return .mixed
+        case "other", "hyrox":
+            // "hyrox" is a race brand, not a wire sport — fall through to other
+            // so the type chip never shows a fake HYROX option.
+            return .other
         default:
             return .other
         }

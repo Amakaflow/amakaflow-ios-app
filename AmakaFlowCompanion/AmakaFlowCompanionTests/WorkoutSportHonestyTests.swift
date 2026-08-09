@@ -200,6 +200,29 @@ final class WorkoutSportHonestyTests: XCTestCase {
         XCTAssertEqual(data["workout_type"] as? String, "run")
     }
 
+    func testWorkoutKitActivityAliasesParse() {
+        XCTAssertEqual(WorkoutSport.parse("traditionalStrengthTraining"), .strength)
+        XCTAssertEqual(WorkoutSport.parse("strengthTraining"), .strength)
+        XCTAssertEqual(WorkoutSport.parse("mixedCardio"), .mixed)
+        XCTAssertEqual(WorkoutSport.parse("highIntensityIntervalTraining"), .conditioning)
+        XCTAssertEqual(WorkoutSport.parse("hyrox"), .other)
+        XCTAssertEqual(WorkoutSport.parse("HYROX"), .other)
+    }
+
+    func testExerciseRowIconsDifferentiateCardioMachines() {
+        XCTAssertEqual(WorkoutSportHonesty.systemImage(forExerciseName: "Assault Bike"), "bicycle")
+        XCTAssertEqual(WorkoutSportHonesty.systemImage(forExerciseName: "Ski Erg"), "figure.skiing.crosscountry")
+        XCTAssertEqual(WorkoutSportHonesty.systemImage(forExerciseName: "Rowing Machine"), "figure.rower")
+        XCTAssertEqual(WorkoutSportHonesty.systemImage(forExerciseName: "Back Squat"), "dumbbell.fill")
+    }
+
+    func testHeroPillNeverUsesHyroxTitleHeuristic() {
+        // Title may say Hyrox; pill must reflect persisted sport only.
+        XCTAssertEqual(WorkoutSport.strength.heroPill, "STRENGTH")
+        XCTAssertEqual(WorkoutSport.conditioning.heroPill, "CONDITIONING")
+        XCTAssertNotEqual(WorkoutSport.strength.heroPill, "HYROX")
+    }
+
     func testSaveRequestEncodesCanonicalSport() throws {
         let workout = Workout(
             name: "Bike ski row",

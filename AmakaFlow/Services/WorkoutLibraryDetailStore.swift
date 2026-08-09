@@ -116,7 +116,10 @@ enum WorkoutLibraryDetailStore {
         return Workout(
             id: workout.id,
             name: workout.name.isEmpty ? cached.name : workout.name,
-            sport: workout.sport == .other ? cached.sport : workout.sport,
+            // AMA-2393 — type-chip / editor writes cache with explicit sport.
+            // Prefer that over incoming when the wire still collapses to `.other`.
+            // When both are concrete, prefer server (post–companion_sport_wire).
+            sport: resolvedSport(fetched: workout.sport, cached: cached.sport),
             duration: cached.duration,
             blocks: cached.blocks,
             description: cached.description ?? workout.description,
@@ -176,6 +179,14 @@ enum WorkoutLibraryDetailStore {
         default:
             return fetched.source
         }
+    }
+
+    /// Prefer concrete wire sport; fall back to cached explicit type-chip / editor sport.
+    private static func resolvedSport(fetched: WorkoutSport, cached: WorkoutSport) -> WorkoutSport {
+        if fetched == .other, cached != .other {
+            return cached
+        }
+        return fetched
     }
 
     private static func loadAllResult() -> Result<[String: Workout], WorkoutLibraryDetailStoreError> {

@@ -891,7 +891,11 @@ struct DDWorkoutBlockSectionView: View {
                         infoExercise = exercise
                     } label: {
                         HStack(spacing: 11) {
-                            DDIconChip(systemName: "dumbbell.fill", background: DailyDriver.card2, size: 30)
+                            DDIconChip(
+                                systemName: WorkoutSportHonesty.systemImage(forExerciseName: exercise.name),
+                                background: DailyDriver.card2,
+                                size: 30
+                            )
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(exercise.name)
                                     .ddDisplayText(13.5, weight: .semibold)
