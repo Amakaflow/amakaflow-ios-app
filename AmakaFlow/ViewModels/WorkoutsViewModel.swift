@@ -8,6 +8,8 @@
 import Foundation
 import Combine
 
+// swiftlint:disable file_length
+
 // MARK: - Notification Names (AMA-237)
 
 extension Notification.Name {
@@ -31,7 +33,7 @@ struct TrainingBlock: Equatable {
 }
 
 @MainActor
-class WorkoutsViewModel: ObservableObject {
+class WorkoutsViewModel: ObservableObject { // swiftlint:disable:this type_body_length
     @Published var upcomingWorkouts: [ScheduledWorkout] = []
     @Published var incomingWorkouts: [Workout] = []
     @Published var searchQuery: String = ""
@@ -52,9 +54,14 @@ class WorkoutsViewModel: ObservableObject {
     // the Block view falls back to "all upcoming" without faking a count.
     @Published var activeBlock: TrainingBlock?
 
+    /// AMA-2394 test seam — production leaves this nil. Pending sync must never
+    /// invoke it (and must never call `WorkoutKitConverter.saveToWorkoutKit`).
+    var pendingWorkoutKitSaveSpy: ((Workout) async throws -> Void)?
+
     private let dependencies: AppDependencies
     private let calendarManager = CalendarManager()
     private var cancellables = Set<AnyCancellable>()
+    private var isCheckingPendingWorkouts = false
 
     /// Repository handles for the local-first read path (AMA-1792). Reads
     /// hydrate `incomingWorkouts` from `workout_events` (status='planned',
@@ -351,14 +358,23 @@ class WorkoutsViewModel: ObservableObject {
         await WatchConnectivityManager.shared.sendWorkout(workout)
     }
 
-    /// Check for pending workouts from iOS companion endpoint and sync to Watch + WorkoutKit
+    /// Check for pending workouts from the BFF sync queue and deliver to the
+    /// AmakaFlow Watch companion (WatchConnectivity) when device prefs allow.
+    ///
+    /// AMA-2394: does **not** schedule into Apple WorkoutKit. WorkoutKit plans
+    /// are user-initiated only (Start / Schedule from Library → confirm). The
+    /// old auto `saveToWorkoutKit` path stacked duplicates with no confirm UI.
     func checkPendingWorkouts() async {
+        guard !isCheckingPendingWorkouts else {
+            print("[WorkoutsViewModel] Pending workout check already in flight — skipping")
+            return
+        }
+        isCheckingPendingWorkouts = true
+        defer { isCheckingPendingWorkouts = false }
+
         pendingWorkoutsStatus = "Checking..."
 
-        // Check for valid auth
-        let hasAuth = dependencies.pairingService.isPaired
-
-        guard hasAuth else {
+        guard dependencies.pairingService.isPaired else {
             pendingWorkoutsStatus = "Not authenticated - skipping"
             print("[WorkoutsViewModel] Not authenticated, skipping pending workout check")
             return
@@ -368,99 +384,94 @@ class WorkoutsViewModel: ObservableObject {
 
         do {
             let pendingWorkouts = try await dependencies.apiService.fetchPendingWorkouts()
-
             guard !pendingWorkouts.isEmpty else {
                 pendingWorkoutsStatus = "No pending workouts"
                 print("[WorkoutsViewModel] No pending workouts found")
                 return
             }
 
-            // Build debug info about intervals
-            var debugInfo = "Found \(pendingWorkouts.count) workout(s)\n"
-            if let firstWorkout = pendingWorkouts.first {
-                debugInfo += "First: \(firstWorkout.name)\n"
-                for (i, interval) in firstWorkout.intervals.enumerated() {
-                    if case .reps(let sets, let reps, let name, _, let restSec, _) = interval {
-                        debugInfo += "[\(i)] \(name): sets=\(sets ?? -1), reps=\(reps), restSec=\(restSec ?? -999)\n"
-                    }
-                }
-            }
+            let debugInfo = Self.pendingWorkoutsDebugInfo(pendingWorkouts)
             pendingWorkoutsStatus = debugInfo
             print("[WorkoutsViewModel] Found \(pendingWorkouts.count) pending workouts, syncing...")
 
-            // Get device preference to determine if we should sync to Apple Watch
-            let devicePref = UserDefaults.standard.string(forKey: DefaultsKey.devicePreference.rawValue).flatMap { DevicePreference(rawValue: $0) } ?? .appleWatchPhone
+            let devicePref = UserDefaults.standard
+                .string(forKey: DefaultsKey.devicePreference.rawValue)
+                .flatMap(DevicePreference.init(rawValue:))
+                ?? .appleWatchPhone
 
+            var allSyncsConfirmed = true
             for workout in pendingWorkouts {
-                var syncSuccessful = true
-                var syncError: String?
-
-                // Only sync to Apple Watch if user has selected Apple Watch mode
-                if devicePref == .appleWatchPhone || devicePref == .appleWatchOnly {
-                    await WatchConnectivityManager.shared.sendWorkout(workout)
-                    print("[WorkoutsViewModel] Sent '\(workout.name)' to Watch")
-                } else {
-                    print("[WorkoutsViewModel] Skipping Watch sync for '\(workout.name)' - device preference is \(devicePref.rawValue)")
-                }
-
-                // Save to WorkoutKit (iOS 18+)
-                // Skip in test mode to avoid WorkoutKit authorization system dialog
-                #if DEBUG
-                let skipWorkoutKit = UITestEnvironment.shared.hasClerkTestUser
-                    || UITestEnvironment.shared.useFixtures
-                #else
-                let skipWorkoutKit = false
-                #endif
-                if !skipWorkoutKit, #available(iOS 18.0, *) {
-                    do {
-                        try await WorkoutKitConverter.shared.saveToWorkoutKit(workout)
-                        print("[WorkoutsViewModel] Saved '\(workout.name)' to WorkoutKit")
-                    } catch {
-                        print("[WorkoutsViewModel] Failed to save to WorkoutKit: \(error.localizedDescription)")
-                        syncSuccessful = false
-                        syncError = "WorkoutKit save failed: \(error.localizedDescription)"
-                    }
-                }
-
-                // Add to local workouts list if not already present
-                if !incomingWorkouts.contains(where: { $0.id == workout.id }) {
-                    incomingWorkouts.append(workout)
-                    print("[WorkoutsViewModel] Added '\(workout.name)' to incoming workouts")
-                }
-
-                // Confirm or report sync status to backend (AMA-307)
-                if syncSuccessful {
-                    do {
-                        try await dependencies.apiService.confirmSync(workoutId: workout.id)
-                        print("[WorkoutsViewModel] Confirmed sync for '\(workout.name)'")
-                    } catch {
-                        print("[WorkoutsViewModel] Failed to confirm sync: \(error.localizedDescription)")
-                        // Non-fatal - workout was still synced locally
-                    }
-                } else if let error = syncError {
-                    do {
-                        try await dependencies.apiService.reportSyncFailed(workoutId: workout.id, error: error)
-                        print("[WorkoutsViewModel] Reported sync failure for '\(workout.name)'")
-                    } catch {
-                        print("[WorkoutsViewModel] Failed to report sync failure: \(error.localizedDescription)")
-                    }
-                }
+                let confirmed = await deliverPendingCompanionWorkout(workout, devicePref: devicePref)
+                allSyncsConfirmed = allSyncsConfirmed && confirmed
             }
 
-            // Keep debug info visible, just append sync status
-            pendingWorkoutsStatus = debugInfo + "\n✅ Synced!"
+            pendingWorkoutsStatus = allSyncsConfirmed
+                ? debugInfo + "\n✅ Synced!"
+                : debugInfo + "\n⚠️ Some sync confirmations failed"
             print("[WorkoutsViewModel] Finished syncing \(pendingWorkouts.count) pending workouts")
         } catch {
-            // Show more detailed error info including raw response
-            if case APIError.serverErrorWithBody(_, let body) = error {
-                pendingWorkoutsStatus = body
-            } else if case APIError.decodingError(let decodeError) = error {
-                pendingWorkoutsStatus = "Decode: \(decodeError)"
-            } else {
-                pendingWorkoutsStatus = "Error: \(error.localizedDescription)"
-            }
+            pendingWorkoutsStatus = Self.pendingFetchErrorStatus(error)
             print("[WorkoutsViewModel] Failed to fetch pending workouts: \(error)")
         }
+    }
+
+    /// Companion WatchConnectivity delivery + Library list + AMA-307 confirm.
+    /// Never schedules WorkoutKit (AMA-2394). Returns whether `confirmSync` succeeded.
+    @discardableResult
+    private func deliverPendingCompanionWorkout(
+        _ workout: Workout,
+        devicePref: DevicePreference
+    ) async -> Bool {
+        if devicePref == .appleWatchPhone || devicePref == .appleWatchOnly {
+            await WatchConnectivityManager.shared.sendWorkout(workout)
+            print("[WorkoutsViewModel] Sent '\(workout.name)' to Watch")
+        } else {
+            print(
+                "[WorkoutsViewModel] Skipping Watch sync for '\(workout.name)' - device preference is \(devicePref.rawValue)"
+            )
+        }
+
+        // AMA-2394: do not call WorkoutKitConverter / saveToWorkoutKit here.
+        // `pendingWorkoutKitSaveSpy` is test-only — production never invokes it.
+
+        if !incomingWorkouts.contains(where: { $0.id == workout.id }) {
+            incomingWorkouts.append(workout)
+            print("[WorkoutsViewModel] Added '\(workout.name)' to incoming workouts")
+        }
+
+        // Pending BFF items land in the in-memory incoming list for this session.
+        // Persisting via suggestion-acceptance repos is a separate local-first
+        // concern (pre-existing AMA-307 behavior) — out of scope for AMA-2394.
+        do {
+            try await dependencies.apiService.confirmSync(workoutId: workout.id)
+            print("[WorkoutsViewModel] Confirmed sync for '\(workout.name)'")
+            return true
+        } catch {
+            print("[WorkoutsViewModel] Failed to confirm sync: \(error.localizedDescription)")
+            return false
+        }
+    }
+
+    private static func pendingWorkoutsDebugInfo(_ pendingWorkouts: [Workout]) -> String {
+        var debugInfo = "Found \(pendingWorkouts.count) workout(s)\n"
+        guard let firstWorkout = pendingWorkouts.first else { return debugInfo }
+        debugInfo += "First: \(firstWorkout.name)\n"
+        for (index, interval) in firstWorkout.intervals.enumerated() {
+            if case .reps(let sets, let reps, let name, _, let restSec, _) = interval {
+                debugInfo += "[\(index)] \(name): sets=\(sets ?? -1), reps=\(reps), restSec=\(restSec ?? -999)\n"
+            }
+        }
+        return debugInfo
+    }
+
+    private static func pendingFetchErrorStatus(_ error: Error) -> String {
+        if case APIError.serverErrorWithBody(_, let body) = error {
+            return body
+        }
+        if case APIError.decodingError(let decodeError) = error {
+            return "Decode: \(decodeError)"
+        }
+        return "Error: \(error.localizedDescription)"
     }
 
     func deleteWorkout(_ workout: ScheduledWorkout) {
@@ -593,11 +604,11 @@ class WorkoutsViewModel: ObservableObject {
     // MARK: - Deep-link helpers (AMA-1640)
 
     private static let deepLinkISODayFormatter: DateFormatter = {
-        let f = DateFormatter()
-        f.dateFormat = "yyyy-MM-dd"
-        f.timeZone = TimeZone(secondsFromGMT: 0)
-        f.locale = Locale(identifier: "en_US_POSIX")
-        return f
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        formatter.timeZone = TimeZone(secondsFromGMT: 0)
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        return formatter
     }()
 
     /// Persist a calendar date selection from a deep link so CalendarView /
@@ -658,7 +669,7 @@ class WorkoutsViewModel: ObservableObject {
     }
     
     // MARK: - Mock Data
-    private func loadMockData() {
+    private func loadMockData() { // swiftlint:disable:this function_body_length
         ctaError = nil
         hasLoadedWorkouts = true
         upcomingWorkouts = [

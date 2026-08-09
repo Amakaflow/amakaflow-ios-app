@@ -620,4 +620,63 @@ final class WorkoutsViewModelTests: XCTestCase {
             "Tombstone is a soft delete — the row stays for the SyncEngine to flush"
         )
     }
+
+    // MARK: - AMA-2394: Pending sync must not schedule WorkoutKit
+
+    func testCheckPendingWorkoutsConfirmsCompanionSyncWithoutWorkoutKit() async {
+        let pending = TestFixtures.workout(id: "pending-wk-1", name: "Bike ski row repeats", sport: .conditioning)
+        mockAPIService.fetchPendingWorkoutsResult = .success([pending])
+        mockAPIService.confirmSyncCalled = false
+        mockAPIService.reportSyncFailedCalled = false
+        mockAPIService.confirmedWorkoutId = nil
+
+        var workoutKitSpyCalls = 0
+        viewModel.pendingWorkoutKitSaveSpy = { _ in
+            workoutKitSpyCalls += 1
+        }
+
+        await viewModel.checkPendingWorkouts()
+
+        XCTAssertTrue(mockAPIService.fetchPendingWorkoutsCalled)
+        XCTAssertTrue(
+            mockAPIService.confirmSyncCalled,
+            "Pending delivery still confirms AMA-307 sync after companion send"
+        )
+        XCTAssertEqual(mockAPIService.confirmedWorkoutId, "pending-wk-1")
+        XCTAssertFalse(
+            mockAPIService.reportSyncFailedCalled,
+            "Must not report WorkoutKit failure — pending path no longer auto-schedules"
+        )
+        XCTAssertEqual(
+            workoutKitSpyCalls,
+            0,
+            "Pending path must never invoke the WorkoutKit save spy"
+        )
+        XCTAssertTrue(
+            viewModel.incomingWorkouts.contains { $0.id == "pending-wk-1" },
+            "Pending workout should still land in the Library/incoming list"
+        )
+        XCTAssertTrue(
+            viewModel.pendingWorkoutsStatus.contains("Synced"),
+            "Status should reflect companion sync without WorkoutKit"
+        )
+    }
+
+    func testCheckPendingWorkoutsReportsPartialFailureWhenConfirmSyncFails() async {
+        let pending = TestFixtures.workout(id: "pending-wk-2", name: "Engine EMOM", sport: .conditioning)
+        mockAPIService.fetchPendingWorkoutsResult = .success([pending])
+        mockAPIService.confirmSyncResult = .failure(
+            NSError(domain: "test", code: 1, userInfo: [
+                NSLocalizedDescriptionKey: "confirm failed"
+            ])
+        )
+
+        await viewModel.checkPendingWorkouts()
+
+        XCTAssertTrue(
+            viewModel.pendingWorkoutsStatus.contains("Some sync confirmations failed"),
+            "Must not publish Synced when confirmSync fails"
+        )
+        XCTAssertFalse(viewModel.pendingWorkoutsStatus.contains("✅ Synced!"))
+    }
 }

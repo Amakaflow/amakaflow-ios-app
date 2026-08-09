@@ -5,6 +5,7 @@
 //  AMA-2287: WorkoutKit-primary Start → Workout on Apple Watch.
 //
 
+// swiftlint:disable file_length
 import Foundation
 import WatchConnectivity
 import WorkoutKitSync
@@ -134,7 +135,7 @@ struct LiveAppleWatchPairingReader: AppleWatchPairingReading {
 
 /// Coordinates mapper compose → preview → WorkoutKit schedule for Start → Apple.
 @MainActor
-final class AppleStartHandoffService {
+final class AppleStartHandoffService { // swiftlint:disable:this type_body_length
     private let pairingReader: any AppleWatchPairingReading
     private let workoutKitSaver: (any WorkoutKitSaving)?
     private let planProvider: (any WorkoutKitPlanProviding)?
@@ -363,16 +364,36 @@ final class AppleStartHandoffService {
                 }
             }
             try await workoutKitSaver.saveMapperPlanJSON(planJSON)
-            if let incompleteScheduleReplacer, !replacements.isEmpty {
-                await incompleteScheduleReplacer.remove(rows: replacements)
+            let preSaveIDs = Set(replacements.map(\.id.planID))
+            if let incompleteScheduleReplacer {
+                if !replacements.isEmpty {
+                    await incompleteScheduleReplacer.remove(rows: replacements)
+                }
+                // Identify the plan(s) that appeared from this confirm (not in the
+                // pre-save set). Prefer that identity over schedule-time heuristics
+                // so a raced duplicate with a later date cannot displace the save.
+                // Lookup failures must surface — do not report clean success when
+                // duplicate cleanup could not run (AMA-2394 / CodeRabbit).
+                let afterSave = try await incompleteScheduleReplacer.findIncompletePlans(
+                    titled: workoutName
+                )
+                let newlyAppeared = afterSave.filter { !preSaveIDs.contains($0.id.planID) }
+                // `min(by:)` matches preferred-first order (same as sorted().first).
+                let savedPlanID = newlyAppeared
+                    .min(by: IncompleteScheduleReplacerKeeper.isPreferredOrder)?
+                    .id.planID
+                try await incompleteScheduleReplacer.removeDuplicateIncompletePlans(
+                    titled: workoutName,
+                    keepingPlanID: savedPlanID,
+                    excluding: preSaveIDs
+                )
             }
             if let libraryWorkoutID {
-                let excluded = Set(replacements.map(\.id.planID))
                 await recordPlanLink(
                     workoutName: workoutName,
                     libraryWorkoutID: libraryWorkoutID,
                     planJSON: planJSON,
-                    excludedPlanIDs: excluded
+                    excludedPlanIDs: preSaveIDs
                 )
             }
             return AppleStartHandoffCopy.scheduledInWorkoutMessage(
