@@ -52,6 +52,11 @@ final class FriendsSharingStore: ObservableObject {
         friendships.filter { $0.status == .pending && $0.isOutgoing }
     }
 
+    /// Profile tab + Friends row badge: pending inbound requests + unhandled shares.
+    var profileAttentionCount: Int {
+        incomingRequests.count + unhandledShareCount
+    }
+
     var unhandledShares: [WorkoutShare] {
         incomingShares.filter(\.isUnhandled)
     }

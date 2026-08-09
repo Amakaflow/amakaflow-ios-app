@@ -109,8 +109,22 @@ nonisolated enum FriendsCopy {
         return "Remove \(first)? They won't be notified. Workouts you saved from them stay yours. You can add them again any time."
     }
 
-    static func profileEntrySubtitle(friendCount: Int, waitingCount: Int) -> String {
+    static func profileEntrySubtitle(
+        friendCount: Int,
+        waitingCount: Int,
+        requestCount: Int = 0
+    ) -> String {
         let friendsPart = friendCount == 1 ? "1 FRIEND" : "\(friendCount) FRIENDS"
+        if requestCount >= 1 {
+            let requestPart = requestCount == 1 ? "1 REQUEST" : "\(requestCount) REQUESTS"
+            if waitingCount >= 1 {
+                let waitingPart = waitingCount == 1
+                    ? "1 WORKOUT WAITING"
+                    : "\(waitingCount) WORKOUTS WAITING"
+                return "\(friendsPart) · \(requestPart) · \(waitingPart)"
+            }
+            return "\(friendsPart) · \(requestPart)"
+        }
         if waitingCount >= 1 {
             let waitingPart = waitingCount == 1 ? "1 WORKOUT WAITING" : "\(waitingCount) WORKOUTS WAITING"
             return "\(friendsPart) · \(waitingPart)"

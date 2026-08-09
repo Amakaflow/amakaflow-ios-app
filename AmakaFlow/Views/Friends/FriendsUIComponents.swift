@@ -131,7 +131,10 @@ struct FriendRemoveConfirmPanel: View {
 struct ProfileFriendsEntryRow: View {
     let friendCount: Int
     let waitingCount: Int
+    var requestCount: Int = 0
     let onTap: () -> Void
+
+    private var badgeValue: Int { requestCount + waitingCount }
 
     var body: some View {
         Button(action: onTap) {
@@ -148,7 +151,8 @@ struct ProfileFriendsEntryRow: View {
                     Text(
                         FriendsCopy.profileEntrySubtitle(
                             friendCount: friendCount,
-                            waitingCount: waitingCount
+                            waitingCount: waitingCount,
+                            requestCount: requestCount
                         )
                     )
                     .font(.system(size: 10, weight: .medium, design: .monospaced))
@@ -157,7 +161,7 @@ struct ProfileFriendsEntryRow: View {
                 }
                 Spacer(minLength: 0)
                 FriendsWaitingBadge(
-                    badgeValue: waitingCount,
+                    badgeValue: badgeValue,
                     accessibilityId: "af_profile_friends_badge"
                 )
                 Image(systemName: "chevron.right")
