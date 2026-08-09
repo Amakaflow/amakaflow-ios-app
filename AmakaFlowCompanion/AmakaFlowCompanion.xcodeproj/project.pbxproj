@@ -607,6 +607,11 @@
 		F1XTUR3JS0N01000001 /* amrap_10min.json in Resources */ = {isa = PBXBuildFile; fileRef = F1XTUR3JS0N00000001 /* amrap_10min.json */; };
 		F1XTUR3JS0N01000002 /* emom_strength.json in Resources */ = {isa = PBXBuildFile; fileRef = F1XTUR3JS0N00000002 /* emom_strength.json */; };
 		F1XTUR3JS0N01000003 /* for_time_conditioning.json in Resources */ = {isa = PBXBuildFile; fileRef = F1XTUR3JS0N00000003 /* for_time_conditioning.json */; };
+		AMA2395FIX4BLD /* ama2395_ai_multiblock.json in Resources */ = {isa = PBXBuildFile; fileRef = AMA2395FIX4REF /* ama2395_ai_multiblock.json */; };
+		AMA2395FIX3BLD /* ama2395_strength_upper.json in Resources */ = {isa = PBXBuildFile; fileRef = AMA2395FIX3REF /* ama2395_strength_upper.json */; };
+		AMA2395FIX2BLD /* ama2395_manual_circuit.json in Resources */ = {isa = PBXBuildFile; fileRef = AMA2395FIX2REF /* ama2395_manual_circuit.json */; };
+		AMA2395FIX1BLD /* ama2395_wrongtype_circuit.json in Resources */ = {isa = PBXBuildFile; fileRef = AMA2395FIX1REF /* ama2395_wrongtype_circuit.json */; };
+		AMA2395FIX0BLD /* ama2395_import_erg.json in Resources */ = {isa = PBXBuildFile; fileRef = AMA2395FIX0REF /* ama2395_import_erg.json */; };
 		F1XTUR3JS0N01000004 /* strength_block_w1.json in Resources */ = {isa = PBXBuildFile; fileRef = F1XTUR3JS0N00000004 /* strength_block_w1.json */; };
 		F1XTUR3JS0N01000005 /* running_long.json in Resources */ = {isa = PBXBuildFile; fileRef = F1XTUR3JS0N00000005 /* running_long.json */; };
 		F1XTUR3JS0N01000006 /* hiit_follow_along.json in Resources */ = {isa = PBXBuildFile; fileRef = F1XTUR3JS0N00000006 /* hiit_follow_along.json */; };
@@ -1363,6 +1368,11 @@
 		F1XTUR3JS0N00000001 /* amrap_10min.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = amrap_10min.json; path = ../AmakaFlow/Resources/Fixtures/amrap_10min.json; sourceTree = SOURCE_ROOT; };
 		F1XTUR3JS0N00000002 /* emom_strength.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = emom_strength.json; path = ../AmakaFlow/Resources/Fixtures/emom_strength.json; sourceTree = SOURCE_ROOT; };
 		F1XTUR3JS0N00000003 /* for_time_conditioning.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = for_time_conditioning.json; path = ../AmakaFlow/Resources/Fixtures/for_time_conditioning.json; sourceTree = SOURCE_ROOT; };
+		AMA2395FIX4REF /* ama2395_ai_multiblock.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = ama2395_ai_multiblock.json; path = ../AmakaFlow/Resources/Fixtures/ama2395_ai_multiblock.json; sourceTree = SOURCE_ROOT; };
+		AMA2395FIX3REF /* ama2395_strength_upper.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = ama2395_strength_upper.json; path = ../AmakaFlow/Resources/Fixtures/ama2395_strength_upper.json; sourceTree = SOURCE_ROOT; };
+		AMA2395FIX2REF /* ama2395_manual_circuit.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = ama2395_manual_circuit.json; path = ../AmakaFlow/Resources/Fixtures/ama2395_manual_circuit.json; sourceTree = SOURCE_ROOT; };
+		AMA2395FIX1REF /* ama2395_wrongtype_circuit.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = ama2395_wrongtype_circuit.json; path = ../AmakaFlow/Resources/Fixtures/ama2395_wrongtype_circuit.json; sourceTree = SOURCE_ROOT; };
+		AMA2395FIX0REF /* ama2395_import_erg.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = ama2395_import_erg.json; path = ../AmakaFlow/Resources/Fixtures/ama2395_import_erg.json; sourceTree = SOURCE_ROOT; };
 		F1XTUR3JS0N00000004 /* strength_block_w1.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = strength_block_w1.json; path = ../AmakaFlow/Resources/Fixtures/strength_block_w1.json; sourceTree = SOURCE_ROOT; };
 		F1XTUR3JS0N00000005 /* running_long.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = running_long.json; path = ../AmakaFlow/Resources/Fixtures/running_long.json; sourceTree = SOURCE_ROOT; };
 		F1XTUR3JS0N00000006 /* hiit_follow_along.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = hiit_follow_along.json; path = ../AmakaFlow/Resources/Fixtures/hiit_follow_along.json; sourceTree = SOURCE_ROOT; };
@@ -2107,6 +2117,11 @@
 				F1XTUR3JS0N00000001 /* amrap_10min.json */,
 				F1XTUR3JS0N00000002 /* emom_strength.json */,
 				F1XTUR3JS0N00000003 /* for_time_conditioning.json */,
+				AMA2395FIX4REF /* ama2395_ai_multiblock.json */,
+				AMA2395FIX3REF /* ama2395_strength_upper.json */,
+				AMA2395FIX2REF /* ama2395_manual_circuit.json */,
+				AMA2395FIX1REF /* ama2395_wrongtype_circuit.json */,
+				AMA2395FIX0REF /* ama2395_import_erg.json */,
 				F1XTUR3JS0N00000004 /* strength_block_w1.json */,
 				AMA2286RUNINTREF /* running_intervals_4x800.json */,
 				F1XTUR3JS0N00000005 /* running_long.json */,
@@ -2590,6 +2605,11 @@
 				F1XTUR3JS0N01000001 /* amrap_10min.json in Resources */,
 				F1XTUR3JS0N01000002 /* emom_strength.json in Resources */,
 				F1XTUR3JS0N01000003 /* for_time_conditioning.json in Resources */,
+				AMA2395FIX4BLD /* ama2395_ai_multiblock.json in Resources */,
+				AMA2395FIX3BLD /* ama2395_strength_upper.json in Resources */,
+				AMA2395FIX2BLD /* ama2395_manual_circuit.json in Resources */,
+				AMA2395FIX1BLD /* ama2395_wrongtype_circuit.json in Resources */,
+				AMA2395FIX0BLD /* ama2395_import_erg.json in Resources */,
 				F1XTUR3JS0N01000004 /* strength_block_w1.json in Resources */,
 				AMA2286RUNINTBLD /* running_intervals_4x800.json in Resources */,
 				F1XTUR3JS0N01000005 /* running_long.json in Resources */,

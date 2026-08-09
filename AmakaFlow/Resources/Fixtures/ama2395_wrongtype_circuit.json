@@ -1,0 +1,32 @@
+{
+  "id": "fixture-ama2395-wrongtype",
+  "name": "Bike ski row repeats",
+  "sport": "strength",
+  "duration": 60,
+  "source": "manual",
+  "blocks": [
+    {
+      "label": "Main",
+      "structure": "circuit",
+      "rounds": 6,
+      "exercises": [
+        {
+          "name": "Assault Bike",
+          "duration_sec": 180
+        },
+        {
+          "name": "Ski Erg",
+          "duration_sec": 180
+        },
+        {
+          "name": "Rowing Machine",
+          "duration_sec": 180
+        },
+        {
+          "name": "Spin / Indoor Bike",
+          "duration_sec": 180
+        }
+      ]
+    }
+  ]
+}

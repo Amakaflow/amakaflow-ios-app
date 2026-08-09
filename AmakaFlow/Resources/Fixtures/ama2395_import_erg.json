@@ -1,0 +1,31 @@
+{
+  "id": "fixture-ama2395-import",
+  "name": "Erg Workout For Time",
+  "sport": "conditioning",
+  "duration": 60,
+  "source": "instagram",
+  "source_url": "https://www.instagram.com/georgedyer.fitness/reel/abc123",
+  "creator_name": "georgedyer.fitness",
+  "description": "500m Ski · 500m Row · 1000m Bike x 10 rounds.\nMy time: 57.53 - it gets spicy very quick\nSave it and give it a go!\nDouble tap & Save\n#erg #workout #fortime #ski #row #bike",
+  "blocks": [
+    {
+      "label": "For time",
+      "structure": "circuit",
+      "rounds": 10,
+      "exercises": [
+        {
+          "name": "Ski Erg",
+          "distance": 500
+        },
+        {
+          "name": "Rowing",
+          "distance": 500
+        },
+        {
+          "name": "Bike",
+          "distance": 1000
+        }
+      ]
+    }
+  ]
+}

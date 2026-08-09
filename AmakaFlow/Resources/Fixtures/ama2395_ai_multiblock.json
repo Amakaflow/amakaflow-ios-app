@@ -1,0 +1,80 @@
+{
+  "id": "fixture-ama2395-ai",
+  "name": "Full Body Aesthetics Session",
+  "sport": "strength",
+  "duration": 60,
+  "source": "ai",
+  "blocks": [
+    {
+      "label": null,
+      "structure": "straight",
+      "rounds": 1,
+      "exercises": [
+        {
+          "name": "Jump Rope",
+          "duration_sec": 180
+        }
+      ]
+    },
+    {
+      "label": "Block 8",
+      "structure": "straight",
+      "rounds": 1,
+      "exercises": [
+        {
+          "name": "WU · squat",
+          "reps": "8"
+        },
+        {
+          "name": "WU · squat",
+          "reps": "5"
+        }
+      ]
+    },
+    {
+      "label": "Block 9",
+      "structure": "straight",
+      "rounds": 3,
+      "exercises": [
+        {
+          "name": "squat",
+          "reps": "8",
+          "rest_seconds": 90
+        }
+      ]
+    },
+    {
+      "label": "Block 10",
+      "structure": "straight",
+      "rounds": 1,
+      "exercises": [
+        {
+          "name": "WU · plank",
+          "duration_sec": 20
+        }
+      ]
+    },
+    {
+      "label": "Block 11",
+      "structure": "straight",
+      "rounds": 2,
+      "exercises": [
+        {
+          "name": "plank",
+          "duration_sec": 30
+        }
+      ]
+    },
+    {
+      "label": "Timed Work",
+      "structure": "straight",
+      "rounds": 1,
+      "exercises": [
+        {
+          "name": "Timed Work",
+          "duration_sec": 300
+        }
+      ]
+    }
+  ]
+}

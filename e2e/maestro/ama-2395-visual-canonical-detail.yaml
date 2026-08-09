@@ -1,0 +1,199 @@
+# AMA-2395 visual — canonical workout detail, one anatomy for every source.
+#
+# Captures the five rig panels (rig-detail.html) against the real app:
+#   1 Instagram import   — distances estimated, collapsed FROM THE CREATOR card
+#   2 wrong type         — stored STRENGTH vs cardio content (AMA-2393 chip)
+#   3 manual circuit     — 8 x 4 x 3:00 = 96 MIN EXACT (no ≈), the E2 anchor
+#   4 YouTube strength   — reps-based estimate with per-exercise minutes
+#   5 AI multi-block     — semantic bands replacing Block 7/9/11 + WU dupes
+#
+# Each panel asserts the anatomy is present AND that the two bugs the ticket
+# was raised for are gone: no "~1 MIN" meta and no "Block N" section.
+#
+# Auth: UITEST fixtures (no live Clerk/mapper).
+appId: com.myamaka.AmakaFlowCompanion
+---
+- launchApp:
+    appId: com.myamaka.AmakaFlowCompanion
+    clearState: true
+    permissions:
+      notifications: deny
+    arguments:
+      UITEST_CLERK_TEST_SESSION: "user_id=user_ama2395_visual,email=claude+clerk_test@amakaflow.dev,name=AMA2395 Visual"
+      UITEST_SKIP_ONBOARDING: "true"
+      UITEST_SKIP_APPLE_WATCH: "true"
+      UITEST_USE_FIXTURES: "true"
+      UITEST_FIXTURES: "ama2395_import_erg,ama2395_wrongtype_circuit,ama2395_manual_circuit,ama2395_strength_upper,ama2395_ai_multiblock"
+- waitForAnimationToEnd:
+    timeout: 5000
+- extendedWaitUntil:
+    visible:
+      id: "af_tabbar"
+    timeout: 60000
+- tapOn: "Library"
+- waitForAnimationToEnd:
+    timeout: 3000
+- extendedWaitUntil:
+    visible:
+      id: "af_library_fab"
+    timeout: 15000
+# Search is avoided on purpose: iOS autocorrect rewrites typed queries.
+- tapOn:
+    id: "af_collection_card_uncategorized"
+- extendedWaitUntil:
+    visible:
+      id: "af_collection_detail"
+    timeout: 15000
+- waitForAnimationToEnd:
+    timeout: 2000
+
+# ── 1 · Instagram import — estimator on distances, caption in a card ──────────
+- tapOn:
+    id: "af_collection_member_fixture-ama2395-import"
+- extendedWaitUntil:
+    visible:
+      id: "af_workout_detail_screen"
+    timeout: 15000
+- waitForAnimationToEnd:
+    timeout: 2000
+- assertVisible:
+    id: "af_detail_pills"
+- assertVisible:
+    id: "af_detail_time_card"
+# The caption is a collapsed card, never the page body.
+- assertVisible:
+    id: "af_detail_creator_note"
+- assertVisible: "FROM THE CREATOR"
+- assertVisible: "More"
+# Hashtags and CTAs stay hidden until the reader asks for them.
+- assertNotVisible:
+    text: ".*#erg.*"
+- assertNotVisible:
+    text: ".*Double tap & Save.*"
+# The bug this ticket exists for.
+- assertNotVisible:
+    text: ".*~1 MIN.*"
+- assertNotVisible:
+    text: ".*Block \\d.*"
+- takeScreenshot: docs/ama-2395-visual-evidence/01-import-instagram
+- tapOn:
+    id: "af_detail_creator_note_toggle"
+- waitForAnimationToEnd:
+    timeout: 1500
+- assertVisible:
+    text: ".*#erg.*"
+- assertVisible: "Less"
+- takeScreenshot: docs/ama-2395-visual-evidence/01b-import-note-expanded
+- tapOn:
+    id: "af_workout_detail_back"
+- extendedWaitUntil:
+    visible:
+      id: "af_collection_detail"
+    timeout: 15000
+- waitForAnimationToEnd:
+    timeout: 2000
+
+# ── 2 · Wrong type — stored STRENGTH, content says cardio ────────────────────
+- tapOn:
+    id: "af_collection_member_fixture-ama2395-wrongtype"
+- extendedWaitUntil:
+    visible:
+      id: "af_workout_detail_screen"
+    timeout: 15000
+- waitForAnimationToEnd:
+    timeout: 2000
+- assertVisible:
+    id: "af_workout_detail_sport_chip"
+- assertVisible:
+    id: "af_workout_detail_sport_disagreement"
+- assertVisible: "CIRCUIT · 6 ROUNDS · ROTATE, NO REST"
+- assertNotVisible:
+    text: ".*~1 MIN.*"
+- takeScreenshot: docs/ama-2395-visual-evidence/02-wrong-type
+- tapOn:
+    id: "af_workout_detail_back"
+- extendedWaitUntil:
+    visible:
+      id: "af_collection_detail"
+    timeout: 15000
+- waitForAnimationToEnd:
+    timeout: 2000
+
+# ── 3 · Manual circuit — the E2 anchor: 96 MIN EXACT, no ≈ ───────────────────
+- tapOn:
+    id: "af_collection_member_fixture-ama2395-manual"
+- extendedWaitUntil:
+    visible:
+      id: "af_workout_detail_screen"
+    timeout: 15000
+- waitForAnimationToEnd:
+    timeout: 2000
+- assertVisible: "96 MIN"
+- assertVisible: "ALL TIMED · EXACT"
+- assertVisible: "CIRCUIT · 8 ROUNDS · ROTATE, NO REST"
+# Everything is timed, so nothing may be hedged.
+- assertNotVisible:
+    text: ".*≈.*MIN.*"
+- assertNotVisible:
+    text: ".*~1 MIN.*"
+- takeScreenshot: docs/ama-2395-visual-evidence/03-manual-circuit-exact
+- tapOn:
+    id: "af_workout_detail_back"
+- extendedWaitUntil:
+    visible:
+      id: "af_collection_detail"
+    timeout: 15000
+- waitForAnimationToEnd:
+    timeout: 2000
+
+# ── 4 · YouTube strength — reps estimate with per-exercise minutes ───────────
+- tapOn:
+    id: "af_collection_member_fixture-ama2395-strength"
+- extendedWaitUntil:
+    visible:
+      id: "af_workout_detail_screen"
+    timeout: 15000
+- waitForAnimationToEnd:
+    timeout: 2000
+- assertVisible:
+    id: "af_detail_time_card"
+- assertVisible:
+    id: "af_detail_row_barbell_overhead_press"
+- assertVisible:
+    text: ".*LIFTING.*"
+- assertNotVisible:
+    text: ".*~1 MIN.*"
+- takeScreenshot: docs/ama-2395-visual-evidence/04-strength-youtube
+- tapOn:
+    id: "af_workout_detail_back"
+- extendedWaitUntil:
+    visible:
+      id: "af_collection_detail"
+    timeout: 15000
+- waitForAnimationToEnd:
+    timeout: 2000
+
+# ── 5 · AI multi-block — semantic bands, no Block N, no duplicate WU rows ────
+- tapOn:
+    id: "af_collection_member_fixture-ama2395-ai"
+- extendedWaitUntil:
+    visible:
+      id: "af_workout_detail_screen"
+    timeout: 15000
+- waitForAnimationToEnd:
+    timeout: 2000
+- assertVisible: "WARM-UP"
+- assertVisible: "SQUAT · 3 ROUNDS"
+- assertVisible: "CORE · 2 ROUNDS"
+# The two things the dogfood screenshots showed and must never come back.
+- assertNotVisible:
+    text: ".*Block \\d.*"
+- assertNotVisible:
+    text: ".*WU · .*"
+- assertNotVisible:
+    text: ".*~1 MIN.*"
+- takeScreenshot: docs/ama-2395-visual-evidence/05-ai-multiblock-bands
+- scroll
+- waitForAnimationToEnd:
+    timeout: 1500
+- takeScreenshot: docs/ama-2395-visual-evidence/05b-ai-multiblock-scrolled
