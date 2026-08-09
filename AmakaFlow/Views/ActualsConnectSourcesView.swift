@@ -112,14 +112,33 @@ struct ActualsConnectSourcesView<Store: ActualsSourceConnecting>: View where Sto
             Spacer(minLength: 8)
 
             if connected {
-                Text(
-                    store.isFreshlyLinked(provider)
-                        ? ActualsCopy.linkedJustNowBadge
-                        : ActualsCopy.connectedBadge
-                )
-                    .font(.system(size: 9, design: .monospaced))
-                    .foregroundColor(DailyDriver.lime)
+                // OAuth sources stay tappable so a local CONNECTED from stub dogfood
+                // (or expired token) can start a real authorize again.
+                if provider == .strava || provider == .garmin {
+                    Button {
+                        connectTapped(provider)
+                    } label: {
+                        Text(ActualsCopy.connectButton)
+                            .ddDisplayText(12, weight: .bold)
+                            .foregroundColor(DailyDriver.ink)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 8)
+                            .background(connectButtonBackground(for: provider))
+                            .clipShape(Capsule())
+                    }
+                    .buttonStyle(.plain)
                     .fixedSize()
+                    .accessibilityIdentifier(provider.accessibilityConnectID)
+                } else {
+                    Text(
+                        store.isFreshlyLinked(provider)
+                            ? ActualsCopy.linkedJustNowBadge
+                            : ActualsCopy.connectedBadge
+                    )
+                        .font(.system(size: 9, design: .monospaced))
+                        .foregroundColor(DailyDriver.lime)
+                        .fixedSize()
+                }
             } else {
                 let opensSettings = provider == .appleHealth
                     && (healthKit.authorizationState == .denied

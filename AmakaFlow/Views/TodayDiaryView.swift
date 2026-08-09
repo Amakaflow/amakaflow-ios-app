@@ -440,13 +440,34 @@ struct TodayDiaryView: View {
     }
 
     private var emptyDiaryState: some View {
-        Text("Sessions land here as they happen — or add one with ＋")
-            .font(.system(size: 12))
-            .foregroundColor(DailyDriver.foregroundDim)
-            .multilineTextAlignment(.center)
-            .frame(maxWidth: .infinity)
-            .padding(.top, 26)
-            .accessibilityIdentifier("af_today_empty_state")
+        // Teach card is first-time only (`hasEverConnected`). Once that flag is set
+        // (stub dogfood / prior connect), empty Today had no path to Connect Sources —
+        // AMA-2391: keep a Connect CTA while any source is still unlinked.
+        VStack(spacing: 16) {
+            Text("Sessions land here as they happen — or add one with ＋")
+                .font(.system(size: 12))
+                .foregroundColor(DailyDriver.foregroundDim)
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: .infinity)
+                .accessibilityIdentifier("af_today_empty_state")
+
+            // Always offer Connect Sources on empty Today — not only first-time teach.
+            // Row state on that screen still reflects what's already linked.
+            Button {
+                showConnectSources = true
+            } label: {
+                Text(ActualsCopy.teachCTA)
+                    .ddDisplayText(14, weight: .bold)
+                    .foregroundColor(DailyDriver.ink)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 13)
+                    .background(DailyDriver.lime)
+                    .clipShape(Capsule())
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier(ActualsCopy.teachCTAAccessibilityID)
+        }
+        .padding(.top, 26)
     }
 
     private var timeline: some View {
