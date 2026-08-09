@@ -194,8 +194,9 @@ struct SocialImportFlowView: View {
     @ViewBuilder
     private var clarifySheet: some View {
         // AMA-2383: PARSING write-in plays once, then CTA → Check the structure.
+        // BuildRevealView already renders config.title — omit chrome title to avoid a duplicate.
         if !parsingRevealDone, let controller = parsingController {
-            DDBottomSheetChrome(title: viewModel.draft?.title ?? "Import") {
+            DDBottomSheetChrome(title: nil) {
                 BuildRevealView(controller: controller) {
                     parsingRevealDone = true
                 }
@@ -364,8 +365,9 @@ struct ImageImportView: View {
                     )
                 }
             case .clarify, .saving:
+                // BuildRevealView already renders config.title — omit chrome title to avoid a duplicate.
                 if !parsingRevealDone, let controller = parsingController {
-                    DDBottomSheetChrome(title: viewModel.draft?.title ?? "Import") {
+                    DDBottomSheetChrome(title: nil) {
                         BuildRevealView(controller: controller) {
                             parsingRevealDone = true
                         }
