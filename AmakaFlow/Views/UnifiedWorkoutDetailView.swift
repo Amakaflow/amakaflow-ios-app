@@ -858,8 +858,10 @@ extension UnifiedWorkoutDetailView {
     }
 
     fileprivate var sportHeroPill: String {
-        // AMA-2393 — pill must match picker / persisted WorkoutSport (never title heuristics).
-        displayedWorkout.sport.heroPill
+        WorkoutSportHonesty.heroPill(
+            sport: displayedWorkout.sport,
+            workoutName: displayedWorkout.name
+        )
     }
 
     fileprivate var heroGradientColors: [Color] {
@@ -873,7 +875,7 @@ extension UnifiedWorkoutDetailView {
         case .ai:
             return [Color(hex: "101C30"), Color(hex: "060A12"), Color(hex: "0A0A0B")]
         case .manual, .all:
-            switch workout.sport {
+            switch displayedWorkout.sport {
             case .running, .cycling, .swimming:
                 return [Color(hex: "0D2438"), Color(hex: "071522"), Color(hex: "0A0A0B")]
             case .cardio, .conditioning, .mixed:
@@ -888,7 +890,7 @@ extension UnifiedWorkoutDetailView {
         if WorkoutSourceProvenance.isExternal(resolvedSourceKey) {
             return "play.fill"
         }
-        switch workout.sport {
+        switch displayedWorkout.sport {
         case .running: return "figure.run"
         case .cycling: return "bicycle"
         case .strength, .mobility: return "dumbbell.fill"
@@ -1445,7 +1447,8 @@ extension UnifiedWorkoutDetailView {
             creatorName: displayedWorkout.creatorName,
             createdAt: displayedWorkout.createdAt,
             canonicalId: displayedWorkout.canonicalId,
-            canonicalSource: displayedWorkout.canonicalSource
+            canonicalSource: displayedWorkout.canonicalSource,
+            sportPersisted: true
         )
         do {
             let request = WorkoutSaveRequest.from(workout: updated)
@@ -1462,7 +1465,8 @@ extension UnifiedWorkoutDetailView {
                 creatorName: updated.creatorName ?? saved.creatorName,
                 createdAt: updated.createdAt ?? saved.createdAt,
                 canonicalId: updated.canonicalId ?? saved.canonicalId,
-                canonicalSource: updated.canonicalSource ?? saved.canonicalSource
+                canonicalSource: updated.canonicalSource ?? saved.canonicalSource,
+                sportPersisted: true
             )
             displayedWorkout = confirmed
             _ = WorkoutLibraryDetailStore.save(

@@ -67,7 +67,8 @@ enum WorkoutLibraryDetailStore {
             source: WorkoutSource(rawValue: request.source ?? "") ?? saved.source,
             sourceUrl: request.sourceUrl ?? saved.sourceUrl,
             creatorName: request.creatorName ?? saved.creatorName,
-            createdAt: saved.createdAt
+            createdAt: saved.createdAt,
+            sportPersisted: true
         )
     }
 
@@ -113,20 +114,26 @@ enum WorkoutLibraryDetailStore {
         }
         // Cache is the block-rich source of truth for interval-only library payloads.
         // Duration stays with the cached blocks so shrinking an edit can take effect.
+        let sport = resolvedSport(
+            fetched: workout.sport,
+            fetchedPersisted: workout.sportPersisted,
+            cached: cached.sport
+        )
         return Workout(
             id: workout.id,
             name: workout.name.isEmpty ? cached.name : workout.name,
-            // AMA-2393 — type-chip / editor writes cache with explicit sport.
-            // Prefer that over incoming when the wire still collapses to `.other`.
-            // When both are concrete, prefer server (post–companion_sport_wire).
-            sport: resolvedSport(fetched: workout.sport, cached: cached.sport),
+            sport: sport,
             duration: cached.duration,
             blocks: cached.blocks,
             description: cached.description ?? workout.description,
             source: resolvedSource(fetched: workout, cached: cached),
             sourceUrl: cached.sourceUrl ?? workout.sourceUrl,
             creatorName: cached.creatorName ?? workout.creatorName,
-            createdAt: cached.createdAt ?? workout.createdAt
+            createdAt: cached.createdAt ?? workout.createdAt,
+            sportPersisted: resolvedSportPersisted(
+                fetched: workout.sportPersisted,
+                keptCachedSport: sport == cached.sport && cached.sport != workout.sport
+            )
         )
     }
 
@@ -181,11 +188,26 @@ enum WorkoutLibraryDetailStore {
         }
     }
 
-    /// Prefer concrete wire sport; fall back to cached explicit type-chip / editor sport.
-    private static func resolvedSport(fetched: WorkoutSport, cached: WorkoutSport) -> WorkoutSport {
+    /// Prefer concrete wire sport; keep cached explicit type when wire sport was inferred.
+    private static func resolvedSport(
+        fetched: WorkoutSport,
+        fetchedPersisted: Bool?,
+        cached: WorkoutSport
+    ) -> WorkoutSport {
+        if fetchedPersisted == false, cached != .other {
+            return cached
+        }
         if fetched == .other, cached != .other {
             return cached
         }
+        return fetched
+    }
+
+    private static func resolvedSportPersisted(
+        fetched: Bool?,
+        keptCachedSport: Bool
+    ) -> Bool? {
+        if keptCachedSport { return true }
         return fetched
     }
 

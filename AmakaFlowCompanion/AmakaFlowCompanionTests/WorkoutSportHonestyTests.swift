@@ -197,7 +197,7 @@ final class WorkoutSportHonestyTests: XCTestCase {
         let body = try APIService.mapperSaveBody(from: request, source: "manual")
         let data = try XCTUnwrap(body["workout_data"] as? [String: Any])
         XCTAssertEqual(data["sport"] as? String, "run")
-        XCTAssertEqual(data["workout_type"] as? String, "run")
+        XCTAssertNil(data["workout_type"])
     }
 
     func testWorkoutKitActivityAliasesParse() {
@@ -217,10 +217,16 @@ final class WorkoutSportHonestyTests: XCTestCase {
     }
 
     func testHeroPillNeverUsesHyroxTitleHeuristic() {
-        // Title may say Hyrox; pill must reflect persisted sport only.
-        XCTAssertEqual(WorkoutSport.strength.heroPill, "STRENGTH")
-        XCTAssertEqual(WorkoutSport.conditioning.heroPill, "CONDITIONING")
-        XCTAssertNotEqual(WorkoutSport.strength.heroPill, "HYROX")
+        let pill = WorkoutSportHonesty.heroPill(
+            sport: .strength,
+            workoutName: "HYROX — Lower body work"
+        )
+        XCTAssertEqual(pill, "STRENGTH")
+        XCTAssertNotEqual(pill, "HYROX")
+        XCTAssertEqual(
+            WorkoutSportHonesty.heroPill(sport: .conditioning, workoutName: "Hyrox workout"),
+            "CONDITIONING"
+        )
     }
 
     func testSaveRequestEncodesCanonicalSport() throws {
@@ -249,6 +255,6 @@ final class WorkoutSportHonestyTests: XCTestCase {
         let body = try APIService.mapperSaveBody(from: request, source: "manual")
         let data = try XCTUnwrap(body["workout_data"] as? [String: Any])
         XCTAssertEqual(data["sport"] as? String, "conditioning")
-        XCTAssertEqual(data["workout_type"] as? String, "conditioning")
+        XCTAssertNil(data["workout_type"])
     }
 }
