@@ -96,16 +96,20 @@ struct OAuthInitiateResponse: Codable {
 class StravaService {
     static let shared = StravaService()
 
-    private var baseURL: String { AppEnvironment.current.stravaAPIURL }
+    /// Legacy direct service host (athlete / activities until BFF routes exist).
+    private var directBaseURL: String { AppEnvironment.current.stravaAPIURL }
+    /// AMA-2391: OAuth initiate + sync-completed via mobile-BFF UPSTREAM_ROUTES.
+    private var bffStravaBaseURL: String { "\(AppEnvironment.current.mobileBFFURL)/v1" }
     private let session = URLSession.shared
 
     private init() {}
 
     // MARK: - User ID
 
-    /// Get the current user ID from PairingService
+    /// Prefer Clerk user id (matches BFF / token store keying).
+    @MainActor
     private var currentUserId: String? {
-        PairingService.shared.userProfile?.id
+        AuthViewModel.shared.userProfile?.id ?? PairingService.shared.userProfile?.id
     }
 
     // MARK: - Auth Headers
@@ -126,11 +130,12 @@ class StravaService {
 
     /// Initiate Strava OAuth flow. Returns the authorization URL to open in a browser.
     func initiateOAuth() async throws -> URL {
-        guard let userId = currentUserId else {
+        let userId = await MainActor.run { currentUserId }
+        guard let userId else {
             throw StravaError.notAuthenticated
         }
 
-        let urlString = "\(baseURL)/strava/oauth/initiate?userId=\(userId)"
+        let urlString = "\(bffStravaBaseURL)/strava/oauth/initiate?userId=\(userId)"
         guard let url = URL(string: urlString) else {
             throw StravaError.invalidURL
         }
@@ -169,12 +174,13 @@ class StravaService {
     /// Fetch the connected Strava athlete profile.
     /// Returns nil if not connected (401/404).
     func getAthlete() async -> StravaAthlete? {
-        guard let userId = currentUserId else {
+        let userId = await MainActor.run { currentUserId }
+        guard let userId else {
             logger.warning("No user ID available for getAthlete")
             return nil
         }
 
-        let urlString = "\(baseURL)/strava/athlete?userId=\(userId)"
+        let urlString = "\(directBaseURL)/strava/athlete?userId=\(userId)"
         guard let url = URL(string: urlString) else { return nil }
 
         var request = URLRequest(url: url)
@@ -211,11 +217,12 @@ class StravaService {
 
     /// Fetch recent activities from Strava.
     func getActivities(limit: Int = 20) async throws -> [StravaActivity] {
-        guard let userId = currentUserId else {
+        let userId = await MainActor.run { currentUserId }
+        guard let userId else {
             throw StravaError.notAuthenticated
         }
 
-        let urlString = "\(baseURL)/strava/activities?userId=\(userId)&limit=\(limit)"
+        let urlString = "\(directBaseURL)/strava/activities?userId=\(userId)&limit=\(limit)"
         guard let url = URL(string: urlString) else {
             throw StravaError.invalidURL
         }

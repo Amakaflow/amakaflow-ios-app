@@ -218,6 +218,10 @@
 		AMA2389MDLBLD /* FriendsSharingModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2389MDLREF /* FriendsSharingModels.swift */; };
 		AMA2389PRVBLD /* FriendsSharingProviding.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2389PRVREF /* FriendsSharingProviding.swift */; };
 		AMA2390BFFBLD /* BFFFriendsSharingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2390BFFREF /* BFFFriendsSharingService.swift */; };
+		AMA2391BFFAUTHBLD /* BFFActualsProviderAuth.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2391BFFAUTHREF /* BFFActualsProviderAuth.swift */; };
+		AMA2391BFFSTRAVABLD /* BFFStravaClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2391BFFSTRAVAREF /* BFFStravaClient.swift */; };
+		AMA2391OAUTHCBBLD /* StravaOAuthCallback.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2391OAUTHCBREF /* StravaOAuthCallback.swift */; };
+		AMA2391OAUTHTBLD /* StravaOAuthCallbackTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2391OAUTHTREF /* StravaOAuthCallbackTests.swift */; };
 		AMA2389MEMBLD /* InMemoryFriendsSharingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2389MEMREF /* InMemoryFriendsSharingService.swift */; };
 		AMA2389SEEDBLD /* InMemoryFriendsSharingService+DemoSeed.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2389SEEDREF /* InMemoryFriendsSharingService+DemoSeed.swift */; };
 		AMA2389LINBLD /* WorkoutLineageStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2389LINREF /* WorkoutLineageStore.swift */; };
@@ -948,6 +952,10 @@
 		AMA2389MDLREF /* FriendsSharingModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FriendsSharingModels.swift; path = ../AmakaFlow/Models/FriendsSharingModels.swift; sourceTree = SOURCE_ROOT; };
 		AMA2389PRVREF /* FriendsSharingProviding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FriendsSharingProviding.swift; path = ../AmakaFlow/Services/FriendsSharingProviding.swift; sourceTree = SOURCE_ROOT; };
 		AMA2390BFFREF /* BFFFriendsSharingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = BFFFriendsSharingService.swift; path = ../AmakaFlow/Services/BFFFriendsSharingService.swift; sourceTree = SOURCE_ROOT; };
+		AMA2391BFFAUTHREF /* BFFActualsProviderAuth.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = BFFActualsProviderAuth.swift; path = ../AmakaFlow/Services/BFFActualsProviderAuth.swift; sourceTree = SOURCE_ROOT; };
+		AMA2391BFFSTRAVAREF /* BFFStravaClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = BFFStravaClient.swift; path = ../AmakaFlow/Services/BFFStravaClient.swift; sourceTree = SOURCE_ROOT; };
+		AMA2391OAUTHCBREF /* StravaOAuthCallback.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = StravaOAuthCallback.swift; path = ../AmakaFlow/Services/StravaOAuthCallback.swift; sourceTree = SOURCE_ROOT; };
+		AMA2391OAUTHTREF /* StravaOAuthCallbackTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = StravaOAuthCallbackTests.swift; path = AmakaFlowCompanionTests/StravaOAuthCallbackTests.swift; sourceTree = "<group>"; };
 		AMA2389MEMREF /* InMemoryFriendsSharingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = InMemoryFriendsSharingService.swift; path = ../AmakaFlow/Services/InMemoryFriendsSharingService.swift; sourceTree = SOURCE_ROOT; };
 		AMA2389SEEDREF /* InMemoryFriendsSharingService+DemoSeed.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "InMemoryFriendsSharingService+DemoSeed.swift"; path = "../AmakaFlow/Services/InMemoryFriendsSharingService+DemoSeed.swift"; sourceTree = SOURCE_ROOT; };
 		AMA2389LINREF /* WorkoutLineageStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutLineageStore.swift; path = ../AmakaFlow/Services/WorkoutLineageStore.swift; sourceTree = SOURCE_ROOT; };
@@ -1633,6 +1641,9 @@
 				AMA2386REPLREF /* WatchItemReplaceCoordinator.swift */,
 				AMA2389PRVREF /* FriendsSharingProviding.swift */,
 				AMA2390BFFREF /* BFFFriendsSharingService.swift */,
+				AMA2391BFFAUTHREF /* BFFActualsProviderAuth.swift */,
+				AMA2391BFFSTRAVAREF /* BFFStravaClient.swift */,
+				AMA2391OAUTHCBREF /* StravaOAuthCallback.swift */,
 				AMA2389MEMREF /* InMemoryFriendsSharingService.swift */,
 				AMA2389SEEDREF /* InMemoryFriendsSharingService+DemoSeed.swift */,
 				AMA2389LINREF /* WorkoutLineageStore.swift */,
@@ -2251,6 +2262,7 @@
 				AMA2387CONNTREF /* ActualsConnectSourcesCopyTests.swift */,
 				AMA2387HKTREF /* ActualsAppleHealthConnectTests.swift */,
 				AMA2387AUTHTREF /* ActualsProviderAuthTests.swift */,
+				AMA2391OAUTHTREF /* StravaOAuthCallbackTests.swift */,
 				AMA2387SYNCTREF /* ActualsSyncProgressTests.swift */,
 				AMA2387MRGTREF /* ActualsMergeClassifierTests.swift */,
 				AMA2387MAPTREF /* ActualsPlanMatcherTests.swift */,
@@ -2995,6 +3007,9 @@
 				AMA2389MDLBLD /* FriendsSharingModels.swift in Sources */,
 				AMA2389PRVBLD /* FriendsSharingProviding.swift in Sources */,
 				AMA2390BFFBLD /* BFFFriendsSharingService.swift in Sources */,
+				AMA2391BFFAUTHBLD /* BFFActualsProviderAuth.swift in Sources */,
+				AMA2391BFFSTRAVABLD /* BFFStravaClient.swift in Sources */,
+				AMA2391OAUTHCBBLD /* StravaOAuthCallback.swift in Sources */,
 				AMA2389MEMBLD /* InMemoryFriendsSharingService.swift in Sources */,
 				AMA2389SEEDBLD /* InMemoryFriendsSharingService+DemoSeed.swift in Sources */,
 				AMA2389LINBLD /* WorkoutLineageStore.swift in Sources */,
@@ -3240,6 +3255,7 @@
 				AMA2387CONNTBLD /* ActualsConnectSourcesCopyTests.swift in Sources */,
 				AMA2387HKTBLD /* ActualsAppleHealthConnectTests.swift in Sources */,
 				AMA2387AUTHTBLD /* ActualsProviderAuthTests.swift in Sources */,
+				AMA2391OAUTHTBLD /* StravaOAuthCallbackTests.swift in Sources */,
 				AMA2387SYNCTBLD /* ActualsSyncProgressTests.swift in Sources */,
 				AMA2387MRGTBLD /* ActualsMergeClassifierTests.swift in Sources */,
 				AMA2387MAPTBLD /* ActualsPlanMatcherTests.swift in Sources */,

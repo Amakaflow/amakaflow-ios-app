@@ -117,14 +117,15 @@ struct TodayDiaryView: View {
                 DDActivityDetailView(completionId: completionId)
             }
             .navigationDestination(isPresented: $showConnectSources) {
-                ActualsConnectSourcesView(store: actualsSources) { _ in
+                ActualsConnectSourcesView(store: actualsSources) { provider in
                     // Children already markConnected + announce on real grant/success.
-                    #if DEBUG
-                    if ActualsTodayDemoFeed.shouldAutoActivate {
-                        actualsDemo.activateAfterConnect(sync: actualsSyncProgress)
-                    }
-                    #endif
                     showConnectSources = false
+                    Task {
+                        await actualsDemo.handleProviderConnected(
+                            provider,
+                            sync: actualsSyncProgress
+                        )
+                    }
                 }
             }
             .navigationDestination(item: $actualsDestination) { destination in
