@@ -107,7 +107,9 @@ private extension WorkoutDetailOrganizeChrome {
             Button {
                 isPresentingAddToCollection = true
             } label: {
-                tileLabel(icon: "square.stack.fill", title: "Collect", isActive: false)
+                // AMA-2395: Collect is the ONE collections door and lights up
+                // once the workout is in ≥1 collection, like Pin.
+                tileLabel(icon: "square.stack.fill", title: "Collect", isActive: !memberCollections.isEmpty)
             }
             .buttonStyle(.plain)
             .accessibilityIdentifier("af_detail_collect")
@@ -157,12 +159,21 @@ private extension WorkoutDetailOrganizeChrome {
 // MARK: - Collection chips
 
 private extension WorkoutDetailOrganizeChrome {
+    /// AMA-2395: membership renders as status chips under the action row. The
+    /// "＋ Add" chip is GONE — it opened the same sheet as Collect, so two
+    /// controls did one job.
+    @ViewBuilder
     var chipsRow: some View {
-        FlowLayout(spacing: 8) {
-            ForEach(memberCollections) { collection in
-                chip(for: collection)
+        if !memberCollections.isEmpty {
+            FlowLayout(spacing: 8) {
+                Text("IN")
+                    .font(.system(size: 8.5, weight: .bold, design: .monospaced))
+                    .foregroundColor(DailyDriver.foregroundDim)
+                ForEach(memberCollections) { collection in
+                    chip(for: collection)
+                }
             }
-            addChip
+            .accessibilityIdentifier("af_detail_collection_chips")
         }
     }
 
@@ -191,27 +202,6 @@ private extension WorkoutDetailOrganizeChrome {
         .accessibilityIdentifier("af_detail_collection_chip_\(collection.id)")
     }
 
-    var addChip: some View {
-        Button {
-            isPresentingAddToCollection = true
-        } label: {
-            HStack(spacing: 4) {
-                Image(systemName: "plus")
-                    .font(.system(size: 9, weight: .bold))
-                Text("Add")
-                    .font(.system(size: 10, weight: .bold))
-            }
-            .foregroundColor(DailyDriver.lime)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 6)
-            .overlay(
-                Capsule(style: .continuous)
-                    .stroke(DailyDriver.lime.opacity(0.5), lineWidth: 1)
-            )
-        }
-        .buttonStyle(.plain)
-        .accessibilityIdentifier("af_detail_collection_add_chip")
-    }
 }
 
 // MARK: - LAST DONE

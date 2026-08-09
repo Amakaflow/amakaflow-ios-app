@@ -134,7 +134,7 @@ struct StructureClarifyView: View {
         let title = name.flatMap { $0.isEmpty ? nil : $0 } ?? "Workout"
         // Import drafts often omit duration — skip the minutes slot rather than invent one.
         let preview = draft?.toPreviewWorkout()
-        let minutes = (preview?.duration ?? 0) / 60
+        let minutes = preview.map { WorkoutDurationEstimator.estimate(for: $0).totalSec / 60 } ?? 0
         if minutes > 0 {
             DDToastCenter.shared.success(
                 DDToastCopy.savedToLibrary,

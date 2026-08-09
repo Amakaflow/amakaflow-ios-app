@@ -3,6 +3,8 @@
 //  AmakaFlowCompanionTests
 //
 //  AMA-2376: collection duration formatting and LAST DONE presentation.
+//  AMA-2395: the "~" hedge is gone — seconds now come from the duration
+//  estimator, and an empty collection says TIME NOT SET rather than "~0H".
 //
 
 import XCTest
@@ -13,15 +15,15 @@ final class CollectionPresentationTests: XCTestCase {
     // MARK: - Duration formatting
 
     func testFormattedTotalDurationHoursAndMinutes() {
-        XCTAssertEqual(CollectionPresentation.formattedTotalDuration(seconds: 15_000), "~4H 10M")
+        XCTAssertEqual(CollectionPresentation.formattedTotalDuration(seconds: 15_000), "4H 10M")
     }
 
     func testFormattedTotalDurationMinutesOnly() {
-        XCTAssertEqual(CollectionPresentation.formattedTotalDuration(seconds: 2_400), "~40M")
+        XCTAssertEqual(CollectionPresentation.formattedTotalDuration(seconds: 2_400), "40M")
     }
 
     func testFormattedTotalDurationZero() {
-        XCTAssertEqual(CollectionPresentation.formattedTotalDuration(seconds: 0), "~0H")
+        XCTAssertEqual(CollectionPresentation.formattedTotalDuration(seconds: 0), "TIME NOT SET")
     }
 
     func testUncategorizedIDSentinel() {
@@ -33,28 +35,28 @@ final class CollectionPresentationTests: XCTestCase {
     func testDetailMetaPluralWithoutNote() {
         XCTAssertEqual(
             CollectionPresentation.detailMeta(workoutCount: 6, totalSeconds: 15_000, note: nil),
-            "6 WORKOUTS · ~4H 10M"
+            "6 WORKOUTS · 4H 10M"
         )
     }
 
     func testDetailMetaSingularWorkout() {
         XCTAssertEqual(
             CollectionPresentation.detailMeta(workoutCount: 1, totalSeconds: 600, note: nil),
-            "1 WORKOUT · ~10M"
+            "1 WORKOUT · 10M"
         )
     }
 
     func testDetailMetaAppendsTrimmedNote() {
         XCTAssertEqual(
             CollectionPresentation.detailMeta(workoutCount: 6, totalSeconds: 15_000, note: "  Race day - Oct 12  "),
-            "6 WORKOUTS · ~4H 10M · Race day - Oct 12"
+            "6 WORKOUTS · 4H 10M · Race day - Oct 12"
         )
     }
 
     func testDetailMetaIgnoresBlankNote() {
         XCTAssertEqual(
             CollectionPresentation.detailMeta(workoutCount: 0, totalSeconds: 0, note: "   "),
-            "0 WORKOUTS · ~0H"
+            "0 WORKOUTS · TIME NOT SET"
         )
     }
 

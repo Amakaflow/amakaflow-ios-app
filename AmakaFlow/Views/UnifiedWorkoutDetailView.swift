@@ -56,6 +56,8 @@ struct UnifiedWorkoutDetailView: View {
     @State private var isDeleting = false
     /// AMA-2373: guards `autoStartOnAppear` so it only fires once per presentation.
     @State private var hasAutoStarted = false
+    /// AMA-2395 — tapping a band row opens the exercise info sheet.
+    @State private var infoExercise: Exercise?
     /// AMA-2393 — editable type chip + quiet disagreement prompt.
     @State private var showingSportPicker = false
     @State private var sportDisagreementDismissed = false
@@ -297,6 +299,12 @@ struct UnifiedWorkoutDetailView: View {
         .fullScreenCover(isPresented: $showingWorkoutPlayer) {
             WorkoutPlayerView()
         }
+        .fullScreenCover(item: $infoExercise) { exercise in
+            NavigationStack {
+                DDExerciseInfoView(exercise: exercise)
+            }
+            .preferredColorScheme(.dark)
+        }
         .alert(GarminLifecycleCopy.deleteWorkoutTitle, isPresented: $showingDeleteConfirm) {
             Button("Delete", role: .destructive) {
                 Task {
@@ -411,6 +419,8 @@ struct UnifiedWorkoutDetailView: View {
                         .accessibilityHint("Changes how watches record it")
                         .accessibilityIdentifier("af_workout_detail_sport_chip")
                     }
+                    .accessibilityElement(children: .contain)
+                    .accessibilityIdentifier("af_detail_pills")
 
                     if showSportDisagreementChip {
                         Button {
@@ -445,21 +455,17 @@ struct UnifiedWorkoutDetailView: View {
 
     // MARK: - Body
 
+    /// AMA-2395 — the canonical anatomy, in fixed order for every source:
+    /// title → action row → attribution → creator note → TIME card → bands.
+    /// The caption NEVER renders as page body; it lives in the collapsed card.
     private var contentBody: some View {
-        VStack(alignment: .leading, spacing: 0) {
+        let estimate = durationEstimate
+        return VStack(alignment: .leading, spacing: 0) {
             Text(workout.name)
                 .ddDisplayText(24, weight: .heavy)
                 .foregroundColor(DailyDriver.foreground)
                 .lineSpacing(2)
                 .accessibilityIdentifier("af_workout_detail_title")
-
-            if let description = displayDescription, !description.isEmpty {
-                Text(description)
-                    .font(.system(size: 12.5))
-                    .foregroundColor(DailyDriver.foregroundMuted)
-                    .lineSpacing(4)
-                    .padding(.top, 8)
-            }
 
             // AMA-2376 Task 7: Pin/Collect/To watch/Share + collection chips + LAST DONE.
             WorkoutDetailOrganizeChrome(
@@ -473,8 +479,19 @@ struct UnifiedWorkoutDetailView: View {
             creditRow
                 .padding(.top, 12)
 
-            blockList
-                .padding(.top, 4)
+            if let note = creatorNoteText {
+                WorkoutCreatorNoteCard(title: creatorNoteTitle, rawText: note)
+                    .padding(.top, 10)
+            }
+
+            WorkoutTimeCardView(
+                estimate: estimate,
+                creatorTimeNote: WorkoutCaptionPresentation.creatorTime(in: workout.description)
+            )
+            .padding(.top, 12)
+
+            bandList(estimate: estimate)
+                .padding(.top, 6)
 
             if let handoffStatus {
                 garminHandoffPanel(status: handoffStatus)
@@ -634,22 +651,21 @@ struct UnifiedWorkoutDetailView: View {
         .accessibilityIdentifier("af_workout_detail_credit_row")
     }
 
-    private var blockList: some View {
-        Group {
-            let sections = DDWorkoutDisplayGrouping.sections(for: workout)
-            if sections.isEmpty {
-                Text("No blocks yet — tap Edit to build the structure.")
-                    .font(.system(size: 10.5, design: .monospaced))
-                    .foregroundColor(DailyDriver.foregroundMuted)
-                    .padding(.top, 18)
-                    .accessibilityIdentifier("af_workout_detail_blocks_empty")
-            } else {
-                ForEach(sections) { section in
-                    DDWorkoutBlockSectionView(section: section)
-                        .padding(.top, 18)
-                }
-                .accessibilityIdentifier("af_workout_detail_blocks")
+    @ViewBuilder
+    private func bandList(estimate: WorkoutDurationEstimate) -> some View {
+        let bands = WorkoutBandGrouping.bands(for: workout, estimate: estimate)
+        if bands.isEmpty {
+            Text("No blocks yet — tap Edit to build the structure.")
+                .font(.system(size: 10.5, design: .monospaced))
+                .foregroundColor(DailyDriver.foregroundMuted)
+                .padding(.top, 18)
+                .accessibilityIdentifier("af_workout_detail_blocks_empty")
+        } else {
+            WorkoutBandListView(bands: bands) { exercise in
+                infoExercise = exercise
             }
+            .padding(.top, 12)
+            .accessibilityIdentifier("af_workout_detail_blocks")
         }
     }
 
@@ -719,10 +735,6 @@ struct UnifiedWorkoutDetailView: View {
 // MARK: - Start handoffs + helpers
 
 extension UnifiedWorkoutDetailView {
-    fileprivate var displayDescription: String? {
-        workout.description
-    }
-
     fileprivate func closeDetail() {
         if let onClose {
             onClose()
@@ -765,22 +777,15 @@ extension UnifiedWorkoutDetailView {
         heroPillsExceptSport + [sportHeroPill]
     }
 
+    /// AMA-2395 — the pill row is exactly SOURCE · TIME · TYPE. Rounds moved to
+    /// the band titles ("CIRCUIT · 8 ROUNDS"), where they mean something.
     fileprivate var heroPillsExceptSport: [String] {
-        var pills: [String] = [sourceHeroPill]
+        [sourceHeroPill, durationEstimate.pillLabel]
+    }
 
-        if workout.exerciseCount > 0 {
-            let rounds = heroRoundCount
-            if rounds > 1 {
-                pills.append("\(rounds) ROUNDS · \(ddHeroDurationLabel)")
-            } else {
-                pills.append("\(workout.exerciseCount) EXERCISES · \(ddHeroDurationLabel)")
-            }
-        } else if workout.blockCount > 0 {
-            pills.append("\(workout.blockCount) BLOCKS · \(ddHeroDurationLabel)")
-        } else {
-            pills.append(ddHeroDurationLabel)
-        }
-        return pills
+    /// One estimate per render, shared by the pill, the TIME card and the bands.
+    fileprivate var durationEstimate: WorkoutDurationEstimate {
+        WorkoutDurationEstimator.estimate(for: workout)
     }
 
     fileprivate var showSportDisagreementChip: Bool {
@@ -788,54 +793,15 @@ extension UnifiedWorkoutDetailView {
         return WorkoutSportHonesty.disagrees(stored: displayedWorkout.sport, blocks: displayedWorkout.blocks)
     }
 
-    fileprivate var ddHeroDurationLabel: String {
-        let minutes = max(1, workout.duration / 60)
-        return "~\(minutes) MIN"
+    /// Imports show the creator's own words; anything we or the user wrote is
+    /// NOTES. Either way it is a collapsed card, never the page body.
+    fileprivate var creatorNoteTitle: String {
+        WorkoutSourceProvenance.isExternal(resolvedSourceKey) ? "FROM THE CREATOR" : "NOTES"
     }
 
-    /// Max rounds among work blocks for hero chips (dd-detail-dark: "5 ROUNDS · ~20 MIN").
-    static func heroRoundCount(for workBlocks: [Block]) -> Int {
-        workBlocks.map { max(1, $0.rounds) }.max() ?? 1
-    }
-
-    fileprivate var heroRoundCount: Int {
-        let workBlocks = workout.blocks.filter { !Self.isWarmupOrCooldown($0) }
-        if !workBlocks.isEmpty {
-            let structuredTotal = Self.heroRoundCount(for: workBlocks)
-            if structuredTotal > 1 { return structuredTotal }
-        }
-        if let parsed = Self.parseRoundCount(from: workout.description) {
-            return parsed
-        }
-        return max(1, workBlocks.map(\.rounds).max() ?? 1)
-    }
-
-    fileprivate static func parseRoundCount(from description: String?) -> Int? {
-        guard let description else { return nil }
-        let lowered = description.lowercased()
-        let wordMap = [
-            "one": 1, "two": 2, "three": 3, "four": 4, "five": 5,
-            "six": 6, "seven": 7, "eight": 8, "nine": 9, "ten": 10
-        ]
-        for (word, value) in wordMap where lowered.contains("\(word) rounds") {
-            return value
-        }
-        guard let regex = try? NSRegularExpression(pattern: "(\\d+)\\s+rounds", options: .caseInsensitive) else {
-            return nil
-        }
-        let range = NSRange(lowered.startIndex..<lowered.endIndex, in: lowered)
-        guard let match = regex.firstMatch(in: lowered, options: [], range: range),
-              match.numberOfRanges > 1,
-              let swiftRange = Range(match.range(at: 1), in: lowered),
-              let value = Int(lowered[swiftRange]) else {
-            return nil
-        }
-        return value
-    }
-
-    fileprivate static func isWarmupOrCooldown(_ block: Block) -> Bool {
-        let label = block.label?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() ?? ""
-        return label == "warm-up" || label == "warmup" || label == "cool-down" || label == "cooldown"
+    fileprivate var creatorNoteText: String? {
+        let trimmed = WorkoutCaptionPresentation.expanded(workout.description)
+        return trimmed.isEmpty ? nil : trimmed
     }
 
     fileprivate var sourceHeroPill: String {

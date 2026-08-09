@@ -126,8 +126,9 @@ private extension CollectionDetailView {
         memberIDs.compactMap { workoutsByID[$0] }
     }
 
+    /// AMA-2395: estimator-derived, matching the collections grid and the rows.
     var totalSeconds: Int {
-        memberWorkouts.reduce(0) { $0 + $1.duration }
+        memberWorkouts.reduce(0) { $0 + WorkoutDurationEstimator.estimate(for: $1).totalSec }
     }
 
     var pinnedSet: Set<String> {

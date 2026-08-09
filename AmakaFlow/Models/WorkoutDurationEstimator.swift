@@ -58,6 +58,21 @@ struct WorkoutDurationEstimate: Equatable {
         hasOpenSteps: false
     )
 
+    /// Last resort for a workout with no structure to read: its own saved
+    /// duration, flagged as an estimate because nothing here was derived.
+    static func fromStoredDuration(_ seconds: Int) -> WorkoutDurationEstimate {
+        WorkoutDurationEstimate(
+            totalSec: max(0, seconds),
+            activeSec: max(0, seconds),
+            isEstimate: true,
+            perSection: [],
+            perExercise: [],
+            basisNote: "AS SAVED · NO STRUCTURE TO MEASURE",
+            activeNote: "AS SAVED",
+            hasOpenSteps: false
+        )
+    }
+
     func seconds(forBlockID id: String) -> WorkoutDurationComponent? {
         perSection.first { $0.id == id }
     }
@@ -135,7 +150,13 @@ enum WorkoutDurationEstimator {
         for workout: Workout,
         paceTable: WorkoutPaceTable = DefaultWorkoutPaceTable()
     ) -> WorkoutDurationEstimate {
-        estimate(blocks: workout.blocks, paceTable: paceTable)
+        let structural = estimate(blocks: workout.blocks, paceTable: paceTable)
+        // Structure always wins: a saved `duration` of 60s on a ten-round
+        // workout is exactly what produced "~1 MIN". Only when there is no
+        // structure at all do we fall back to what the workout says about
+        // itself — and we still mark it as an estimate.
+        guard structural.isUnknown, workout.duration > 0 else { return structural }
+        return .fromStoredDuration(workout.duration)
     }
 
     static func estimate(

@@ -110,7 +110,8 @@ struct CreateWithAIDraftSessionPlan: View {
     private func summaryMinutesLabel(_ interval: WorkoutInterval) -> String? {
         switch interval {
         case .warmup(let seconds, _), .cooldown(let seconds, _):
-            return "~\(max(1, seconds / 60)) MIN"
+            // Warm-up/cool-down steps are timed, so this is exact, not "~".
+            return WorkoutDurationEstimate.label(seconds: seconds, isEstimate: false)
         default:
             return nil
         }

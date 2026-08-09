@@ -172,7 +172,11 @@ final class LibraryCollectionsStore: ObservableObject {
         return items
     }
 
+    /// AMA-2395: derive from the structure rather than the stored `duration`,
+    /// which is 0 or nonsense on most imports (it is what produced "~1 MIN").
     private static func totalSeconds(for workoutIDs: [String], workoutsByID: [String: Workout]) -> Int {
-        workoutIDs.compactMap { workoutsByID[$0]?.duration }.reduce(0, +)
+        workoutIDs
+            .compactMap { workoutsByID[$0] }
+            .reduce(0) { $0 + WorkoutDurationEstimator.estimate(for: $1).totalSec }
     }
 }

@@ -84,9 +84,9 @@ struct CreateWithAIDraftView: View {
             whyThis: viewModel.whyThis,
             description: workout.description
         )
-        let minutes = max(1, workout.duration / 60)
+        // AMA-2395: the draft pill uses the estimator, like the saved detail.
         let pills = [
-            "~\(minutes) MIN",
+            WorkoutDurationEstimator.estimate(for: workout).pillLabel,
             workout.sport.displayName.uppercased(),
             "\(viewModel.draftMainBlocks.count) EXERCISES"
         ]
@@ -233,8 +233,7 @@ struct CreateWithAIDraftView: View {
     }
 
     private var durationPill: String {
-        let minutes = max(1, workout.duration / 60)
-        return "~\(minutes) MIN"
+        WorkoutDurationEstimator.estimate(for: workout).pillLabel
     }
 
     private func metaPill(_ text: String) -> some View {

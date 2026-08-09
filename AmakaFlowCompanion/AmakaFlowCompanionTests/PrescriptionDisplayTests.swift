@@ -151,61 +151,53 @@ final class PrescriptionDisplayTests: XCTestCase {
         XCTAssertEqual(preview.duration, 0)
     }
 
-    // MARK: - Display collapse (read-time, non-mutating)
+    // MARK: - Display grouping (read-time, non-mutating)
+    //
+    // AMA-2395 moved these from DDWorkoutDisplayGrouping to the semantic bands.
+    // The behaviours they guard are unchanged: legacy one-exercise-per-block
+    // imports collapse into a single section, named sections survive, stored
+    // blocks are never mutated, and no section invents a duration.
 
-    func testCollapseLegacySingletonBlocksIntoOneSection() {
-        let blocks = [
+    func testLegacySingletonBlocksCollapseIntoOneBand() {
+        let bands = bandsFor([
             Block(label: nil, structure: .straight, rounds: 1, exercises: [makeExercise(name: "A", reps: "8")]),
             Block(label: "Block 2", structure: .straight, rounds: 1, exercises: [makeExercise(name: "B", reps: "8")]),
             Block(label: "Block 3", structure: .straight, rounds: 1, exercises: [makeExercise(name: "C", reps: "8")])
-        ]
-        let collapsed = DDWorkoutDisplayGrouping.collapseStraightSetSingletons(blocks)
-        XCTAssertEqual(collapsed.count, 1)
-        XCTAssertEqual(collapsed[0].label, "Main")
-        XCTAssertEqual(collapsed[0].exercises.map(\.name), ["A", "B", "C"])
+        ])
+        XCTAssertEqual(bands.count, 1)
+        XCTAssertEqual(bands[0].rows.map(\.name), ["A", "B", "C"])
     }
 
-    func testCollapsePreservesNamedSoftSection() {
-        let finisher = Block(
-            label: "Finisher",
-            structure: .circuit,
-            rounds: 5,
-            exercises: [makeExercise(name: "Ski", reps: nil, distance: 500)]
-        )
-        let blocks = [
+    func testGroupingPreservesNamedSoftSection() {
+        let bands = bandsFor([
             Block(label: nil, structure: .straight, rounds: 1, exercises: [makeExercise(name: "A", reps: "8")]),
-            finisher,
+            Block(
+                label: "Finisher",
+                structure: .circuit,
+                rounds: 5,
+                exercises: [makeExercise(name: "Ski", reps: nil, distance: 500)]
+            ),
             Block(label: "Cool-down", structure: .straight, rounds: 1, exercises: [makeExercise(name: "B", reps: "8")])
-        ]
-        let collapsed = DDWorkoutDisplayGrouping.collapseStraightSetSingletons(blocks)
-        XCTAssertEqual(collapsed.count, 3)
-        XCTAssertEqual(collapsed[0].exercises.map(\.name), ["A"])
-        XCTAssertEqual(collapsed[1].label, "Finisher")
-        XCTAssertEqual(collapsed[2].label, "Cool-down")
+        ])
+        XCTAssertEqual(bands.count, 3)
+        XCTAssertEqual(bands[0].rows.map(\.name), ["A"])
+        XCTAssertTrue(bands[1].title.hasPrefix("CIRCUIT · 5 ROUNDS"), bands[1].title)
+        XCTAssertEqual(bands[2].title, "COOLDOWN")
+        XCTAssertEqual(bands[2].kind, .cooldown)
     }
 
-    func testSectionsSuppressMainTitleWhenSoleStraightSetContainer() {
-        let workout = Workout(
-            id: "w1",
-            name: "Import",
-            sport: .strength,
-            duration: 0,
-            blocks: [
-                Block(label: "Warm-up", structure: .straight, rounds: 1, exercises: [makeExercise(name: "Band", reps: "10")]),
-                Block(label: nil, structure: .straight, rounds: 1, exercises: [makeExercise(name: "A", reps: "8")]),
-                Block(label: "Block 2", structure: .straight, rounds: 1, exercises: [makeExercise(name: "B", reps: "8")])
-            ],
-            source: .instagram
-        )
-        let sections = DDWorkoutDisplayGrouping.sections(for: workout)
-        XCTAssertEqual(sections.count, 2)
-        XCTAssertEqual(sections[0].title.lowercased(), "warm-up")
-        XCTAssertTrue(sections[1].title.isEmpty, "Got title: \(sections[1].title)")
-        XCTAssertTrue(sections[1].note.isEmpty)
-        XCTAssertEqual(sections[1].exercises.count, 2)
+    func testWarmupBlockKeepsItsOwnBandAheadOfTheWork() {
+        let bands = bandsFor([
+            Block(label: "Warm-up", structure: .straight, rounds: 1, exercises: [makeExercise(name: "Band", reps: "10")]),
+            Block(label: nil, structure: .straight, rounds: 1, exercises: [makeExercise(name: "A", reps: "8")]),
+            Block(label: "Block 2", structure: .straight, rounds: 1, exercises: [makeExercise(name: "B", reps: "8")])
+        ])
+        XCTAssertEqual(bands.count, 2)
+        XCTAssertEqual(bands[0].title, "WARM-UP")
+        XCTAssertEqual(bands[1].rows.count, 2, "the two loose blocks became one section")
     }
 
-    func testSectionsDoNotMutateStoredWorkoutBlocks() {
+    func testGroupingDoesNotMutateStoredWorkoutBlocks() {
         let blocks = [
             Block(label: nil, structure: .straight, rounds: 1, exercises: [makeExercise(name: "A", reps: "8")]),
             Block(label: "Block 2", structure: .straight, rounds: 1, exercises: [makeExercise(name: "B", reps: "8")])
@@ -218,13 +210,15 @@ final class PrescriptionDisplayTests: XCTestCase {
             blocks: blocks,
             source: .instagram
         )
-        _ = DDWorkoutDisplayGrouping.sections(for: workout)
+        _ = WorkoutBandGrouping.bands(for: workout)
         XCTAssertEqual(workout.blocks.count, 2)
         XCTAssertNil(workout.blocks[0].label)
         XCTAssertEqual(workout.blocks[1].label, "Block 2")
     }
 
-    func testSectionNoteOmitsFakeMinutesForStraightMain() {
+    /// The old grouping split `workout.duration` across blocks and printed
+    /// "~N min". Bands only ever show what the estimator actually derived.
+    func testBandTimeIgnoresTheStoredDurationAndNeverPrintsATilde() {
         let workout = Workout(
             id: "w3",
             name: "Legacy",
@@ -236,9 +230,19 @@ final class PrescriptionDisplayTests: XCTestCase {
             ],
             source: .instagram
         )
-        let sections = DDWorkoutDisplayGrouping.sections(for: workout)
-        XCTAssertEqual(sections.count, 1)
-        XCTAssertFalse(sections[0].note.contains("MIN"))
-        XCTAssertFalse(sections[0].note.contains("min"))
+        let bands = WorkoutBandGrouping.bands(for: workout)
+        XCTAssertEqual(bands.count, 1)
+        XCTAssertFalse(bands[0].timeLabel.contains("~"), bands[0].timeLabel)
+        XCTAssertNil(
+            bands[0].title.range(of: #"BLOCK\s*\d"#, options: [.regularExpression, .caseInsensitive]),
+            bands[0].title
+        )
+    }
+
+    private func bandsFor(_ blocks: [Block]) -> [WorkoutBand] {
+        WorkoutBandGrouping.bands(
+            blocks: blocks,
+            estimate: WorkoutDurationEstimator.estimate(blocks: blocks)
+        )
     }
 }

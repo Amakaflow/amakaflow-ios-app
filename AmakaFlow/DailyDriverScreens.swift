@@ -550,16 +550,21 @@ enum DDLibraryPresentation {
         return title.lowercased().contains(q) || creator.lowercased().contains(q)
     }
 
+    /// AMA-2395: the time comes from the structure, not the stored `duration`
+    /// (0 on most imports — that is what rendered "~1 MIN" on hour-long work).
     private static func metaLine(for workout: Workout) -> String {
-        let minutes = max(1, workout.duration / 60)
+        let estimate = WorkoutDurationEstimator.estimate(for: workout)
         let creator = creatorLabel(for: workout)
+        let time = estimate.isUnknown ? nil : estimate.totalLabel.lowercased()
+        var parts: [String] = []
         if workout.blockCount > 0 {
-            return "\(workout.blockCount) blocks · \(minutes) min · by \(creator)"
+            parts.append("\(workout.blockCount) blocks")
+        } else if workout.exerciseCount > 0 {
+            parts.append("\(workout.exerciseCount) exercises")
         }
-        if workout.exerciseCount > 0 {
-            return "\(workout.exerciseCount) exercises · \(minutes) min · by \(creator)"
-        }
-        return "\(minutes) min · by \(creator)"
+        if let time { parts.append(time) }
+        parts.append("by \(creator)")
+        return parts.joined(separator: " · ")
     }
 
     static func creatorLabel(for workout: Workout) -> String {
@@ -690,262 +695,10 @@ extension WorkoutCompletion {
     }
 }
 
-// MARK: - Workout detail block grouping (DDDetailScreen)
-
-struct DDWorkoutDisplaySection: Identifiable {
-    let id: String
-    let title: String
-    let note: String
-    let exercises: [Exercise]
-}
-
-enum DDWorkoutDisplayGrouping {
-    /// One handoff section per block (`DDDetailScreen` — jsx L1697).
-    /// Applies read-time collapse for legacy singleton blocks — does not mutate `workout`.
-    static func sections(for workout: Workout) -> [DDWorkoutDisplaySection] {
-        let sourceBlocks = workout.blocks.filter { !$0.exercises.isEmpty }
-        guard !sourceBlocks.isEmpty else { return [] }
-
-        let displayBlocks = collapseStraightSetSingletons(sourceBlocks)
-        let totalExercises = max(1, displayBlocks.reduce(0) { $0 + $1.exercises.count })
-
-        return displayBlocks.enumerated().map { index, block in
-            let suppressTitle = shouldSuppressTitle(for: block, allBlocks: displayBlocks)
-            let title = suppressTitle
-                ? ""
-                : sectionTitle(for: block, index: index)
-            let seconds = durationShare(
-                for: block,
-                totalExercises: totalExercises,
-                workoutDuration: workout.duration
-            )
-            return DDWorkoutDisplaySection(
-                id: block.id,
-                title: title,
-                note: sectionNote(for: block, durationSeconds: seconds),
-                exercises: block.exercises
-            )
-        }
-    }
-
-    /// Display-only: merge consecutive unlabeled straight-set singletons into one virtual Main.
-    static func collapseStraightSetSingletons(_ blocks: [Block]) -> [Block] {
-        var result: [Block] = []
-        var pendingExercises: [Exercise] = []
-
-        func flushPending() {
-            guard !pendingExercises.isEmpty else { return }
-            result.append(
-                Block(
-                    label: "Main",
-                    structure: .straight,
-                    rounds: 1,
-                    exercises: pendingExercises
-                )
-            )
-            pendingExercises = []
-        }
-
-        for block in blocks {
-            if isCollapsibleSingleton(block) {
-                pendingExercises.append(contentsOf: block.exercises)
-            } else {
-                flushPending()
-                result.append(block)
-            }
-        }
-        flushPending()
-        return result
-    }
-
-    static func isCollapsibleSingleton(_ block: Block) -> Bool {
-        block.structure == .straight
-            && block.exercises.count == 1
-            && isUnlabeledStraightSetContainer(block)
-    }
-
-    static func isUnlabeledStraightSetContainer(_ block: Block) -> Bool {
-        guard let label = block.label?.trimmingCharacters(in: .whitespacesAndNewlines), !label.isEmpty else {
-            return true
-        }
-        if label.caseInsensitiveCompare("Main") == .orderedSame { return true }
-        return isGenericBlockLabel(label)
-    }
-
-    static func isStraightSetContainer(_ block: Block) -> Bool {
-        block.structure == .straight
-    }
-
-    static func shouldSuppressTitle(for block: Block, allBlocks: [Block]) -> Bool {
-        guard isStraightSetContainer(block), isUnlabeledStraightSetContainer(block) else { return false }
-        let unlabeledContainers = allBlocks.filter {
-            isStraightSetContainer($0) && isUnlabeledStraightSetContainer($0)
-        }
-        return unlabeledContainers.count == 1 && unlabeledContainers[0].id == block.id
-    }
-
-    static func isGenericBlockLabel(_ label: String) -> Bool {
-        label.range(
-            of: #"^(Main block|Block \d+|AMRAP)$"#,
-            options: [.regularExpression, .caseInsensitive]
-        ) != nil
-    }
-
-    static func isWarmupOrCooldown(_ block: Block) -> Bool {
-        let label = block.label?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() ?? ""
-        return label == "warm-up" || label == "warmup" || label == "cool-down" || label == "cooldown"
-    }
-
-    private static func sectionTitle(for block: Block, index: Int) -> String {
-        if isWarmupOrCooldown(block) {
-            let label = block.label?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-            if !label.isEmpty { return label.capitalized }
-            return index == 0 ? "Warm-up" : "Cool-down"
-        }
-        if let label = block.label?.trimmingCharacters(in: .whitespacesAndNewlines), !label.isEmpty {
-            if !isGenericLabel(label) {
-                return label
-            }
-            if label.caseInsensitiveCompare("AMRAP") == .orderedSame, block.rounds > 1 {
-                return "Round 1–\(block.rounds)"
-            }
-        }
-
-        switch block.structure {
-        case .amrap, .circuit, .timedCircuit, .emom, .tabata:
-            if block.rounds > 1 {
-                return "Round 1–\(block.rounds)"
-            }
-        default:
-            break
-        }
-
-        if let label = block.label?.trimmingCharacters(in: .whitespacesAndNewlines), !label.isEmpty {
-            return label
-        }
-        return index == 0 ? "Main block" : "Block \(index + 1)"
-    }
-
-    private static func isGenericLabel(_ label: String) -> Bool {
-        isGenericBlockLabel(label)
-    }
-
-    private static func durationShare(for block: Block, totalExercises: Int, workoutDuration: Int) -> Int {
-        guard workoutDuration > 0 else { return 0 }
-        if isStraightSetContainer(block), isUnlabeledStraightSetContainer(block) { return 0 }
-        let ratio = Double(block.exercises.count) / Double(totalExercises)
-        return max(60, Int(Double(workoutDuration) * ratio))
-    }
-
-    private static func sectionNote(for block: Block, durationSeconds: Int) -> String {
-        if isStraightSetContainer(block), isUnlabeledStraightSetContainer(block) {
-            if block.rounds > 1 {
-                return "\(block.rounds) rounds"
-            }
-            return ""
-        }
-
-        let minutes = max(1, durationSeconds / 60)
-        let rounds = max(1, block.rounds)
-        let label = block.label?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() ?? ""
-
-        if label == "finisher" {
-            return "\(rounds) round · ~\(minutes) min"
-        }
-        if rounds > 1 {
-            return "\(rounds) rounds · ~\(minutes) min"
-        }
-        let exerciseCount = block.exercises.count
-        if exerciseCount > 1 {
-            return "\(exerciseCount) exercises · ~\(minutes) min"
-        }
-        return "~\(minutes) min"
-    }
-}
-
-struct DDWorkoutBlockSectionView: View {
-    let section: DDWorkoutDisplaySection
-    @State private var infoExercise: Exercise?
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            if !section.title.isEmpty || !section.note.isEmpty {
-                HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    if !section.title.isEmpty {
-                        Text(section.title)
-                            .ddDisplayText(14.5, weight: .bold)
-                            .foregroundColor(DailyDriver.foreground)
-                    }
-                    Spacer(minLength: 0)
-                    if !section.note.isEmpty {
-                        Text(section.note.uppercased())
-                            .font(.system(size: 9.5, weight: .medium, design: .monospaced))
-                            .foregroundColor(DailyDriver.foregroundMuted)
-                    }
-                }
-            }
-
-            VStack(spacing: 0) {
-                ForEach(Array(section.exercises.enumerated()), id: \.element.id) { index, exercise in
-                    Button {
-                        infoExercise = exercise
-                    } label: {
-                        HStack(spacing: 11) {
-                            DDIconChip(
-                                systemName: WorkoutSportHonesty.systemImage(forExerciseName: exercise.name),
-                                background: DailyDriver.card2,
-                                size: 30
-                            )
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(exercise.name)
-                                    .ddDisplayText(13.5, weight: .semibold)
-                                    .foregroundColor(DailyDriver.foreground)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                Text(exercise.ddDetailLine)
-                                    .font(.system(size: 10, weight: .medium, design: .monospaced))
-                                    .foregroundColor(DailyDriver.foregroundMuted)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                            }
-                            Spacer(minLength: 0)
-                            if let hint = exercise.ddMuscleHint {
-                                Text(hint)
-                                    .font(.system(size: 9.5))
-                                    .foregroundColor(DailyDriver.foregroundDim)
-                                    .multilineTextAlignment(.trailing)
-                            }
-                            Image(systemName: "chevron.right")
-                                .font(.system(size: 11, weight: .semibold))
-                                .foregroundColor(DailyDriver.foregroundDim)
-                        }
-                        .padding(.vertical, 11)
-                        .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityIdentifier("dd_exercise_row_\(index)")
-
-                    if index < section.exercises.count - 1 {
-                        Divider()
-                            .overlay(DailyDriver.border)
-                    }
-                }
-            }
-            .padding(.horizontal, 13)
-            .padding(.vertical, 2)
-            .background(DailyDriver.card)
-            .overlay(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .stroke(DailyDriver.border, lineWidth: 1)
-            )
-            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-        }
-        .fullScreenCover(item: $infoExercise) { exercise in
-            NavigationStack {
-                DDExerciseInfoView(exercise: exercise)
-            }
-            .preferredColorScheme(.dark)
-        }
-    }
-}
+// NOTE: the old per-block display grouping (DDWorkoutDisplayGrouping /
+// DDWorkoutBlockSectionView) was removed in AMA-2395 — semantic bands in
+// WorkoutBandGrouping + WorkoutBandSectionView replace it, and they are
+// shared by the saved detail and the pre-save previews.
 
 extension Exercise {
     var ddDetailLine: String {

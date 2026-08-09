@@ -52,7 +52,7 @@ struct SocialImportPreviewView: View {
             if case .saved = newPhase {
                 let name = draft.title.trimmingCharacters(in: .whitespacesAndNewlines)
                 let title = name.isEmpty ? "Workout" : name
-                let minutes = draft.toPreviewWorkout().duration / 60
+                let minutes = WorkoutDurationEstimator.estimate(for: draft.toPreviewWorkout()).totalSec / 60
                 if minutes > 0 {
                     DDToastCenter.shared.success(
                         DDToastCopy.savedToLibrary,

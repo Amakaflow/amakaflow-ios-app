@@ -8,6 +8,8 @@
 
 /* Begin PBXBuildFile section */
 		AMA2393HONBLD /* WorkoutSportHonesty.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2393HONREF /* WorkoutSportHonesty.swift */; };
+		AMA2395ANABLD /* WorkoutDetailAnatomy.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2395ANAREF /* WorkoutDetailAnatomy.swift */; };
+		AMA2395CAPBLD /* WorkoutCaptionPresentation.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2395CAPREF /* WorkoutCaptionPresentation.swift */; };
 		AMA2395BNDBLD /* WorkoutBandGrouping.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2395BNDREF /* WorkoutBandGrouping.swift */; };
 		AMA2395ESTBLD /* WorkoutDurationEstimator.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2395ESTREF /* WorkoutDurationEstimator.swift */; };
 		AMA2393PICKBLD /* WorkoutSportPickerSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2393PICKREF /* WorkoutSportPickerSheet.swift */; };
@@ -193,7 +195,6 @@
 		AMA2360SHEETBLD01 /* AppleWatchDeliveryPrefsSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2360SHEETREF01 /* AppleWatchDeliveryPrefsSheet.swift */; };
 		AMA2316SHEETBLD01 /* GarminWatchDisplayPrefsSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2316SHEETREF01 /* GarminWatchDisplayPrefsSheet.swift */; };
 		AMA2360PREFTESTBLD /* AppleWatchDeliveryPrefsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2360PREFTESTREF /* AppleWatchDeliveryPrefsTests.swift */; };
-		AMA2381HEROTESTBLD /* UnifiedWorkoutDetailViewHeroTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2381HEROTESTREF /* UnifiedWorkoutDetailViewHeroTests.swift */; };
 		AMA2316PREFTESTBLD /* GarminWatchDisplayPrefsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2316PREFTESTREF /* GarminWatchDisplayPrefsTests.swift */; };
 		AMA2336MDLBLD001 /* WorkoutEnrichmentModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2336MDLREF001 /* WorkoutEnrichmentModels.swift */; };
 		AMA2378V2MDLBLD001 /* WorkoutEnrichmentV2Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2378V2MDLREF001 /* WorkoutEnrichmentV2Models.swift */; };
@@ -771,6 +772,8 @@
 
 /* Begin PBXFileReference section */
 		AMA2393HONREF /* WorkoutSportHonesty.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutSportHonesty.swift; path = ../AmakaFlow/Models/WorkoutSportHonesty.swift; sourceTree = SOURCE_ROOT; };
+		AMA2395ANAREF /* WorkoutDetailAnatomy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutDetailAnatomy.swift; path = ../AmakaFlow/Views/Components/WorkoutDetailAnatomy.swift; sourceTree = SOURCE_ROOT; };
+		AMA2395CAPREF /* WorkoutCaptionPresentation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutCaptionPresentation.swift; path = ../AmakaFlow/Models/WorkoutCaptionPresentation.swift; sourceTree = SOURCE_ROOT; };
 		AMA2395BNDREF /* WorkoutBandGrouping.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutBandGrouping.swift; path = ../AmakaFlow/Models/WorkoutBandGrouping.swift; sourceTree = SOURCE_ROOT; };
 		AMA2395ESTREF /* WorkoutDurationEstimator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutDurationEstimator.swift; path = ../AmakaFlow/Models/WorkoutDurationEstimator.swift; sourceTree = SOURCE_ROOT; };
 		AMA2393PICKREF /* WorkoutSportPickerSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutSportPickerSheet.swift; path = ../AmakaFlow/Views/WorkoutSportPickerSheet.swift; sourceTree = SOURCE_ROOT; };
@@ -942,7 +945,6 @@
 		AMA2360PREFREF001 /* AppleWatchDeliveryPrefs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppleWatchDeliveryPrefs.swift; path = ../AmakaFlow/Models/AppleWatchDeliveryPrefs.swift; sourceTree = SOURCE_ROOT; };
 		AMA2360SHEETREF01 /* AppleWatchDeliveryPrefsSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppleWatchDeliveryPrefsSheet.swift; path = ../AmakaFlow/Views/AppleWatchDeliveryPrefsSheet.swift; sourceTree = SOURCE_ROOT; };
 		AMA2360PREFTESTREF /* AppleWatchDeliveryPrefsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppleWatchDeliveryPrefsTests.swift; path = AmakaFlowCompanionTests/AppleWatchDeliveryPrefsTests.swift; sourceTree = "<group>"; };
-		AMA2381HEROTESTREF /* UnifiedWorkoutDetailViewHeroTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = UnifiedWorkoutDetailViewHeroTests.swift; path = AmakaFlowCompanionTests/UnifiedWorkoutDetailViewHeroTests.swift; sourceTree = "<group>"; };
 		AMA2360STEPSREF01 /* WorkoutKitPlanStepSummary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutKitPlanStepSummary.swift; path = ../AmakaFlow/Models/WorkoutKitPlanStepSummary.swift; sourceTree = SOURCE_ROOT; };
 		AMA2374SECTSREF01 /* WorkoutKitPlanStepSummary+Sections.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "WorkoutKitPlanStepSummary+Sections.swift"; path = "../AmakaFlow/Models/WorkoutKitPlanStepSummary+Sections.swift"; sourceTree = SOURCE_ROOT; };
 		AMA2374DDBANDREF1 /* DailyDriverTheme+WatchBands.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "DailyDriverTheme+WatchBands.swift"; path = "../AmakaFlow/DailyDriverTheme+WatchBands.swift"; sourceTree = SOURCE_ROOT; };
@@ -1827,6 +1829,8 @@
 				F84E22732ED0D58300459747 /* WorkoutsViewModel.swift */,
 				F84E22712ED0D56C00459747 /* Workout.swift */,
 				AMA2393HONREF /* WorkoutSportHonesty.swift */,
+				AMA2395ANAREF /* WorkoutDetailAnatomy.swift */,
+				AMA2395CAPREF /* WorkoutCaptionPresentation.swift */,
 				AMA2395BNDREF /* WorkoutBandGrouping.swift */,
 				AMA2395ESTREF /* WorkoutDurationEstimator.swift */,
 				AMA2389MDLREF /* FriendsSharingModels.swift */,
@@ -2246,7 +2250,6 @@
 				AMA2291STARTSTREF /* WorkoutStartSelectionTests.swift */,
 				AMA2286GARTESTREF /* GarminStartHandoffTests.swift */,
 				AMA2360PREFTESTREF /* AppleWatchDeliveryPrefsTests.swift */,
-				AMA2381HEROTESTREF /* UnifiedWorkoutDetailViewHeroTests.swift */,
 				AMA2316PREFTESTREF /* GarminWatchDisplayPrefsTests.swift */,
 				AMA2336TESTREF /* WorkoutEnrichmentModelsTests.swift */,
 				AMA2336PLANTESTREF /* WorkoutEnrichmentPushPlannerTests.swift */,
@@ -2780,6 +2783,8 @@
 				F84E22702ED0D55600459747 /* Theme.swift in Sources */,
 				F84E22722ED0D56C00459747 /* Workout.swift in Sources */,
 				AMA2393HONBLD /* WorkoutSportHonesty.swift in Sources */,
+				AMA2395ANABLD /* WorkoutDetailAnatomy.swift in Sources */,
+				AMA2395CAPBLD /* WorkoutCaptionPresentation.swift in Sources */,
 				AMA2395BNDBLD /* WorkoutBandGrouping.swift in Sources */,
 				AMA2395ESTBLD /* WorkoutDurationEstimator.swift in Sources */,
 				AMA2393PICKBLD /* WorkoutSportPickerSheet.swift in Sources */,
@@ -3241,7 +3246,6 @@
 				AMA2291STARTSTBLD /* WorkoutStartSelectionTests.swift in Sources */,
 				AMA2286GARTESTBLD /* GarminStartHandoffTests.swift in Sources */,
 				AMA2360PREFTESTBLD /* AppleWatchDeliveryPrefsTests.swift in Sources */,
-				AMA2381HEROTESTBLD /* UnifiedWorkoutDetailViewHeroTests.swift in Sources */,
 				AMA2316PREFTESTBLD /* GarminWatchDisplayPrefsTests.swift in Sources */,
 				AMA2336TESTBLD /* WorkoutEnrichmentModelsTests.swift in Sources */,
 				AMA2336PLANTESTBLD /* WorkoutEnrichmentPushPlannerTests.swift in Sources */,
