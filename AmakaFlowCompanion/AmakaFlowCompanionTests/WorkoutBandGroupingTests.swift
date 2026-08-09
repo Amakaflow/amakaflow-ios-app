@@ -215,11 +215,9 @@ final class WorkoutBandGroupingTests: XCTestCase {
     // MARK: - Prescription grammar
 
     func testOneGrammarForEveryTargetFamily() {
-        let estimate = WorkoutDurationEstimate.empty
         func line(_ ex: Exercise) -> String {
             WorkoutBandPrescription.line(for: ex, estimate: nil)
         }
-        _ = estimate
 
         XCTAssertEqual(line(exercise("Back Squat", sets: 3, reps: "8")), "3 × 8")
         // Hyphen stored, en-dash displayed (AMA-2379 rule).

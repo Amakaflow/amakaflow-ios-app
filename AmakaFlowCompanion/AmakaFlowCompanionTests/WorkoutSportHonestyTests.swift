@@ -47,6 +47,24 @@ final class WorkoutSportHonestyTests: XCTestCase {
         XCTAssertEqual(WorkoutSportHonesty.modality(for: named("Sled Drag", sets: 3, reps: "10")), .lift)
     }
 
+    /// The load tag only wins when the NAME isn't a machine — a bodyweight-
+    /// tagged Assault Bike is still a bike.
+    func testBodyweightLoadDoesNotOverrideAMachineName() {
+        func loaded(_ name: String) -> Exercise {
+            Exercise(
+                name: name, canonicalName: nil, sets: nil, reps: nil,
+                durationSeconds: 180, load: ExerciseLoad(value: 0, unit: "bodyweight"),
+                restSeconds: nil, distance: nil, notes: nil, supersetGroup: nil
+            )
+        }
+        XCTAssertEqual(WorkoutSportHonesty.modality(for: loaded("Assault Bike")), .cardioMachine)
+        XCTAssertEqual(WorkoutSportHonesty.modality(for: loaded("Farmer Carry")), .bodyweight)
+    }
+
+    func testBurpeesAreBodyweightNotLifts() {
+        XCTAssertEqual(WorkoutSportHonesty.modality(for: named("Burpee")), .bodyweight)
+    }
+
     func testDominantModalityDrivesDerivedSectionNames() {
         XCTAssertEqual(
             WorkoutSportHonesty.dominantModality(of: [named("Rowing Machine"), named("Assault Bike")]),

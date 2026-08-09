@@ -66,6 +66,7 @@ struct WorkoutBand: Identifiable, Equatable {
     static func == (lhs: WorkoutBand, rhs: WorkoutBand) -> Bool {
         lhs.id == rhs.id && lhs.title == rhs.title && lhs.kind == rhs.kind
             && lhs.rows == rhs.rows && lhs.seconds == rhs.seconds
+            && lhs.isEstimate == rhs.isEstimate && lhs.timeLabel == rhs.timeLabel
     }
 }
 
@@ -191,7 +192,7 @@ enum WorkoutBandGrouping {
                 id: "ramp-\(key)",
                 name: "\(display) — warm-up ramp",
                 modality: WorkoutSportHonesty.modality(for: first),
-                prescription: parts.joined(separator: " · "),
+                prescription: parts.isEmpty ? "OPEN" : parts.joined(separator: " · "),
                 subline: nil,
                 exerciseIDs: entries.map(\.id),
                 exercise: first
@@ -340,9 +341,9 @@ enum WorkoutBandGrouping {
         // Named structures keep their name AND their shape.
         switch block.structure {
         case .emom:
-            return "EMOM \(rounds)"
+            return "EMOM \(capMinutes(for: block) ?? rounds)"
         case .amrap:
-            return "AMRAP \(rounds)"
+            return "AMRAP \(capMinutes(for: block) ?? rounds)"
         case .tabata:
             return roundsSuffixed("TABATA", rounds: rounds)
         case .circuit, .timedCircuit:
@@ -369,6 +370,11 @@ enum WorkoutBandGrouping {
             return roundsSuffixed(lift.uppercased(), rounds: rounds)
         }
         return roundsSuffixed(derivedName(for: group.exercises), rounds: rounds)
+    }
+
+    /// The cap the ESTIMATOR resolved, so header and subtotal always agree.
+    private static func capMinutes(for block: Block) -> Int? {
+        WorkoutDurationEstimator.capSeconds(for: block).map { $0 / 60 }
     }
 
     private static func roundsSuffixed(_ title: String, rounds: Int) -> String {
@@ -439,9 +445,11 @@ enum WorkoutBandGrouping {
         blocks: [Block]
     ) -> [WorkoutBand] {
         let overheads = blockOverheads(estimate: estimate, blocks: blocks)
-        // Each block's overhead is claimed exactly once, by the band holding
-        // most of its exercises — otherwise the subtotals wouldn't add up.
-        var claimed: Set<String> = []
+        // Every block's overhead is claimed exactly ONCE, by whichever band
+        // holds the largest share of its exercises. A strict-majority rule
+        // would silently drop the overhead of a block split evenly between two
+        // bands, and the subtotals would stop adding up to the total.
+        let owners = blockOwners(partials: partials, blocks: blocks)
 
         return partials.map { partial in
             let exerciseIDs = partial.rows.flatMap(\.exerciseIDs)
@@ -449,8 +457,7 @@ enum WorkoutBandGrouping {
             var seconds = component.seconds
             var isEstimate = component.isEstimate
 
-            for blockID in owningBlockIDs(for: exerciseIDs, blocks: blocks) where !claimed.contains(blockID) {
-                claimed.insert(blockID)
+            for (blockID, ownerID) in owners where ownerID == partial.id {
                 seconds += overheads[blockID] ?? 0
                 if estimate.seconds(forBlockID: blockID)?.isEstimate == true { isEstimate = true }
             }
@@ -483,14 +490,25 @@ enum WorkoutBandGrouping {
         return overheads
     }
 
-    /// Blocks where this band holds a strict majority of the exercises.
-    private static func owningBlockIDs(for exerciseIDs: [String], blocks: [Block]) -> [String] {
-        let held = Set(exerciseIDs)
-        return blocks.compactMap { block in
-            guard !block.exercises.isEmpty else { return nil }
-            let mine = block.exercises.filter { held.contains($0.id) }.count
-            return mine * 2 > block.exercises.count ? block.id : nil
+    /// Maps every non-empty block to the single band that owns its overhead:
+    /// the band holding the most of its exercises, ties broken by band order so
+    /// the result is deterministic.
+    private static func blockOwners(partials: [PartialBand], blocks: [Block]) -> [String: String] {
+        let held = partials.map { (id: $0.id, ids: Set($0.rows.flatMap(\.exerciseIDs))) }
+        var owners: [String: String] = [:]
+        for block in blocks where !block.exercises.isEmpty {
+            var bestID: String?
+            var bestCount = 0
+            for band in held {
+                let mine = block.exercises.filter { band.ids.contains($0.id) }.count
+                if mine > bestCount {
+                    bestCount = mine
+                    bestID = band.id
+                }
+            }
+            if let bestID { owners[block.id] = bestID }
         }
+        return owners
     }
 }
 
@@ -504,7 +522,8 @@ enum WorkoutBandPrescription {
         let primary = PrescriptionFormatter.primaryLine(
             PrescriptionFormatter.effective(from: exercise).primary
         )
-        parts.append((primary?.isEmpty == false ? primary! : "OPEN").uppercased())
+        let resolved = primary.flatMap { $0.isEmpty ? nil : $0 } ?? "OPEN"
+        parts.append(resolved.uppercased())
 
         if let rest = exercise.restSeconds, rest > 0 {
             parts.append("REST \(rest)S")

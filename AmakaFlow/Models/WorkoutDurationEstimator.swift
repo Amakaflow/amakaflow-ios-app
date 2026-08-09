@@ -216,16 +216,23 @@ enum WorkoutDurationEstimator {
 
         // Capped structures are exact by definition: the cap IS the duration,
         // however many rounds the athlete actually gets through.
-        if let cap = cappedSeconds(for: block) {
+        if let cap = capSeconds(for: block) {
             tally.sawExactTimed = true
             var result = BlockDuration()
             result.totalSec = cap
             result.activeSec = cap
             result.isEstimate = false
-            // Attribute the cap evenly so per-exercise rows still show something honest.
-            let share = block.exercises.isEmpty ? 0 : cap / block.exercises.count
-            result.perExercise = block.exercises.map {
-                WorkoutDurationComponent(id: $0.id, seconds: share, isEstimate: false)
+            // Attribute the cap evenly, spreading the remainder over the first
+            // few steps so the per-exercise seconds still add up to the cap.
+            let count = block.exercises.count
+            let share = count == 0 ? 0 : cap / count
+            let remainder = count == 0 ? 0 : cap % count
+            result.perExercise = block.exercises.enumerated().map { index, exercise in
+                WorkoutDurationComponent(
+                    id: exercise.id,
+                    seconds: share + (index < remainder ? 1 : 0),
+                    isEstimate: false
+                )
             }
             return result
         }
@@ -289,7 +296,9 @@ enum WorkoutDurationEstimator {
     }
 
     /// EMOM / AMRAP / Tabata caps — exact wall-clock regardless of content.
-    private static func cappedSeconds(for block: Block) -> Int? {
+    /// `WorkoutBandGrouping` titles read from here too, so the header ("EMOM 24")
+    /// and the subtotal can never disagree about what the cap is.
+    static func capSeconds(for block: Block) -> Int? {
         let rounds = max(1, block.rounds)
         switch block.structure {
         case .emom:
@@ -302,7 +311,9 @@ enum WorkoutDurationEstimator {
             if block.exercises.count == 1, let seconds = block.exercises[0].durationSeconds {
                 return seconds * rounds
             }
-            return nil
+            // Otherwise `rounds` carries the minute cap — the same reading the
+            // band title uses when it renders "AMRAP 12".
+            return rounds * 60
         case .tabata:
             // Classic 20s on / 10s off unless the steps say otherwise.
             if block.exercises.allSatisfy({ $0.durationSeconds == nil }) {
@@ -314,12 +325,13 @@ enum WorkoutDurationEstimator {
         }
     }
 
+    private static let capMinutesRegex = try? NSRegularExpression(
+        pattern: #"(?:emom|amrap|for time|cap)\D{0,4}(\d{1,3})"#,
+        options: [.caseInsensitive]
+    )
+
     private static func minutesInLabel(_ label: String?) -> Int? {
-        guard let label else { return nil }
-        let pattern = #"(?:emom|amrap|for time|cap)\D{0,4}(\d{1,3})"#
-        guard let regex = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive]) else {
-            return nil
-        }
+        guard let label, let regex = capMinutesRegex else { return nil }
         let range = NSRange(label.startIndex..<label.endIndex, in: label)
         guard let match = regex.firstMatch(in: label, options: [], range: range),
               match.numberOfRanges > 1,

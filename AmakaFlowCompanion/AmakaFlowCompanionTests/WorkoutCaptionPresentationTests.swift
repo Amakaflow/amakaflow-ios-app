@@ -59,6 +59,13 @@ final class WorkoutCaptionPresentationTests: XCTestCase {
         XCTAssertFalse(WorkoutCaptionPresentation.hasHiddenDetail(""))
     }
 
+    /// Plain multiline copy hides nothing, so the card must not grow a dead
+    /// "More" just because the lines were joined.
+    func testOrdinaryMultilineCaptionReportsNoHiddenDetail() {
+        XCTAssertFalse(WorkoutCaptionPresentation.hasHiddenDetail("Line one\nLine two"))
+        XCTAssertEqual(WorkoutCaptionPresentation.collapsed("Line one\nLine two"), "Line one Line two")
+    }
+
     func testEmptyAndHashtagOnlyCaptionsCollapseToNothing() {
         XCTAssertEqual(WorkoutCaptionPresentation.collapsed(nil), "")
         XCTAssertEqual(WorkoutCaptionPresentation.collapsed("#gym #fit"), "")

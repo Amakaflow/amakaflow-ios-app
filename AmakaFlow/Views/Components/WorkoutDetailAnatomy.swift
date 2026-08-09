@@ -240,7 +240,7 @@ struct WorkoutBandSectionView: View {
     private var rowsCard: some View {
         VStack(spacing: 0) {
             ForEach(Array(band.rows.enumerated()), id: \.element.id) { offset, row in
-                rowView(row)
+                rowView(row, position: offset)
                 if offset < band.rows.count - 1 {
                     Divider().overlay(DailyDriver.border)
                 }
@@ -257,7 +257,7 @@ struct WorkoutBandSectionView: View {
     }
 
     @ViewBuilder
-    private func rowView(_ row: WorkoutBandRow) -> some View {
+    private func rowView(_ row: WorkoutBandRow, position: Int) -> some View {
         Button {
             if let exercise = row.exercise { onSelect?(exercise) }
         } label: {
@@ -290,7 +290,10 @@ struct WorkoutBandSectionView: View {
         .buttonStyle(.plain)
         .disabled(row.exercise == nil || onSelect == nil)
         .accessibilityElement(children: .combine)
-        .accessibilityIdentifier("af_detail_row_\(WorkoutBandSectionView.identifierSlug(row.name))")
+        // Position-scoped: a circuit can legitimately repeat a movement.
+        .accessibilityIdentifier(
+            "af_detail_row_\(WorkoutBandSectionView.identifierSlug(row.name))_\(index)_\(position)"
+        )
     }
 
     private var bandColor: Color {

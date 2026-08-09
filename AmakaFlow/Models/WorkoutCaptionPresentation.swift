@@ -46,7 +46,13 @@ enum WorkoutCaptionPresentation {
     static func hasHiddenDetail(_ raw: String?) -> Bool {
         let full = expanded(raw)
         guard !full.isEmpty else { return false }
-        return collapsed(raw) != full
+        // Compare against the same space-joined shape `collapsed` produces —
+        // otherwise plain multiline copy looks like it is hiding something.
+        let normalised = full
+            .replacingOccurrences(of: "\n", with: " ")
+            .replacingOccurrences(of: #"\s{2,}"#, with: " ", options: .regularExpression)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        return collapsed(raw) != normalised
     }
 
     /// The creator's own time when the caption states it ("My time: 57.53"),

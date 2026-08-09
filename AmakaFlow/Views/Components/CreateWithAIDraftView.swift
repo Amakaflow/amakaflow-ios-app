@@ -236,6 +236,12 @@ struct CreateWithAIDraftView: View {
         WorkoutDurationEstimator.estimate(for: workout).pillLabel
     }
 
+    /// AMA-2395: the save toast reads the estimator too, so the number the
+    /// draft showed is the number the confirmation repeats.
+    private func savedToastMinutes(for saved: Workout) -> Int {
+        WorkoutDurationEstimator.estimate(for: saved).totalSec / 60
+    }
+
     private func metaPill(_ text: String) -> some View {
         Text(text)
             .font(.system(size: 11, weight: .semibold, design: .monospaced))
@@ -369,7 +375,7 @@ struct CreateWithAIDraftView: View {
                 retry: { saveToLibrary() },
                 onSuccess: { saved in
                     workoutsViewModel.acceptSuggestedWorkout(saved)
-                    let minutes = max(1, saved.duration / 60)
+                    let minutes = savedToastMinutes(for: saved)
                     DDToastCenter.shared.success(
                         DDToastCopy.savedToLibrary,
                         sub: DDToastCopy.savedSub(

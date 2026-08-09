@@ -157,8 +157,9 @@ appId: com.myamaka.AmakaFlowCompanion
     timeout: 2000
 - assertVisible:
     id: "af_detail_time_card"
+# Row ids are position-scoped (a circuit may repeat a movement).
 - assertVisible:
-    id: "af_detail_row_barbell_overhead_press"
+    id: "af_detail_row_barbell_overhead_press.*"
 - assertVisible:
     text: ".*LIFTING.*"
 - assertNotVisible:
@@ -196,4 +197,14 @@ appId: com.myamaka.AmakaFlowCompanion
 - scroll
 - waitForAnimationToEnd:
     timeout: 1500
+# assertNotVisible only sees the current viewport, so re-check the bugs after
+# scrolling — the tail of a multi-band workout is exactly where "Block N" and
+# stray "WU ·" rows used to hide.
+- assertVisible: "CORE · 2 ROUNDS"
+- assertNotVisible:
+    text: ".*Block \\d.*"
+- assertNotVisible:
+    text: ".*WU · .*"
+- assertNotVisible:
+    text: ".*~1 MIN.*"
 - takeScreenshot: docs/ama-2395-visual-evidence/05b-ai-multiblock-scrolled

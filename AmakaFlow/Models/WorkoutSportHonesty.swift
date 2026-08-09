@@ -141,12 +141,12 @@ enum WorkoutSportHonesty {
         "sit-up", "sit up", "situp", "crunch", "mountain climber", "jumping jack",
         "air squat", "hollow", "dead bug", "bird dog", "glute bridge", "wall sit",
         "jump rope", "skipping", "bear crawl", "inchworm", "v-up", "toes to bar",
-        "hanging leg raise", "flutter kick", "russian twist", "superman"
+        "hanging leg raise", "flutter kick", "russian twist", "superman", "burpee"
     ]
 
     private static let liftNeedles = [
         "barbell", "dumbbell", "kettlebell", "cable", "machine press", "smith",
-        "squat", "deadlift", "press", "curl", "lunge", "burpee", "row",
+        "squat", "deadlift", "press", "curl", "lunge", "row",
         "fly", "raise", "extension", "pulldown", "thruster", "clean", "snatch",
         "jerk", "hip thrust", "shrug", "calf raise"
     ]
