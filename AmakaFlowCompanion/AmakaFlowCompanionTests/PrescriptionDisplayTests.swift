@@ -153,19 +153,21 @@ final class PrescriptionDisplayTests: XCTestCase {
 
     // MARK: - Display grouping (read-time, non-mutating)
     //
-    // AMA-2395 moved these from DDWorkoutDisplayGrouping to the semantic bands.
-    // The behaviours they guard are unchanged: legacy one-exercise-per-block
-    // imports collapse into a single section, named sections survive, stored
-    // blocks are never mutated, and no section invents a duration.
+    // AMA-2395 moved these from DDWorkoutDisplayGrouping to the section layer.
+    // The old grouping COLLAPSED consecutive singleton blocks into one section;
+    // that is reshaping, and the section layer no longer does it. What still
+    // holds: stored blocks are never mutated, named sections survive, and no
+    // section invents a duration.
 
-    func testLegacySingletonBlocksCollapseIntoOneBand() {
+    func testLegacySingletonBlocksEachKeepTheirOwnSection() {
         let bands = bandsFor([
             Block(label: nil, structure: .straight, rounds: 1, exercises: [makeExercise(name: "A", reps: "8")]),
             Block(label: "Block 2", structure: .straight, rounds: 1, exercises: [makeExercise(name: "B", reps: "8")]),
             Block(label: "Block 3", structure: .straight, rounds: 1, exercises: [makeExercise(name: "C", reps: "8")])
         ])
-        XCTAssertEqual(bands.count, 1)
-        XCTAssertEqual(bands[0].rows.map(\.name), ["A", "B", "C"])
+        XCTAssertEqual(bands.count, 3, "three stored blocks render as three sections")
+        XCTAssertEqual(bands.map { $0.rows.map(\.name) }, [["A"], ["B"], ["C"]])
+        XCTAssertTrue(bands.allSatisfy { !$0.hasHeader }, "generic labels render no heading")
     }
 
     func testGroupingPreservesNamedSoftSection() {
@@ -181,7 +183,8 @@ final class PrescriptionDisplayTests: XCTestCase {
         ])
         XCTAssertEqual(bands.count, 3)
         XCTAssertEqual(bands[0].rows.map(\.name), ["A"])
-        XCTAssertTrue(bands[1].title.hasPrefix("CIRCUIT · 5 ROUNDS"), bands[1].title)
+        // One station is not a circuit, so the label stands on its own.
+        XCTAssertEqual(bands[1].title, "FINISHER")
         XCTAssertEqual(bands[2].title, "COOLDOWN")
         XCTAssertEqual(bands[2].kind, .cooldown)
     }
@@ -192,9 +195,9 @@ final class PrescriptionDisplayTests: XCTestCase {
             Block(label: nil, structure: .straight, rounds: 1, exercises: [makeExercise(name: "A", reps: "8")]),
             Block(label: "Block 2", structure: .straight, rounds: 1, exercises: [makeExercise(name: "B", reps: "8")])
         ])
-        XCTAssertEqual(bands.count, 2)
+        XCTAssertEqual(bands.count, 3, "the two loose blocks stay separate")
         XCTAssertEqual(bands[0].title, "WARM-UP")
-        XCTAssertEqual(bands[1].rows.count, 2, "the two loose blocks became one section")
+        XCTAssertEqual(bands.map { $0.rows.count }, [1, 1, 1])
     }
 
     func testGroupingDoesNotMutateStoredWorkoutBlocks() {
@@ -231,7 +234,7 @@ final class PrescriptionDisplayTests: XCTestCase {
             source: .instagram
         )
         let bands = WorkoutBandGrouping.bands(for: workout)
-        XCTAssertEqual(bands.count, 1)
+        XCTAssertEqual(bands.count, 2)
         XCTAssertFalse(bands[0].timeLabel.contains("~"), bands[0].timeLabel)
         XCTAssertNil(
             bands[0].title.range(of: #"BLOCK\s*\d"#, options: [.regularExpression, .caseInsensitive]),

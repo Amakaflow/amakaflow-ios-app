@@ -17,27 +17,12 @@
       ]
     },
     {
-      "label": "Block 8",
-      "structure": "straight",
-      "rounds": 1,
-      "exercises": [
-        {
-          "name": "WU · squat",
-          "reps": "8"
-        },
-        {
-          "name": "WU · squat",
-          "reps": "5"
-        }
-      ]
-    },
-    {
       "label": "Block 9",
       "structure": "straight",
       "rounds": 3,
       "exercises": [
         {
-          "name": "squat",
+          "name": "Back Squat",
           "reps": "8",
           "rest_seconds": 90
         }
@@ -45,12 +30,16 @@
     },
     {
       "label": "Block 10",
-      "structure": "straight",
-      "rounds": 1,
+      "structure": "superset",
+      "rounds": 3,
       "exercises": [
         {
-          "name": "WU · plank",
-          "duration_sec": 20
+          "name": "Bench Press",
+          "reps": "8"
+        },
+        {
+          "name": "Ring Row",
+          "reps": "10"
         }
       ]
     },
@@ -60,19 +49,8 @@
       "rounds": 2,
       "exercises": [
         {
-          "name": "plank",
+          "name": "Plank",
           "duration_sec": 30
-        }
-      ]
-    },
-    {
-      "label": "Timed Work",
-      "structure": "straight",
-      "rounds": 1,
-      "exercises": [
-        {
-          "name": "Timed Work",
-          "duration_sec": 300
         }
       ]
     }

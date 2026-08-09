@@ -204,7 +204,7 @@ struct WorkoutBandSectionView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            header
+            if band.hasHeader { header }
             rowsCard
         }
         .accessibilityElement(children: .contain)
@@ -272,12 +272,6 @@ struct WorkoutBandSectionView: View {
                         .font(.system(size: 8.5, weight: .medium, design: .monospaced))
                         .foregroundColor(DailyDriver.foregroundMuted)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                    if let subline = row.subline, !subline.isEmpty {
-                        Text(subline)
-                            .font(.system(size: 8, weight: .medium, design: .monospaced))
-                            .foregroundColor(DailyDriver.foregroundDim)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                    }
                 }
                 Spacer(minLength: 0)
                 Image(systemName: "chevron.right")

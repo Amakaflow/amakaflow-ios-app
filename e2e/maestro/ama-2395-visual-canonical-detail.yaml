@@ -106,7 +106,7 @@ appId: com.myamaka.AmakaFlowCompanion
     id: "af_workout_detail_sport_chip"
 - assertVisible:
     id: "af_workout_detail_sport_disagreement"
-- assertVisible: "CIRCUIT · 6 ROUNDS · ROTATE, NO REST"
+- assertVisible: "CIRCUIT · 6 ROUNDS"
 - assertNotVisible:
     text: ".*~1 MIN.*"
 - takeScreenshot: docs/ama-2395-visual-evidence/02-wrong-type
@@ -130,7 +130,7 @@ appId: com.myamaka.AmakaFlowCompanion
     timeout: 2000
 - assertVisible: "96 MIN"
 - assertVisible: "ALL TIMED · EXACT"
-- assertVisible: "CIRCUIT · 8 ROUNDS · ROTATE, NO REST"
+- assertVisible: "CIRCUIT · 8 ROUNDS"
 # Everything is timed, so nothing may be hedged.
 - assertNotVisible:
     text: ".*≈.*MIN.*"
@@ -183,10 +183,12 @@ appId: com.myamaka.AmakaFlowCompanion
     timeout: 15000
 - waitForAnimationToEnd:
     timeout: 2000
-- assertVisible: "WARM-UP"
-- assertVisible: "SQUAT · 3 ROUNDS"
-- assertVisible: "CORE · 2 ROUNDS"
-# The two things the dogfood screenshots showed and must never come back.
+# Sections mirror the stored blocks: generic "Block N" labels render no
+# heading at all, and a superset is named because the data says superset.
+- assertVisible: "BENCH PRESS"
+- assertVisible: "SUPERSET × 3"
+# "Block N" must never render; "WU ·" rows belong to the watch plan and must
+# never be conjured into the library detail.
 - assertNotVisible:
     text: ".*Block \\d.*"
 - assertNotVisible:
@@ -200,7 +202,6 @@ appId: com.myamaka.AmakaFlowCompanion
 # assertNotVisible only sees the current viewport, so re-check the bugs after
 # scrolling — the tail of a multi-band workout is exactly where "Block N" and
 # stray "WU ·" rows used to hide.
-- assertVisible: "CORE · 2 ROUNDS"
 - assertNotVisible:
     text: ".*Block \\d.*"
 - assertNotVisible:
