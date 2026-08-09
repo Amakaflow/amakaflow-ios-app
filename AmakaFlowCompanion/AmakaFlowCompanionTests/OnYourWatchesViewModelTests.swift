@@ -68,6 +68,69 @@ final class OnYourWatchesViewModelTests: XCTestCase {
         XCTAssertFalse(vm.snapshot.librarySummaryLine.contains("GARMIN"))
     }
 
+    /// Simulator / unpaired WatchConnectivity must still show Apple when the
+    /// phone already has WorkoutKit scheduled plans (AMA-2390 dogfood).
+    func testShowsAppleWhenUnpairedButScheduledPlansExist() async {
+        let scheduler = MockWorkoutKitScheduler()
+        scheduler.rows = [
+            WorkoutScheduleRow(
+                id: WorkoutScheduleRowID(planID: "bike", date: DateComponents(hour: 17, minute: 35)),
+                title: "Bike ski row repeats",
+                dateComponents: DateComponents(hour: 17, minute: 35),
+                scheduledAt: Date(),
+                isComplete: false
+            )
+        ]
+        let vm = OnYourWatchesViewModel(
+            scheduler: scheduler,
+            pairingReader: FixedAppleWatchPairingReader(.confirmedUnpaired),
+            garminPairing: { true },
+            queueStore: InMemoryGarminWatchQueueStore(),
+            statusFetcher: { _ in
+                Components.Schemas.WatchDeliveryStatus(
+                    state: .pushed,
+                    subtitle: nil,
+                    title: "Waiting"
+                )
+            }
+        )
+        await vm.refresh()
+        XCTAssertTrue(vm.snapshot.showsApple)
+        XCTAssertEqual(vm.snapshot.appleScheduledCount, 1)
+        XCTAssertTrue(vm.snapshot.librarySummaryLine.contains("APPLE"))
+    }
+
+    func testShouldShowApplePolicy() {
+        XCTAssertFalse(
+            OnYourWatchesViewModel.shouldShowApple(
+                pairing: .confirmedUnpaired,
+                schedulerAvailable: true,
+                scheduledCount: 0
+            )
+        )
+        XCTAssertTrue(
+            OnYourWatchesViewModel.shouldShowApple(
+                pairing: .confirmedUnpaired,
+                schedulerAvailable: true,
+                scheduledCount: 1
+            )
+        )
+        XCTAssertTrue(
+            OnYourWatchesViewModel.shouldShowApple(
+                pairing: .unknown,
+                schedulerAvailable: true,
+                scheduledCount: 0
+            )
+        )
+        XCTAssertFalse(
+            OnYourWatchesViewModel.shouldShowApple(
+                pairing: .confirmedPaired,
+                schedulerAvailable: false,
+                scheduledCount: 0
+            )
+        )
+    }
+
     func testGarminStateMapping() {
         XCTAssertEqual(GarminQueueItemState.from(delivery: .confirmedOnDevice), .onWatch)
         XCTAssertEqual(GarminQueueItemState.from(delivery: .fetchedByWidget), .onWatch)
