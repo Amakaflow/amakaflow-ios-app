@@ -136,20 +136,47 @@ final class WorkoutEnrichmentPushPlannerTests: XCTestCase {
         XCTAssertNil(plan.offer(.cooldown))
     }
 
-    func testExistingRestIntentIsNotOffered() {
+    /// AMA-2390 — existing block rest stays visible (checked) so the athlete can opt out.
+    func testExistingRestIntentIsOfferedChecked() {
         let timed = WorkoutEnrichmentPushPlanner.plan(
             blocks: [benchBlock(blockRestSec: 90)],
             tombstones: [],
             prefs: .defaults
         )
-        XCTAssertNil(timed.offer(.betweenSetRest))
+        XCTAssertEqual(timed.offer(.betweenSetRest)?.isChecked, true)
 
         let open = WorkoutEnrichmentPushPlanner.plan(
             blocks: [benchBlock(blockRestOpen: true)],
             tombstones: [],
             prefs: .defaults
         )
-        XCTAssertNil(open.offer(.betweenSetRest))
+        XCTAssertEqual(open.offer(.betweenSetRest)?.isChecked, true)
+    }
+
+    func testClearBlockRestIntentRemovesRestKeys() {
+        let blocksJSON: [String: Any] = [
+            "blocks": [
+                [
+                    "label": "Circuit",
+                    "type": "circuit",
+                    "rounds": 6,
+                    "rest_sec": 60,
+                    "rest_open": false,
+                    "rest_between_rounds_sec": 60,
+                    "field_provenance": [
+                        "rest_sec": "user",
+                        "rest_open": "user"
+                    ],
+                    "exercises": [["name": "Assault Bike", "duration_sec": 180]]
+                ]
+            ]
+        ]
+        let cleared = WorkoutEnrichmentMutations.clearBlockRestIntent(in: blocksJSON)
+        let block = (cleared["blocks"] as? [[String: Any]])?.first
+        XCTAssertNil(block?["rest_sec"])
+        XCTAssertNil(block?["rest_open"])
+        XCTAssertNil(block?["rest_between_rounds_sec"])
+        XCTAssertNil(block?["field_provenance"])
     }
 
     /// Exercise-level rest from ingest/defaults must not hide block Lap/timed rest (AMA-2348).
@@ -792,6 +819,69 @@ final class WorkoutEnrichmentPushPlannerTests: XCTestCase {
         let savedTombs = mock.savedWorkoutBlocksJSON[0].tombstones ?? []
         XCTAssertTrue(savedTombs.contains(where: { $0.kind == .sessionWarmup }))
         XCTAssertTrue(savedTombs.contains(where: { $0.kind == .betweenSetRest }))
+    }
+
+    /// AMA-2390 — Send as-is / Rest unchecked strips author rest so Apple Workout
+    /// does not keep Rest 01:00 after the sheet looked like "no changes".
+    @MainActor
+    func testApplyClearsBlockRestWhenRestUnchecked() async throws {
+        let mock = MockAPIService()
+        let blocksJSON: [String: Any] = [
+            "blocks": [
+                [
+                    "label": "Circuit",
+                    "type": "circuit",
+                    "rounds": 6,
+                    "rest_sec": 60,
+                    "exercises": [
+                        ["name": "Assault Bike", "duration_sec": 180],
+                        ["name": "Ski Erg", "duration_sec": 180]
+                    ]
+                ]
+            ]
+        ]
+        let plan = WorkoutEnrichmentPushPlanner.plan(
+            blocks: [
+                SocialImportBlock(
+                    label: "Circuit",
+                    rounds: 6,
+                    exercises: [
+                        SocialImportExercise(name: "Assault Bike", seconds: 180),
+                        SocialImportExercise(name: "Ski Erg", seconds: 180)
+                    ],
+                    type: "circuit",
+                    restSec: 60
+                )
+            ],
+            tombstones: [],
+            prefs: .defaults,
+            target: .apple
+        )
+        XCTAssertEqual(plan.offer(.betweenSetRest)?.isChecked, true)
+
+        var prefs = WorkoutPreferences.defaults
+        prefs.sessionWarmup.enabled = false
+        prefs.exerciseWarmupSets.enabled = false
+        let prepared = WorkoutEnrichmentPushCoordinator.Prepared(
+            workoutId: "w-circuit",
+            title: "Bike ski row repeats",
+            plan: plan,
+            prefs: prefs,
+            tombstones: [],
+            blocksJSON: blocksJSON,
+            target: .apple
+        )
+        let outcome = await WorkoutEnrichmentPushCoordinator(apiService: mock).apply(
+            prepared: prepared,
+            decision: WorkoutEnrichmentPushPlanner.Decision(checkedKinds: [])
+        )
+
+        XCTAssertTrue(outcome.applied)
+        XCTAssertEqual(mock.enrichWorkoutCallCount, 0)
+        let saved = try XCTUnwrap(mock.savedWorkoutBlocksJSON.first?.blocksJSON)
+        let block = try XCTUnwrap((saved["blocks"] as? [[String: Any]])?.first)
+        XCTAssertNil(block["rest_sec"])
+        XCTAssertNil(block["rest_open"])
     }
 
     func testRejectSessionWarmupTombsWhileAcceptingRest() throws {

@@ -412,6 +412,35 @@ final class AppleStartHandoffService {
             title: workoutName,
             planJSON: planJSON
         )
+        // AMA-2390 — stamp Watch Item readiness from the scheduled plan so the
+        // sheet mirrors what landed (not standing WorkoutPreferences.defaults).
+        Self.stampWatchItemReadiness(
+            workoutID: libraryWorkoutID,
+            planJSON: planJSON
+        )
+    }
+
+    /// Persist delivered/draft readiness from composed planJSON (MainActor store).
+    @MainActor
+    private static func stampWatchItemReadiness(workoutID: String, planJSON: Data) {
+        let sections = WorkoutKitPlanStepSummary.sections(from: planJSON)
+        let readiness = WatchItemViewModel.readinessReflectingDelivered(sections)
+        let config = WatchItemViewModel.configReflectingDelivered(sections)
+        let pills = WatchItemViewModel.pills(
+            from: readiness,
+            config: config,
+            isApple: true,
+            title: "",
+            deliveredStepTotal: sections.reduce(0) { $0 + $1.steps.count }
+        )
+        let snapshot = WatchItemReadinessSnapshot(
+            readiness: readiness,
+            config: config,
+            snapshotPills: pills,
+            updatedAt: Date()
+        )
+        WatchItemReadinessStore.shared.saveDelivered(workoutID: workoutID, snapshot: snapshot)
+        WatchItemReadinessStore.shared.saveDraft(workoutID: workoutID, snapshot: snapshot)
     }
 
     /// One-shot compose + schedule (tests / callers that skip the preview sheet).

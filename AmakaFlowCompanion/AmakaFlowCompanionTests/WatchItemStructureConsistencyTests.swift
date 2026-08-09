@@ -61,42 +61,65 @@ final class WatchItemStructureConsistencyTests: XCTestCase {
         """.utf8)
     }
 
-    private func scheduleRow(planID: String = "plan-bike", title: String = "Bike ski row") -> WorkoutScheduleRow {
-        WorkoutScheduleRow(
-            id: WorkoutScheduleRowID(planID: planID, date: DateComponents(hour: 8, minute: 51)),
-            title: title,
-            dateComponents: DateComponents(hour: 8, minute: 51),
-            scheduledAt: Date(),
-            isComplete: false
+    func testAppleFactoryUsesCachedPlanJSONNotDemoSteps() {
+        let sections = WatchItemViewModel.resolvedStepSections(
+            stepSections: [],
+            planJSON: bikeSkiRowPlanJSON,
+            title: "Bike ski row"
         )
+        let seeded = WatchItemViewModel.seed(
+            storeKey: "lib-bike",
+            title: "Bike ski row",
+            isApple: true,
+            prefs: .defaults,
+            readinessStore: readinessStore,
+            deliveredStepTotal: sections.reduce(0) { $0 + $1.steps.count },
+            stepSections: sections
+        )
+        XCTAssertEqual(sections.count, 1)
+        XCTAssertEqual(sections[0].band, "Circuit")
+        XCTAssertEqual(sections[0].tag, "8 ROUNDS")
+        XCTAssertEqual(sections[0].steps.count, 4)
+        XCTAssertFalse(sections.flatMap(\.steps).contains { $0.title.contains("Bench") })
+        XCTAssertEqual(seeded.pills.first, WatchItemCopy.stepsPill(count: 4))
+        let tracker = WatchItemChangeTracker(
+            baseline: seeded.baseline,
+            config: seeded.baselineConfig,
+            draft: seeded.draft,
+            draftConfig: seeded.draftConfig
+        )
+        XCTAssertEqual(tracker.changeCount, 0)
     }
 
-    func testAppleFactoryUsesCachedPlanJSONNotDemoSteps() {
-        let planJSON = bikeSkiRowPlanJSON
-        linkStore.record(
-            planID: "plan-bike",
-            workoutID: "lib-bike",
+    /// Send-as-is / no prefs → Watch Item must not invent MOBILITY / TIMED REST.
+    func testAppleFactoryWithoutPrefsMirrorsPlanNotStandingDefaults() {
+        let sections = WatchItemViewModel.resolvedStepSections(
+            stepSections: [],
+            planJSON: bikeSkiRowPlanJSON,
+            title: "Bike ski row"
+        )
+        let seeded = WatchItemViewModel.seed(
+            storeKey: "lib-bike",
             title: "Bike ski row",
-            planJSON: planJSON
-        )
-        let vm = WatchItemViewModel.apple(
-            row: scheduleRow(),
-            linkStore: linkStore,
+            isApple: true,
+            prefs: nil,
             readinessStore: readinessStore,
-            library: [("lib-bike", "Bike ski row")],
-            prefs: .defaults
+            deliveredStepTotal: sections.reduce(0) { $0 + $1.steps.count },
+            stepSections: sections
         )
-        XCTAssertEqual(vm.stepSections.count, 1)
-        XCTAssertEqual(vm.stepSections[0].band, "Circuit")
-        XCTAssertEqual(vm.stepSections[0].tag, "8 ROUNDS")
-        XCTAssertEqual(vm.stepCount, 4)
-        XCTAssertFalse(vm.stepSections.flatMap(\.steps).contains { $0.title.contains("Bench") })
-        XCTAssertEqual(vm.changeCount, 0)
-        XCTAssertFalse(vm.canReplace)
-        XCTAssertFalse(vm.isEdited(.mobility))
-        XCTAssertFalse(vm.isEdited(.warmups))
-        XCTAssertFalse(vm.isEdited(.rest))
-        XCTAssertEqual(vm.snapshotPills.first, WatchItemCopy.stepsPill(count: 4))
+        XCTAssertEqual(sections[0].tag, "8 ROUNDS")
+        XCTAssertFalse(seeded.draft.mobilityEnabled)
+        XCTAssertFalse(seeded.draft.warmupsEnabled)
+        XCTAssertFalse(seeded.draft.restEnabled)
+        XCTAssertFalse(seeded.draft.cooldownEnabled)
+        XCTAssertEqual(seeded.pills, [WatchItemCopy.stepsPill(count: 4)])
+        let tracker = WatchItemChangeTracker(
+            baseline: seeded.baseline,
+            config: seeded.baselineConfig,
+            draft: seeded.draft,
+            draftConfig: seeded.draftConfig
+        )
+        XCTAssertEqual(tracker.changeCount, 0)
     }
 
     func testSeedWithDeliveredAndNilDraftHasNoGhostEdits() {
@@ -208,20 +231,24 @@ final class WatchItemStructureConsistencyTests: XCTestCase {
             title: "Bike ski row",
             planJSON: planJSON
         )
-        let vm = WatchItemViewModel.apple(
-            row: scheduleRow(),
-            linkStore: linkStore,
-            readinessStore: readinessStore,
-            library: [("lib-other", "Different workout")],
-            prefs: .defaults
+        // Library no longer contains lib-deleted — resolve drops the binding but
+        // planJSON must remain for Watch Item sections.
+        let linked = linkStore.resolve(
+            planID: "plan-bike",
+            title: "Bike ski row",
+            library: [("lib-other", "Different workout")]
         )
-        XCTAssertNil(vm.libraryWorkoutID)
+        XCTAssertNil(linked)
         XCTAssertEqual(linkStore.planJSON(forPlanID: "plan-bike"), planJSON)
-        XCTAssertEqual(vm.stepSections.count, 1)
-        XCTAssertEqual(vm.stepSections[0].band, "Circuit")
-        XCTAssertEqual(vm.stepSections[0].tag, "8 ROUNDS")
-        XCTAssertEqual(vm.stepCount, 4)
-        XCTAssertFalse(vm.stepSections.flatMap(\.steps).contains { $0.title.contains("Bench") })
+        let sections = WatchItemViewModel.resolvedStepSections(
+            stepSections: [],
+            planJSON: linkStore.planJSON(forPlanID: "plan-bike"),
+            title: "Bike ski row"
+        )
+        XCTAssertEqual(sections.count, 1)
+        XCTAssertEqual(sections[0].band, "Circuit")
+        XCTAssertEqual(sections[0].tag, "8 ROUNDS")
+        XCTAssertEqual(sections[0].steps.count, 4)
     }
 
     /// Prior demo delivered snapshot must not stick as production baseline/pills.

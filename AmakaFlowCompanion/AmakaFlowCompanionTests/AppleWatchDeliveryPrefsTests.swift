@@ -336,6 +336,35 @@ final class AppleWatchDeliveryPrefsTests: XCTestCase {
         XCTAssertFalse(sections.contains { $0.tag?.contains("SETS") == true })
     }
 
+    /// AMA-2390 — circuit trailing rest must surface as a chip (not silently drop).
+    func testCircuitRepeatRestPinsToLastStation() throws {
+        let json = """
+        {
+          "title": "Bike ski row repeats",
+          "sportType": "traditionalStrengthTraining",
+          "intervals": [
+            {
+              "kind": "repeat",
+              "reps": 6,
+              "intervals": [
+                { "kind": "work", "name": "Assault Bike", "seconds": 180 },
+                { "kind": "work", "name": "Ski Erg", "seconds": 180 },
+                { "kind": "work", "name": "Rowing Machine", "seconds": 180 },
+                { "kind": "work", "name": "Spin / Indoor Bike", "seconds": 180 },
+                { "kind": "rest", "seconds": 60 }
+              ]
+            }
+          ]
+        }
+        """.data(using: .utf8)!
+
+        let sections = WorkoutKitPlanStepSummary.sections(from: json)
+        XCTAssertEqual(sections.count, 1)
+        XCTAssertEqual(sections[0].tag, "6 ROUNDS")
+        XCTAssertEqual(sections[0].steps.last?.title, "Spin / Indoor Bike")
+        XCTAssertEqual(sections[0].steps.last?.restChip, "REST 60S")
+    }
+
     func testMobilityDurationTagIgnoresRepsDetails() throws {
         let json = """
         {

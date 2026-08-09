@@ -313,6 +313,8 @@ private struct SectionAccumulator {
         flushExercise()
         flushCooldownAsInterstitial()
         hasWorked = true
+        // Drop rest that arrived *before* the circuit (nothing earlier to pin to).
+        // Rest *after* the circuit is attached in `finish()` via pendingRest.
         pendingRest = nil
         let rows = stations.map { PreviewRow(title: $0.exercise, detail: $0.detail, setCount: 1) }
         let tag = reps == 1 ? "1 ROUND" : "\(reps) ROUNDS"
@@ -334,12 +336,39 @@ private struct SectionAccumulator {
         cooldownRows.append(PreviewRow(title: "Cool-down", detail: detail))
     }
 
-    /// Trailing rest with no prior work is dropped (nothing to pin the chip to).
+    /// Trailing rest pins to the last work band (circuit rounds / last station).
+    /// Rest with no prior work is dropped (nothing to pin the chip to).
     mutating func finish() -> [PreviewSection] {
         flushMobility()
         flushExercise()
         flushCooldown()
+        attachTrailingRestToLastWorkSection()
         return sections
+    }
+
+    /// Circuit/repeat rest arrives after `appendCircuit` cleared pendingRest —
+    /// pin that chip onto the last station so preview matches Apple Workout.
+    private mutating func attachTrailingRestToLastWorkSection() {
+        guard let chip = pendingRest else { return }
+        pendingRest = nil
+        guard let index = sections.lastIndex(where: { $0.accent == .work }),
+              !sections[index].steps.isEmpty else { return }
+        let prior = sections[index]
+        var steps = prior.steps
+        let last = steps[steps.count - 1]
+        steps[steps.count - 1] = PreviewStep(
+            number: last.number,
+            title: last.title,
+            detail: last.detail,
+            restChip: chip
+        )
+        sections[index] = PreviewSection(
+            accent: prior.accent,
+            band: prior.band,
+            tag: prior.tag,
+            steps: steps,
+            caption: prior.caption
+        )
     }
 
     private mutating func beginExercise(_ exercise: String) {

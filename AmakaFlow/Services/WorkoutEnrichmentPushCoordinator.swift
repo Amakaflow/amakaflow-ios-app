@@ -159,10 +159,6 @@ final class WorkoutEnrichmentPushCoordinator {
                 prefs: prepared.prefs,
                 tombstones: prepared.tombstones
             )
-            guard application.needsPersist else {
-                return ApplyOutcome(applied: false, note: nil)
-            }
-
             // AMA-2365 — Apple Start resets leftover enrichment, then adds once.
             // Garmin keeps existing enrichment (prepare does not strip for Garmin).
             let softNames = Self.softActivityNames(from: prepared.prefs)
@@ -173,6 +169,21 @@ final class WorkoutEnrichmentPushCoordinator {
                 )
                 : prepared.blocksJSON
             var blocksJSON = baseline
+
+            // AMA-2390 — Rest offered + unchecked → strip block rest so Send as-is
+            // / opt-out cannot leave Rest 01:00 on Apple Workout.
+            var didClearRest = false
+            if prepared.plan.offer(.betweenSetRest) != nil,
+               !decision.checkedKinds.contains(.betweenSetRest) {
+                let cleared = WorkoutEnrichmentMutations.clearBlockRestIntent(in: blocksJSON)
+                didClearRest = !NSDictionary(dictionary: cleared).isEqual(to: blocksJSON)
+                blocksJSON = cleared
+            }
+
+            guard application.needsPersist || didClearRest else {
+                return ApplyOutcome(applied: false, note: nil)
+            }
+
             var enrichNote: String?
             var enrichFailed = false
             if application.appliesAnything {

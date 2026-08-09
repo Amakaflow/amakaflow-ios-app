@@ -75,17 +75,26 @@ struct WatchItemDeliveredStepsOverlay: View {
     private func band(_ section: PreviewSection) -> some View {
         let color = bandColor(section.accent)
         return VStack(alignment: .leading, spacing: 0) {
-            Text(section.band.uppercased())
-                .font(.system(size: 8, weight: .bold, design: .monospaced))
-                .foregroundColor(color)
-                .padding(.vertical, 3)
-                .padding(.leading, 9)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(DailyDriver.card)
-                .overlay(alignment: .leading) {
-                    Rectangle().fill(color).frame(width: 3)
+            HStack(spacing: 8) {
+                Text(section.band.uppercased())
+                    .font(.system(size: 8, weight: .bold, design: .monospaced))
+                    .foregroundColor(color)
+                Spacer(minLength: 0)
+                // AMA-2390 — surface Circuit "N ROUNDS" like Apple preview header.
+                if let tag = section.tag, !tag.isEmpty {
+                    Text(tag.uppercased())
+                        .font(.system(size: 8, weight: .semibold, design: .monospaced))
+                        .foregroundColor(DailyDriver.foregroundMuted)
                 }
-                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+            }
+            .padding(.vertical, 3)
+            .padding(.horizontal, 9)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(DailyDriver.card)
+            .overlay(alignment: .leading) {
+                Rectangle().fill(color).frame(width: 3)
+            }
+            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
 
             ForEach(section.steps) { step in
                 HStack(spacing: 10) {
@@ -97,9 +106,15 @@ struct WatchItemDeliveredStepsOverlay: View {
                         .font(.system(size: 12.5, weight: .medium))
                         .foregroundColor(DailyDriver.foreground)
                     Spacer(minLength: 0)
+                    if let restChip = step.restChip, !restChip.isEmpty {
+                        Text(restChip)
+                            .font(.system(size: 8.5, weight: .semibold, design: .monospaced))
+                            .foregroundColor(DailyDriver.foregroundMuted)
+                    }
                 }
                 .padding(.vertical, 8)
                 .padding(.leading, 12)
+                .padding(.trailing, 12)
                 .overlay(alignment: .bottom) {
                     Rectangle()
                         .fill(DailyDriver.border)
