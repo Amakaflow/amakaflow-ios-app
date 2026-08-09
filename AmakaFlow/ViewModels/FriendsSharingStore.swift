@@ -26,15 +26,18 @@ final class FriendsSharingStore: ObservableObject {
         service: FriendsSharingProviding? = nil,
         lineageStore: WorkoutLineageStoring? = nil
     ) {
-        #if DEBUG
-        self.service = service ?? InMemoryFriendsSharingService()
-        #else
-        // AMA-2389 v1: BFF friendship/share client is not wired yet. Release keeps the
-        // protocol seam with an empty in-memory store (no demo directory) so UI ships;
-        // cross-account sharing lands with the BFF implementation of FriendsSharingProviding.
-        self.service = service ?? InMemoryFriendsSharingService(seedDemo: false)
-        #endif
+        self.service = service ?? Self.makeDefaultService()
         self.lineageStore = lineageStore ?? UserDefaultsWorkoutLineageStore()
+    }
+
+    private static func makeDefaultService() -> FriendsSharingProviding {
+        #if DEBUG
+        let isPreview = ProcessInfo.processInfo.environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1"
+        if isPreview || UITestEnvironment.shared.useFixtures {
+            return InMemoryFriendsSharingService()
+        }
+        #endif
+        return BFFFriendsSharingService.live()
     }
 
     var acceptedFriends: [Friendship] {
