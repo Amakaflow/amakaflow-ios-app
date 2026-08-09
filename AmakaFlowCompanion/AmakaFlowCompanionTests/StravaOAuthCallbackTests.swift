@@ -66,6 +66,36 @@ final class StravaOAuthCallbackTests: XCTestCase {
         XCTAssertEqual(cards[0].sourceProvider, .strava)
     }
 
+    func testCardsOmitPriorDaysWhenTodayEmpty() {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime]
+        let yesterday = formatter.string(from: Date().addingTimeInterval(-86_400))
+
+        let activities = [
+            StravaCompletedActivityDTO(
+                stravaId: 1,
+                name: "Old run",
+                type: "Run",
+                distanceKm: 5,
+                durationMin: 30,
+                startDate: yesterday,
+                description: ""
+            ),
+            StravaCompletedActivityDTO(
+                stravaId: 3,
+                name: "Evening Weight Training",
+                type: "WeightTraining",
+                distanceKm: 0,
+                durationMin: 45,
+                startDate: yesterday,
+                description: ""
+            )
+        ]
+
+        let cards = ActualsTodayDemoFeed.cards(from: activities)
+        XCTAssertTrue(cards.isEmpty, "Today must not backfill prior-day Strava sessions")
+    }
+
     func testApplyLibraryMatchUpdatesLiveStravaCardID() async throws {
         MockURLProtocol.reset()
         defer { MockURLProtocol.reset() }

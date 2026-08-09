@@ -12,18 +12,23 @@ import Foundation
 struct ActualsSyncProgress: Equatable {
     var ingested: Int
     var total: Int
+    /// True while waiting on the network before the provider reports a total.
+    var isAwaitingTotal: Bool = false
 
-    /// Locked format from design-handoff/ACTUALS.md §5.
+    /// Locked format from design-handoff/ACTUALS.md §5 (awaiting = lookback line only).
     var displayString: String {
-        "PULLING YOUR LAST 30 DAYS… \(ingested) OF \(total) SESSIONS ▍"
+        if isAwaitingTotal || total == 0 {
+            return "\(ActualsCopy.syncPullingSub) ▍"
+        }
+        return "PULLING YOUR LAST 30 DAYS… \(ingested) OF \(total) SESSIONS ▍"
     }
 
     var isComplete: Bool {
-        total > 0 && ingested >= total
+        !isAwaitingTotal && total > 0 && ingested >= total
     }
 
     var shouldShowBanner: Bool {
-        total > 0 && !isComplete
+        isAwaitingTotal || (total > 0 && !isComplete)
     }
 }
 
@@ -36,10 +41,15 @@ final class ActualsSyncProgressStore: ObservableObject {
     /// Avoid MainActor-isolated deinit + TaskLocal teardown crash under XCTest (Swift 6).
     nonisolated deinit {}
 
+    /// Show the 30-day lookback line immediately (before sync-completed returns).
+    func beginPulling() {
+        progress = ActualsSyncProgress(ingested: 0, total: 0, isAwaitingTotal: true)
+    }
+
     /// Start a backfill only when the provider reports a real session total.
     func beginBackfill(total: Int) {
         guard total > 0 else { return }
-        progress = ActualsSyncProgress(ingested: 0, total: total)
+        progress = ActualsSyncProgress(ingested: 0, total: total, isAwaitingTotal: false)
     }
 
     /// Increment on a real ingested session only. Never fabricates a counter.

@@ -23,7 +23,7 @@ enum ActualsCopy {
 
     static let connectTitle = "Pull your training in"
     static let connectSubhead =
-        "Finished sessions land on Today by themselves — then you fill in what you actually did. We only read; we never post."
+        "On connect we pull your last 30 days, then new sessions land on Today by themselves — fill in what you actually did. We only read; we never post."
     static let connectDedupeFooter =
         "SAME WORKOUT FROM TWO SOURCES? WE KEEP ONE — WATCH BEATS PHONE, RICHER DATA WINS. NOTHING COUNTS TWICE."
 
@@ -34,9 +34,13 @@ enum ActualsCopy {
         case .garmin:
             return "RUNS + STRENGTH · PULLED AUTOMATICALLY AFTER SYNC"
         case .strava:
-            return "EVERYTHING YOU RECORD THERE · INCL. OTHER APPS VIA STRAVA"
+            return "LAST 30 DAYS ON CONNECT · THEN NEW SESSIONS AS THEY LAND"
         }
     }
+
+    /// Empty Today after Strava is linked and today's sync returned nothing.
+    static let linkedEmptyToday =
+        "No Strava sessions for today — earlier days stay in Strava (we pulled the last 30 on connect)."
 
     static func sourceDisplayName(_ provider: ActualsSourceProvider) -> String {
         switch provider {

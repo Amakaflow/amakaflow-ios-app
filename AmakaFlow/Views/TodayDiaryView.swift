@@ -47,7 +47,11 @@ struct TodayDiaryView: View {
     }
 
     private var showsActualsTeachCard: Bool {
-        ActualsTeachCardVisibility.shouldShow(
+        // Never flash teach/Connect while Strava is already linked or re-syncing.
+        guard !actualsSources.isConnected(.strava), !actualsDemo.isRefreshing else {
+            return false
+        }
+        return ActualsTeachCardVisibility.shouldShow(
             hasEverConnected: actualsSources.hasEverConnected,
             todayEmpty: todaysCompletions.isEmpty && !actualsDemo.isActive
         )
@@ -55,6 +59,20 @@ struct TodayDiaryView: View {
 
     private var showsActualsDemoRail: Bool {
         actualsDemo.isActive
+    }
+
+    /// Linked Strava with an in-flight sync — show progress, never Connect CTA.
+    private var showsStravaRefreshing: Bool {
+        actualsDemo.isRefreshing && actualsSources.isConnected(.strava)
+    }
+
+    /// Linked, sync done, nothing for calendar-today.
+    private var showsLinkedStravaEmptyToday: Bool {
+        actualsSources.isConnected(.strava)
+            && actualsDemo.isActive
+            && !actualsDemo.isRefreshing
+            && actualsDemo.cards.isEmpty
+            && todaysCompletions.isEmpty
     }
 
     var body: some View {
@@ -73,17 +91,26 @@ struct TodayDiaryView: View {
                                 .padding(.bottom, 12)
                         }
 
-                        if historyViewModel.isLoading && historyViewModel.completions.isEmpty && !showsActualsDemoRail {
+                        if historyViewModel.isLoading && historyViewModel.completions.isEmpty
+                            && !showsActualsDemoRail && !showsStravaRefreshing {
                             loadingState
+                        } else if showsStravaRefreshing && !showsActualsDemoRail {
+                            // Already linked — keep the 30-day pull banner; no Connect CTA.
+                            Color.clear.frame(height: 8)
                         } else if showsActualsTeachCard {
                             ActualsTeachCard {
                                 showConnectSources = true
                             }
                             .padding(.top, 12)
-                        } else if showsActualsDemoRail {
+                        } else if showsActualsDemoRail, !actualsDemo.cards.isEmpty {
                             actualsDemoContent
-                        } else if todaysCompletions.isEmpty {
+                        } else if showsLinkedStravaEmptyToday {
+                            linkedStravaEmptyTodayState
+                        } else if todaysCompletions.isEmpty, !actualsSources.isConnected(.strava) {
                             emptyDiaryState
+                        } else if todaysCompletions.isEmpty {
+                            // Linked but feed not active yet (edge) — still no Connect flash.
+                            linkedStravaEmptyTodayState
                         } else {
                             timeline
                             systemEventRows
@@ -99,8 +126,6 @@ struct TodayDiaryView: View {
             .navigationBarHidden(true)
             .preferredColorScheme(.dark)
             .task {
-                await historyViewModel.loadCompletions()
-                syncScrubberToToday()
                 #if DEBUG
                 if ActualsTodayDemoFeed.shouldAutoActivate {
                     actualsDemo.activateColdStart(
@@ -109,13 +134,16 @@ struct TodayDiaryView: View {
                     )
                 }
                 #endif
-                // AMA-2391: feed is in-memory — re-pull Strava when already linked.
+                // Kick Strava re-pull first so Connect never flashes while history loads.
+                async let history: Void = historyViewModel.loadCompletions()
                 if actualsSources.isConnected(.strava), !actualsDemo.isActive {
                     await actualsDemo.handleProviderConnected(
                         .strava,
                         sync: actualsSyncProgress
                     )
                 }
+                await history
+                syncScrubberToToday()
             }
             .refreshable {
                 await historyViewModel.refreshCompletions()
@@ -478,8 +506,7 @@ struct TodayDiaryView: View {
                 .frame(maxWidth: .infinity)
                 .accessibilityIdentifier("af_today_empty_state")
 
-            // Always offer Connect Sources on empty Today — not only first-time teach.
-            // Row state on that screen still reflects what's already linked.
+            // Offer Connect Sources only when nothing is linked yet.
             Button {
                 showConnectSources = true
             } label: {
@@ -493,6 +520,24 @@ struct TodayDiaryView: View {
             }
             .buttonStyle(.plain)
             .accessibilityIdentifier(ActualsCopy.teachCTAAccessibilityID)
+        }
+        .padding(.top, 26)
+    }
+
+    private var linkedStravaEmptyTodayState: some View {
+        VStack(spacing: 12) {
+            Text(ActualsCopy.linkedEmptyToday)
+                .font(.system(size: 12))
+                .foregroundColor(DailyDriver.foregroundDim)
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: .infinity)
+                .accessibilityIdentifier("af_today_strava_empty_today")
+
+            Text("Sessions land here as they happen — or add one with ＋")
+                .font(.system(size: 12))
+                .foregroundColor(DailyDriver.foregroundMuted)
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: .infinity)
         }
         .padding(.top, 26)
     }

@@ -59,6 +59,8 @@ struct ActualsTodayDemoCard: Identifiable, Equatable {
 // swiftlint:disable:next type_body_length
 final class ActualsTodayDemoFeed: ObservableObject {
     @Published private(set) var isActive = false
+    /// True while sync-completed is in flight — Today must not flash Connect CTA.
+    @Published private(set) var isRefreshing = false
     @Published var showMergeAsk = false
     @Published private(set) var cards: [ActualsTodayDemoCard] = []
     @Published private(set) var mergeLeft: ActualsSourceRecording?
@@ -120,11 +122,16 @@ final class ActualsTodayDemoFeed: ObservableObject {
         await activateFromStravaSync(sync: sync, client: client ?? BFFStravaClient.live())
     }
 
-    /// Replace demo cards with Strava sync-completed activities (30-day backfill).
+    /// Replace Today cards with Strava sync-completed activities for **today only**.
+    /// API still backfills the last 30 days (progress copy); older days stay off this rail.
     func activateFromStravaSync(
         sync: ActualsSyncProgressStore,
         client: BFFStravaClient
     ) async {
+        isRefreshing = true
+        // Show lookback copy immediately — don't wait for the response to paint a banner.
+        sync.beginPulling()
+        defer { isRefreshing = false }
         do {
             let result = try await client.syncCompleted(daysBack: 30)
             // Logical BFF failure: do not activate Today, map activities, or invent progress.
@@ -134,6 +141,7 @@ final class ActualsTodayDemoFeed: ObservableObject {
             isActive = true
             showMergeAsk = false
             let activities = result.activities
+            let todayCards = Self.cards(from: activities)
             let total = max(result.syncedCount, activities.count)
             if total > 0 {
                 sync.beginBackfill(total: total)
@@ -143,13 +151,14 @@ final class ActualsTodayDemoFeed: ObservableObject {
             } else {
                 sync.clear()
             }
-            cards = Self.cards(from: activities)
+            cards = todayCards
         } catch is StravaLogicalSyncFailure {
             showMergeAsk = false
             cards = []
             sync.clear()
         } catch {
-            // Tokens missing / network — leave the empty Today + Connect CTA visible.
+            // Tokens missing / network — leave the empty Today + Connect CTA visible
+            // only when we are no longer considered linked (caller may clear store).
             isActive = false
             showMergeAsk = false
             cards = []
@@ -157,18 +166,17 @@ final class ActualsTodayDemoFeed: ObservableObject {
         }
     }
 
-    /// Map API activities → unmapped Today cards (prefer calendar-today, else recent).
+    /// Map API activities → unmapped Today cards for calendar-today only.
     static func cards(from activities: [StravaCompletedActivityDTO]) -> [ActualsTodayDemoCard] {
+        let calendar = Calendar.current
         let parsed = activities.compactMap { activity -> (StravaCompletedActivityDTO, Date)? in
             guard let date = parseStravaStartDate(activity.startDate) else { return nil }
+            guard calendar.isDateInToday(date) else { return nil }
             return (activity, date)
         }
         .sorted { $0.1 > $1.1 }
 
-        let calendar = Calendar.current
-        let todays = parsed.filter { calendar.isDateInToday($0.1) }
-        let chosen = todays.isEmpty ? Array(parsed.prefix(8)) : todays
-        return chosen.map { card(from: $0.0, startDate: $0.1) }
+        return parsed.map { card(from: $0.0, startDate: $0.1) }
     }
 
     private static func card(

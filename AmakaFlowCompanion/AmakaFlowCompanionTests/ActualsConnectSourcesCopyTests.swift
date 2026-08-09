@@ -19,6 +19,10 @@ final class ActualsConnectSourcesCopyTests: XCTestCase {
             ActualsCopy.connectSubhead.contains("We only read; we never post"),
             "Subhead must carry the read-only promise: \(ActualsCopy.connectSubhead)"
         )
+        XCTAssertTrue(
+            ActualsCopy.connectSubhead.localizedCaseInsensitiveContains("30 days"),
+            "Subhead must state the Strava lookback window: \(ActualsCopy.connectSubhead)"
+        )
     }
 
     func testPerProviderOneLinersMatchHandoff() {
@@ -32,7 +36,7 @@ final class ActualsConnectSourcesCopyTests: XCTestCase {
         )
         XCTAssertEqual(
             ActualsCopy.sourceOneLiner(.strava),
-            "EVERYTHING YOU RECORD THERE · INCL. OTHER APPS VIA STRAVA"
+            "LAST 30 DAYS ON CONNECT · THEN NEW SESSIONS AS THEY LAND"
         )
     }
 
