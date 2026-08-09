@@ -112,8 +112,9 @@ enum WorkoutDurationEstimator {
             // Attribute the cap evenly, spreading the remainder over the first
             // few steps so the per-exercise seconds still add up to the cap.
             let count = block.exercises.count
-            let share = count == 0 ? 0 : cap / count
-            let remainder = count == 0 ? 0 : cap % count
+            let isEmptyBlock = block.exercises.isEmpty
+            let share = isEmptyBlock ? 0 : cap / count
+            let remainder = isEmptyBlock ? 0 : cap % count
             result.perExercise = block.exercises.enumerated().map { index, exercise in
                 WorkoutDurationComponent(
                     id: exercise.id,

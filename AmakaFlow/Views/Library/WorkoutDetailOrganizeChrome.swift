@@ -201,7 +201,6 @@ private extension WorkoutDetailOrganizeChrome {
         .clipShape(Capsule(style: .continuous))
         .accessibilityIdentifier("af_detail_collection_chip_\(collection.id)")
     }
-
 }
 
 // MARK: - LAST DONE
