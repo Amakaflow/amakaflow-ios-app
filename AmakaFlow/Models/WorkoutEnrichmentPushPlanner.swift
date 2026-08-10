@@ -240,6 +240,10 @@ enum WorkoutEnrichmentPushPlanner {
     /// Rows that could take warm-up sets: a strength `sets` shape, no rows yet,
     /// and not excluded by name. Exclusion matching is server-side at enrich time;
     /// this preview mirrors it with `ExerciseKeyNormalizer` so counts stay honest.
+    ///
+    /// AMA-2400: timed / distance / cals stations (Assault Bike `1 × 0:30`) are
+    /// not strength ramps — offering warm-up sets on them made Rest/WU/CD
+    /// enrich look broken when the athlete only wanted session extras.
     static func warmupSetCandidates(
         in blocks: [SocialImportBlock],
         prefs: ExerciseWarmupSetsPrefs
@@ -250,6 +254,10 @@ enum WorkoutEnrichmentPushPlanner {
         // that share one PerExerciseRamp (same exercise across two blocks).
         return blocks.flatMap(\.exercises).filter { exercise in
             guard exercise.sets != nil else { return false }
+            // Timed/distance/cals stations are not ramp candidates.
+            if exercise.seconds != nil || exercise.distanceMeters != nil || exercise.calories != nil {
+                return false
+            }
             guard exercise.warmupSets?.isEmpty ?? true else { return false }
             let key = ExerciseKeyNormalizer.normalize(exercise.name)
             guard !excluded.contains(key) else { return false }
@@ -298,13 +306,22 @@ enum WorkoutEnrichmentBlocksJSON {
             name: name,
             sets: raw["sets"] as? Int,
             reps: raw["reps"] as? Int,
-            seconds: raw["duration_sec"] as? Int,
-            distanceMeters: raw["distance_m"] as? Int,
-            restSeconds: raw["rest_sec"] as? Int,
-            exerciseId: raw["exercise_id"] as? String,
-            warmupSets: WarmupSetRow.parseList(raw["warmup_sets"]),
-            restOpen: raw["rest_open"] as? Bool,
-            structureSource: raw["structure_source"] as? String
+            seconds: raw["duration_sec"] as? Int
+                ?? raw["duration_seconds"] as? Int
+                ?? raw["seconds"] as? Int,
+            distanceMeters: raw["distance_m"] as? Int
+                ?? raw["distanceMeters"] as? Int
+                ?? (raw["distance"] as? Double).map { Int($0.rounded()) },
+            // AMA-2400: calorie stations must round-trip so warmupSetCandidates
+            // can exclude them (filter checks exercise.calories).
+            calories: raw["calories"] as? Int
+                ?? raw["cals"] as? Int,
+            restSeconds: raw["rest_sec"] as? Int ?? raw["restSeconds"] as? Int,
+            exerciseId: (raw["exercise_id"] as? String) ?? (raw["exerciseId"] as? String),
+            warmupSets: WarmupSetRow.parseList(raw["warmup_sets"] ?? raw["warmupSets"]),
+            restOpen: (raw["rest_open"] as? Bool) ?? (raw["restOpen"] as? Bool),
+            structureSource: (raw["structure_source"] as? String)
+                ?? (raw["structureSource"] as? String)
         )
     }
 }
