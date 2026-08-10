@@ -151,45 +151,14 @@ final class PrescriptionDisplayTests: XCTestCase {
         XCTAssertEqual(preview.duration, 0)
     }
 
-    // MARK: - Display collapse (read-time, non-mutating)
+    // MARK: - AMA-2395 section restyle (1 block = 1 section, no reshape)
 
-    func testCollapseLegacySingletonBlocksIntoOneSection() {
-        let blocks = [
-            Block(label: nil, structure: .straight, rounds: 1, exercises: [makeExercise(name: "A", reps: "8")]),
-            Block(label: "Block 2", structure: .straight, rounds: 1, exercises: [makeExercise(name: "B", reps: "8")]),
-            Block(label: "Block 3", structure: .straight, rounds: 1, exercises: [makeExercise(name: "C", reps: "8")])
-        ]
-        let collapsed = DDWorkoutDisplayGrouping.collapseStraightSetSingletons(blocks)
-        XCTAssertEqual(collapsed.count, 1)
-        XCTAssertEqual(collapsed[0].label, "Main")
-        XCTAssertEqual(collapsed[0].exercises.map(\.name), ["A", "B", "C"])
-    }
-
-    func testCollapsePreservesNamedSoftSection() {
-        let finisher = Block(
-            label: "Finisher",
-            structure: .circuit,
-            rounds: 5,
-            exercises: [makeExercise(name: "Ski", reps: nil, distance: 500)]
-        )
-        let blocks = [
-            Block(label: nil, structure: .straight, rounds: 1, exercises: [makeExercise(name: "A", reps: "8")]),
-            finisher,
-            Block(label: "Cool-down", structure: .straight, rounds: 1, exercises: [makeExercise(name: "B", reps: "8")])
-        ]
-        let collapsed = DDWorkoutDisplayGrouping.collapseStraightSetSingletons(blocks)
-        XCTAssertEqual(collapsed.count, 3)
-        XCTAssertEqual(collapsed[0].exercises.map(\.name), ["A"])
-        XCTAssertEqual(collapsed[1].label, "Finisher")
-        XCTAssertEqual(collapsed[2].label, "Cool-down")
-    }
-
-    func testSectionsSuppressMainTitleWhenSoleStraightSetContainer() {
+    func testSectionsKeepOneBlockPerSectionInSourceOrder() {
         let workout = Workout(
             id: "w1",
             name: "Import",
             sport: .strength,
-            duration: 0,
+            duration: 60,
             blocks: [
                 Block(label: "Warm-up", structure: .straight, rounds: 1, exercises: [makeExercise(name: "Band", reps: "10")]),
                 Block(label: nil, structure: .straight, rounds: 1, exercises: [makeExercise(name: "A", reps: "8")]),
@@ -198,11 +167,14 @@ final class PrescriptionDisplayTests: XCTestCase {
             source: .instagram
         )
         let sections = DDWorkoutDisplayGrouping.sections(for: workout)
-        XCTAssertEqual(sections.count, 2)
-        XCTAssertEqual(sections[0].title.lowercased(), "warm-up")
+        XCTAssertEqual(sections.count, 3)
+        XCTAssertEqual(sections[0].title, "WARM-UP")
         XCTAssertTrue(sections[1].title.isEmpty, "Got title: \(sections[1].title)")
-        XCTAssertTrue(sections[1].note.isEmpty)
-        XCTAssertEqual(sections[1].exercises.count, 2)
+        XCTAssertTrue(sections[2].title.isEmpty, "Placeholder Block N must not render — got \(sections[2].title)")
+        XCTAssertEqual(sections.map { $0.exercises.map(\.name) }, [["Band"], ["A"], ["B"]])
+        for section in sections {
+            XCTAssertFalse(section.note.contains("~"), "Got note: \(section.note)")
+        }
     }
 
     func testSectionsDoNotMutateStoredWorkoutBlocks() {
@@ -224,21 +196,29 @@ final class PrescriptionDisplayTests: XCTestCase {
         XCTAssertEqual(workout.blocks[1].label, "Block 2")
     }
 
-    func testSectionNoteOmitsFakeMinutesForStraightMain() {
+    func testCircuitTitleUsesStoredStructureNotInventedRotateCopy() {
         let workout = Workout(
             id: "w3",
-            name: "Legacy",
-            sport: .strength,
-            duration: 1800,
+            name: "Bike ski row",
+            sport: .cardio,
+            duration: 60,
             blocks: [
-                Block(label: nil, structure: .straight, rounds: 1, exercises: [makeExercise(name: "A", reps: "8")]),
-                Block(label: "Block 2", structure: .straight, rounds: 1, exercises: [makeExercise(name: "B", reps: "8")])
+                Block(
+                    label: nil,
+                    structure: .circuit,
+                    rounds: 8,
+                    exercises: [
+                        makeExercise(name: "Assault Bike", reps: nil),
+                        makeExercise(name: "Ski Erg", reps: nil),
+                    ]
+                )
             ],
-            source: .instagram
+            source: .manual
         )
         let sections = DDWorkoutDisplayGrouping.sections(for: workout)
         XCTAssertEqual(sections.count, 1)
-        XCTAssertFalse(sections[0].note.contains("MIN"))
-        XCTAssertFalse(sections[0].note.contains("min"))
+        XCTAssertEqual(sections[0].title, "CIRCUIT · 8 ROUNDS")
+        XCTAssertFalse(sections[0].title.contains("ROTATE"))
+        XCTAssertFalse(sections[0].note.contains("~"))
     }
 }

@@ -1,0 +1,149 @@
+# AMA-2395 — canonical workout detail validation
+#
+# Proves on fixture workouts:
+#   1) Jeff sets-only import → ≈ 46 MIN, creator note card, no ~1 MIN, no ＋ Add
+#   2) Bike ski row circuit → 96 MIN exact (no ≈)
+#   3) HIIT import → TIME card + pills present
+#
+# Auth: UITEST_CLERK_TEST_SESSION + fixtures (no live network).
+appId: com.myamaka.AmakaFlowCompanion
+---
+- launchApp:
+    appId: com.myamaka.AmakaFlowCompanion
+    clearState: true
+    permissions:
+      notifications: deny
+    arguments:
+      UITEST_CLERK_TEST_SESSION: "user_id=user_ama2395_validation,email=claude+clerk_test@amakaflow.dev,name=AMA2395 Validation"
+      UITEST_SKIP_ONBOARDING: "true"
+      UITEST_SKIP_APPLE_WATCH: "true"
+      UITEST_USE_FIXTURES: "true"
+      UITEST_FIXTURES: "jeff_nippard_upper_body,bike_ski_row_circuit,hiit_follow_along"
+- waitForAnimationToEnd:
+    timeout: 5000
+- extendedWaitUntil:
+    visible:
+      id: "af_tabbar"
+    timeout: 60000
+- tapOn:
+    text: "Library"
+    index: 0
+- waitForAnimationToEnd:
+    timeout: 3000
+- extendedWaitUntil:
+    visible:
+      id: "library_screen"
+    timeout: 15000
+- tapOn:
+    text: "Uncategorized"
+- waitForAnimationToEnd:
+    timeout: 3000
+- extendedWaitUntil:
+    visible:
+      id: "af_collection_detail"
+    timeout: 15000
+
+# --- 1 · Jeff Nippard sets-only (1 min work + 1 min rest / set) ---
+- scrollUntilVisible:
+    element:
+      text: "High Intensity Upper Body"
+    direction: DOWN
+    timeout: 20000
+- tapOn:
+    text: "High Intensity Upper Body"
+- waitForAnimationToEnd:
+    timeout: 3000
+- extendedWaitUntil:
+    visible:
+      id: "af_detail_time_card"
+    timeout: 15000
+- assertVisible:
+    id: "af_detail_pills"
+- assertVisible:
+    id: "af_detail_actions"
+- assertVisible:
+    text: "Collect"
+- assertVisible:
+    id: "af_detail_creator_note"
+- assertVisible:
+    text: "≈ 46 MIN"
+- assertVisible:
+    text: "jeffnippard"
+- assertVisible:
+    text: "FROM THE CREATOR"
+- assertVisible:
+    text: "Incline Smith Machine Press"
+- assertVisible:
+    text: "5 SETS"
+- assertNotVisible: "~1 MIN"
+- assertNotVisible: "~1 min"
+- assertNotVisible: "＋ Add"
+- assertNotVisible: "+ Add"
+- assertNotVisible: "Block 7"
+- takeScreenshot: docs/ama-2395-visual-evidence/01-jeff-sets-only
+- tapOn:
+    id: "af_workout_detail_back"
+- waitForAnimationToEnd:
+    timeout: 2000
+- extendedWaitUntil:
+    visible:
+      id: "af_collection_detail"
+    timeout: 10000
+
+# --- 2 · Exact timed circuit (E2 anchor) ---
+# Scoped fixtures keep the Uncategorized list short (3 rows).
+- scrollUntilVisible:
+    element:
+      text: "Bike ski row repeats"
+    direction: DOWN
+    timeout: 15000
+- tapOn:
+    text: "Bike ski row repeats"
+- waitForAnimationToEnd:
+    timeout: 3000
+- extendedWaitUntil:
+    visible:
+      id: "af_detail_time_card"
+    timeout: 15000
+- assertVisible:
+    text: "96 MIN"
+- assertVisible:
+    text: "CIRCUIT · 8 ROUNDS"
+- assertVisible:
+    text: "ALL TIMED · EXACT"
+- assertNotVisible: "≈ 96"
+- assertNotVisible: "~1 MIN"
+- assertVisible:
+    text: "Ski Erg"
+- takeScreenshot: docs/ama-2395-visual-evidence/02-circuit-exact-96
+- tapOn:
+    id: "af_workout_detail_back"
+- waitForAnimationToEnd:
+    timeout: 2000
+- extendedWaitUntil:
+    visible:
+      id: "af_collection_detail"
+    timeout: 10000
+
+# --- 3 · HIIT import anatomy ---
+- scrollUntilVisible:
+    element:
+      text: "HIIT Follow-Along"
+    direction: DOWN
+    timeout: 15000
+- tapOn:
+    text: "HIIT Follow-Along"
+- waitForAnimationToEnd:
+    timeout: 3000
+- extendedWaitUntil:
+    visible:
+      id: "af_detail_time_card"
+    timeout: 15000
+- assertVisible:
+    id: "af_detail_pills"
+- assertVisible:
+    id: "af_detail_time_card"
+- assertVisible:
+    text: "FROM THE CREATOR"
+- assertNotVisible: "~1 MIN"
+- takeScreenshot: docs/ama-2395-visual-evidence/03-hiit-import

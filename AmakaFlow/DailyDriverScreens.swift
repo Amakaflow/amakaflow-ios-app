@@ -551,15 +551,28 @@ enum DDLibraryPresentation {
     }
 
     private static func metaLine(for workout: Workout) -> String {
-        let minutes = max(1, workout.duration / 60)
+        let estimate = WorkoutDurationEstimator.estimate(for: workout)
+        let minutes = WorkoutDurationEstimate.libraryMinutes(
+            seconds: estimate.totalSec,
+            isEstimate: estimate.isEstimate
+        )
         let creator = creatorLabel(for: workout)
         if workout.blockCount > 0 {
-            return "\(workout.blockCount) blocks · \(minutes) min · by \(creator)"
+            if let minutes {
+                return "\(workout.blockCount) blocks · \(minutes) · by \(creator)"
+            }
+            return "\(workout.blockCount) blocks · by \(creator)"
         }
         if workout.exerciseCount > 0 {
-            return "\(workout.exerciseCount) exercises · \(minutes) min · by \(creator)"
+            if let minutes {
+                return "\(workout.exerciseCount) exercises · \(minutes) · by \(creator)"
+            }
+            return "\(workout.exerciseCount) exercises · by \(creator)"
         }
-        return "\(minutes) min · by \(creator)"
+        if let minutes {
+            return "\(minutes) · by \(creator)"
+        }
+        return "by \(creator)"
     }
 
     static func creatorLabel(for workout: Workout) -> String {
@@ -697,71 +710,58 @@ struct DDWorkoutDisplaySection: Identifiable {
     let title: String
     let note: String
     let exercises: [Exercise]
+    /// AMA-2395 — left band accent; restyles only, does not reshape members.
+    let accent: Color
+    /// Block rounds for prescription fidelity when `exercise.sets` is nil.
+    let blockRounds: Int
+    let blockStructure: BlockStructure
+
+    init(
+        id: String,
+        title: String,
+        note: String,
+        exercises: [Exercise],
+        accent: Color = DailyDriver.lime,
+        blockRounds: Int = 1,
+        blockStructure: BlockStructure = .straight
+    ) {
+        self.id = id
+        self.title = title
+        self.note = note
+        self.exercises = exercises
+        self.accent = accent
+        self.blockRounds = blockRounds
+        self.blockStructure = blockStructure
+    }
 }
 
 enum DDWorkoutDisplayGrouping {
-    /// One handoff section per block (`DDDetailScreen` — jsx L1697).
-    /// Applies read-time collapse for legacy singleton blocks — does not mutate `workout`.
+    /// AMA-2395: one stored block → one section, same order and members.
+    /// Restyles titles/times only — never merges, folds, or invents structure.
     static func sections(for workout: Workout) -> [DDWorkoutDisplaySection] {
         let sourceBlocks = workout.blocks.filter { !$0.exercises.isEmpty }
         guard !sourceBlocks.isEmpty else { return [] }
 
-        let displayBlocks = collapseStraightSetSingletons(sourceBlocks)
-        let totalExercises = max(1, displayBlocks.reduce(0) { $0 + $1.exercises.count })
-
-        return displayBlocks.enumerated().map { index, block in
-            let suppressTitle = shouldSuppressTitle(for: block, allBlocks: displayBlocks)
-            let title = suppressTitle
-                ? ""
-                : sectionTitle(for: block, index: index)
-            let seconds = durationShare(
-                for: block,
-                totalExercises: totalExercises,
-                workoutDuration: workout.duration
+        let estimate = WorkoutDurationEstimator.estimate(for: workout)
+        // Pair by order — not Block.id — so duplicate ids keep distinct section times.
+        return sourceBlocks.enumerated().map { index, block in
+            let sectionEstimate = estimate.perSection.indices.contains(index)
+                ? estimate.perSection[index]
+                : nil
+            let timeLabel = WorkoutDurationEstimate.sectionMinuteLabel(
+                seconds: sectionEstimate?.seconds ?? 0,
+                isEstimate: sectionEstimate?.isEstimate ?? false
             )
             return DDWorkoutDisplaySection(
-                id: block.id,
-                title: title,
-                note: sectionNote(for: block, durationSeconds: seconds),
-                exercises: block.exercises
+                id: "\(block.id)#\(index)",
+                title: sectionTitle(for: block),
+                note: timeLabel,
+                exercises: block.exercises,
+                accent: accent(for: block),
+                blockRounds: max(1, block.rounds),
+                blockStructure: block.structure
             )
         }
-    }
-
-    /// Display-only: merge consecutive unlabeled straight-set singletons into one virtual Main.
-    static func collapseStraightSetSingletons(_ blocks: [Block]) -> [Block] {
-        var result: [Block] = []
-        var pendingExercises: [Exercise] = []
-
-        func flushPending() {
-            guard !pendingExercises.isEmpty else { return }
-            result.append(
-                Block(
-                    label: "Main",
-                    structure: .straight,
-                    rounds: 1,
-                    exercises: pendingExercises
-                )
-            )
-            pendingExercises = []
-        }
-
-        for block in blocks {
-            if isCollapsibleSingleton(block) {
-                pendingExercises.append(contentsOf: block.exercises)
-            } else {
-                flushPending()
-                result.append(block)
-            }
-        }
-        flushPending()
-        return result
-    }
-
-    static func isCollapsibleSingleton(_ block: Block) -> Bool {
-        block.structure == .straight
-            && block.exercises.count == 1
-            && isUnlabeledStraightSetContainer(block)
     }
 
     static func isUnlabeledStraightSetContainer(_ block: Block) -> Bool {
@@ -776,95 +776,80 @@ enum DDWorkoutDisplayGrouping {
         block.structure == .straight
     }
 
-    static func shouldSuppressTitle(for block: Block, allBlocks: [Block]) -> Bool {
-        guard isStraightSetContainer(block), isUnlabeledStraightSetContainer(block) else { return false }
-        let unlabeledContainers = allBlocks.filter {
-            isStraightSetContainer($0) && isUnlabeledStraightSetContainer($0)
-        }
-        return unlabeledContainers.count == 1 && unlabeledContainers[0].id == block.id
-    }
-
     static func isGenericBlockLabel(_ label: String) -> Bool {
         label.range(
-            of: #"^(Main block|Block \d+|AMRAP)$"#,
+            of: #"^(Main block|Main|Block \d+)$"#,
             options: [.regularExpression, .caseInsensitive]
         ) != nil
     }
 
     static func isWarmupOrCooldown(_ block: Block) -> Bool {
         let label = block.label?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() ?? ""
-        return label == "warm-up" || label == "warmup" || label == "cool-down" || label == "cooldown"
+        return ["warm-up", "warmup", "warm up", "cool-down", "cooldown", "cool down"]
+            .contains(label)
     }
 
-    private static func sectionTitle(for block: Block, index: Int) -> String {
-        if isWarmupOrCooldown(block) {
-            let label = block.label?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-            if !label.isEmpty { return label.capitalized }
-            return index == 0 ? "Warm-up" : "Cool-down"
-        }
-        if let label = block.label?.trimmingCharacters(in: .whitespacesAndNewlines), !label.isEmpty {
-            if !isGenericLabel(label) {
-                return label
+    /// Title from the block's own label + structure fields only.
+    /// Placeholder labels (`Block 7`, `Main`) produce no heading — never invent one.
+    static func sectionTitle(for block: Block) -> String {
+        let format = formatDescriptor(for: block)
+        if let label = block.label?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !label.isEmpty,
+           !isGenericBlockLabel(label) {
+            let upper = label.uppercased()
+            if isWarmupOrCooldown(block) { return upper }
+            if let format, !upper.contains(format) {
+                return "\(upper) · \(format)"
             }
-            if label.caseInsensitiveCompare("AMRAP") == .orderedSame, block.rounds > 1 {
-                return "Round 1–\(block.rounds)"
-            }
+            return upper
         }
-
-        switch block.structure {
-        case .amrap, .circuit, .timedCircuit, .emom, .tabata:
-            if block.rounds > 1 {
-                return "Round 1–\(block.rounds)"
-            }
-        default:
-            break
-        }
-
-        if let label = block.label?.trimmingCharacters(in: .whitespacesAndNewlines), !label.isEmpty {
-            return label
-        }
-        return index == 0 ? "Main block" : "Block \(index + 1)"
+        return format ?? ""
     }
 
-    private static func isGenericLabel(_ label: String) -> Bool {
-        isGenericBlockLabel(label)
-    }
-
-    private static func durationShare(for block: Block, totalExercises: Int, workoutDuration: Int) -> Int {
-        guard workoutDuration > 0 else { return 0 }
-        if isStraightSetContainer(block), isUnlabeledStraightSetContainer(block) { return 0 }
-        let ratio = Double(block.exercises.count) / Double(totalExercises)
-        return max(60, Int(Double(workoutDuration) * ratio))
-    }
-
-    private static func sectionNote(for block: Block, durationSeconds: Int) -> String {
-        if isStraightSetContainer(block), isUnlabeledStraightSetContainer(block) {
-            if block.rounds > 1 {
-                return "\(block.rounds) rounds"
-            }
-            return ""
-        }
-
-        let minutes = max(1, durationSeconds / 60)
+    private static func formatDescriptor(for block: Block) -> String? {
         let rounds = max(1, block.rounds)
-        let label = block.label?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() ?? ""
+        switch block.structure {
+        case .circuit, .timedCircuit:
+            guard block.exercises.count > 1 else { return rounds > 1 ? "\(rounds) ROUNDS" : nil }
+            return rounds > 1 ? "CIRCUIT · \(rounds) ROUNDS" : "CIRCUIT"
+        case .superset:
+            return rounds > 1 ? "SUPERSET × \(rounds)" : "SUPERSET"
+        case .emom:
+            return "EMOM \(rounds)"
+        case .amrap:
+            return "AMRAP \(rounds)"
+        case .tabata:
+            return "TABATA \(rounds)"
+        case .straight:
+            if block.exercises.count == 1, rounds > 1 {
+                return "\(rounds) ROUNDS"
+            }
+            return nil
+        }
+    }
 
-        if label == "finisher" {
-            return "\(rounds) round · ~\(minutes) min"
+    private static func accent(for block: Block) -> Color {
+        if isWarmupOrCooldown(block) {
+            let label = block.label?.lowercased() ?? ""
+            if label.contains("cool") { return DailyDriver.foregroundDim }
+            return DailyDriver.amber
         }
-        if rounds > 1 {
-            return "\(rounds) rounds · ~\(minutes) min"
+        switch block.structure {
+        case .circuit, .timedCircuit, .amrap, .emom, .tabata:
+            return DailyDriver.blue
+        case .superset, .straight:
+            let allCardio = block.exercises.allSatisfy {
+                WorkoutSportHonesty.machineKindKey(forExerciseName: $0.name) != nil
+                    || WorkoutSportHonesty.looksLikeRun($0.name)
+            }
+            return allCardio ? DailyDriver.blue : DailyDriver.lime
         }
-        let exerciseCount = block.exercises.count
-        if exerciseCount > 1 {
-            return "\(exerciseCount) exercises · ~\(minutes) min"
-        }
-        return "~\(minutes) min"
     }
 }
 
 struct DDWorkoutBlockSectionView: View {
     let section: DDWorkoutDisplaySection
+    var sectionIndex: Int = 0
     @State private var infoExercise: Exercise?
 
     var body: some View {
@@ -873,16 +858,36 @@ struct DDWorkoutBlockSectionView: View {
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
                     if !section.title.isEmpty {
                         Text(section.title)
-                            .ddDisplayText(14.5, weight: .bold)
-                            .foregroundColor(DailyDriver.foreground)
+                            .font(.system(size: 9, weight: .bold, design: .monospaced))
+                            .foregroundColor(section.accent)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    } else {
+                        Spacer(minLength: 0)
                     }
-                    Spacer(minLength: 0)
                     if !section.note.isEmpty {
                         Text(section.note.uppercased())
-                            .font(.system(size: 9.5, weight: .medium, design: .monospaced))
-                            .foregroundColor(DailyDriver.foregroundMuted)
+                            .font(.system(size: 8, weight: .medium, design: .monospaced))
+                            .foregroundColor(DailyDriver.foregroundDim)
                     }
                 }
+                .padding(.leading, 10)
+                .padding(.trailing, 10)
+                .padding(.vertical, 5)
+                .background(DailyDriver.card)
+                .overlay(alignment: .leading) {
+                    Rectangle()
+                        .fill(section.accent)
+                        .frame(width: 3)
+                }
+                .clipShape(
+                    UnevenRoundedRectangle(
+                        topLeadingRadius: 0,
+                        bottomLeadingRadius: 0,
+                        bottomTrailingRadius: 10,
+                        topTrailingRadius: 10,
+                        style: .continuous
+                    )
+                )
             }
 
             VStack(spacing: 0) {
@@ -893,7 +898,7 @@ struct DDWorkoutBlockSectionView: View {
                         HStack(spacing: 11) {
                             DDIconChip(
                                 systemName: WorkoutSportHonesty.systemImage(forExerciseName: exercise.name),
-                                background: DailyDriver.card2,
+                                background: modalityChipBackground(for: exercise.name),
                                 size: 30
                             )
                             VStack(alignment: .leading, spacing: 2) {
@@ -901,18 +906,12 @@ struct DDWorkoutBlockSectionView: View {
                                     .ddDisplayText(13.5, weight: .semibold)
                                     .foregroundColor(DailyDriver.foreground)
                                     .frame(maxWidth: .infinity, alignment: .leading)
-                                Text(exercise.ddDetailLine)
+                                Text(detailLine(for: exercise))
                                     .font(.system(size: 10, weight: .medium, design: .monospaced))
                                     .foregroundColor(DailyDriver.foregroundMuted)
                                     .frame(maxWidth: .infinity, alignment: .leading)
                             }
                             Spacer(minLength: 0)
-                            if let hint = exercise.ddMuscleHint {
-                                Text(hint)
-                                    .font(.system(size: 9.5))
-                                    .foregroundColor(DailyDriver.foregroundDim)
-                                    .multilineTextAlignment(.trailing)
-                            }
                             Image(systemName: "chevron.right")
                                 .font(.system(size: 11, weight: .semibold))
                                 .foregroundColor(DailyDriver.foregroundDim)
@@ -921,7 +920,7 @@ struct DDWorkoutBlockSectionView: View {
                         .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
-                    .accessibilityIdentifier("dd_exercise_row_\(index)")
+                    .accessibilityIdentifier("af_detail_row_\(index)")
 
                     if index < section.exercises.count - 1 {
                         Divider()
@@ -938,12 +937,49 @@ struct DDWorkoutBlockSectionView: View {
             )
             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         }
+        .accessibilityIdentifier("af_detail_section_\(sectionIndex)")
         .fullScreenCover(item: $infoExercise) { exercise in
             NavigationStack {
                 DDExerciseInfoView(exercise: exercise)
             }
             .preferredColorScheme(.dark)
         }
+    }
+
+    private func modalityChipBackground(for name: String) -> Color {
+        switch WorkoutSportHonesty.modalityChipKind(forExerciseName: name) {
+        case .cardio: return DailyDriver.blue.opacity(0.22)
+        case .bodyweight: return DailyDriver.amber.opacity(0.22)
+        case .lift: return DailyDriver.purple.opacity(0.22)
+        }
+    }
+
+    /// When `sets` is nil on a straight/single-station block, `block.rounds` is the set count.
+    private func detailLine(for exercise: Exercise) -> String {
+        let proxyBlock = Block(
+            label: nil,
+            structure: section.blockStructure,
+            rounds: section.blockRounds,
+            exercises: section.exercises
+        )
+        let multiStation = WorkoutDurationEstimator.isMultiStation(proxyBlock)
+        if exercise.sets == nil, !multiStation, section.blockRounds > 1 {
+            let withSets = Exercise(
+                name: exercise.name,
+                canonicalName: exercise.canonicalName,
+                sets: section.blockRounds,
+                reps: exercise.reps,
+                durationSeconds: exercise.durationSeconds,
+                load: exercise.load,
+                restSeconds: exercise.restSeconds,
+                distance: exercise.distance,
+                notes: exercise.notes,
+                focus: exercise.focus,
+                supersetGroup: exercise.supersetGroup
+            )
+            return withSets.ddDetailLine
+        }
+        return exercise.ddDetailLine
     }
 }
 

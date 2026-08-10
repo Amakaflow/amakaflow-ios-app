@@ -173,6 +173,9 @@ final class LibraryCollectionsStore: ObservableObject {
     }
 
     private static func totalSeconds(for workoutIDs: [String], workoutsByID: [String: Workout]) -> Int {
-        workoutIDs.compactMap { workoutsByID[$0]?.duration }.reduce(0, +)
+        workoutIDs.compactMap { id -> Int? in
+            guard let workout = workoutsByID[id] else { return nil }
+            return WorkoutDurationEstimator.estimate(for: workout).totalSec
+        }.reduce(0, +)
     }
 }

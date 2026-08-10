@@ -1,0 +1,26 @@
+{
+  "id": "fixture-jeff-upper-001",
+  "name": "High Intensity Upper Body",
+  "sport": "strength",
+  "duration": 60,
+  "description": "Here's the 45-minute high intensity upper body workout I do every week. It's from my new Min-Max Program, which is 30% off right now for Black Friday! If you're looking for a new program that gets results without living in the gym, this is it.\n\n#upperbody #jeffnippard #minmax #hypertrophy",
+  "source": "instagram",
+  "source_url": "https://www.instagram.com/jeffnippard",
+  "creator_name": "jeffnippard",
+  "blocks": [
+    {
+      "label": null,
+      "structure": "straight",
+      "rounds": 1,
+      "exercises": [
+        { "name": "Incline Smith Machine Press", "sets": 5, "reps": null },
+        { "name": "Machine Pec Deck", "sets": 3, "reps": null },
+        { "name": "Machine Lateral Raises", "sets": 3, "reps": null },
+        { "name": "Weighted Pull-Ups", "sets": 3, "reps": "6" },
+        { "name": "Machine Rows", "sets": 3, "reps": null },
+        { "name": "Easy Bar Preacher Curls", "sets": 3, "reps": null },
+        { "name": "Triceps Press Downs", "sets": 3, "reps": null }
+      ]
+    }
+  ]
+}

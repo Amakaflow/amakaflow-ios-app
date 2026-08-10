@@ -1,0 +1,20 @@
+{
+  "id": "fixture-bikeskirow-001",
+  "name": "Bike ski row repeats",
+  "sport": "cardio",
+  "duration": 60,
+  "description": "8 rounds · 4 stations · 3:00 each · no rest",
+  "source": "manual",
+  "intervals": [
+    {
+      "kind": "repeat",
+      "reps": 8,
+      "intervals": [
+        { "kind": "time", "seconds": 180, "target": "Assault Bike" },
+        { "kind": "time", "seconds": 180, "target": "Ski Erg" },
+        { "kind": "time", "seconds": 180, "target": "Rowing Machine" },
+        { "kind": "time", "seconds": 180, "target": "Spin / Indoor Bike" }
+      ]
+    }
+  ]
+}
