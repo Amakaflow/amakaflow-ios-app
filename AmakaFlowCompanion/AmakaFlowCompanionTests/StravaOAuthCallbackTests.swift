@@ -28,6 +28,12 @@ final class StravaOAuthCallbackTests: XCTestCase {
         XCTAssertEqual(StravaOAuthCallback.outcome(from: url), .success(grantedWrite: true))
     }
 
+    func testSuccessCallbackWithSpaceDelimitedWriteScope() {
+        let encoded = "activity:read_all%20activity:write"
+        let url = URL(string: "amakaflow://strava/connected?status=success&scope=\(encoded)")!
+        XCTAssertEqual(StravaOAuthCallback.outcome(from: url), .success(grantedWrite: true))
+    }
+
     func testErrorCallbackMapsToFailed() {
         let url = URL(string: "amakaflow://strava/connected?status=error&error=access_denied")!
         XCTAssertEqual(StravaOAuthCallback.outcome(from: url), .failed)

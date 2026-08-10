@@ -46,11 +46,15 @@ enum StravaOAuthCallback {
         }
     }
 
-    /// Strava returns comma-separated scopes (`activity:read_all,activity:write`).
+    /// Strava may return comma- or space-separated scopes
+    /// (`activity:read_all,activity:write` or `activity:read_all activity:write`).
     static func scopeContainsWrite(_ scope: String) -> Bool {
-        scope
-            .split(separator: ",")
-            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() }
+        let normalized = scope
+            .replacingOccurrences(of: ",", with: " ")
+            .lowercased()
+        return normalized
+            .split(whereSeparator: { $0.isWhitespace })
+            .map(String.init)
             .contains("activity:write")
     }
 }
