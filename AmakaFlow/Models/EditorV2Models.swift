@@ -5,7 +5,7 @@
 //  AMA-2307 / ADR-017 — Editor v2 type registry (screens-editor2.jsx E2_TYPES).
 //
 
-// swiftlint:disable file_length cyclomatic_complexity
+// swiftlint:disable file_length
 
 import SwiftUI
 

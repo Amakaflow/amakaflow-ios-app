@@ -44,7 +44,7 @@ extension IncompleteScheduleReplacing {
 
     /// Prefer the confirm's saved plan ID. Fall back to newest schedule time, then
     /// lexicographic `planID` so equal dates are deterministic.
-    static func selectKeeper(
+    static func selectKeeper( // swiftlint:disable:this trailing_closure
         from rows: [WorkoutScheduleRow],
         keepingPlanID: String?,
         excluding excludedPlanIDs: Set<String>
