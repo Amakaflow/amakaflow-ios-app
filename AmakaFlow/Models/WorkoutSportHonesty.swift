@@ -72,6 +72,38 @@ enum WorkoutSportHonesty {
         return "dumbbell.fill"
     }
 
+    /// AMA-2395 — shared machine-kind key for pace tables / modality chips.
+    /// Returns `"ski" | "row" | "bike" | "treadmill" | "elliptical" | "stair" | "jump"` or nil.
+    static func machineKindKey(forExerciseName name: String) -> String? {
+        machineKind(name.lowercased())
+    }
+
+    /// AMA-2395 — run/jog detection shared with the pace table (not treadmill).
+    static func looksLikeRun(_ name: String) -> Bool {
+        matchesRun(name.lowercased())
+    }
+
+    /// AMA-2395 — coarse modality bucket for chip tinting (cardio / bodyweight / lift).
+    enum ModalityChipKind {
+        case cardio
+        case bodyweight
+        case lift
+    }
+
+    static func modalityChipKind(forExerciseName name: String) -> ModalityChipKind {
+        let lowered = name.lowercased()
+        if machineKind(lowered) != nil || matchesRun(lowered) {
+            return .cardio
+        }
+        if matches(
+            lowered,
+            ["jump rope", "burpee", "bodyweight", "air squat", "push-up", "push up", "pull-up", "pull up"]
+        ) {
+            return .bodyweight
+        }
+        return .lift
+    }
+
     // MARK: - Helpers
 
     private struct ContentFlags {

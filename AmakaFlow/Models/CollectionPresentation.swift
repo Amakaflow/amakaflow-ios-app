@@ -11,17 +11,18 @@ enum CollectionPresentation {
     /// Sentinel id for derived Uncategorized folder (not a DB row).
     static let uncategorizedID = "uncategorized"
 
-    /// Approximate total duration for collection cards, e.g. `~4H 10M`, `~40M`, `~0H`.
+    /// Total duration for collection cards, e.g. `≈ 4H 10M`, `40M`, `TIME NOT SET`.
+    /// AMA-2395: never emits the old `~1 MIN` / `~0H` hedge from bogus stored seconds.
     static func formattedTotalDuration(seconds: Int) -> String {
-        guard seconds > 0 else { return "~0H" }
+        guard seconds > 0 else { return "TIME NOT SET" }
 
         let hours = seconds / 3600
         let minutes = (seconds % 3600) / 60
 
         if hours > 0 {
-            return "~\(hours)H \(minutes)M"
+            return "≈ \(hours)H \(minutes)M"
         }
-        return "~\(minutes)M"
+        return "≈ \(minutes)M"
     }
 
     /// Collection/Uncategorized detail meta line, e.g.

@@ -60,6 +60,8 @@ struct UnifiedWorkoutDetailView: View {
     @State private var showingSportPicker = false
     @State private var sportDisagreementDismissed = false
     @State private var isSavingSport = false
+    /// AMA-2395 — FROM THE CREATOR / NOTES expand toggle.
+    @State private var creatorNoteExpanded = false
 
     @Environment(\.scenePhase) private var scenePhase
     private let handoffStore = GarminHandoffStateStore()
@@ -411,21 +413,36 @@ struct UnifiedWorkoutDetailView: View {
                         .accessibilityHint("Changes how watches record it")
                         .accessibilityIdentifier("af_workout_detail_sport_chip")
                     }
+                    .accessibilityIdentifier("af_detail_pills")
 
                     if showSportDisagreementChip {
                         Button {
                             showingSportPicker = true
                         } label: {
-                            Text(WorkoutSportHonesty.disagreementPrompt(stored: displayedWorkout.sport))
-                                .font(.system(size: 10, weight: .medium))
-                                .foregroundColor(.white.opacity(0.9))
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 5)
-                                .background(Color.white.opacity(0.12))
-                                .clipShape(Capsule())
+                            HStack(spacing: 8) {
+                                Text(WorkoutSportHonesty.disagreementPrompt(stored: displayedWorkout.sport))
+                                    .font(.system(size: 10, weight: .medium))
+                                    .foregroundColor(.white.opacity(0.95))
+                                if let inferred = WorkoutSportHonesty.inferSport(from: displayedWorkout.blocks) {
+                                    Text("LOOKS LIKE \(inferred.heroPill)")
+                                        .font(.system(size: 8.5, weight: .bold, design: .monospaced))
+                                        .foregroundColor(DailyDriver.ink)
+                                        .padding(.horizontal, 7)
+                                        .padding(.vertical, 3)
+                                        .background(DailyDriver.amber)
+                                        .clipShape(Capsule())
+                                }
+                            }
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .background(DailyDriver.amber.opacity(0.18))
+                            .overlay(
+                                Capsule().stroke(DailyDriver.amber.opacity(0.45), lineWidth: 1)
+                            )
+                            .clipShape(Capsule())
                         }
                         .buttonStyle(.plain)
-                        .accessibilityIdentifier("af_workout_detail_sport_disagreement")
+                        .accessibilityIdentifier("af_detail_type_flag")
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -453,14 +470,6 @@ struct UnifiedWorkoutDetailView: View {
                 .lineSpacing(2)
                 .accessibilityIdentifier("af_workout_detail_title")
 
-            if let description = displayDescription, !description.isEmpty {
-                Text(description)
-                    .font(.system(size: 12.5))
-                    .foregroundColor(DailyDriver.foregroundMuted)
-                    .lineSpacing(4)
-                    .padding(.top, 8)
-            }
-
             // AMA-2376 Task 7: Pin/Collect/To watch/Share + collection chips + LAST DONE.
             WorkoutDetailOrganizeChrome(
                 workout: workout,
@@ -473,6 +482,14 @@ struct UnifiedWorkoutDetailView: View {
             creditRow
                 .padding(.top, 12)
 
+            if let caption = captionPresentation {
+                creatorNoteCard(caption)
+                    .padding(.top, 8)
+            }
+
+            timeCard
+                .padding(.top, 12)
+
             blockList
                 .padding(.top, 4)
 
@@ -483,6 +500,119 @@ struct UnifiedWorkoutDetailView: View {
         }
         .padding(.horizontal, 18)
         .padding(.top, 16)
+    }
+
+    private var captionPresentation: WorkoutCaptionPresentation? {
+        WorkoutCaptionPresentation.present(displayDescription)
+    }
+
+    private var durationEstimate: WorkoutDurationEstimate {
+        WorkoutDurationEstimator.estimate(for: workout)
+    }
+
+    private var creatorNoteTitle: String {
+        if WorkoutSourceProvenance.isExternal(resolvedSourceKey) {
+            return "FROM THE CREATOR"
+        }
+        return "NOTES"
+    }
+
+    private func creatorNoteCard(_ caption: WorkoutCaptionPresentation) -> some View {
+        Button {
+            guard caption.hasHiddenDetail || caption.collapsed != caption.expanded else { return }
+            creatorNoteExpanded.toggle()
+        } label: {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(creatorNoteTitle)
+                    .font(.system(size: 7.5, weight: .medium, design: .monospaced))
+                    .foregroundColor(DailyDriver.foregroundDim)
+                Text(creatorNoteExpanded ? caption.expanded : caption.collapsed)
+                    .font(.system(size: 11.5))
+                    .foregroundColor(DailyDriver.foregroundMuted)
+                    .lineSpacing(3)
+                    .lineLimit(creatorNoteExpanded ? nil : 2)
+                    .multilineTextAlignment(.leading)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                if caption.hasHiddenDetail || caption.collapsed.count < caption.expanded.count {
+                    Text(creatorNoteExpanded ? "Less" : "More")
+                        .ddDisplayText(11, weight: .bold)
+                        .foregroundColor(DailyDriver.lime)
+                        .padding(.top, 1)
+                }
+            }
+            .padding(.horizontal, 13)
+            .padding(.vertical, 10)
+            .background(DailyDriver.card)
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(DailyDriver.border, lineWidth: 1)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("af_detail_creator_note")
+        .accessibilityAction(named: Text(creatorNoteExpanded ? "Less" : "More")) {
+            creatorNoteExpanded.toggle()
+        }
+    }
+
+    private var timeCard: some View {
+        let estimate = durationEstimate
+        let creatorTime = WorkoutCaptionPresentation.creatorTimeLabel(from: workout.description)
+        return VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 0) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(estimate.minuteLabel)
+                        .ddDisplayText(19, weight: .heavy)
+                        .foregroundColor(DailyDriver.lime)
+                    Text(estimate.totalSublabel)
+                        .font(.system(size: 7.5, weight: .medium, design: .monospaced))
+                        .foregroundColor(DailyDriver.foregroundDim)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.trailing, 12)
+
+                Rectangle()
+                    .fill(DailyDriver.border)
+                    .frame(width: 1, height: 36)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(estimate.activeMinuteLabel == "TIME NOT SET" ? "—" : estimate.activeMinuteLabel)
+                        .ddDisplayText(19, weight: .heavy)
+                        .foregroundColor(DailyDriver.foreground)
+                    Text(estimate.activeSublabel)
+                        .font(.system(size: 7.5, weight: .medium, design: .monospaced))
+                        .foregroundColor(DailyDriver.foregroundDim)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.8)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.leading, 12)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+            .background(DailyDriver.card)
+            .overlay(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(DailyDriver.border, lineWidth: 1)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .accessibilityIdentifier("af_detail_time_card")
+
+            if !estimate.basisNote.isEmpty || creatorTime != nil {
+                let footnote: String = {
+                    var parts = [estimate.basisNote].filter { !$0.isEmpty }
+                    if let creatorTime {
+                        parts.append("CREATOR'S TIME: \(creatorTime)")
+                    }
+                    return parts.joined(separator: " · ")
+                }()
+                Text(footnote)
+                    .font(.system(size: 7.5, weight: .medium, design: .monospaced))
+                    .foregroundColor(DailyDriver.foregroundDim)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
     }
 
     /// AMA-2317: the app-switch to Garmin Connect used to read as a crash —
@@ -766,21 +896,8 @@ extension UnifiedWorkoutDetailView {
     }
 
     fileprivate var heroPillsExceptSport: [String] {
-        var pills: [String] = [sourceHeroPill]
-
-        if workout.exerciseCount > 0 {
-            let rounds = heroRoundCount
-            if rounds > 1 {
-                pills.append("\(rounds) ROUNDS · \(ddHeroDurationLabel)")
-            } else {
-                pills.append("\(workout.exerciseCount) EXERCISES · \(ddHeroDurationLabel)")
-            }
-        } else if workout.blockCount > 0 {
-            pills.append("\(workout.blockCount) BLOCKS · \(ddHeroDurationLabel)")
-        } else {
-            pills.append(ddHeroDurationLabel)
-        }
-        return pills
+        // AMA-2395 canonical pills: SOURCE · TIME (TYPE is the editable chip beside).
+        [sourceHeroPill, ddHeroDurationLabel]
     }
 
     fileprivate var showSportDisagreementChip: Bool {
@@ -789,8 +906,7 @@ extension UnifiedWorkoutDetailView {
     }
 
     fileprivate var ddHeroDurationLabel: String {
-        let minutes = max(1, workout.duration / 60)
-        return "~\(minutes) MIN"
+        WorkoutDurationEstimator.estimate(for: workout).minuteLabel
     }
 
     /// Max rounds among work blocks for hero chips (dd-detail-dark: "5 ROUNDS · ~20 MIN").

@@ -187,13 +187,14 @@ appId: com.myamaka.AmakaFlowCompanion
 - assertVisible:
     id: "af_detail_pin"
 - assertVisible:
+    id: "af_detail_collect"
+- assertVisible:
     text: "RACE WEEK"
 - assertVisible:
-    id: "af_detail_collection_add_chip"
+    text: "IN"
 - takeScreenshot: docs/ama-2376-visual-evidence/05-detail
 - tapOn:
-    id: ".*_chip_.*"
-    index: 1
+    id: "af_detail_collection_chip_.*_remove"
 - waitForAnimationToEnd:
     timeout: 2000
 - assertNotVisible:
