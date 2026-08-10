@@ -50,7 +50,7 @@ extension IncompleteScheduleReplacing {
         excluding excludedPlanIDs: Set<String>
     ) -> WorkoutScheduleRow {
         if let keepingPlanID,
-           let match = rows.first(where: \.id.planID == keepingPlanID) {
+           let match = rows.first(where: { $0.id.planID == keepingPlanID }) {
             return match
         }
         let candidates = rows.filter { !excludedPlanIDs.contains($0.id.planID) }
