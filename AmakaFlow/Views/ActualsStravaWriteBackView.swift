@@ -2,7 +2,7 @@
 //  ActualsStravaWriteBackView.swift
 //  AmakaFlow
 //
-//  AMA-2396 A4: Strava write-back settings — master toggle, skip rules,
+//  AMA-2396 A4: Strava write-back settings — write-back toggle, skip rules,
 //  ownership explainer, and a live preview of what Strava will receive.
 //
 
@@ -10,7 +10,7 @@ import SwiftUI
 
 struct ActualsStravaWriteBackView: View {
     @ObservedObject var store: StravaWriteBackSettingsStore
-    /// Master toggle flipped ON without the write scope — caller owns the reconnect flow.
+    /// Write-back toggle flipped ON without the write scope — caller owns the reconnect flow.
     var onReconnect: (() -> Void)?
 
     init(
@@ -21,7 +21,7 @@ struct ActualsStravaWriteBackView: View {
         self.onReconnect = onReconnect
     }
 
-    private var masterToggleBinding: Binding<Bool> {
+    private var writeBackToggleBinding: Binding<Bool> {
         Binding(
             get: { store.writeBackEnabled },
             set: { newValue in
@@ -31,9 +31,8 @@ struct ActualsStravaWriteBackView: View {
                         DDToastEvent(
                             kind: .error,
                             text: ActualsCopy.writeBackReconnectToast,
-                            action: "Reconnect",
-                            onAction: { onReconnect?() }
-                        )
+                            action: "Reconnect"
+                        ) { onReconnect?() }
                     )
                 } else {
                     store.writeBackEnabled = newValue
@@ -48,7 +47,7 @@ struct ActualsStravaWriteBackView: View {
                 header
                     .padding(.top, 10)
 
-                masterToggleRow
+                writeBackToggleRow
                     .padding(.top, 16)
 
                 skipRulesSection
@@ -82,22 +81,22 @@ struct ActualsStravaWriteBackView: View {
         }
     }
 
-    // MARK: - Master toggle
+    // MARK: - Write-back toggle
 
-    private var masterToggleRow: some View {
+    private var writeBackToggleRow: some View {
         HStack(alignment: .top, spacing: 12) {
             VStack(alignment: .leading, spacing: 4) {
-                Text(ActualsCopy.writeBackMasterTitle)
+                Text(ActualsCopy.writeBackToggleTitle)
                     .ddDisplayText(14.5, weight: .bold)
                     .foregroundColor(DailyDriver.foreground)
-                Text(ActualsCopy.writeBackMasterSub)
+                Text(ActualsCopy.writeBackToggleSub)
                     .font(.system(size: 8, design: .monospaced))
                     .foregroundColor(DailyDriver.foregroundDim)
                     .lineSpacing(2)
                     .fixedSize(horizontal: false, vertical: true)
             }
             Spacer(minLength: 8)
-            Toggle("", isOn: masterToggleBinding)
+            Toggle("", isOn: writeBackToggleBinding)
                 .labelsHidden()
                 .tint(DailyDriver.stravaBrand)
         }
@@ -109,7 +108,7 @@ struct ActualsStravaWriteBackView: View {
                 .stroke(DailyDriver.border, lineWidth: 1)
         )
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .accessibilityIdentifier("af_actuals_writeback_master")
+        .accessibilityIdentifier("af_actuals_writeback_toggle")
     }
 
     // MARK: - Skip rules
@@ -221,7 +220,7 @@ struct ActualsStravaWriteBackView: View {
 
 #if DEBUG
 #Preview("Strava write-back settings") {
-    let store = StravaWriteBackSettingsStore(defaults: UserDefaults(suiteName: "preview.writeback")!)
-    return ActualsStravaWriteBackView(store: store)
+    let defaults = UserDefaults(suiteName: "preview.writeback") ?? .standard
+    ActualsStravaWriteBackView(store: StravaWriteBackSettingsStore(defaults: defaults))
 }
 #endif

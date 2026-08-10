@@ -346,147 +346,176 @@ struct TodayDiaryView: View {
     }
 
     @ViewBuilder
-    // swiftlint:disable:next cyclomatic_complexity
     private func actualsDestinationView(_ destination: ActualsTodayDestination) -> some View {
         switch destination {
         case .mergedDetail:
-            if let session = activeMergedSession {
-                ActualsMergedDetailView(
-                    session: session,
-                    onSplit: { restored in
-                        actualsDemo.applySplit(
-                            restored: restored,
-                            fromMergedSessionID: session.id
-                        )
-                        actualsDestination = nil
-                        activeMergedSession = nil
-                    },
-                    onFillIn: {
-                        if let merged = actualsDemo.cards.first(where: { $0.kind == .merged }) {
-                            actualsDemo.prepareFillIn(from: merged)
-                        } else {
-                            actualsDemo.prepareFillIn()
-                        }
-                        guard actualsDemo.fillInViewModel != nil else { return }
-                        actualsDestination = .fillIn
-                    }
-                )
-                .navigationBarBackButtonHidden(true)
-            } else {
-                missingDestinationFallback("Couldn't open that session.")
-            }
+            mergedDetailDestinationView
         case .mapToPlan(let cardID, let activity):
-            ActualsMapToPlanView(
-                activity: activity,
-                matches: ActualsPlanMatcher.rank(
-                    activity: activity,
-                    candidates: ActualsTodayDemoFeed.samplePlanCandidates
-                ),
-                onSelect: { match in
-                    // Keep the session on Today — attach the plan, then RPE.
-                    actualsDemo.applyLibraryMatch(
-                        planTitle: match.candidate.title,
-                        unmappedCardID: cardID
-                    )
-                    if let matched = actualsDemo.cards.first(where: { $0.id == cardID }) {
-                        actualsDemo.prepareFillIn(from: matched)
-                    }
-                    guard actualsDemo.fillInViewModel != nil else {
-                        actualsDestination = nil
-                        return
-                    }
-                    actualsDestination = .fillIn
-                },
-                onKeepAsIs: {
-                    actualsDemo.applyKeepAsIs(unmappedCardID: cardID)
-                    actualsDestination = nil
-                },
-                onCaptureMatched: { draft, _ in
-                    actualsDemo.applyCaptureMatched(draft: draft, unmappedCardID: cardID)
-                    actualsDestination = nil
-                    activeUnmapped = nil
-                }
-            )
-            .navigationBarBackButtonHidden(true)
+            mapToPlanDestinationView(cardID: cardID, activity: activity)
         case .matchSave:
             // Match-save is presented from Map (fullScreenCover). Pop if we land here.
             missingDestinationFallback(nil)
         case .fillIn:
-            if let viewModel = actualsDemo.fillInViewModel {
-                ActualsFillInView(
-                    viewModel: viewModel,
-                    onSaved: { session in
-                        verifiedSession = session
-                        if let card = actualsDemo.cards.first(where: {
-                            $0.id == actualsDemo.pendingFillInCardID || $0.fillInSession?.id == session.id
-                        }) {
-                            verifiedSourceName = sourceDisplayName(for: card)
-                        }
-                        actualsDemo.markVerified(saved: session)
-                        actualsDestination = .verified
-                    },
-                    presentsVerifiedOnSave: false,
-                    dismissOnSave: false,
-                    onUnverify: {
-                        actualsDemo.applyUnverify(sessionID: viewModel.session.id)
-                    }
-                )
-                .navigationBarBackButtonHidden(true)
-            } else {
-                missingDestinationFallback("Couldn't open fill-in.")
-            }
+            fillInDestinationView
         case .verified:
-            if let session = verifiedSession {
-                ActualsVerifiedView(
-                    session: session,
-                    sourceName: verifiedSourceName,
-                    decoration: actualsDemo.cards.first(where: { $0.id == verifiedCardID })?
-                        .stravaDecoration ?? .none,
-                    onEditActuals: {
-                        actualsDemo.prepareFillIn(
-                            from: actualsDemo.cards.first(where: { $0.id == verifiedCardID })
-                        )
-                        guard actualsDemo.fillInViewModel != nil else { return }
-                        actualsDestination = .fillIn
-                    },
-                    onRemoveFromStrava: {
-                        guard let cardID = verifiedCardID else { return }
-                        Task {
-                            let repository = ActualsRepository()
-                            let provider = StravaWriteBackFactory.makeDefault()
-                            if let snapshot = try? repository.fetchPreUpdateSnapshot(forSessionID: cardID) {
-                                let outcome = await provider.restore(
-                                    activityId: snapshot.activityId,
-                                    snapshot: snapshot
-                                )
-                                if case .restored = outcome {
-                                    try? repository.clearPreUpdateSnapshot(forSessionID: cardID)
-                                }
-                            }
-                            try? repository.storeDecoration(.untouched, forSessionID: cardID)
-                            await MainActor.run {
-                                actualsDemo.applyDecoration(cardID: cardID, state: .untouched)
-                            }
-                        }
-                    },
-                    onUnverify: {
-                        actualsDemo.applyUnverify(sessionID: session.id)
-                        try? ActualsRepository().unverifySession(id: session.id)
-                        actualsDestination = nil
-                    },
-                    onUnmatch: {
-                        guard let cardID = verifiedCardID else {
-                            actualsDestination = nil
-                            return
-                        }
-                        let activity = actualsDemo.cards.first(where: { $0.id == cardID })?.activity
-                            ?? ActualsTodayDemoFeed.sampleUnmappedActivity()
-                        actualsDestination = .mapToPlan(cardID: cardID, activity: activity)
+            verifiedDestinationView
+        }
+    }
+
+    @ViewBuilder
+    private var mergedDetailDestinationView: some View {
+        if let session = activeMergedSession {
+            ActualsMergedDetailView(
+                session: session,
+                onSplit: { restored in
+                    actualsDemo.applySplit(
+                        restored: restored,
+                        fromMergedSessionID: session.id
+                    )
+                    actualsDestination = nil
+                    activeMergedSession = nil
+                },
+                onFillIn: {
+                    if let merged = actualsDemo.cards.first(where: { $0.kind == .merged }) {
+                        actualsDemo.prepareFillIn(from: merged)
+                    } else {
+                        actualsDemo.prepareFillIn()
                     }
+                    guard actualsDemo.fillInViewModel != nil else { return }
+                    actualsDestination = .fillIn
+                }
+            )
+            .navigationBarBackButtonHidden(true)
+        } else {
+            missingDestinationFallback("Couldn't open that session.")
+        }
+    }
+
+    private func mapToPlanDestinationView(
+        cardID: String,
+        activity: ActualsUnmappedActivity
+    ) -> some View {
+        ActualsMapToPlanView(
+            activity: activity,
+            matches: ActualsPlanMatcher.rank(
+                activity: activity,
+                candidates: ActualsTodayDemoFeed.samplePlanCandidates
+            ),
+            onSelect: { match in
+                // Keep the session on Today — attach the plan, then RPE.
+                actualsDemo.applyLibraryMatch(
+                    planTitle: match.candidate.title,
+                    unmappedCardID: cardID
                 )
-                .navigationBarBackButtonHidden(true)
-            } else {
-                missingDestinationFallback(nil)
+                if let matched = actualsDemo.cards.first(where: { $0.id == cardID }) {
+                    actualsDemo.prepareFillIn(from: matched)
+                }
+                guard actualsDemo.fillInViewModel != nil else {
+                    actualsDestination = nil
+                    return
+                }
+                actualsDestination = .fillIn
+            },
+            onKeepAsIs: {
+                actualsDemo.applyKeepAsIs(unmappedCardID: cardID)
+                actualsDestination = nil
+            },
+            onCaptureMatched: { draft, _ in
+                actualsDemo.applyCaptureMatched(draft: draft, unmappedCardID: cardID)
+                actualsDestination = nil
+                activeUnmapped = nil
+            }
+        )
+        .navigationBarBackButtonHidden(true)
+    }
+
+    @ViewBuilder
+    private var fillInDestinationView: some View {
+        if let viewModel = actualsDemo.fillInViewModel {
+            // Named closures avoid trailing_closure vs multiple_closures_with_trailing_closure.
+            let onSaved: (ActualsFillInSession) -> Void = { session in
+                verifiedSession = session
+                if let card = actualsDemo.cards.first(where: {
+                    $0.id == actualsDemo.pendingFillInCardID || $0.fillInSession?.id == session.id
+                }) {
+                    verifiedSourceName = sourceDisplayName(for: card)
+                }
+                actualsDemo.markVerified(saved: session)
+                actualsDestination = .verified
+            }
+            let onUnverify = {
+                actualsDemo.applyUnverify(sessionID: viewModel.session.id)
+            }
+            ActualsFillInView(
+                viewModel: viewModel,
+                onSaved: onSaved,
+                presentsVerifiedOnSave: false,
+                dismissOnSave: false,
+                onUnverify: onUnverify
+            )
+            .navigationBarBackButtonHidden(true)
+        } else {
+            missingDestinationFallback("Couldn't open fill-in.")
+        }
+    }
+
+    @ViewBuilder
+    private var verifiedDestinationView: some View {
+        if let session = verifiedSession {
+            let onEditActuals = {
+                actualsDemo.prepareFillIn(
+                    from: actualsDemo.cards.first { $0.id == verifiedCardID }
+                )
+                guard actualsDemo.fillInViewModel != nil else { return }
+                actualsDestination = .fillIn
+            }
+            let onUnverify = {
+                actualsDemo.applyUnverify(sessionID: session.id)
+                try? ActualsRepository().unverifySession(id: session.id)
+                actualsDestination = nil
+            }
+            let onUnmatch = {
+                guard let cardID = verifiedCardID else {
+                    actualsDestination = nil
+                    return
+                }
+                let activity = actualsDemo.cards.first { $0.id == cardID }?.activity
+                    ?? ActualsTodayDemoFeed.sampleUnmappedActivity()
+                actualsDestination = .mapToPlan(cardID: cardID, activity: activity)
+            }
+            ActualsVerifiedView(
+                session: session,
+                sourceName: verifiedSourceName,
+                decoration: actualsDemo.cards.first { $0.id == verifiedCardID }?
+                    .stravaDecoration ?? .none,
+                onEditActuals: onEditActuals,
+                onRemoveFromStrava: removeVerifiedFromStrava,
+                onUnverify: onUnverify,
+                onUnmatch: onUnmatch
+            )
+            .navigationBarBackButtonHidden(true)
+        } else {
+            missingDestinationFallback(nil)
+        }
+    }
+
+    private func removeVerifiedFromStrava() {
+        guard let cardID = verifiedCardID else { return }
+        Task {
+            let repository = ActualsRepository()
+            let provider = StravaWriteBackFactory.makeDefault()
+            if let snapshot = try? repository.fetchPreUpdateSnapshot(forSessionID: cardID) {
+                let outcome = await provider.restore(
+                    activityId: snapshot.activityId,
+                    snapshot: snapshot
+                )
+                if case .restored = outcome {
+                    try? repository.clearPreUpdateSnapshot(forSessionID: cardID)
+                }
+            }
+            try? repository.storeDecoration(.untouched, forSessionID: cardID)
+            await MainActor.run {
+                actualsDemo.applyDecoration(cardID: cardID, state: .untouched)
             }
         }
     }

@@ -171,8 +171,8 @@ enum ActualsCopy {
 
     // MARK: - Strava write-back settings (AMA-2396 A4)
 
-    static let writeBackMasterTitle = "Write my workout back to Strava"
-    static let writeBackMasterSub =
+    static let writeBackToggleTitle = "Write my workout back to Strava"
+    static let writeBackToggleSub =
         "AFTER YOU VERIFY — TITLE + DESCRIPTION GET THE REAL STRUCTURE"
     static let writeBackSkipHeader = "NEVER TOUCH — SKIP THESE"
     static let writeBackOwnershipExplainer =

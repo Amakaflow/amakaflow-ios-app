@@ -125,6 +125,29 @@ struct StravaWriteBackDecision: Equatable, Sendable {
     var decoratedDescription: String?
 }
 
+/// Inputs for skip-rule evaluation + description decoration (keeps `evaluate` ≤5 params).
+struct StravaWriteBackEvaluateInput: Equatable, Sendable {
+    var activityType: String
+    var recordingApp: String?
+    var description: String
+    var isRace: Bool
+    var rules: StravaWriteBackRules
+    var structureBody: String
+    var rpe: Int?
+}
+
+/// Payload for a single Strava activity write-back attempt.
+struct StravaWriteBackRequest: Equatable, Sendable {
+    var activityId: String
+    var title: String
+    var structureBody: String
+    var currentDescription: String
+    var activityType: String
+    var recordingApp: String?
+    var isRace: Bool
+    var rules: StravaWriteBackRules
+}
+
 enum StravaWriteBackDecorator {
     /// Append the ownership signature. Decorating twice is byte-identical
     /// (matches backend `decorate_description`).
@@ -189,21 +212,13 @@ enum StravaWriteBackDecorator {
         description.contains(StravaWriteBackSignature.line)
     }
 
-    static func evaluate(
-        activityType: String,
-        recordingApp: String?,
-        description: String,
-        isRace: Bool,
-        rules: StravaWriteBackRules,
-        structureBody: String,
-        rpe: Int? = nil
-    ) -> StravaWriteBackDecision {
-        let typeLower = activityType.lowercased()
-        let appLower = (recordingApp ?? "").lowercased()
+    static func evaluate(_ input: StravaWriteBackEvaluateInput) -> StravaWriteBackDecision {
+        let typeLower = input.activityType.lowercased()
+        let appLower = (input.recordingApp ?? "").lowercased()
         let virtualTypes: Set<String> = ["virtualride", "virtualrun"]
         let virtualApps = ["zwift", "trainerroad", "mywhoosh", "peloton", "rouvy", "fulgaz", "kinomap"]
 
-        if rules.skipVirtual {
+        if input.rules.skipVirtual {
             if virtualTypes.contains(typeLower)
                 || virtualApps.contains(where: { appLower.contains($0) }) {
                 return StravaWriteBackDecision(
@@ -214,10 +229,10 @@ enum StravaWriteBackDecorator {
             }
         }
 
-        let trimmed = description.trimmingCharacters(in: .whitespacesAndNewlines)
-        if rules.skipDescribed,
+        let trimmed = input.description.trimmingCharacters(in: .whitespacesAndNewlines)
+        if input.rules.skipDescribed,
            !trimmed.isEmpty,
-           !containsOurSignature(description) {
+           !containsOurSignature(input.description) {
             return StravaWriteBackDecision(
                 shouldWrite: false,
                 state: .skipped(rule: .described),
@@ -225,7 +240,7 @@ enum StravaWriteBackDecorator {
             )
         }
 
-        if rules.skipRaces, isRace {
+        if input.rules.skipRaces, input.isRace {
             return StravaWriteBackDecision(
                 shouldWrite: false,
                 state: .skipped(rule: .race),
@@ -234,16 +249,16 @@ enum StravaWriteBackDecorator {
         }
 
         let decorated: String
-        if containsOurSignature(description) {
+        if containsOurSignature(input.description) {
             decorated = refreshOurs(
-                existingDescription: description,
-                structureBody: structureBody,
-                rpe: rpe
+                existingDescription: input.description,
+                structureBody: input.structureBody,
+                rpe: input.rpe
             )
-        } else if structureBody.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            decorated = decorate(description: description)
+        } else if input.structureBody.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            decorated = decorate(description: input.description)
         } else {
-            decorated = previewDescription(structureBody: structureBody, rpe: rpe)
+            decorated = previewDescription(structureBody: input.structureBody, rpe: input.rpe)
         }
         return StravaWriteBackDecision(
             shouldWrite: true,
@@ -258,7 +273,8 @@ enum StravaWriteBackDecorator {
 @MainActor
 final class StravaWriteBackSettingsStore: ObservableObject {
     private enum Keys {
-        static let master = "ama2396.strava.writeBackEnabled"
+        /// UserDefaults key for the write-back toggle (stable string; do not rename).
+        static let writeBackEnabled = "ama2396.strava.writeBackEnabled"
         static let rules = "ama2396.strava.writeBackRules"
         static let hasWriteScope = "ama2396.strava.hasActivityWriteScope"
     }
@@ -266,7 +282,7 @@ final class StravaWriteBackSettingsStore: ObservableObject {
     private let defaults: UserDefaults
 
     @Published var writeBackEnabled: Bool {
-        didSet { defaults.set(writeBackEnabled, forKey: Keys.master) }
+        didSet { defaults.set(writeBackEnabled, forKey: Keys.writeBackEnabled) }
     }
 
     @Published var rules: StravaWriteBackRules {
@@ -283,7 +299,7 @@ final class StravaWriteBackSettingsStore: ObservableObject {
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
-        writeBackEnabled = defaults.bool(forKey: Keys.master)
+        writeBackEnabled = defaults.bool(forKey: Keys.writeBackEnabled)
         hasActivityWriteScope = defaults.bool(forKey: Keys.hasWriteScope)
         if let data = defaults.data(forKey: Keys.rules),
            let decoded = try? JSONDecoder().decode(StravaWriteBackRules.self, from: data) {
@@ -314,16 +330,7 @@ enum StravaWriteBackOutcome: Equatable, Sendable {
 }
 
 protocol StravaWriteBackProviding: AnyObject {
-    func writeBack(
-        activityId: String,
-        title: String,
-        structureBody: String,
-        currentDescription: String,
-        activityType: String,
-        recordingApp: String?,
-        isRace: Bool,
-        rules: StravaWriteBackRules
-    ) async -> StravaWriteBackOutcome
+    func writeBack(_ request: StravaWriteBackRequest) async -> StravaWriteBackOutcome
 
     func restore(
         activityId: String,
@@ -338,43 +345,36 @@ final class StubStravaWriteBackProvider: StravaWriteBackProviding {
     private(set) var restoreCalls = 0
     private var snapshots: [String: StravaPreUpdateSnapshot] = [:]
 
-    func writeBack(
-        activityId: String,
-        title: String,
-        structureBody: String,
-        currentDescription: String,
-        activityType: String,
-        recordingApp: String?,
-        isRace: Bool,
-        rules: StravaWriteBackRules
-    ) async -> StravaWriteBackOutcome {
+    func writeBack(_ request: StravaWriteBackRequest) async -> StravaWriteBackOutcome {
         writeCalls += 1
         if let nextOutcome { return nextOutcome }
         #if DEBUG
         let decision = StravaWriteBackDecorator.evaluate(
-            activityType: activityType,
-            recordingApp: recordingApp,
-            description: currentDescription,
-            isRace: isRace,
-            rules: rules,
-            structureBody: structureBody,
-            rpe: nil
+            StravaWriteBackEvaluateInput(
+                activityType: request.activityType,
+                recordingApp: request.recordingApp,
+                description: request.currentDescription,
+                isRace: request.isRace,
+                rules: request.rules,
+                structureBody: request.structureBody,
+                rpe: nil
+            )
         )
         guard decision.shouldWrite, let decorated = decision.decoratedDescription else {
             return .skipped(decision.state)
         }
-        if snapshots[activityId] == nil {
-            snapshots[activityId] = StravaPreUpdateSnapshot(
-                activityId: activityId,
-                preUpdateTitle: title,
-                preUpdateDescription: currentDescription,
+        if snapshots[request.activityId] == nil {
+            snapshots[request.activityId] = StravaPreUpdateSnapshot(
+                activityId: request.activityId,
+                preUpdateTitle: request.title,
+                preUpdateDescription: request.currentDescription,
                 rev: 1
             )
-        } else if var existing = snapshots[activityId] {
+        } else if var existing = snapshots[request.activityId] {
             existing.rev += 1
-            snapshots[activityId] = existing
+            snapshots[request.activityId] = existing
         }
-        return .updated(title: title, description: decorated)
+        return .updated(title: request.title, description: decorated)
         #else
         return .failed("Write-back unavailable")
         #endif
@@ -401,18 +401,9 @@ final class MockStravaWriteBackProvider: StravaWriteBackProviding {
     private(set) var writeCalls: [String] = []
     private(set) var restoreCalls: [String] = []
 
-    func writeBack(
-        activityId: String,
-        title: String,
-        structureBody: String,
-        currentDescription: String,
-        activityType: String,
-        recordingApp: String?,
-        isRace: Bool,
-        rules: StravaWriteBackRules
-    ) async -> StravaWriteBackOutcome {
-        writeCalls.append(activityId)
-        return writeHandler?(activityId) ?? .cancelled
+    func writeBack(_ request: StravaWriteBackRequest) async -> StravaWriteBackOutcome {
+        writeCalls.append(request.activityId)
+        return writeHandler?(request.activityId) ?? .cancelled
     }
 
     func restore(

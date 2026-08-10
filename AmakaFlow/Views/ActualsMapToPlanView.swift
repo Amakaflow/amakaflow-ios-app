@@ -9,6 +9,8 @@
 
 import SwiftUI
 
+// AMA-2396: Map v3 keeps match list + capture + pinned CTA in one screen by design.
+// swiftlint:disable:next type_body_length
 struct ActualsMapToPlanView: View {
     let activity: ActualsUnmappedActivity
     let matches: [ActualsPlanMatch]
@@ -251,22 +253,26 @@ struct ActualsMapToPlanView: View {
 
             HStack(spacing: 8) {
                 captureTile(
-                    icon: "square.and.pencil",
-                    iconBackground: DailyDriver.card2,
-                    iconInk: .white,
-                    title: ActualsCopy.mapCaptureBuildTitle,
-                    subtitle: ActualsCopy.mapCaptureBuildSub,
-                    accessibilityID: ActualsCopy.mapCaptureBuildAccessibilityID
+                    CaptureTileConfig(
+                        icon: "square.and.pencil",
+                        iconBackground: DailyDriver.card2,
+                        iconInk: .white,
+                        title: ActualsCopy.mapCaptureBuildTitle,
+                        subtitle: ActualsCopy.mapCaptureBuildSub,
+                        accessibilityID: ActualsCopy.mapCaptureBuildAccessibilityID
+                    )
                 ) {
                     capturePresentation = .builder
                 }
                 captureTile(
-                    icon: "camera.fill",
-                    iconBackground: DailyDriver.purple,
-                    iconInk: DailyDriver.ink,
-                    title: ActualsCopy.mapCapturePhotoTitle,
-                    subtitle: ActualsCopy.mapCapturePhotoSub,
-                    accessibilityID: ActualsCopy.mapCapturePhotoAccessibilityID
+                    CaptureTileConfig(
+                        icon: "camera.fill",
+                        iconBackground: DailyDriver.purple,
+                        iconInk: DailyDriver.ink,
+                        title: ActualsCopy.mapCapturePhotoTitle,
+                        subtitle: ActualsCopy.mapCapturePhotoSub,
+                        accessibilityID: ActualsCopy.mapCapturePhotoAccessibilityID
+                    )
                 ) {
                     capturePresentation = .photo
                 }
@@ -274,28 +280,32 @@ struct ActualsMapToPlanView: View {
         }
     }
 
+    private struct CaptureTileConfig {
+        let icon: String
+        let iconBackground: Color
+        let iconInk: Color
+        let title: String
+        let subtitle: String
+        let accessibilityID: String
+    }
+
     private func captureTile(
-        icon: String,
-        iconBackground: Color,
-        iconInk: Color,
-        title: String,
-        subtitle: String,
-        accessibilityID: String,
+        _ config: CaptureTileConfig,
         action: @escaping () -> Void
     ) -> some View {
         Button(action: action) {
             VStack(alignment: .leading, spacing: 0) {
                 DDIconChip(
-                    systemName: icon,
-                    background: iconBackground,
-                    foreground: iconInk,
+                    systemName: config.icon,
+                    background: config.iconBackground,
+                    foreground: config.iconInk,
                     size: 30
                 )
-                Text(title)
+                Text(config.title)
                     .ddDisplayText(13, weight: .bold)
                     .foregroundColor(DailyDriver.foreground)
                     .padding(.top, 7)
-                Text(subtitle)
+                Text(config.subtitle)
                     .font(.system(size: 7.5, design: .monospaced))
                     .foregroundColor(DailyDriver.foregroundDim)
                     .padding(.top, 2)
@@ -311,7 +321,7 @@ struct ActualsMapToPlanView: View {
             .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
         }
         .buttonStyle(.plain)
-        .accessibilityIdentifier(accessibilityID)
+        .accessibilityIdentifier(config.accessibilityID)
     }
 
     private func candidateRow(_ match: ActualsPlanMatch, index: Int) -> some View {

@@ -7,6 +7,8 @@
 
 import SwiftUI
 
+// AMA-2396: write-back toast path lives on this screen by design.
+// swiftlint:disable:next type_body_length
 struct ActualsFillInView: View {
     @ObservedObject var viewModel: ActualsFillInViewModel
     var onSaved: (ActualsFillInSession) -> Void = { _ in }
@@ -18,7 +20,7 @@ struct ActualsFillInView: View {
     /// AMA-2396: extra hook alongside the built-in repository un-verify (e.g. a
     /// Today feed also needs its in-memory card flipped back to "Fill in").
     var onUnverify: (() -> Void)?
-    var writeBackSettings: StravaWriteBackSettingsStore = StravaWriteBackSettingsStore()
+    var writeBackSettings = StravaWriteBackSettingsStore()
     var writeBackProvider: any StravaWriteBackProviding = StravaWriteBackFactory.makeDefault()
 
     @Environment(\.dismiss) private var dismiss
@@ -347,14 +349,16 @@ struct ActualsFillInView: View {
                 .map { "\($0.name): \($0.actualSets)×\($0.actualReps)" }
                 .joined(separator: "\n")
             let outcome = await writeBackProvider.writeBack(
-                activityId: activityId,
-                title: session.title,
-                structureBody: structureBody,
-                currentDescription: "",
-                activityType: "workout",
-                recordingApp: nil,
-                isRace: false,
-                rules: writeBackSettings.rules
+                StravaWriteBackRequest(
+                    activityId: activityId,
+                    title: session.title,
+                    structureBody: structureBody,
+                    currentDescription: "",
+                    activityType: "workout",
+                    recordingApp: nil,
+                    isRace: false,
+                    rules: writeBackSettings.rules
+                )
             )
             if case .updated = outcome {
                 claimedStravaUpdate = true
