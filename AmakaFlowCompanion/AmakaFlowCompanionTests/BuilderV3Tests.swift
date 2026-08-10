@@ -13,11 +13,11 @@ final class BuilderV3Tests: XCTestCase {
     // MARK: - Category coverage
 
     func testEveryCategoryHasExpectedSeedCount() {
-        XCTAssertEqual(BuilderV3TypeRegistry.seeds(for: .lift).count, 6)
+        XCTAssertEqual(BuilderV3TypeRegistry.seeds(for: .lift).count, 7)
         XCTAssertEqual(BuilderV3TypeRegistry.seeds(for: .conditioning).count, 5)
         XCTAssertEqual(BuilderV3TypeRegistry.seeds(for: .run).count, 4)
         XCTAssertEqual(BuilderV3TypeRegistry.seeds(for: .recover).count, 2)
-        XCTAssertEqual(BuilderV3TypeRegistry.all.count, 17)
+        XCTAssertEqual(BuilderV3TypeRegistry.all.count, 18)
     }
 
     func testEverySeedHasAUniqueBuilderV3AccessibilityId() {

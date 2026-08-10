@@ -16,8 +16,12 @@ final class ActualsConnectSourcesCopyTests: XCTestCase {
 
     func testSubheadIncludesReadOnlyPromise() {
         XCTAssertTrue(
-            ActualsCopy.connectSubhead.contains("We only read; we never post"),
-            "Subhead must carry the read-only promise: \(ActualsCopy.connectSubhead)"
+            ActualsCopy.connectSubhead.contains("Pull is read-only"),
+            "Subhead must carry the pull read-only promise: \(ActualsCopy.connectSubhead)"
+        )
+        XCTAssertTrue(
+            ActualsCopy.connectSubhead.localizedCaseInsensitiveContains("write-back"),
+            "Subhead must mention optional write-back: \(ActualsCopy.connectSubhead)"
         )
         XCTAssertTrue(
             ActualsCopy.connectSubhead.localizedCaseInsensitiveContains("30 days"),

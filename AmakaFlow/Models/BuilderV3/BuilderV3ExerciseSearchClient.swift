@@ -136,21 +136,22 @@ struct BuilderV3ExerciseSearchClient {
                     limit: limit,
                     offset: 0
                 )
-                let (absRows, obliqueRows) = try await (absPage, obliquePage)
+                let (absPageResult, obliquePageResult) = try await (absPage, obliquePage)
                 var seen = Set<String>()
                 var merged: [BuilderV3ExerciseItem] = []
-                for item in absRows + obliqueRows {
+                for item in absPageResult.items + obliquePageResult.items {
                     guard seen.insert(item.id).inserted else { continue }
                     merged.append(item)
                 }
                 return BuilderV3ExerciseFetchResult(
                     items: merged,
-                    receivedRowCount: absRows.count,
+                    // Pagination advances on the primary muscle page only.
+                    receivedRowCount: absPageResult.receivedRowCount,
                     mode: .live
                 )
             }
 
-            let rows = try await listLivePage(
+            let page = try await listLivePage(
                 category: category,
                 muscle: muscle,
                 equipment: equipment,
@@ -158,8 +159,8 @@ struct BuilderV3ExerciseSearchClient {
                 offset: offset
             )
             return BuilderV3ExerciseFetchResult(
-                items: rows,
-                receivedRowCount: rows.count,
+                items: page.items,
+                receivedRowCount: page.receivedRowCount,
                 mode: .live
             )
         } catch {
@@ -173,7 +174,7 @@ struct BuilderV3ExerciseSearchClient {
         equipment: String?,
         limit: Int,
         offset: Int
-    ) async throws -> [BuilderV3ExerciseItem] {
+    ) async throws -> BuilderV3ExerciseFetchResult {
         var queryItems = [
             URLQueryItem(name: "category", value: category),
             URLQueryItem(name: "limit", value: String(limit)),
@@ -195,7 +196,12 @@ struct BuilderV3ExerciseSearchClient {
             decode: BuilderV3ExerciseListResponse.self,
             decoder: APIService.makeGeneratedDecoder()
         )
-        return response.exercises.compactMap { Self.mapRow($0) }
+        let rows = response.exercises
+        return BuilderV3ExerciseFetchResult(
+            items: rows.compactMap { Self.mapRow($0) },
+            receivedRowCount: rows.count,
+            mode: .live
+        )
     }
 
     static func fixtureResults(matching query: String) -> [BuilderV3ExerciseItem] {
