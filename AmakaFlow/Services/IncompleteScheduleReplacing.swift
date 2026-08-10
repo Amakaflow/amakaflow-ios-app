@@ -54,7 +54,7 @@ extension IncompleteScheduleReplacing {
             return match
         }
         if let preferred = rows
-            .filter({ !excludedPlanIDs.contains($0.id.planID) })
+            .filter { !excludedPlanIDs.contains($0.id.planID) }
             .min(by: IncompleteScheduleReplacerKeeper.isPreferredOrder) {
             return preferred
         }

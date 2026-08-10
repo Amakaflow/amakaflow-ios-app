@@ -110,7 +110,6 @@ enum EditorV2GroupType: String, CaseIterable, Equatable, Sendable {
     }
 
     /// Map ADR-017 clarify block types onto Editor v2 defaults (AMA-2326 chips).
-    // swiftlint:disable:next cyclomatic_complexity
     static func from(structureBlock type: StructureBlockType) -> EditorV2GroupType? {
         switch type.canonical {
         case .superset: return .superset
@@ -172,7 +171,7 @@ struct EditorV2Group: Equatable, Identifiable, Sendable {
         self.enrichmentKind = enrichmentKind
     }
 
-    var metaLine: String {
+    var metaLine: String { // swiftlint:disable:this cyclomatic_complexity
         switch type {
         case .warmup: return "\(config.rounds ?? 2) ROUNDS · EASY"
         case .cooldown: return "\(config.rounds ?? 1) ROUNDS · EASY"
