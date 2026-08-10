@@ -21,17 +21,28 @@ struct TodayDiaryView: View {
     @StateObject private var actualsDemo = ActualsTodayDemoFeed()
     @State private var selectedCompletionId: String?
     @State private var scrubberSelectedIndex = 0
+    /// AMA-2396: explicit selected day so the scrubber window can shift backward
+    /// without a circular dependency on `scrubberDays[index]`.
+    @State private var selectedScrubberDay: Date = Calendar.current.startOfDay(for: Date())
     @State private var showConnectSources = false
     @State private var actualsDestination: ActualsTodayDestination?
     @State private var activeMergedSession: ActualsSession?
     @State private var activeUnmapped: ActualsUnmappedActivity?
     @State private var verifiedSession: ActualsFillInSession?
     @State private var verifiedSourceName = ActualsCopy.sourceDisplayName(.strava)
+    @State private var verifiedCardID: String?
 
     private var today: Date { Date() }
 
+    private var isViewingToday: Bool {
+        Calendar.current.isDateInToday(selectedScrubberDay)
+    }
+
     private var todaysCompletions: [WorkoutCompletion] {
-        historyViewModel.todaysCompletions
+        let calendar = Calendar.current
+        return historyViewModel.completions
+            .filter { calendar.isDate($0.startedAt, inSameDayAs: selectedScrubberDay) }
+            .sorted { $0.startedAt > $1.startedAt }
     }
 
     private var usesTodayFixture: Bool {
@@ -39,7 +50,10 @@ struct TodayDiaryView: View {
     }
 
     private var scrubberDays: [DDScrubberDay] {
-        historyViewModel.completions.scrubberDays(now: today)
+        historyViewModel.completions.scrubberDays(
+            now: today,
+            selectedDay: selectedScrubberDay
+        )
     }
 
     private var watchConnected: Bool {
@@ -82,6 +96,16 @@ struct TodayDiaryView: View {
 
                 if !scrubberDays.isEmpty {
                     DDDayScrubber(days: scrubberDays, selectedIndex: $scrubberSelectedIndex)
+                        .onChange(of: scrubberSelectedIndex) { _, newIndex in
+                            let days = scrubberDays
+                            guard days.indices.contains(newIndex) else { return }
+                            selectedScrubberDay = days[newIndex].id
+                        }
+                    Text(ActualsCopy.historyScrubberHint)
+                        .font(.system(size: 8, design: .monospaced))
+                        .foregroundColor(DailyDriver.foregroundDim)
+                        .padding(.horizontal, 18)
+                        .padding(.bottom, 4)
                 }
 
                 ScrollView {
@@ -250,6 +274,10 @@ struct TodayDiaryView: View {
             Text(ActualsCopy.verifiedTimelineCTA)
                 .ddDisplayText(12, weight: .bold)
                 .foregroundColor(DailyDriver.lime)
+        case .counted:
+            Text(ActualsCopy.historyCountedCTA)
+                .ddDisplayText(12, weight: .bold)
+                .foregroundColor(DailyDriver.lime)
         }
     }
 
@@ -259,7 +287,7 @@ struct TodayDiaryView: View {
             return Self.symbolName(for: card.activity?.type)
         case .merged: return "applewatch"
         case .fillInDebt: return "figure.strengthtraining.traditional"
-        case .verified:
+        case .verified, .counted:
             if card.session != nil { return "applewatch" }
             if card.title.localizedCaseInsensitiveContains("run") { return "figure.run" }
             return "figure.strengthtraining.traditional"
@@ -274,7 +302,7 @@ struct TodayDiaryView: View {
                 : DailyDriver.card2
         case .merged: return DailyDriver.blue
         case .fillInDebt: return DailyDriver.lime
-        case .verified:
+        case .verified, .counted:
             return card.session != nil ? DailyDriver.blue : DailyDriver.lime
         }
     }
@@ -309,8 +337,11 @@ struct TodayDiaryView: View {
             if let saved = card.fillInSession {
                 verifiedSession = saved
                 verifiedSourceName = sourceDisplayName(for: card)
+                verifiedCardID = card.id
                 actualsDestination = .verified
             }
+        case .counted:
+            break
         }
     }
 
@@ -367,6 +398,7 @@ struct TodayDiaryView: View {
                     actualsDestination = .fillIn
                 },
                 onKeepAsIs: {
+                    actualsDemo.applyKeepAsIs(unmappedCardID: cardID)
                     actualsDestination = nil
                 },
                 onCaptureMatched: { draft, _ in
@@ -394,7 +426,10 @@ struct TodayDiaryView: View {
                         actualsDestination = .verified
                     },
                     presentsVerifiedOnSave: false,
-                    dismissOnSave: false
+                    dismissOnSave: false,
+                    onUnverify: {
+                        actualsDemo.applyUnverify(sessionID: viewModel.session.id)
+                    }
                 )
                 .navigationBarBackButtonHidden(true)
             } else {
@@ -402,8 +437,54 @@ struct TodayDiaryView: View {
             }
         case .verified:
             if let session = verifiedSession {
-                ActualsVerifiedView(session: session, sourceName: verifiedSourceName)
-                    .navigationBarBackButtonHidden(true)
+                ActualsVerifiedView(
+                    session: session,
+                    sourceName: verifiedSourceName,
+                    decoration: actualsDemo.cards.first(where: { $0.id == verifiedCardID })?
+                        .stravaDecoration ?? .none,
+                    onEditActuals: {
+                        actualsDemo.prepareFillIn(
+                            from: actualsDemo.cards.first(where: { $0.id == verifiedCardID })
+                        )
+                        guard actualsDemo.fillInViewModel != nil else { return }
+                        actualsDestination = .fillIn
+                    },
+                    onRemoveFromStrava: {
+                        guard let cardID = verifiedCardID else { return }
+                        Task {
+                            let repository = ActualsRepository()
+                            let provider = StravaWriteBackFactory.makeDefault()
+                            if let snapshot = try? repository.fetchPreUpdateSnapshot(forSessionID: cardID) {
+                                let outcome = await provider.restore(
+                                    activityId: snapshot.activityId,
+                                    snapshot: snapshot
+                                )
+                                if case .restored = outcome {
+                                    try? repository.clearPreUpdateSnapshot(forSessionID: cardID)
+                                }
+                            }
+                            try? repository.storeDecoration(.untouched, forSessionID: cardID)
+                            await MainActor.run {
+                                actualsDemo.applyDecoration(cardID: cardID, state: .untouched)
+                            }
+                        }
+                    },
+                    onUnverify: {
+                        actualsDemo.applyUnverify(sessionID: session.id)
+                        try? ActualsRepository().unverifySession(id: session.id)
+                        actualsDestination = nil
+                    },
+                    onUnmatch: {
+                        guard let cardID = verifiedCardID else {
+                            actualsDestination = nil
+                            return
+                        }
+                        let activity = actualsDemo.cards.first(where: { $0.id == cardID })?.activity
+                            ?? ActualsTodayDemoFeed.sampleUnmappedActivity()
+                        actualsDestination = .mapToPlan(cardID: cardID, activity: activity)
+                    }
+                )
+                .navigationBarBackButtonHidden(true)
             } else {
                 missingDestinationFallback(nil)
             }
@@ -450,25 +531,42 @@ struct TodayDiaryView: View {
 
     private var headerRow: some View {
         HStack(alignment: .center) {
-            Text("Today")
+            Text(headerTitle)
                 .ddDisplayText(32, weight: .heavy)
                 .foregroundColor(DailyDriver.foreground)
                 .accessibilityIdentifier("af_today_title")
             Spacer(minLength: 0)
-            NavigationLink {
-                DDDeviceDetailView()
-                    .ddSuppressFloatingChrome()
-            } label: {
-                DDWatchReadinessPill(
-                    isConnected: watchConnected || usesTodayFixture || showsActualsDemoRail,
-                    batteryPercent: usesTodayFixture ? DDDeviceFixture.batteryPercent : nil
-                )
+            if !isViewingToday {
+                Button {
+                    syncScrubberToToday()
+                } label: {
+                    Text(ActualsCopy.historyJumpToday)
+                        .ddDisplayText(12, weight: .bold)
+                        .foregroundColor(DailyDriver.lime)
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("af_today_jump_today")
+            } else {
+                NavigationLink {
+                    DDDeviceDetailView()
+                        .ddSuppressFloatingChrome()
+                } label: {
+                    DDWatchReadinessPill(
+                        isConnected: watchConnected || usesTodayFixture || showsActualsDemoRail,
+                        batteryPercent: usesTodayFixture ? DDDeviceFixture.batteryPercent : nil
+                    )
+                }
+                .buttonStyle(.plain)
             }
-            .buttonStyle(.plain)
         }
         .padding(.horizontal, 18)
         .padding(.top, 8)
         .padding(.bottom, 6)
+    }
+
+    private var headerTitle: String {
+        if isViewingToday { return "Today" }
+        return selectedScrubberDay.formatted(.dateTime.weekday(.wide))
     }
 
     private var loadingState: some View {
@@ -639,6 +737,7 @@ struct TodayDiaryView: View {
     }
 
     private func syncScrubberToToday() {
+        selectedScrubberDay = Calendar.current.startOfDay(for: today)
         if let todayIndex = scrubberDays.firstIndex(where: { $0.isToday }) {
             scrubberSelectedIndex = todayIndex
         }

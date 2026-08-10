@@ -388,10 +388,11 @@ struct DDDayScrubber: View {
                             .stroke(index == selectedIndex ? DailyDriver.border.opacity(0.9) : Color.clear, lineWidth: 1)
                     )
                     .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                    .opacity(day.isFuture ? 0.4 : 1)
+                    .opacity(day.isFuture ? 0.3 : (index == selectedIndex ? 1 : 0.55))
                 }
                 .buttonStyle(.plain)
-                .disabled(!day.isSelectable && !day.isToday)
+                // AMA-2396: past days are always tappable for history; future = planned-only (dim).
+                .disabled(day.isFuture)
             }
         }
         .padding(.horizontal, 18)
@@ -400,7 +401,7 @@ struct DDDayScrubber: View {
 
     private func dotColor(for day: DDScrubberDay) -> Color {
         if day.isToday {
-            return day.hasActivity ? DailyDriver.lime : DailyDriver.foregroundDim
+            return DailyDriver.lime
         }
         return day.hasActivity ? DailyDriver.lime : .clear
     }
@@ -414,8 +415,9 @@ struct DDScrubberDay: Identifiable {
     let isFuture: Bool
     let hasActivity: Bool
 
+    /// AMA-2396: any non-future day is scrubbable (history access).
     var isSelectable: Bool {
-        hasActivity && !isToday && !isFuture
+        !isFuture
     }
 }
 
@@ -972,25 +974,19 @@ extension Exercise {
 }
 
 extension Array where Element == WorkoutCompletion {
-    func scrubberDays(calendar: Calendar = .current, now: Date = Date()) -> [DDScrubberDay] {
-        let today = calendar.startOfDay(for: now)
-        guard let weekStart = calendar.date(from: calendar.dateComponents([.yearForWeekOfYear, .weekOfYear], from: today)) else {
-            return []
-        }
-
-        return (0..<7).compactMap { offset in
-            guard let date = calendar.date(byAdding: .day, value: offset, to: weekStart) else { return nil }
-            let dayNumber = calendar.component(.day, from: date)
-            let weekday = date.formatted(.dateTime.weekday(.narrow)).uppercased()
-            let hasActivity = contains { calendar.isDate($0.startedAt, inSameDayAs: date) }
-            return DDScrubberDay(
-                id: date,
-                weekdayLabel: weekday,
-                dayNumber: dayNumber,
-                isToday: calendar.isDate(date, inSameDayAs: today),
-                isFuture: date > today,
-                hasActivity: hasActivity
-            )
-        }
+    /// AMA-2396: scrubber looks BACKWARD over the last 30 days (not the calendar week
+    /// that previously showed future days ahead of today).
+    func scrubberDays(
+        calendar: Calendar = .current,
+        now: Date = Date(),
+        selectedDay: Date? = nil
+    ) -> [DDScrubberDay] {
+        ActualsHistoryScrubber.days(
+            activityDates: map(\.startedAt),
+            calendar: calendar,
+            now: now,
+            selectedDay: selectedDay,
+            includeFuturePlannedSlot: true
+        )
     }
 }

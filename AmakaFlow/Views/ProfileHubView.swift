@@ -13,6 +13,8 @@ enum ProfileHubRoute: Hashable {
     case coach
     /// AMA-2389: Friends management (add / remove / requests).
     case friends
+    /// AMA-2396: Sync v2 — day-grouped Strava history + write-back state.
+    case actualsHistory
 }
 
 struct ProfileHubView: View {
@@ -102,6 +104,8 @@ struct ProfileHubView: View {
                         }
                 case .friends:
                     FriendsListView(store: friendsStore)
+                case .actualsHistory:
+                    ActualsHistoryView()
                 }
             }
             .task {
@@ -169,6 +173,9 @@ struct ProfileHubView: View {
             }
             .padding(.top, 14)
 
+            actualsHistoryEntryRow
+                .padding(.top, 10)
+
             if !backfillCompleted {
                 DDInsightBanner(
                     title: "Monday's strength needs weights",
@@ -188,6 +195,39 @@ struct ProfileHubView: View {
             .padding(.top, 20)
         }
         .padding(.horizontal, 18)
+    }
+
+    /// AMA-2396: day-grouped Strava sync history — separate from the general
+    /// planned-vs-actual `ActivityHistoryView` pushed from the stat tiles.
+    private var actualsHistoryEntryRow: some View {
+        Button {
+            path.append(ProfileHubRoute.actualsHistory)
+        } label: {
+            HStack(spacing: 12) {
+                DDIconChip(systemName: "clock.arrow.circlepath", background: DailyDriver.stravaBrand, size: 34)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(ActualsCopy.historyTitle)
+                        .ddDisplayText(14, weight: .bold)
+                        .foregroundColor(DailyDriver.foreground)
+                    Text("STRAVA SYNC · LAST 30 DAYS · WRITE-BACK STATE")
+                        .font(.system(size: 8, design: .monospaced))
+                        .foregroundColor(DailyDriver.foregroundDim)
+                }
+                Spacer(minLength: 8)
+                Image(systemName: "chevron.right")
+                    .foregroundColor(DailyDriver.foregroundDim)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+            .background(DailyDriver.card)
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(DailyDriver.border, lineWidth: 1)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("af_profile_sync_history_entry")
     }
 
     private var identityRow: some View {

@@ -16,6 +16,9 @@ struct ActualsConnectSourcesView<Store: ActualsSourceConnecting>: View where Sto
 
     @State private var showAppleHealthPrimer = false
     @State private var oauthProvider: ActualsSourceProvider?
+    /// AMA-2396: Strava row → write-back settings, once connected.
+    @State private var showStravaWriteBack = false
+    @StateObject private var writeBackSettings = StravaWriteBackSettingsStore()
 
     init(
         store: Store,
@@ -39,6 +42,9 @@ struct ActualsConnectSourcesView<Store: ActualsSourceConnecting>: View where Sto
                 VStack(spacing: 9) {
                     ForEach(ActualsSourceProvider.allCases) { provider in
                         sourceRow(provider)
+                        if provider == .strava, store.isConnected(.strava) {
+                            stravaWriteBackEntryRow
+                        }
                     }
                 }
                 .padding(.top, 16)
@@ -66,6 +72,40 @@ struct ActualsConnectSourcesView<Store: ActualsSourceConnecting>: View where Sto
                 onConnect(provider)
             }
         }
+        .navigationDestination(isPresented: $showStravaWriteBack) {
+            ActualsStravaWriteBackView(store: writeBackSettings) {
+                // Reconnect needs the write scope — route back through OAuth.
+                showStravaWriteBack = false
+                oauthProvider = .strava
+            }
+        }
+    }
+
+    // MARK: - Strava write-back entry
+
+    private var stravaWriteBackEntryRow: some View {
+        Button {
+            showStravaWriteBack = true
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: "arrow.triangle.2.circlepath")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(DailyDriver.foregroundMuted)
+                Text("Write-back settings")
+                    .font(.system(size: 11.5, weight: .semibold))
+                    .foregroundColor(DailyDriver.foregroundMuted)
+                Spacer(minLength: 8)
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundColor(DailyDriver.foregroundDim)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .background(DailyDriver.card2.opacity(0.6))
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("af_actuals_strava_writeback_entry")
     }
 
     // MARK: - Header

@@ -3,6 +3,7 @@
 //  AmakaFlow
 //
 //  AMA-2387: verified session screen — payoff after fill-in save.
+//  AMA-2396: ⋯ menu (edit / remove from Strava / un-verify / unmatch) + badge.
 //
 
 import SwiftUI
@@ -13,14 +14,35 @@ struct ActualsVerifiedView: View {
     let sourceName: String
     let rpe: Int
     let rows: [ActualsVerifiedDeltaRow]
+    let decoration: StravaDecorationState
+
+    var onEditActuals: (() -> Void)?
+    var onRemoveFromStrava: (() -> Void)?
+    var onUnverify: (() -> Void)?
+    var onUnmatch: (() -> Void)?
 
     @Environment(\.dismiss) private var dismiss
+    @State private var showMenu = false
 
-    init(session: ActualsFillInSession, sourceName: String = "Strava", metaLine: String? = nil) {
+    init(
+        session: ActualsFillInSession,
+        sourceName: String = "Strava",
+        metaLine: String? = nil,
+        decoration: StravaDecorationState = .none,
+        onEditActuals: (() -> Void)? = nil,
+        onRemoveFromStrava: (() -> Void)? = nil,
+        onUnverify: (() -> Void)? = nil,
+        onUnmatch: (() -> Void)? = nil
+    ) {
         self.title = session.title
         self.sourceName = sourceName
         self.rpe = session.rpe ?? 0
         self.rows = ActualsVerifiedDeltas.rows(from: session.exercises)
+        self.decoration = decoration
+        self.onEditActuals = onEditActuals
+        self.onRemoveFromStrava = onRemoveFromStrava
+        self.onUnverify = onUnverify
+        self.onUnmatch = onUnmatch
         if let metaLine {
             self.metaLine = metaLine
         } else {
@@ -29,11 +51,66 @@ struct ActualsVerifiedView: View {
         }
     }
 
+    private var menuRows: [ActualsVerifiedMenuRow] {
+        var rows: [ActualsVerifiedMenuRow] = []
+        if let onEditActuals {
+            rows.append(
+                ActualsVerifiedMenuRow(
+                    id: "edit",
+                    title: ActualsCopy.verifiedMenuEdit,
+                    subtitle: ActualsCopy.verifiedMenuEditSub,
+                    destructive: false,
+                    action: onEditActuals
+                )
+            )
+        }
+        // Nothing to remove when we never wrote to Strava.
+        if let onRemoveFromStrava, decoration == .ours {
+            rows.append(
+                ActualsVerifiedMenuRow(
+                    id: "removeStrava",
+                    title: ActualsCopy.verifiedMenuRemoveStrava,
+                    subtitle: ActualsCopy.verifiedMenuRemoveStravaSub,
+                    destructive: true,
+                    action: onRemoveFromStrava
+                )
+            )
+        }
+        if let onUnverify {
+            rows.append(
+                ActualsVerifiedMenuRow(
+                    id: "unverify",
+                    title: ActualsCopy.verifiedMenuUnverify,
+                    subtitle: ActualsCopy.verifiedMenuUnverifySub,
+                    destructive: false,
+                    action: onUnverify
+                )
+            )
+        }
+        if let onUnmatch {
+            rows.append(
+                ActualsVerifiedMenuRow(
+                    id: "unmatch",
+                    title: ActualsCopy.verifiedMenuUnmatch,
+                    subtitle: ActualsCopy.verifiedMenuUnmatchSub,
+                    destructive: false,
+                    action: onUnmatch
+                )
+            )
+        }
+        return rows
+    }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
                 header
                     .padding(.top, 10)
+
+                if decoration.badgeLabel != nil {
+                    SZStravaBadge(decoration: decoration)
+                        .padding(.top, 10)
+                }
 
                 ActualsVerifiedCard(
                     sourceName: sourceName,
@@ -48,20 +125,46 @@ struct ActualsVerifiedView: View {
         .background(DailyDriver.screenBackground.ignoresSafeArea())
         .preferredColorScheme(.dark)
         .ddSuppressFloatingChrome()
+        .sheet(isPresented: $showMenu) {
+            ActualsVerifiedMenuSheet(rows: menuRows) { row in
+                showMenu = false
+                row.action()
+            }
+            .presentationDetents([.height(CGFloat(96 + menuRows.count * 64))])
+        }
     }
 
     private var header: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Button { dismiss() } label: {
-                HStack(spacing: 4) {
-                    Image(systemName: "chevron.left")
-                        .font(.system(size: 13, weight: .semibold))
-                    Text("Today")
-                        .font(.system(size: 13, weight: .semibold))
+            HStack {
+                Button { dismiss() } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 13, weight: .semibold))
+                        Text("Today")
+                            .font(.system(size: 13, weight: .semibold))
+                    }
+                    .foregroundColor(DailyDriver.foregroundMuted)
                 }
-                .foregroundColor(DailyDriver.foregroundMuted)
+                .buttonStyle(.plain)
+
+                Spacer(minLength: 0)
+
+                if !menuRows.isEmpty {
+                    Button {
+                        showMenu = true
+                    } label: {
+                        Image(systemName: "ellipsis")
+                            .font(.system(size: 15, weight: .bold))
+                            .foregroundColor(DailyDriver.foregroundMuted)
+                            .frame(width: 32, height: 32)
+                            .background(DailyDriver.card2)
+                            .clipShape(Circle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier(ActualsCopy.verifiedMenuAccessibilityID)
+                }
             }
-            .buttonStyle(.plain)
 
             HStack(spacing: 12) {
                 DDIconChip(systemName: "dumbbell.fill", background: DailyDriver.purple, size: 34)
@@ -78,6 +181,67 @@ struct ActualsVerifiedView: View {
     }
 }
 
+// MARK: - ⋯ menu
+
+private struct ActualsVerifiedMenuRow: Identifiable {
+    let id: String
+    let title: String
+    let subtitle: String
+    let destructive: Bool
+    let action: () -> Void
+}
+
+private struct ActualsVerifiedMenuSheet: View {
+    let rows: [ActualsVerifiedMenuRow]
+    var onSelect: (ActualsVerifiedMenuRow) -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Capsule()
+                .fill(DailyDriver.border)
+                .frame(width: 36, height: 4)
+                .frame(maxWidth: .infinity)
+                .padding(.top, 8)
+                .padding(.bottom, 10)
+
+            VStack(spacing: 8) {
+                ForEach(rows) { row in
+                    Button {
+                        onSelect(row)
+                    } label: {
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(row.title)
+                                .ddDisplayText(14, weight: .bold)
+                                .foregroundColor(row.destructive ? DailyDriver.red : DailyDriver.foreground)
+                            Text(row.subtitle)
+                                .font(.system(size: 7.5, design: .monospaced))
+                                .foregroundColor(DailyDriver.foregroundDim)
+                                .lineSpacing(1.5)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 11)
+                        .background(DailyDriver.card)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                .stroke(DailyDriver.border, lineWidth: 1)
+                        )
+                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("\(ActualsCopy.verifiedMenuAccessibilityID)_\(row.id)")
+                }
+            }
+            .padding(.horizontal, 16)
+
+            Spacer(minLength: 8)
+        }
+        .background(DailyDriver.screenBackground.ignoresSafeArea())
+        .preferredColorScheme(.dark)
+    }
+}
+
 #if DEBUG
 #Preview("Verified session") {
     var session = ActualsFillInSession.lowerBodyPosteriorSample()
@@ -88,6 +252,15 @@ struct ActualsVerifiedView: View {
     }
     session.rpe = 8
     session.verified = true
-    return ActualsVerifiedView(session: session, sourceName: "Strava", metaLine: "MON 17:20 · 52 MIN · FROM STRAVA")
+    return ActualsVerifiedView(
+        session: session,
+        sourceName: "Strava",
+        metaLine: "MON 17:20 · 52 MIN · FROM STRAVA",
+        decoration: .ours,
+        onEditActuals: {},
+        onRemoveFromStrava: {},
+        onUnverify: {},
+        onUnmatch: {}
+    )
 }
 #endif

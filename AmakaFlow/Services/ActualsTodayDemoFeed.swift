@@ -19,6 +19,8 @@ struct ActualsTodayDemoCard: Identifiable, Equatable {
         case unmapped
         case fillInDebt
         case verified
+        /// AMA-2396: keep-as-is — counts in Progress, no fill-in debt.
+        case counted
     }
 
     let id: String
@@ -32,9 +34,39 @@ struct ActualsTodayDemoCard: Identifiable, Equatable {
     let session: ActualsSession?
     let activity: ActualsUnmappedActivity?
     let fillInSession: ActualsFillInSession?
+    /// AMA-2396 A5: per-session Strava write-state badge.
+    let stravaDecoration: StravaDecorationState
+
+    init(
+        id: String,
+        kind: Kind,
+        timeLabel: String,
+        title: String,
+        stats: [(icon: String, value: String)],
+        sourceLabel: String,
+        sourceProvider: ActualsSourceProvider?,
+        session: ActualsSession?,
+        activity: ActualsUnmappedActivity?,
+        fillInSession: ActualsFillInSession?,
+        stravaDecoration: StravaDecorationState = .none
+    ) {
+        self.id = id
+        self.kind = kind
+        self.timeLabel = timeLabel
+        self.title = title
+        self.stats = stats
+        self.sourceLabel = sourceLabel
+        self.sourceProvider = sourceProvider
+        self.session = session
+        self.activity = activity
+        self.fillInSession = fillInSession
+        self.stravaDecoration = stravaDecoration
+    }
 
     static func == (lhs: ActualsTodayDemoCard, rhs: ActualsTodayDemoCard) -> Bool {
-        lhs.id == rhs.id && lhs.kind == rhs.kind
+        lhs.id == rhs.id
+            && lhs.kind == rhs.kind
+            && lhs.stravaDecoration == rhs.stravaDecoration
     }
 
     func markingVerified(with saved: ActualsFillInSession) -> ActualsTodayDemoCard {
@@ -50,7 +82,40 @@ struct ActualsTodayDemoCard: Identifiable, Equatable {
                 ?? session?.primaryRecording?.provider,
             session: session,
             activity: nil,
-            fillInSession: saved
+            fillInSession: saved,
+            stravaDecoration: stravaDecoration
+        )
+    }
+
+    func markingCounted() -> ActualsTodayDemoCard {
+        ActualsTodayDemoCard(
+            id: id,
+            kind: .counted,
+            timeLabel: timeLabel,
+            title: title,
+            stats: stats,
+            sourceLabel: "Kept as-is",
+            sourceProvider: sourceProvider ?? activity?.provider,
+            session: session,
+            activity: activity,
+            fillInSession: fillInSession,
+            stravaDecoration: stravaDecoration == .none ? .untouched : stravaDecoration
+        )
+    }
+
+    func withDecoration(_ state: StravaDecorationState) -> ActualsTodayDemoCard {
+        ActualsTodayDemoCard(
+            id: id,
+            kind: kind,
+            timeLabel: timeLabel,
+            title: title,
+            stats: stats,
+            sourceLabel: sourceLabel,
+            sourceProvider: sourceProvider,
+            session: session,
+            activity: activity,
+            fillInSession: fillInSession,
+            stravaDecoration: state
         )
     }
 }
@@ -167,16 +232,73 @@ final class ActualsTodayDemoFeed: ObservableObject {
     }
 
     /// Map API activities → unmapped Today cards for calendar-today only.
-    static func cards(from activities: [StravaCompletedActivityDTO]) -> [ActualsTodayDemoCard] {
-        let calendar = Calendar.current
+    /// AMA-2396: bucket by `start_date_local` (not UTC) so evening sessions don't
+    /// land on the wrong day; sort newest-first (18:34 above 12:19).
+    static func cards(
+        from activities: [StravaCompletedActivityDTO],
+        calendar: Calendar = .current,
+        now: Date = Date()
+    ) -> [ActualsTodayDemoCard] {
+        cards(
+            from: activities,
+            on: calendar.startOfDay(for: now),
+            calendar: calendar,
+            now: now
+        )
+    }
+
+    /// All activities for a local day, newest-first.
+    static func cards(
+        from activities: [StravaCompletedActivityDTO],
+        on day: Date,
+        calendar: Calendar = .current,
+        now: Date = Date()
+    ) -> [ActualsTodayDemoCard] {
         let parsed = activities.compactMap { activity -> (StravaCompletedActivityDTO, Date)? in
-            guard let date = parseStravaStartDate(activity.startDate) else { return nil }
-            guard calendar.isDateInToday(date) else { return nil }
+            guard let date = resolveStartDate(activity, calendar: calendar, now: now) else {
+                return nil
+            }
+            guard calendar.isDate(date, inSameDayAs: day) else { return nil }
             return (activity, date)
         }
         .sorted { $0.1 > $1.1 }
 
         return parsed.map { card(from: $0.0, startDate: $0.1) }
+    }
+
+    /// Full 30-day (or longer) history rows, day-bucketed newest-first.
+    static func historyCards(
+        from activities: [StravaCompletedActivityDTO],
+        calendar: Calendar = .current,
+        now: Date = Date()
+    ) -> [(day: Date, cards: [ActualsTodayDemoCard])] {
+        let parsed: [(StravaCompletedActivityDTO, Date)] = activities.compactMap { activity in
+            guard let date = resolveStartDate(activity, calendar: calendar, now: now) else {
+                return nil
+            }
+            return (activity, date)
+        }
+        let buckets = ActualsDayBucketing.bucketByLocalDay(
+            parsed,
+            startDate: { $0.1 },
+            calendar: calendar
+        )
+        return buckets.map { day, items in
+            (day, items.map { card(from: $0.0, startDate: $0.1) })
+        }
+    }
+
+    static func resolveStartDate(
+        _ activity: StravaCompletedActivityDTO,
+        calendar: Calendar = .current,
+        now: Date = Date()
+    ) -> Date? {
+        ActualsDayBucketing.resolveStartDate(
+            startDateLocal: activity.startDateLocal,
+            startDateUTC: activity.startDate,
+            calendar: calendar,
+            now: now
+        )
     }
 
     private static func card(
@@ -236,12 +358,51 @@ final class ActualsTodayDemoFeed: ObservableObject {
     }
 
     private static func parseStravaStartDate(_ raw: String) -> Date? {
-        let fractional = ISO8601DateFormatter()
-        fractional.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        if let date = fractional.date(from: raw) { return date }
-        let plain = ISO8601DateFormatter()
-        plain.formatOptions = [.withInternetDateTime]
-        return plain.date(from: raw)
+        ActualsDayBucketing.parseISO8601(raw)
+    }
+
+    /// AMA-2396: cards for live Strava sync keep the `strava_<id>` prefix through
+    /// merge/mapping — extract it so write-back knows which activity to update.
+    static func stravaActivityId(fromCardID cardID: String) -> String? {
+        let prefix = "strava_"
+        guard cardID.hasPrefix(prefix) else { return nil }
+        return String(cardID.dropFirst(prefix.count))
+    }
+
+    /// AMA-2396: Keep as-is marks the session counted (Progress), clears fill-in debt.
+    func applyKeepAsIs(unmappedCardID: String) {
+        guard let index = cards.firstIndex(where: { $0.id == unmappedCardID }) else { return }
+        cards[index] = cards[index].markingCounted()
+    }
+
+    /// AMA-2396 A3: un-verify — actuals kept as draft, RPE cleared, badge cleared.
+    func applyUnverify(sessionID: String) {
+        for index in cards.indices {
+            guard let saved = cards[index].fillInSession, saved.id == sessionID
+                    || cards[index].id == sessionID else { continue }
+            var draft = saved
+            draft.verified = false
+            draft.rpe = nil
+            let card = cards[index]
+            cards[index] = ActualsTodayDemoCard(
+                id: card.id,
+                kind: .fillInDebt,
+                timeLabel: card.timeLabel,
+                title: card.title,
+                stats: card.stats,
+                sourceLabel: "Fill in · draft",
+                sourceProvider: card.sourceProvider,
+                session: card.session,
+                activity: card.activity,
+                fillInSession: draft,
+                stravaDecoration: .none
+            )
+        }
+    }
+
+    func applyDecoration(cardID: String, state: StravaDecorationState) {
+        guard let index = cards.firstIndex(where: { $0.id == cardID }) else { return }
+        cards[index] = cards[index].withDecoration(state)
     }
 
     /// Cold-start demo: pretend a source is already linked and Today has Actuals debt.
@@ -446,7 +607,8 @@ final class ActualsTodayDemoFeed: ObservableObject {
                 ]
                 : Array(exercises),
             rpe: nil,
-            verified: false
+            verified: false,
+            stravaActivityId: Self.stravaActivityId(fromCardID: cardID)
         )
 
         return ActualsTodayDemoCard(

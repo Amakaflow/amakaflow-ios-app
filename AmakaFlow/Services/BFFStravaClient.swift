@@ -41,7 +41,12 @@ struct StravaCompletedActivityDTO: Codable, Equatable, Sendable, Identifiable {
     let type: String
     let distanceKm: Double
     let durationMin: Int
+    /// UTC ISO8601 from Strava (`start_date`).
     let startDate: String
+    /// Local wall-clock from Strava (`start_date_local`) when the BFF forwards it.
+    /// AMA-2396: prefer this for day bucketing so UTC-crossing sessions land on the
+    /// athlete's local day (the 18:34 / 12:19 regression).
+    let startDateLocal: String?
     let description: String
 
     enum CodingKeys: String, CodingKey {
@@ -51,7 +56,28 @@ struct StravaCompletedActivityDTO: Codable, Equatable, Sendable, Identifiable {
         case distanceKm = "distance_km"
         case durationMin = "duration_min"
         case startDate = "start_date"
+        case startDateLocal = "start_date_local"
         case description
+    }
+
+    init(
+        stravaId: Int,
+        name: String,
+        type: String,
+        distanceKm: Double,
+        durationMin: Int,
+        startDate: String,
+        startDateLocal: String? = nil,
+        description: String
+    ) {
+        self.stravaId = stravaId
+        self.name = name
+        self.type = type
+        self.distanceKm = distanceKm
+        self.durationMin = durationMin
+        self.startDate = startDate
+        self.startDateLocal = startDateLocal
+        self.description = description
     }
 }
 

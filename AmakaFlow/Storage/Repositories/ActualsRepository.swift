@@ -62,10 +62,20 @@ final class ActualsRepository: @unchecked Sendable {
                 rpe: rpe,
                 verified: true,
                 savedAt: timestamp,
-                createdAt: timestamp
+                createdAt: timestamp,
+                stravaActivityId: session.stravaActivityId
             )
             if let existing = try LocalActualsSession.fetchOne(database, key: session.id) {
                 header.createdAt = existing.createdAt
+                // Preserve write-back state a prior verify/decorate pass recorded —
+                // a re-save (edit actuals) must not blank out the Strava linkage.
+                header.stravaDecoration = existing.stravaDecoration
+                header.preUpdateTitle = existing.preUpdateTitle
+                header.preUpdateDescription = existing.preUpdateDescription
+                header.isDraft = false
+                if header.stravaActivityId == nil {
+                    header.stravaActivityId = existing.stravaActivityId
+                }
             }
             try header.upsert(database)
 
@@ -128,7 +138,8 @@ final class ActualsRepository: @unchecked Sendable {
                 subtitle: header.subtitle,
                 exercises: exercises,
                 rpe: header.rpe,
-                verified: header.verified
+                verified: header.verified,
+                stravaActivityId: header.stravaActivityId
             )
         }
     }
@@ -140,6 +151,83 @@ final class ActualsRepository: @unchecked Sendable {
                 sql: "SELECT verified FROM actuals_sessions WHERE id = ?",
                 arguments: [id]
             ) ?? false
+        }
+    }
+
+    // MARK: - AMA-2396: un-verify + Strava write-back state
+
+    /// Back to "Fill in" — actuals kept as a draft (exercise rows untouched), RPE
+    /// cleared, and no longer counted as verified. Never deletes the session.
+    func unverifySession(id: String) throws {
+        try dbQueue.write { database in
+            guard var session = try LocalActualsSession.fetchOne(database, key: id) else { return }
+            session.verified = false
+            session.rpe = nil
+            session.isDraft = true
+            try session.update(database)
+        }
+    }
+
+    /// Persist the badge state (`SZStravaBadge`) so it survives relaunch without
+    /// re-deriving from a live Strava fetch.
+    func storeDecoration(_ decoration: StravaDecorationState, forSessionID id: String) throws {
+        try dbQueue.write { database in
+            guard var session = try LocalActualsSession.fetchOne(database, key: id) else { return }
+            session.stravaDecoration = decoration.persistedRawValue
+            try session.update(database)
+        }
+    }
+
+    func clearDecoration(forSessionID id: String) throws {
+        try storeDecoration(.none, forSessionID: id)
+    }
+
+    func fetchDecoration(forSessionID id: String) throws -> StravaDecorationState {
+        try dbQueue.read { database in
+            let raw = try String.fetchOne(
+                database,
+                sql: "SELECT strava_decoration FROM actuals_sessions WHERE id = ?",
+                arguments: [id]
+            )
+            return StravaDecorationState(persistedRawValue: raw)
+        }
+    }
+
+    /// Snapshot what Strava had before our first write — "Remove from Strava" and
+    /// "Un-verify" restore this instead of guessing.
+    func storePreUpdateSnapshot(_ snapshot: StravaPreUpdateSnapshot, forSessionID id: String) throws {
+        try dbQueue.write { database in
+            guard var session = try LocalActualsSession.fetchOne(database, key: id) else { return }
+            session.stravaActivityId = snapshot.activityId
+            session.preUpdateTitle = snapshot.preUpdateTitle
+            session.preUpdateDescription = snapshot.preUpdateDescription
+            try session.update(database)
+        }
+    }
+
+    func fetchPreUpdateSnapshot(forSessionID id: String) throws -> StravaPreUpdateSnapshot? {
+        try dbQueue.read { database in
+            guard let session = try LocalActualsSession.fetchOne(database, key: id),
+                  let activityId = session.stravaActivityId,
+                  let preUpdateTitle = session.preUpdateTitle,
+                  let preUpdateDescription = session.preUpdateDescription else {
+                return nil
+            }
+            return StravaPreUpdateSnapshot(
+                activityId: activityId,
+                preUpdateTitle: preUpdateTitle,
+                preUpdateDescription: preUpdateDescription,
+                rev: 1
+            )
+        }
+    }
+
+    func clearPreUpdateSnapshot(forSessionID id: String) throws {
+        try dbQueue.write { database in
+            guard var session = try LocalActualsSession.fetchOne(database, key: id) else { return }
+            session.preUpdateTitle = nil
+            session.preUpdateDescription = nil
+            try session.update(database)
         }
     }
 }

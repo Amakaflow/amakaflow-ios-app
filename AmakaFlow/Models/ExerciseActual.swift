@@ -74,6 +74,27 @@ struct ActualsFillInSession: Equatable {
     var exercises: [ExerciseActual]
     var rpe: Int?
     var verified: Bool
+    /// AMA-2396: originating Strava activity id — non-nil only for sessions that
+    /// came from a synced Strava activity (drives write-back eligibility).
+    var stravaActivityId: String?
+
+    init(
+        id: String,
+        title: String,
+        subtitle: String,
+        exercises: [ExerciseActual],
+        rpe: Int? = nil,
+        verified: Bool,
+        stravaActivityId: String? = nil
+    ) {
+        self.id = id
+        self.title = title
+        self.subtitle = subtitle
+        self.exercises = exercises
+        self.rpe = rpe
+        self.verified = verified
+        self.stravaActivityId = stravaActivityId
+    }
 
     var confirmedCount: Int {
         exercises.filter(\.isConfirmed).count

@@ -92,23 +92,26 @@ enum ActualsCopy {
         }
     }
 
-    // MARK: - Map-to-plan (screens-actuals.jsx SYMapScreen + Map v2 capture)
+    // MARK: - Map-to-plan (screens-sync2.jsx SZMapScreen — Map v3)
 
     static let mapAskTitle = "Which workout was this?"
+    static let mapAskMono =
+        "ATTACHES THE PLAN · COUNTS ONCE · NOTHING DUPLICATED"
     static let mapAskBody =
         "Mapping attaches this run to the plan it was — nothing is duplicated, and Progress counts it once."
     static let mapAskBodyNoMatch =
         "Nothing in your library looks close enough — build what you did, or match a workout below."
     static let mapCaptureSectionHeader = "NOT IN YOUR LIBRARY — CAPTURE IT"
-    static let mapCaptureBuildTitle = "Build what you did"
-    static let mapCaptureBuildSub = "SAME BUILDER · SAVES AS THIS SESSION'S ACTUALS"
+    static let mapCaptureBuildTitle = "Build it"
+    static let mapCaptureBuildSub = "SAME BUILDER"
     static let mapCapturePhotoTitle = "From a photo"
-    static let mapCapturePhotoSub = "CLASS WHITEBOARD → DRAFT → MATCH"
+    static let mapCapturePhotoSub = "WHITEBOARD → DRAFT"
     static let mapOrMatchHeader = "OR MATCH A LIBRARY WORKOUT"
     static let mapBestMatchesHeader = "BEST MATCHES — SAME DAY, SAME SHAPE"
-    static let mapSearchAllCTA = "Search all workouts…"
+    static let mapSearchAllCTA = "Search all workouts"
     static let mapKeepAsIsCTA = "It was just a run — keep as is"
     static let mapKeepAsIsAccessibilityID = "af_actuals_map_keep_as_is"
+    static let mapPinnedCTAAccessibilityID = "af_actuals_map_pinned_cta"
     static let mapCaptureBuildAccessibilityID = "af_actuals_map_capture_build"
     static let mapCapturePhotoAccessibilityID = "af_actuals_map_capture_photo"
 
@@ -119,6 +122,66 @@ enum ActualsCopy {
     static func mapKeepAsNamedCTA(title: String) -> String {
         "Keep as '\(title)' — no detail needed"
     }
+
+    /// Map v3 pinned CTA — nothing selected.
+    static func mapKeepAsDoneCTA(title: String) -> String {
+        "Keep as “\(title)” — done"
+    }
+
+    /// Map v3 pinned CTA — match selected.
+    static func mapMatchToCTA(title: String) -> String {
+        "Match to “\(title)”"
+    }
+
+    // MARK: - History scrubber / Profile History (AMA-2396 A2)
+
+    static let historyScrubberHint =
+        "SWIPE OR TAP — LAST 30 DAYS · PULLED FROM STRAVA + GARMIN ON CONNECT"
+    static let historyLocalTimeFooter =
+        "TIMES ARE YOUR LOCAL TIME · NEWEST FIRST — THE WRONG-DAY BUG DIES HERE"
+    static let historyJumpToday = "Today ›"
+    static let historyTitle = "History"
+    static let historyLoadMore = "Load 30 more days…"
+    static let historyFillInCTA = "Fill in ›"
+    static let historyCountedCTA = "Counted ✓"
+    static let historyLegend =
+        "STRAVA ✓ OURS = WE WROTE IT (SIGNED “— TRACKED WITH AMAKAFLOW”, SAFE TO REFRESH) · SKIPPED = A RULE HELD US BACK · UNTOUCHED = THEIR WORDS, WE NEVER WRITE."
+    static let historyBannerShow = "Show ›"
+    static let historyAccessibilityID = "af_actuals_history"
+
+    static func historyPulledBanner(days: Int, sessions: Int, needFillIn: Int) -> String {
+        "PULLED \(days) DAYS · \(sessions) SESSIONS · \(needFillIn) STILL NEED FILL-IN"
+    }
+
+    // MARK: - Verified undo / ⋯ menu (AMA-2396 A3)
+
+    static let verifiedToastWithStrava = "Verified ✓ · Strava updated"
+    static let verifiedToastNoStrava = "Verified ✓"
+    static let verifiedUndoAction = "Undo"
+    static let verifiedMenuEdit = "Edit actuals"
+    static let verifiedMenuEditSub = "CHANGES STAY VERIFIED · REFRESHES OUR STRAVA TEXT"
+    static let verifiedMenuRemoveStrava = "Remove from Strava"
+    static let verifiedMenuRemoveStravaSub = "THIS SESSION · RESTORES WHAT WAS THERE BEFORE US"
+    static let verifiedMenuUnverify = "Un-verify"
+    static let verifiedMenuUnverifySub =
+        "BACK TO “FILL IN” · ACTUALS KEPT AS DRAFT · STRAVA RESTORED"
+    static let verifiedMenuUnmatch = "Unmatch from this workout"
+    static let verifiedMenuUnmatchSub = "SESSION KEEPS ITS STRAVA METRICS"
+    static let verifiedMenuAccessibilityID = "af_actuals_verified_menu"
+
+    // MARK: - Strava write-back settings (AMA-2396 A4)
+
+    static let writeBackMasterTitle = "Write my workout back to Strava"
+    static let writeBackMasterSub =
+        "AFTER YOU VERIFY — TITLE + DESCRIPTION GET THE REAL STRUCTURE"
+    static let writeBackSkipHeader = "NEVER TOUCH — SKIP THESE"
+    static let writeBackOwnershipExplainer =
+        "HOW WE KNOW WHAT'S OURS: EVERY UPDATE WE WRITE ENDS WITH “— TRACKED WITH AMAKAFLOW”. SIGNED = OURS → REFRESHED WHEN YOUR ACTUALS CHANGE, NEVER DUPLICATED. UNSIGNED WORDS = YOURS OR ANOTHER APP'S → NEVER TOUCHED. ONE UPDATE PER ACTIVITY, EVER."
+    static let writeBackPreviewHeader = "WHAT STRAVA GETS"
+    static let writeBackStatusReadWrite = "CONNECTED ✓ · READ + WRITE-BACK"
+    static let writeBackReconnectToast =
+        "Needs one more permission — reconnect to Strava to allow editing"
+    static let writeBackAccessibilityID = "af_actuals_strava_writeback"
 
     // MARK: - Capture builder / photo (Map v2)
 

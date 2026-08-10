@@ -237,6 +237,8 @@ struct LocalPinnedWorkout: Codable, FetchableRecord, MutablePersistableRecord, I
 }
 
 /// AMA-2387: verified fill-in session (local-first; sync later).
+/// AMA-2396: extended with per-session Strava write-back state so un-verify /
+/// remove-from-Strava can restore what was there before us without a re-fetch.
 struct LocalActualsSession: Codable, FetchableRecord, MutablePersistableRecord, Identifiable, Equatable {
     static let databaseTableName = "actuals_sessions"
     static let persistenceConflictPolicy = PersistenceConflictPolicy(insert: .replace, update: .replace)
@@ -248,16 +250,64 @@ struct LocalActualsSession: Codable, FetchableRecord, MutablePersistableRecord, 
     var verified: Bool
     var savedAt: Date
     var createdAt: Date
+    /// `StravaDecorationState.persistedRawValue` — nil means no Strava involvement.
+    var stravaDecoration: String?
+    /// Snapshot of Strava's title/description before our first write (restore-on-unverify).
+    var preUpdateTitle: String?
+    var preUpdateDescription: String?
+    /// Originating Strava activity id when this session came from a synced activity.
+    var stravaActivityId: String?
+    /// Un-verify keeps exercise rows but drops the session back to a draft — never
+    /// deletes the fill-in the athlete already did.
+    var isDraft: Bool
+
+    init(
+        id: String,
+        title: String,
+        subtitle: String,
+        rpe: Int? = nil,
+        verified: Bool,
+        savedAt: Date,
+        createdAt: Date,
+        stravaDecoration: String? = nil,
+        preUpdateTitle: String? = nil,
+        preUpdateDescription: String? = nil,
+        stravaActivityId: String? = nil,
+        isDraft: Bool = false
+    ) {
+        self.id = id
+        self.title = title
+        self.subtitle = subtitle
+        self.rpe = rpe
+        self.verified = verified
+        self.savedAt = savedAt
+        self.createdAt = createdAt
+        self.stravaDecoration = stravaDecoration
+        self.preUpdateTitle = preUpdateTitle
+        self.preUpdateDescription = preUpdateDescription
+        self.stravaActivityId = stravaActivityId
+        self.isDraft = isDraft
+    }
 
     enum Columns: String, ColumnExpression {
         case id, title, subtitle, rpe, verified
         case savedAt = "saved_at", createdAt = "created_at"
+        case stravaDecoration = "strava_decoration"
+        case preUpdateTitle = "pre_update_title"
+        case preUpdateDescription = "pre_update_description"
+        case stravaActivityId = "strava_activity_id"
+        case isDraft = "is_draft"
     }
 
     enum CodingKeys: String, CodingKey {
         case id, title, subtitle, rpe, verified
         case savedAt = "saved_at"
         case createdAt = "created_at"
+        case stravaDecoration = "strava_decoration"
+        case preUpdateTitle = "pre_update_title"
+        case preUpdateDescription = "pre_update_description"
+        case stravaActivityId = "strava_activity_id"
+        case isDraft = "is_draft"
     }
 }
 

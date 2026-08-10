@@ -275,6 +275,14 @@
 		AMA2387TODAYDEMBLD /* ActualsTodayDemoFeed.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2387TODAYDEMREF /* ActualsTodayDemoFeed.swift */; };
 		AMA2387CAPDRAFTBLD /* ActualsCaptureDraft.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2387CAPDRAFTREF /* ActualsCaptureDraft.swift */; };
 		AMA2387MATCHSAVEBLD /* ActualsMatchSaveView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2387MATCHSAVEREF /* ActualsMatchSaveView.swift */; };
+		AMA2396SZBADGEBLD /* SZStravaBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2396SZBADGEREF /* SZStravaBadge.swift */; };
+		AMA2396MAPCTABLD /* ActualsMapCTAState.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2396MAPCTAREF /* ActualsMapCTAState.swift */; };
+		AMA2396DAYBUCKBLD /* ActualsDayBucketing.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2396DAYBUCKREF /* ActualsDayBucketing.swift */; };
+		AMA2396STRAVAWBBLD /* StravaWriteBack.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2396STRAVAWBREF /* StravaWriteBack.swift */; };
+		AMA2396V5BLD /* V5_actuals_sync_v2.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2396V5REF /* V5_actuals_sync_v2.swift */; };
+		AMA2396HISTVIEWBLD /* ActualsHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2396HISTVIEWREF /* ActualsHistoryView.swift */; };
+		AMA2396WBVIEWBLD /* ActualsStravaWriteBackView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2396WBVIEWREF /* ActualsStravaWriteBackView.swift */; };
+		AMA2396SYNCV2TBLD /* AMA2396SyncV2Tests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2396SYNCV2TREF /* AMA2396SyncV2Tests.swift */; };
 		WATCHTITLEBLD /* WatchWorkoutTitlePolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = WATCHTITLEREF /* WatchWorkoutTitlePolicy.swift */; };
 		AMA2375MODLBLD /* OnYourWatchesModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2375MODLREF /* OnYourWatchesModels.swift */; };
 		AMA2375QSTRBLD /* GarminWatchQueueStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2375QSTRREF /* GarminWatchQueueStore.swift */; };
@@ -1009,6 +1017,14 @@
 		AMA2387TODAYDEMREF /* ActualsTodayDemoFeed.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActualsTodayDemoFeed.swift; path = ../AmakaFlow/Services/ActualsTodayDemoFeed.swift; sourceTree = SOURCE_ROOT; };
 		AMA2387CAPDRAFTREF /* ActualsCaptureDraft.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActualsCaptureDraft.swift; path = ../AmakaFlow/Models/ActualsCaptureDraft.swift; sourceTree = SOURCE_ROOT; };
 		AMA2387MATCHSAVEREF /* ActualsMatchSaveView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActualsMatchSaveView.swift; path = ../AmakaFlow/Views/ActualsMatchSaveView.swift; sourceTree = SOURCE_ROOT; };
+		AMA2396SZBADGEREF /* SZStravaBadge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SZStravaBadge.swift; path = ../AmakaFlow/Views/Components/SZStravaBadge.swift; sourceTree = SOURCE_ROOT; };
+		AMA2396MAPCTAREF /* ActualsMapCTAState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActualsMapCTAState.swift; path = ../AmakaFlow/Models/ActualsMapCTAState.swift; sourceTree = SOURCE_ROOT; };
+		AMA2396DAYBUCKREF /* ActualsDayBucketing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActualsDayBucketing.swift; path = ../AmakaFlow/Models/ActualsDayBucketing.swift; sourceTree = SOURCE_ROOT; };
+		AMA2396STRAVAWBREF /* StravaWriteBack.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = StravaWriteBack.swift; path = ../AmakaFlow/Models/StravaWriteBack.swift; sourceTree = SOURCE_ROOT; };
+		AMA2396V5REF /* V5_actuals_sync_v2.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = V5_actuals_sync_v2.swift; path = ../AmakaFlow/Storage/Migrations/V5_actuals_sync_v2.swift; sourceTree = SOURCE_ROOT; };
+		AMA2396HISTVIEWREF /* ActualsHistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActualsHistoryView.swift; path = ../AmakaFlow/Views/ActualsHistoryView.swift; sourceTree = SOURCE_ROOT; };
+		AMA2396WBVIEWREF /* ActualsStravaWriteBackView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActualsStravaWriteBackView.swift; path = ../AmakaFlow/Views/ActualsStravaWriteBackView.swift; sourceTree = SOURCE_ROOT; };
+		AMA2396SYNCV2TREF /* AMA2396SyncV2Tests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AMA2396SyncV2Tests.swift; path = AmakaFlowCompanionTests/AMA2396SyncV2Tests.swift; sourceTree = "<group>"; };
 		WATCHTITLEREF /* WatchWorkoutTitlePolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WatchWorkoutTitlePolicy.swift; path = ../AmakaFlow/Models/WatchWorkoutTitlePolicy.swift; sourceTree = SOURCE_ROOT; };
 		AMA2375MODLREF /* OnYourWatchesModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = OnYourWatchesModels.swift; path = ../AmakaFlow/Models/OnYourWatchesModels.swift; sourceTree = SOURCE_ROOT; };
 		AMA2375QSTRREF /* GarminWatchQueueStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = GarminWatchQueueStore.swift; path = ../AmakaFlow/Services/GarminWatchQueueStore.swift; sourceTree = SOURCE_ROOT; };
@@ -1864,6 +1880,13 @@
 				AMA2387VERVREF /* ActualsVerifiedView.swift */,
 				AMA2387DOGFOODREF /* ActualsDogfoodHubView.swift */,
 				AMA2387MATCHSAVEREF /* ActualsMatchSaveView.swift */,
+				AMA2396SZBADGEREF /* SZStravaBadge.swift */,
+				AMA2396MAPCTAREF /* ActualsMapCTAState.swift */,
+				AMA2396DAYBUCKREF /* ActualsDayBucketing.swift */,
+				AMA2396STRAVAWBREF /* StravaWriteBack.swift */,
+				AMA2396V5REF /* V5_actuals_sync_v2.swift */,
+				AMA2396HISTVIEWREF /* ActualsHistoryView.swift */,
+				AMA2396WBVIEWREF /* ActualsStravaWriteBackView.swift */,
 				AMA2378SEQVREF001 /* EnrichmentSequenceScreen.swift */,
 				AMA2378WPICKREF001 /* EnrichmentWarmupPickScreen.swift */,
 				AMA2378RAMPVREF001 /* EnrichmentRampEditorScreen.swift */,
@@ -2268,6 +2291,7 @@
 				AMA2387MAPTREF /* ActualsPlanMatcherTests.swift */,
 				AMA2387FILLTREF /* ActualsFillInTests.swift */,
 				AMA2387VERGTREF /* ActualsVerifiedGhostTests.swift */,
+				AMA2396SYNCV2TREF /* AMA2396SyncV2Tests.swift */,
 				AMA2376TESTREF /* WorkoutCollectionsRepositoryTests.swift */,
 				AMA2376CPTESTREF /* CollectionPresentationTests.swift */,
 				AMA2376STORTREF /* LibraryCollectionsStoreTests.swift */,
@@ -3048,6 +3072,13 @@
 				AMA2387VERCBLD /* ActualsVerifiedCard.swift in Sources */,
 				AMA2387VERVBLD /* ActualsVerifiedView.swift in Sources */,
 				AMA2387DOGFOODBLD /* ActualsDogfoodHubView.swift in Sources */,
+				AMA2396SZBADGEBLD /* SZStravaBadge.swift in Sources */,
+				AMA2396MAPCTABLD /* ActualsMapCTAState.swift in Sources */,
+				AMA2396DAYBUCKBLD /* ActualsDayBucketing.swift in Sources */,
+				AMA2396STRAVAWBBLD /* StravaWriteBack.swift in Sources */,
+				AMA2396V5BLD /* V5_actuals_sync_v2.swift in Sources */,
+				AMA2396HISTVIEWBLD /* ActualsHistoryView.swift in Sources */,
+				AMA2396WBVIEWBLD /* ActualsStravaWriteBackView.swift in Sources */,
 				WATCHTITLEBLD /* WatchWorkoutTitlePolicy.swift in Sources */,
 				AMA2375MODLBLD /* OnYourWatchesModels.swift in Sources */,
 				AMA2375QSTRBLD /* GarminWatchQueueStore.swift in Sources */,
@@ -3261,6 +3292,7 @@
 				AMA2387MAPTBLD /* ActualsPlanMatcherTests.swift in Sources */,
 				AMA2387FILLTBLD /* ActualsFillInTests.swift in Sources */,
 				AMA2387VERGTBLD /* ActualsVerifiedGhostTests.swift in Sources */,
+				AMA2396SYNCV2TBLD /* AMA2396SyncV2Tests.swift in Sources */,
 				AMA2376TESTBLD /* WorkoutCollectionsRepositoryTests.swift in Sources */,
 				AMA2376CPTESTBLD /* CollectionPresentationTests.swift in Sources */,
 				AMA2376STORTBLD /* LibraryCollectionsStoreTests.swift in Sources */,

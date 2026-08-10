@@ -15,6 +15,11 @@ struct ActualsFillInView: View {
     var presentsVerifiedOnSave: Bool = true
     /// When false (and not presenting verified here), parent owns navigation after save.
     var dismissOnSave: Bool = true
+    /// AMA-2396: extra hook alongside the built-in repository un-verify (e.g. a
+    /// Today feed also needs its in-memory card flipped back to "Fill in").
+    var onUnverify: (() -> Void)?
+    var writeBackSettings: StravaWriteBackSettingsStore = StravaWriteBackSettingsStore()
+    var writeBackProvider: any StravaWriteBackProviding = StravaWriteBackFactory.makeDefault()
 
     @Environment(\.dismiss) private var dismiss
 
@@ -298,19 +303,17 @@ struct ActualsFillInView: View {
         return Button {
             do {
                 if try viewModel.save() {
-                    DDToastCenter.shared.success(
-                        ActualsCopy.fillInSavedToast,
-                        sub: ActualsCopy.fillInSavedToastSub
-                    )
+                    let savedSession = viewModel.session
                     // Present verified first (state lives on the VM so parent
                     // refresh from onSaved cannot drop the payoff).
                     if presentsVerifiedOnSave {
                         viewModel.showVerifiedPayoff = true
                     }
-                    onSaved(viewModel.session)
+                    onSaved(savedSession)
                     if !presentsVerifiedOnSave, dismissOnSave {
                         dismiss()
                     }
+                    Task { await resolveWriteBackAndToast(for: savedSession) }
                 }
             } catch {
                 DDToastCenter.shared.error(
@@ -331,6 +334,39 @@ struct ActualsFillInView: View {
         .buttonStyle(.plain)
         .disabled(!ready)
         .accessibilityIdentifier(ActualsCopy.fillInSaveAccessibilityID)
+    }
+
+    /// AMA-2396: never claim "Strava updated" until the write-back PUT actually
+    /// confirms — the toast waits for `resolveWriteBackAndToast` before it claims
+    /// anything, then offers Undo back to "Fill in".
+    @MainActor
+    private func resolveWriteBackAndToast(for session: ActualsFillInSession) async {
+        var claimedStravaUpdate = false
+        if let activityId = session.stravaActivityId, writeBackSettings.writeBackEnabled {
+            let structureBody = session.exercises
+                .map { "\($0.name): \($0.actualSets)×\($0.actualReps)" }
+                .joined(separator: "\n")
+            let outcome = await writeBackProvider.writeBack(
+                activityId: activityId,
+                title: session.title,
+                structureBody: structureBody,
+                currentDescription: "",
+                activityType: "workout",
+                recordingApp: nil,
+                isRace: false,
+                rules: writeBackSettings.rules
+            )
+            if case .updated = outcome {
+                claimedStravaUpdate = true
+            }
+        }
+        let toastText = claimedStravaUpdate
+            ? ActualsCopy.verifiedToastWithStrava
+            : ActualsCopy.verifiedToastNoStrava
+        DDToastCenter.shared.undo(toastText, sub: ActualsCopy.fillInSavedToastSub) {
+            viewModel.unverify()
+            onUnverify?()
+        }
     }
 }
 

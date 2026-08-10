@@ -124,4 +124,12 @@ final class ActualsFillInViewModel: ObservableObject {
             throw error
         }
     }
+
+    /// AMA-2396: toast Undo — back to "Fill in", RPE cleared, draft kept.
+    func unverify() {
+        session.verified = false
+        session.rpe = nil
+        showVerifiedPayoff = false
+        try? repository.unverifySession(id: session.id)
+    }
 }
