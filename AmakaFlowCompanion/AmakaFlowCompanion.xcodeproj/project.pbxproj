@@ -12,6 +12,14 @@
 		AMA2393HONBLD /* WorkoutSportHonesty.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2393HONREF /* WorkoutSportHonesty.swift */; };
 		AMA2393PICKBLD /* WorkoutSportPickerSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2393PICKREF /* WorkoutSportPickerSheet.swift */; };
 		AMA2393TSTBLD /* WorkoutSportHonestyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2393TSTREF /* WorkoutSportHonestyTests.swift */; };
+		AMA2395PACBLD /* WorkoutPaceTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2395PACREF /* WorkoutPaceTable.swift */; };
+		AMA2395ESTBLD /* WorkoutDurationEstimate.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2395ESTREF /* WorkoutDurationEstimate.swift */; };
+		AMA2395ESRBLD /* WorkoutDurationEstimator.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2395ESRREF /* WorkoutDurationEstimator.swift */; };
+		AMA2395INTBLD /* WorkoutDurationEstimator+Internals.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2395INTREF /* WorkoutDurationEstimator+Internals.swift */; };
+		AMA2395CAPBLD /* WorkoutCaptionPresentation.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2395CAPREF /* WorkoutCaptionPresentation.swift */; };
+		AMA2395TSTBLD /* WorkoutDurationEstimatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2395TSTREF /* WorkoutDurationEstimatorTests.swift */; };
+		AMA2395DETTSTBLD /* WorkoutDetailCanonicalPresentationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2395DETTSTREF /* WorkoutDetailCanonicalPresentationTests.swift */; };
+		AMA2395CAPTSTBLD /* WorkoutCaptionPresentationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2395CAPTSTREF /* WorkoutCaptionPresentationTests.swift */; };
 		00CBD8759EE7C769D1D7F82B /* AgentInboxView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3EB7457100F5C1B6E4488558 /* AgentInboxView.swift */; };
 		056DCE6864994871816A3AF9 /* OpenAPIRuntime in Frameworks */ = {isa = PBXBuildFile; productRef = 5428DFDDAABA4C78929FAD58 /* OpenAPIRuntime */; };
 		0B82E5ED1C34442389BC7768 /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = 2F0C8DCE03694CF3A60D12F9 /* Sentry */; };
@@ -622,6 +630,8 @@
 		F1XTUR3JS0N01000004 /* strength_block_w1.json in Resources */ = {isa = PBXBuildFile; fileRef = F1XTUR3JS0N00000004 /* strength_block_w1.json */; };
 		F1XTUR3JS0N01000005 /* running_long.json in Resources */ = {isa = PBXBuildFile; fileRef = F1XTUR3JS0N00000005 /* running_long.json */; };
 		F1XTUR3JS0N01000006 /* hiit_follow_along.json in Resources */ = {isa = PBXBuildFile; fileRef = F1XTUR3JS0N00000006 /* hiit_follow_along.json */; };
+		F1XTUR3JS0N01000007 /* jeff_nippard_upper_body.json in Resources */ = {isa = PBXBuildFile; fileRef = F1XTUR3JS0N00000007 /* jeff_nippard_upper_body.json */; };
+		F1XTUR3JS0N01000008 /* bike_ski_row_circuit.json in Resources */ = {isa = PBXBuildFile; fileRef = F1XTUR3JS0N00000008 /* bike_ski_row_circuit.json */; };
 		F1XTUR3L0AD3R0000002 /* FixtureLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1XTUR3L0AD3R0000001 /* FixtureLoader.swift */; };
 		F4E8733C34C4B41F73806D0A /* PlanningModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = EBCE80D8EA7940E025E8D41D /* PlanningModels.swift */; };
 		F818DA94C6BD4F40EE8313B0 /* StepDisplayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8BFF8D1C38311406C868156 /* StepDisplayView.swift */; };
@@ -788,6 +798,14 @@
 		AMA2393HONREF /* WorkoutSportHonesty.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutSportHonesty.swift; path = ../AmakaFlow/Models/WorkoutSportHonesty.swift; sourceTree = SOURCE_ROOT; };
 		AMA2393PICKREF /* WorkoutSportPickerSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutSportPickerSheet.swift; path = ../AmakaFlow/Views/WorkoutSportPickerSheet.swift; sourceTree = SOURCE_ROOT; };
 		AMA2393TSTREF /* WorkoutSportHonestyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutSportHonestyTests.swift; path = AmakaFlowCompanionTests/WorkoutSportHonestyTests.swift; sourceTree = "<group>"; };
+		AMA2395PACREF /* WorkoutPaceTable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutPaceTable.swift; path = ../AmakaFlow/Models/WorkoutPaceTable.swift; sourceTree = SOURCE_ROOT; };
+		AMA2395ESTREF /* WorkoutDurationEstimate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutDurationEstimate.swift; path = ../AmakaFlow/Models/WorkoutDurationEstimate.swift; sourceTree = SOURCE_ROOT; };
+		AMA2395ESRREF /* WorkoutDurationEstimator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutDurationEstimator.swift; path = ../AmakaFlow/Models/WorkoutDurationEstimator.swift; sourceTree = SOURCE_ROOT; };
+		AMA2395INTREF /* WorkoutDurationEstimator+Internals.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "WorkoutDurationEstimator+Internals.swift"; path = "../AmakaFlow/Models/WorkoutDurationEstimator+Internals.swift"; sourceTree = SOURCE_ROOT; };
+		AMA2395CAPREF /* WorkoutCaptionPresentation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutCaptionPresentation.swift; path = ../AmakaFlow/Models/WorkoutCaptionPresentation.swift; sourceTree = SOURCE_ROOT; };
+		AMA2395TSTREF /* WorkoutDurationEstimatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutDurationEstimatorTests.swift; path = AmakaFlowCompanionTests/WorkoutDurationEstimatorTests.swift; sourceTree = "<group>"; };
+		AMA2395DETTSTREF /* WorkoutDetailCanonicalPresentationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutDetailCanonicalPresentationTests.swift; path = AmakaFlowCompanionTests/WorkoutDetailCanonicalPresentationTests.swift; sourceTree = "<group>"; };
+		AMA2395CAPTSTREF /* WorkoutCaptionPresentationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutCaptionPresentationTests.swift; path = AmakaFlowCompanionTests/WorkoutCaptionPresentationTests.swift; sourceTree = "<group>"; };
 		0590FA2DB2E16FC868D6F303 /* SyncDashboardView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = SyncDashboardView.swift; path = ../AmakaFlow/Views/Settings/SyncDashboardView.swift; sourceTree = "<group>"; };
 		08D9B67C13E34BAE804A9359 /* HistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = HistoryView.swift; path = ../AmakaFlow/Views/HistoryView.swift; sourceTree = SOURCE_ROOT; };
 		0949526387D9FA932B940DF3 /* TrainingPreferencesViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = TrainingPreferencesViewModel.swift; path = ../AmakaFlow/ViewModels/TrainingPreferencesViewModel.swift; sourceTree = "<group>"; };
@@ -1390,6 +1408,8 @@
 		F1XTUR3JS0N00000004 /* strength_block_w1.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = strength_block_w1.json; path = ../AmakaFlow/Resources/Fixtures/strength_block_w1.json; sourceTree = SOURCE_ROOT; };
 		F1XTUR3JS0N00000005 /* running_long.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = running_long.json; path = ../AmakaFlow/Resources/Fixtures/running_long.json; sourceTree = SOURCE_ROOT; };
 		F1XTUR3JS0N00000006 /* hiit_follow_along.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = hiit_follow_along.json; path = ../AmakaFlow/Resources/Fixtures/hiit_follow_along.json; sourceTree = SOURCE_ROOT; };
+		F1XTUR3JS0N00000007 /* jeff_nippard_upper_body.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = jeff_nippard_upper_body.json; path = ../AmakaFlow/Resources/Fixtures/jeff_nippard_upper_body.json; sourceTree = SOURCE_ROOT; };
+		F1XTUR3JS0N00000008 /* bike_ski_row_circuit.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = bike_ski_row_circuit.json; path = ../AmakaFlow/Resources/Fixtures/bike_ski_row_circuit.json; sourceTree = SOURCE_ROOT; };
 		F1XTUR3L0AD3R0000001 /* FixtureLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FixtureLoader.swift; path = ../AmakaFlow/Services/FixtureLoader.swift; sourceTree = SOURCE_ROOT; };
 		F3CF9663A6818FA77C6C02B0 /* WeeklyReviewView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = WeeklyReviewView.swift; path = ../AmakaFlow/Views/WeeklyReviewView.swift; sourceTree = SOURCE_ROOT; };
 		F82258553831E24BC9B8C650 /* FlattenedInterval.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FlattenedInterval.swift; path = ../AmakaFlow/Engine/FlattenedInterval.swift; sourceTree = SOURCE_ROOT; };
@@ -1853,6 +1873,11 @@
 				F84E22732ED0D58300459747 /* WorkoutsViewModel.swift */,
 				F84E22712ED0D56C00459747 /* Workout.swift */,
 				AMA2393HONREF /* WorkoutSportHonesty.swift */,
+				AMA2395PACREF /* WorkoutPaceTable.swift */,
+				AMA2395ESTREF /* WorkoutDurationEstimate.swift */,
+				AMA2395ESRREF /* WorkoutDurationEstimator.swift */,
+				AMA2395INTREF /* WorkoutDurationEstimator+Internals.swift */,
+				AMA2395CAPREF /* WorkoutCaptionPresentation.swift */,
 				AMA2389MDLREF /* FriendsSharingModels.swift */,
 				89321AF9D21D441198437105 /* DevicePreference.swift */,
 				BL0CK5W1FT00000001 /* Block.swift */,
@@ -2145,6 +2170,8 @@
 				AMA2286RUNINTREF /* running_intervals_4x800.json */,
 				F1XTUR3JS0N00000005 /* running_long.json */,
 				F1XTUR3JS0N00000006 /* hiit_follow_along.json */,
+				F1XTUR3JS0N00000007 /* jeff_nippard_upper_body.json */,
+				F1XTUR3JS0N00000008 /* bike_ski_row_circuit.json */,
 				8B1F098698F14683BCACADE0 /* WorkoutCompletionService.swift */,
 				AMA12820001A /* PRDetectionService.swift */,
 				AMA12840002A /* ShareCardGenerator.swift */,
@@ -2303,6 +2330,9 @@
 				AMA2387STORETREF /* ActualsSourceConnectionStoreTests.swift */,
 				AMA2387TEACHTREF /* ActualsTeachCardVisibilityTests.swift */,
 				AMA2393TSTREF /* WorkoutSportHonestyTests.swift */,
+				AMA2395TSTREF /* WorkoutDurationEstimatorTests.swift */,
+				AMA2395DETTSTREF /* WorkoutDetailCanonicalPresentationTests.swift */,
+				AMA2395CAPTSTREF /* WorkoutCaptionPresentationTests.swift */,
 				AMA2387CONNTREF /* ActualsConnectSourcesCopyTests.swift */,
 				AMA2387HKTREF /* ActualsAppleHealthConnectTests.swift */,
 				AMA2387AUTHTREF /* ActualsProviderAuthTests.swift */,
@@ -2630,6 +2660,8 @@
 				AMA2286RUNINTBLD /* running_intervals_4x800.json in Resources */,
 				F1XTUR3JS0N01000005 /* running_long.json in Resources */,
 				F1XTUR3JS0N01000006 /* hiit_follow_along.json in Resources */,
+				F1XTUR3JS0N01000007 /* jeff_nippard_upper_body.json in Resources */,
+				F1XTUR3JS0N01000008 /* bike_ski_row_circuit.json in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -2819,6 +2851,11 @@
 				F84E22702ED0D55600459747 /* Theme.swift in Sources */,
 				F84E22722ED0D56C00459747 /* Workout.swift in Sources */,
 				AMA2393HONBLD /* WorkoutSportHonesty.swift in Sources */,
+				AMA2395PACBLD /* WorkoutPaceTable.swift in Sources */,
+				AMA2395ESTBLD /* WorkoutDurationEstimate.swift in Sources */,
+				AMA2395ESRBLD /* WorkoutDurationEstimator.swift in Sources */,
+				AMA2395INTBLD /* WorkoutDurationEstimator+Internals.swift in Sources */,
+				AMA2395CAPBLD /* WorkoutCaptionPresentation.swift in Sources */,
 				AMA2393PICKBLD /* WorkoutSportPickerSheet.swift in Sources */,
 				AMA2373COPYBLD /* CreateWithAICopy.swift in Sources */,
 				AMA2373PRESBLD /* CreateWithAIDraftPresentation.swift in Sources */,
@@ -3311,6 +3348,9 @@
 				AMA2387STORETBLD /* ActualsSourceConnectionStoreTests.swift in Sources */,
 				AMA2387TEACHTBLD /* ActualsTeachCardVisibilityTests.swift in Sources */,
 				AMA2393TSTBLD /* WorkoutSportHonestyTests.swift in Sources */,
+				AMA2395TSTBLD /* WorkoutDurationEstimatorTests.swift in Sources */,
+				AMA2395DETTSTBLD /* WorkoutDetailCanonicalPresentationTests.swift in Sources */,
+				AMA2395CAPTSTBLD /* WorkoutCaptionPresentationTests.swift in Sources */,
 				AMA2387CONNTBLD /* ActualsConnectSourcesCopyTests.swift in Sources */,
 				AMA2387HKTBLD /* ActualsAppleHealthConnectTests.swift in Sources */,
 				AMA2387AUTHTBLD /* ActualsProviderAuthTests.swift in Sources */,

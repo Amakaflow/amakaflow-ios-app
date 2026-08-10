@@ -107,7 +107,11 @@ private extension WorkoutDetailOrganizeChrome {
             Button {
                 isPresentingAddToCollection = true
             } label: {
-                tileLabel(icon: "square.stack.fill", title: "Collect", isActive: false)
+                tileLabel(
+                    icon: "square.stack.fill",
+                    title: "Collect",
+                    isActive: !memberCollections.isEmpty
+                )
             }
             .buttonStyle(.plain)
             .accessibilityIdentifier("af_detail_collect")
@@ -118,10 +122,11 @@ private extension WorkoutDetailOrganizeChrome {
                 tileLabel(icon: "tv", title: "To watch", isActive: false)
             }
             .buttonStyle(.plain)
-            .accessibilityIdentifier("af_detail_to_watch")
+            .accessibilityIdentifier("af_detail_towatch")
 
             shareTile
         }
+        .accessibilityIdentifier("af_detail_actions")
     }
 
     func tileLabel(icon: String, title: String, isActive: Bool) -> some View {
@@ -157,12 +162,21 @@ private extension WorkoutDetailOrganizeChrome {
 // MARK: - Collection chips
 
 private extension WorkoutDetailOrganizeChrome {
+    @ViewBuilder
     var chipsRow: some View {
-        FlowLayout(spacing: 8) {
-            ForEach(memberCollections) { collection in
-                chip(for: collection)
+        // AMA-2395: membership chips only — Collect is the one collections door
+        // (＋ Add removed). Row absent when the workout is in no collections.
+        if !memberCollections.isEmpty {
+            HStack(alignment: .center, spacing: 8) {
+                Text("IN")
+                    .font(.system(size: 9, weight: .bold, design: .monospaced))
+                    .foregroundColor(DailyDriver.foregroundDim)
+                FlowLayout(spacing: 8) {
+                    ForEach(memberCollections) { collection in
+                        chip(for: collection)
+                    }
+                }
             }
-            addChip
         }
     }
 
@@ -182,35 +196,15 @@ private extension WorkoutDetailOrganizeChrome {
                     .foregroundColor(DailyDriver.foregroundMuted)
             }
             .buttonStyle(.plain)
+            .accessibilityLabel("Remove")
             .accessibilityIdentifier("af_detail_collection_chip_\(collection.id)_remove")
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
         .background(DailyDriver.card2)
         .clipShape(Capsule(style: .continuous))
+        // Prefer stable collection id — names are not unique after sanitize.
         .accessibilityIdentifier("af_detail_collection_chip_\(collection.id)")
-    }
-
-    var addChip: some View {
-        Button {
-            isPresentingAddToCollection = true
-        } label: {
-            HStack(spacing: 4) {
-                Image(systemName: "plus")
-                    .font(.system(size: 9, weight: .bold))
-                Text("Add")
-                    .font(.system(size: 10, weight: .bold))
-            }
-            .foregroundColor(DailyDriver.lime)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 6)
-            .overlay(
-                Capsule(style: .continuous)
-                    .stroke(DailyDriver.lime.opacity(0.5), lineWidth: 1)
-            )
-        }
-        .buttonStyle(.plain)
-        .accessibilityIdentifier("af_detail_collection_add_chip")
     }
 }
 

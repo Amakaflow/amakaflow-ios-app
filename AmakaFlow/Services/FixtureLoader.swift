@@ -102,7 +102,8 @@ enum FixtureLoader {
         let knownFixtures = [
             "amrap_10min", "emom_strength", "for_time_conditioning",
             "strength_block_w1", "running_long", "hiit_follow_along",
-            "running_intervals_4x800"
+            "running_intervals_4x800", "jeff_nippard_upper_body",
+            "bike_ski_row_circuit"
         ]
         return knownFixtures.contains(name)
     }
