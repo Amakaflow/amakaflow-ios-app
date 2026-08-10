@@ -166,32 +166,27 @@ struct ActualsConnectSourcesView<Store: ActualsSourceConnecting>: View where Sto
             Spacer(minLength: 8)
 
             if connected {
-                // OAuth sources stay tappable so a local CONNECTED from stub dogfood
-                // (or expired token) can start a real authorize again.
-                if provider == .strava || provider == .garmin {
-                    Button {
-                        connectTapped(provider)
-                    } label: {
-                        Text(ActualsCopy.connectButton)
-                            .ddDisplayText(12, weight: .bold)
-                            .foregroundColor(DailyDriver.ink)
-                            .padding(.horizontal, 14)
-                            .padding(.vertical, 8)
-                            .background(connectButtonBackground(for: provider))
-                            .clipShape(Capsule())
-                    }
-                    .buttonStyle(.plain)
-                    .fixedSize()
-                    .accessibilityIdentifier(provider.accessibilityConnectID)
-                } else {
+                VStack(alignment: .trailing, spacing: 6) {
                     Text(
                         store.isFreshlyLinked(provider)
                             ? ActualsCopy.linkedJustNowBadge
                             : ActualsCopy.connectedBadge
                     )
-                        .font(.system(size: 9, design: .monospaced))
-                        .foregroundColor(DailyDriver.lime)
-                        .fixedSize()
+                    .font(.system(size: 9, design: .monospaced))
+                    .foregroundColor(DailyDriver.lime)
+                    .fixedSize()
+                    // Re-auth without looking "not connected" — Connect CTA was confusing dogfood.
+                    if provider == .strava || provider == .garmin {
+                        Button {
+                            connectTapped(provider)
+                        } label: {
+                            Text(ActualsCopy.reconnectButton)
+                                .font(.system(size: 10, weight: .semibold))
+                                .foregroundColor(DailyDriver.foregroundMuted)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityIdentifier(provider.accessibilityConnectID)
+                    }
                 }
             } else {
                 let opensSettings = provider == .appleHealth

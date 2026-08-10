@@ -569,8 +569,22 @@ final class ActualsTodayDemoFeed: ObservableObject {
         guard !byStrava.isEmpty else { return cards }
         return cards.map { card in
             guard let activityId = stravaActivityId(fromCardID: card.id),
-                  let session = byStrava[activityId] else {
+                  var session = byStrava[activityId] else {
                 return card
+            }
+            // Cold-launch DB rows may predate V6 metadata — fill from the live Strava card.
+            if let activity = card.activity {
+                if session.stravaActivityId == nil { session.stravaActivityId = activityId }
+                if session.stravaActivityType == nil {
+                    session.stravaActivityType = activity.stravaTypeRaw
+                }
+                if session.stravaCurrentDescription == nil {
+                    session.stravaCurrentDescription = activity.activityDescription
+                }
+                if session.stravaRecordingApp == nil {
+                    session.stravaRecordingApp = activity.recordingApp
+                }
+                session.stravaIsRace = activity.isRace
             }
             let decoration = (try? repository.fetchDecoration(forSessionID: session.id)) ?? card.stravaDecoration
             if session.verified {

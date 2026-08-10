@@ -291,7 +291,7 @@ struct TodayDiaryView: View {
                         time: card.timeLabel,
                         title: card.title,
                         stats: card.stats,
-                        sourceLabel: card.sourceLabel,
+                        sourceLabel: todaySourceLabel(for: card),
                         showsChevron: true,
                         trailingAction: AnyView(actualsTrailingAction(for: card))
                     )
@@ -368,6 +368,20 @@ struct TodayDiaryView: View {
         }
     }
 
+    /// Surface write-back state on Today (History already shows SZStravaBadge).
+    private func todaySourceLabel(for card: ActualsTodayDemoCard) -> String {
+        switch card.stravaDecoration {
+        case .ours:
+            return "\(card.sourceLabel) · STRAVA ✓ OURS"
+        case .skipped:
+            return "\(card.sourceLabel) · STRAVA SKIPPED"
+        case .untouched:
+            return "\(card.sourceLabel) · STRAVA UNTOUCHED"
+        case .none:
+            return card.sourceLabel
+        }
+    }
+
     private func openActualsCard(_ card: ActualsTodayDemoCard) {
         switch card.kind {
         case .merged:
@@ -385,12 +399,16 @@ struct TodayDiaryView: View {
             guard actualsDemo.fillInViewModel != nil else { return }
             actualsDestination = .fillIn
         case .verified:
+            // Carry card id on the route — setting verifiedSession in the same
+            // frame races navigationDestination and pops a blank screen.
+            verifiedCardID = card.id
+            verifiedSourceName = sourceDisplayName(for: card)
             if let saved = card.fillInSession {
                 verifiedSession = saved
-                verifiedSourceName = sourceDisplayName(for: card)
-                verifiedCardID = card.id
-                actualsDestination = .verified
+            } else if let loaded = try? ActualsRepository().fetchSession(id: card.id) {
+                verifiedSession = loaded
             }
+            actualsDestination = .verified(cardID: card.id)
         case .counted:
             break
         }
@@ -408,8 +426,8 @@ struct TodayDiaryView: View {
             missingDestinationFallback(nil)
         case .fillIn:
             fillInDestinationView
-        case .verified:
-            verifiedDestinationView
+        case .verified(let cardID):
+            verifiedDestinationView(cardID: cardID)
         }
     }
 
@@ -521,7 +539,7 @@ struct TodayDiaryView: View {
                     verifiedSourceName = sourceDisplayName(for: card)
                 }
                 actualsDemo.markVerified(saved: session)
-                actualsDestination = .verified
+                actualsDestination = .verified(cardID: verifiedCardID ?? session.id)
             }
             let onUnverify = {
                 actualsDemo.applyUnverify(sessionID: viewModel.session.id)
@@ -546,12 +564,17 @@ struct TodayDiaryView: View {
     }
 
     @ViewBuilder
-    private var verifiedDestinationView: some View {
-        if let session = verifiedSession {
+    private func verifiedDestinationView(cardID: String) -> some View {
+        let card = actualsDemo.cards.first { $0.id == cardID }
+        let session = card?.fillInSession
+            ?? verifiedSession
+            ?? (try? ActualsRepository().fetchSession(id: cardID))
+        if let session {
+            let sourceName = card.map(sourceDisplayName(for:)) ?? verifiedSourceName
+            let decoration = card?.stravaDecoration
+                ?? ((try? ActualsRepository().fetchDecoration(forSessionID: session.id)) ?? .none)
             let onEditActuals = {
-                actualsDemo.prepareFillIn(
-                    from: actualsDemo.cards.first { $0.id == verifiedCardID }
-                )
+                actualsDemo.prepareFillIn(from: card)
                 guard actualsDemo.fillInViewModel != nil else { return }
                 actualsDestination = .fillIn
             }
@@ -559,27 +582,87 @@ struct TodayDiaryView: View {
                 Task { await unverifyVerifiedSession(session) }
             }
             let onUnmatch = {
-                guard let cardID = verifiedCardID else {
-                    actualsDestination = nil
-                    return
-                }
-                let activity = actualsDemo.cards.first { $0.id == cardID }?.activity
+                let activity = card?.activity
                     ?? ActualsTodayDemoFeed.sampleUnmappedActivity()
                 actualsDestination = .mapToPlan(cardID: cardID, activity: activity)
             }
+            let onWriteToStrava: (() -> Void)? = {
+                let settings = StravaWriteBackSettingsStore.shared
+                guard settings.writeBackEnabled, settings.hasActivityWriteScope else { return nil }
+                guard decoration != .ours else { return nil }
+                return {
+                    Task { await pushVerifiedWriteBack(session: session, cardID: cardID) }
+                }
+            }()
             ActualsVerifiedView(
                 session: session,
-                sourceName: verifiedSourceName,
-                decoration: actualsDemo.cards.first { $0.id == verifiedCardID }?
-                    .stravaDecoration ?? .none,
+                sourceName: sourceName,
+                decoration: decoration,
                 onEditActuals: onEditActuals,
+                onWriteToStrava: onWriteToStrava,
                 onRemoveFromStrava: removeVerifiedFromStrava,
                 onUnverify: onUnverify,
                 onUnmatch: onUnmatch
             )
             .navigationBarBackButtonHidden(true)
         } else {
-            missingDestinationFallback(nil)
+            missingDestinationFallback("Couldn't open that verified session.")
+        }
+    }
+
+    @MainActor
+    private func pushVerifiedWriteBack(session: ActualsFillInSession, cardID: String) async {
+        var payload = session
+        if let activity = actualsDemo.cards.first(where: { $0.id == cardID })?.activity {
+            if payload.stravaActivityId == nil {
+                payload.stravaActivityId = ActualsTodayDemoFeed.stravaActivityId(fromCardID: cardID)
+            }
+            if payload.stravaActivityType == nil {
+                payload.stravaActivityType = activity.stravaTypeRaw
+            }
+            if payload.stravaCurrentDescription == nil {
+                payload.stravaCurrentDescription = activity.activityDescription
+            }
+            if payload.stravaRecordingApp == nil {
+                payload.stravaRecordingApp = activity.recordingApp
+            }
+            payload.stravaIsRace = activity.isRace
+        }
+        guard payload.canEvaluateStravaWriteBack,
+              let activityId = payload.stravaActivityId,
+              let activityType = payload.stravaActivityType else {
+            DDToastCenter.shared.error("Missing Strava activity details for write-back")
+            return
+        }
+        let provider = StravaWriteBackFactory.makeDefault()
+        let structureBody = payload.exercises
+            .map { "\($0.name): \($0.actualSets)×\($0.actualReps)" }
+            .joined(separator: "\n")
+        let outcome = await provider.writeBack(
+            StravaWriteBackRequest(
+                activityId: activityId,
+                title: payload.title,
+                structureBody: structureBody,
+                currentDescription: payload.stravaCurrentDescription ?? "",
+                activityType: activityType,
+                recordingApp: payload.stravaRecordingApp,
+                isRace: payload.stravaIsRace,
+                rules: StravaWriteBackSettingsStore.shared.rules
+            )
+        )
+        switch outcome {
+        case .updated:
+            try? ActualsRepository().storeDecoration(.ours, forSessionID: payload.id)
+            actualsDemo.applyDecoration(cardID: cardID, state: .ours)
+            DDToastCenter.shared.success(ActualsCopy.verifiedToastWithStrava)
+        case .skipped(let state):
+            try? ActualsRepository().storeDecoration(state, forSessionID: payload.id)
+            actualsDemo.applyDecoration(cardID: cardID, state: state)
+            DDToastCenter.shared.error("Strava skipped this activity")
+        case .failed(let message):
+            DDToastCenter.shared.error("Strava write-back failed", sub: message)
+        case .restored, .cancelled:
+            break
         }
     }
 
@@ -898,7 +981,8 @@ private enum ActualsTodayDestination: Hashable, Identifiable {
     case mapToPlan(cardID: String, activity: ActualsUnmappedActivity)
     case matchSave
     case fillIn
-    case verified
+    /// Card id only — session is resolved when the destination builds (avoids blank race).
+    case verified(cardID: String)
 
     var id: String {
         switch self {
@@ -907,7 +991,7 @@ private enum ActualsTodayDestination: Hashable, Identifiable {
             return "mapToPlan-\(cardID)-\(activity.startDate.timeIntervalSince1970)"
         case .matchSave: return "matchSave"
         case .fillIn: return "fillIn"
-        case .verified: return "verified"
+        case .verified(let cardID): return "verified-\(cardID)"
         }
     }
 }

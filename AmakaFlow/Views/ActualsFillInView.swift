@@ -347,23 +347,31 @@ struct ActualsFillInView: View {
     private func resolveWriteBackAndToast(for session: ActualsFillInSession) async {
         var claimedStravaUpdate = false
         // Refuse fabricated skip inputs — write-back needs real activity metadata.
+        // Prefer live session fields; fall back to card activity metadata when DB
+        // rows predate V6 write-back columns (type/description).
+        var writeSession = session
+        if !writeSession.canEvaluateStravaWriteBack,
+           let activityId = writeSession.stravaActivityId
+            ?? ActualsTodayDemoFeed.stravaActivityId(fromCardID: session.id) {
+            writeSession.stravaActivityId = activityId
+        }
         if writeBackSettings.writeBackEnabled,
-           session.canEvaluateStravaWriteBack,
-           let activityId = session.stravaActivityId,
-           let activityType = session.stravaActivityType {
-            let structureBody = session.exercises
+           writeSession.canEvaluateStravaWriteBack,
+           let activityId = writeSession.stravaActivityId,
+           let activityType = writeSession.stravaActivityType {
+            let structureBody = writeSession.exercises
                 .map { "\($0.name): \($0.actualSets)×\($0.actualReps)" }
                 .joined(separator: "\n")
-            let currentDescription = session.stravaCurrentDescription ?? ""
+            let currentDescription = writeSession.stravaCurrentDescription ?? ""
             let outcome = await writeBackProvider.writeBack(
                 StravaWriteBackRequest(
                     activityId: activityId,
-                    title: session.title,
+                    title: writeSession.title,
                     structureBody: structureBody,
                     currentDescription: currentDescription,
                     activityType: activityType,
-                    recordingApp: session.stravaRecordingApp,
-                    isRace: session.stravaIsRace,
+                    recordingApp: writeSession.stravaRecordingApp,
+                    isRace: writeSession.stravaIsRace,
                     rules: writeBackSettings.rules
                 )
             )

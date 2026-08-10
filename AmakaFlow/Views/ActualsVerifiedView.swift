@@ -17,6 +17,7 @@ struct ActualsVerifiedView: View {
     let decoration: StravaDecorationState
 
     var onEditActuals: (() -> Void)?
+    var onWriteToStrava: (() -> Void)?
     var onRemoveFromStrava: (() -> Void)?
     var onUnverify: (() -> Void)?
     var onUnmatch: (() -> Void)?
@@ -30,6 +31,7 @@ struct ActualsVerifiedView: View {
         metaLine: String? = nil,
         decoration: StravaDecorationState = .none,
         onEditActuals: (() -> Void)? = nil,
+        onWriteToStrava: (() -> Void)? = nil,
         onRemoveFromStrava: (() -> Void)? = nil,
         onUnverify: (() -> Void)? = nil,
         onUnmatch: (() -> Void)? = nil
@@ -40,6 +42,7 @@ struct ActualsVerifiedView: View {
         self.rows = ActualsVerifiedDeltas.rows(from: session.exercises)
         self.decoration = decoration
         self.onEditActuals = onEditActuals
+        self.onWriteToStrava = onWriteToStrava
         self.onRemoveFromStrava = onRemoveFromStrava
         self.onUnverify = onUnverify
         self.onUnmatch = onUnmatch
@@ -61,6 +64,17 @@ struct ActualsVerifiedView: View {
                     subtitle: ActualsCopy.verifiedMenuEditSub,
                     destructive: false,
                     action: onEditActuals
+                )
+            )
+        }
+        if let onWriteToStrava, decoration != .ours {
+            rows.append(
+                ActualsVerifiedMenuRow(
+                    id: "writeStrava",
+                    title: ActualsCopy.verifiedMenuWriteStrava,
+                    subtitle: ActualsCopy.verifiedMenuWriteStravaSub,
+                    destructive: false,
+                    action: onWriteToStrava
                 )
             )
         }

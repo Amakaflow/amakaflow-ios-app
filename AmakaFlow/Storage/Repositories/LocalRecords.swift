@@ -260,6 +260,11 @@ struct LocalActualsSession: Codable, FetchableRecord, MutablePersistableRecord, 
     /// Un-verify keeps exercise rows but drops the session back to a draft — never
     /// deletes the fill-in the athlete already did.
     var isDraft: Bool
+    /// AMA-2396 V6: write-back skip-rule inputs (must survive relaunch).
+    var stravaActivityType: String?
+    var stravaCurrentDescription: String?
+    var stravaRecordingApp: String?
+    var stravaIsRace: Bool
 
     init(
         id: String,
@@ -273,7 +278,11 @@ struct LocalActualsSession: Codable, FetchableRecord, MutablePersistableRecord, 
         preUpdateTitle: String? = nil,
         preUpdateDescription: String? = nil,
         stravaActivityId: String? = nil,
-        isDraft: Bool = false
+        isDraft: Bool = false,
+        stravaActivityType: String? = nil,
+        stravaCurrentDescription: String? = nil,
+        stravaRecordingApp: String? = nil,
+        stravaIsRace: Bool = false
     ) {
         self.id = id
         self.title = title
@@ -287,6 +296,10 @@ struct LocalActualsSession: Codable, FetchableRecord, MutablePersistableRecord, 
         self.preUpdateDescription = preUpdateDescription
         self.stravaActivityId = stravaActivityId
         self.isDraft = isDraft
+        self.stravaActivityType = stravaActivityType
+        self.stravaCurrentDescription = stravaCurrentDescription
+        self.stravaRecordingApp = stravaRecordingApp
+        self.stravaIsRace = stravaIsRace
     }
 
     enum Columns: String, ColumnExpression {
@@ -297,6 +310,10 @@ struct LocalActualsSession: Codable, FetchableRecord, MutablePersistableRecord, 
         case preUpdateDescription = "pre_update_description"
         case stravaActivityId = "strava_activity_id"
         case isDraft = "is_draft"
+        case stravaActivityType = "strava_activity_type"
+        case stravaCurrentDescription = "strava_current_description"
+        case stravaRecordingApp = "strava_recording_app"
+        case stravaIsRace = "strava_is_race"
     }
 
     enum CodingKeys: String, CodingKey {
@@ -308,6 +325,10 @@ struct LocalActualsSession: Codable, FetchableRecord, MutablePersistableRecord, 
         case preUpdateDescription = "pre_update_description"
         case stravaActivityId = "strava_activity_id"
         case isDraft = "is_draft"
+        case stravaActivityType = "strava_activity_type"
+        case stravaCurrentDescription = "strava_current_description"
+        case stravaRecordingApp = "strava_recording_app"
+        case stravaIsRace = "strava_is_race"
     }
 }
 

@@ -114,6 +114,29 @@ final class ActualsHistoryViewModel: ObservableObject {
         NotificationCenter.default.post(name: .actualsLocalSessionsDidChange, object: nil)
     }
 
+    func applyUnverify(cardID: String, session: ActualsFillInSession) {
+        try? repository.unverifySession(id: session.id)
+        var draft = session
+        draft.verified = false
+        draft.rpe = nil
+        mutateCard(id: cardID) { card in
+            ActualsTodayDemoCard(
+                id: card.id,
+                kind: .fillInDebt,
+                timeLabel: card.timeLabel,
+                title: draft.title,
+                stats: card.stats,
+                sourceLabel: "Fill in · draft",
+                sourceProvider: card.sourceProvider,
+                session: card.session,
+                activity: card.activity,
+                fillInSession: draft,
+                stravaDecoration: card.stravaDecoration
+            )
+        }
+        NotificationCenter.default.post(name: .actualsLocalSessionsDidChange, object: nil)
+    }
+
     func card(withID id: String) -> ActualsTodayDemoCard? {
         for group in dayGroups {
             if let found = group.cards.first(where: { $0.id == id }) {
@@ -191,10 +214,17 @@ private struct HistoryFillInRoute: Identifiable, Hashable {
     var id: String { "fill-\(cardID)" }
 }
 
+private struct HistoryVerifiedRoute: Identifiable, Hashable {
+    let cardID: String
+
+    var id: String { "verified-\(cardID)" }
+}
+
 struct ActualsHistoryView: View {
     @StateObject private var viewModel: ActualsHistoryViewModel
     @State private var mapRoute: HistoryMapRoute?
     @State private var fillInRoute: HistoryFillInRoute?
+    @State private var verifiedRoute: HistoryVerifiedRoute?
     @State private var libraryCandidates: [ActualsPlanCandidate] = ActualsTodayDemoFeed.samplePlanCandidates
     @State private var showLibraryMatchPicker = false
     @State private var libraryPickerCardID: String?
@@ -238,6 +268,9 @@ struct ActualsHistoryView: View {
         }
         .navigationDestination(item: $fillInRoute) { route in
             fillInDestination(for: route)
+        }
+        .navigationDestination(item: $verifiedRoute) { route in
+            verifiedDestination(for: route)
         }
         .sheet(isPresented: $showLibraryMatchPicker) {
             ActualsLibraryMatchPicker(
@@ -355,7 +388,9 @@ struct ActualsHistoryView: View {
                 _ = viewModel.applyLibraryMatch(planTitle: card.title, cardID: card.id)
             }
             openFillIn(cardID: card.id)
-        case .verified, .counted:
+        case .verified:
+            verifiedRoute = HistoryVerifiedRoute(cardID: card.id)
+        case .counted:
             break
         }
     }
@@ -415,6 +450,39 @@ struct ActualsHistoryView: View {
             .navigationBarBackButtonHidden(true)
         } else {
             Text("Couldn't open fill-in for that session.")
+                .foregroundColor(DailyDriver.foregroundDim)
+                .padding()
+        }
+    }
+
+    @ViewBuilder
+    private func verifiedDestination(for route: HistoryVerifiedRoute) -> some View {
+        let card = viewModel.card(withID: route.cardID)
+        let session = card?.fillInSession
+            ?? (try? ActualsRepository().fetchSession(id: route.cardID))
+        if let session {
+            ActualsVerifiedView(
+                session: session,
+                sourceName: ActualsCopy.sourceDisplayName(card?.sourceProvider ?? .strava),
+                decoration: card?.stravaDecoration ?? .none,
+                onEditActuals: {
+                    if card?.fillInSession == nil {
+                        _ = viewModel.applyLibraryMatch(
+                            planTitle: session.title,
+                            cardID: route.cardID
+                        )
+                    }
+                    verifiedRoute = nil
+                    openFillIn(cardID: route.cardID)
+                },
+                onUnverify: {
+                    viewModel.applyUnverify(cardID: route.cardID, session: session)
+                    verifiedRoute = nil
+                }
+            )
+            .navigationBarBackButtonHidden(true)
+        } else {
+            Text("Couldn't open that verified session.")
                 .foregroundColor(DailyDriver.foregroundDim)
                 .padding()
         }

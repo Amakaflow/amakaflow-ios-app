@@ -23,7 +23,11 @@ enum ActualsCopy {
 
     static let connectTitle = "Pull your training in"
     static let connectSubhead =
-        "On connect we pull your last 30 days, then new sessions land on Today by themselves — fill in what you actually did. We only read; we never post."
+        "On connect we pull your last 30 days, then new sessions land on Today by themselves — fill in what you actually did. Pull is read-only; optional Strava write-back is off until you enable it."
+    static let reconnectButton = "Reconnect"
+    static let verifiedMenuWriteStrava = "Write to Strava now"
+    static let verifiedMenuWriteStravaSub =
+        "PUSH TITLE + STRUCTURE WITH “— TRACKED WITH AMAKAFLOW”"
     static let connectDedupeFooter =
         "SAME WORKOUT FROM TWO SOURCES? WE KEEP ONE — WATCH BEATS PHONE, RICHER DATA WINS. NOTHING COUNTS TWICE."
 

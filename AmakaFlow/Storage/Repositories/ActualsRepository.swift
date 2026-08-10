@@ -63,7 +63,11 @@ final class ActualsRepository: @unchecked Sendable {
                 verified: true,
                 savedAt: timestamp,
                 createdAt: timestamp,
-                stravaActivityId: session.stravaActivityId
+                stravaActivityId: session.stravaActivityId,
+                stravaActivityType: session.stravaActivityType,
+                stravaCurrentDescription: session.stravaCurrentDescription,
+                stravaRecordingApp: session.stravaRecordingApp,
+                stravaIsRace: session.stravaIsRace
             )
             if let existing = try LocalActualsSession.fetchOne(database, key: session.id) {
                 header.createdAt = existing.createdAt
@@ -75,6 +79,15 @@ final class ActualsRepository: @unchecked Sendable {
                 header.isDraft = false
                 if header.stravaActivityId == nil {
                     header.stravaActivityId = existing.stravaActivityId
+                }
+                if header.stravaActivityType == nil {
+                    header.stravaActivityType = existing.stravaActivityType
+                }
+                if header.stravaCurrentDescription == nil {
+                    header.stravaCurrentDescription = existing.stravaCurrentDescription
+                }
+                if header.stravaRecordingApp == nil {
+                    header.stravaRecordingApp = existing.stravaRecordingApp
                 }
             }
             try header.upsert(database)
@@ -149,7 +162,11 @@ final class ActualsRepository: @unchecked Sendable {
                 savedAt: timestamp,
                 createdAt: timestamp,
                 stravaActivityId: session.stravaActivityId,
-                isDraft: true
+                isDraft: true,
+                stravaActivityType: session.stravaActivityType,
+                stravaCurrentDescription: session.stravaCurrentDescription,
+                stravaRecordingApp: session.stravaRecordingApp,
+                stravaIsRace: session.stravaIsRace
             )
             if let existing = try LocalActualsSession.fetchOne(database, key: session.id) {
                 header.createdAt = existing.createdAt
@@ -158,6 +175,9 @@ final class ActualsRepository: @unchecked Sendable {
                 header.preUpdateDescription = existing.preUpdateDescription
                 if header.stravaActivityId == nil {
                     header.stravaActivityId = existing.stravaActivityId
+                }
+                if header.stravaActivityType == nil {
+                    header.stravaActivityType = existing.stravaActivityType
                 }
             }
             try header.upsert(database)
@@ -218,7 +238,11 @@ final class ActualsRepository: @unchecked Sendable {
             exercises: exercises,
             rpe: header.rpe,
             verified: header.verified,
-            stravaActivityId: header.stravaActivityId
+            stravaActivityId: header.stravaActivityId,
+            stravaActivityType: header.stravaActivityType,
+            stravaCurrentDescription: header.stravaCurrentDescription,
+            stravaRecordingApp: header.stravaRecordingApp,
+            stravaIsRace: header.stravaIsRace
         )
     }
 
