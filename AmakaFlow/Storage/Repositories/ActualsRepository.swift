@@ -295,7 +295,7 @@ final class ActualsRepository: @unchecked Sendable {
         }
     }
 
-    /// Snapshot what Strava had before our first write — "Remove from Strava" and
+    /// Snapshot what Strava had before our first write — "Undo our Strava text" and
     /// "Un-verify" restore this instead of guessing.
     func storePreUpdateSnapshot(_ snapshot: StravaPreUpdateSnapshot, forSessionID id: String) throws {
         try dbQueue.write { database in

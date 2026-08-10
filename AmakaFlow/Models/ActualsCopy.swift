@@ -168,8 +168,9 @@ enum ActualsCopy {
     static let verifiedUndoAction = "Undo"
     static let verifiedMenuEdit = "Edit actuals"
     static let verifiedMenuEditSub = "CHANGES STAY VERIFIED · REFRESHES OUR STRAVA TEXT"
-    static let verifiedMenuRemoveStrava = "Remove from Strava"
-    static let verifiedMenuRemoveStravaSub = "THIS SESSION · RESTORES WHAT WAS THERE BEFORE US"
+    static let verifiedMenuRemoveStrava = "Undo our Strava text"
+    static let verifiedMenuRemoveStravaSub =
+        "KEEPS THE ACTIVITY · RESTORES TITLE + DESCRIPTION FROM BEFORE AMAKAFLOW"
     static let verifiedMenuUnverify = "Un-verify"
     static let verifiedMenuUnverifySub =
         "BACK TO “FILL IN” · ACTUALS KEPT AS DRAFT · STRAVA RESTORED"
