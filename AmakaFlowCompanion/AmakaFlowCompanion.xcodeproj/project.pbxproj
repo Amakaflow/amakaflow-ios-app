@@ -277,6 +277,8 @@
 		AMA2387MATCHSAVEBLD /* ActualsMatchSaveView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2387MATCHSAVEREF /* ActualsMatchSaveView.swift */; };
 		AMA2396SZBADGEBLD /* SZStravaBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2396SZBADGEREF /* SZStravaBadge.swift */; };
 		AMA2396MAPCTABLD /* ActualsMapCTAState.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2396MAPCTAREF /* ActualsMapCTAState.swift */; };
+		AMA2396LIBPICKBLD /* ActualsLibraryMatchPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2396LIBPICKREF /* ActualsLibraryMatchPicker.swift */; };
+		AMA2396LIBCANDBLD /* ActualsPlanCandidate+Library.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2396LIBCANDREF /* ActualsPlanCandidate+Library.swift */; };
 		AMA2396DAYBUCKBLD /* ActualsDayBucketing.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2396DAYBUCKREF /* ActualsDayBucketing.swift */; };
 		AMA2396STRAVAWBBLD /* StravaWriteBack.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2396STRAVAWBREF /* StravaWriteBack.swift */; };
 		AMA2396V5BLD /* V5_actuals_sync_v2.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2396V5REF /* V5_actuals_sync_v2.swift */; };
@@ -1019,6 +1021,8 @@
 		AMA2387MATCHSAVEREF /* ActualsMatchSaveView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActualsMatchSaveView.swift; path = ../AmakaFlow/Views/ActualsMatchSaveView.swift; sourceTree = SOURCE_ROOT; };
 		AMA2396SZBADGEREF /* SZStravaBadge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SZStravaBadge.swift; path = ../AmakaFlow/Views/Components/SZStravaBadge.swift; sourceTree = SOURCE_ROOT; };
 		AMA2396MAPCTAREF /* ActualsMapCTAState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActualsMapCTAState.swift; path = ../AmakaFlow/Models/ActualsMapCTAState.swift; sourceTree = SOURCE_ROOT; };
+		AMA2396LIBPICKREF /* ActualsLibraryMatchPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "ActualsLibraryMatchPicker.swift"; path = "../AmakaFlow/Views/ActualsLibraryMatchPicker.swift"; sourceTree = SOURCE_ROOT; };
+		AMA2396LIBCANDREF /* ActualsPlanCandidate+Library.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "ActualsPlanCandidate+Library.swift"; path = "../AmakaFlow/Models/ActualsPlanCandidate+Library.swift"; sourceTree = SOURCE_ROOT; };
 		AMA2396DAYBUCKREF /* ActualsDayBucketing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActualsDayBucketing.swift; path = ../AmakaFlow/Models/ActualsDayBucketing.swift; sourceTree = SOURCE_ROOT; };
 		AMA2396STRAVAWBREF /* StravaWriteBack.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = StravaWriteBack.swift; path = ../AmakaFlow/Models/StravaWriteBack.swift; sourceTree = SOURCE_ROOT; };
 		AMA2396V5REF /* V5_actuals_sync_v2.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = V5_actuals_sync_v2.swift; path = ../AmakaFlow/Storage/Migrations/V5_actuals_sync_v2.swift; sourceTree = SOURCE_ROOT; };
@@ -1882,6 +1886,8 @@
 				AMA2387MATCHSAVEREF /* ActualsMatchSaveView.swift */,
 				AMA2396SZBADGEREF /* SZStravaBadge.swift */,
 				AMA2396MAPCTAREF /* ActualsMapCTAState.swift */,
+				AMA2396LIBPICKREF /* ActualsLibraryMatchPicker.swift */,
+				AMA2396LIBCANDREF /* ActualsPlanCandidate+Library.swift */,
 				AMA2396DAYBUCKREF /* ActualsDayBucketing.swift */,
 				AMA2396STRAVAWBREF /* StravaWriteBack.swift */,
 				AMA2396V5REF /* V5_actuals_sync_v2.swift */,
@@ -3074,6 +3080,8 @@
 				AMA2387DOGFOODBLD /* ActualsDogfoodHubView.swift in Sources */,
 				AMA2396SZBADGEBLD /* SZStravaBadge.swift in Sources */,
 				AMA2396MAPCTABLD /* ActualsMapCTAState.swift in Sources */,
+				AMA2396LIBPICKBLD /* ActualsLibraryMatchPicker.swift in Sources */,
+				AMA2396LIBCANDBLD /* ActualsPlanCandidate+Library.swift in Sources */,
 				AMA2396DAYBUCKBLD /* ActualsDayBucketing.swift in Sources */,
 				AMA2396STRAVAWBBLD /* StravaWriteBack.swift in Sources */,
 				AMA2396V5BLD /* V5_actuals_sync_v2.swift in Sources */,

@@ -362,4 +362,34 @@ final class AMA2396SyncV2Tests: XCTestCase {
         XCTFail("unparseable fixture date: \(iso)")
         return Date.distantPast
     }
+
+    func testLibraryCandidateIncludesBikeSkiRowRepeatsTitle() {
+        let workout = Workout(
+            id: "lib_bike_ski",
+            name: "Bike ski row repeats",
+            sport: .cardio,
+            duration: 60,
+            blocks: [
+                Block(
+                    label: "Circuit",
+                    structure: .circuit,
+                    rounds: 6,
+                    exercises: [
+                        Exercise(name: "Assault Bike", canonicalName: nil, sets: 1, reps: nil, durationSeconds: 180, load: nil, restSeconds: nil, distance: nil, notes: nil, focus: nil, supersetGroup: nil),
+                        Exercise(name: "Ski Erg", canonicalName: nil, sets: 1, reps: nil, durationSeconds: 180, load: nil, restSeconds: nil, distance: nil, notes: nil, focus: nil, supersetGroup: nil),
+                        Exercise(name: "Rowing Machine", canonicalName: nil, sets: 1, reps: nil, durationSeconds: 180, load: nil, restSeconds: nil, distance: nil, notes: nil, focus: nil, supersetGroup: nil),
+                        Exercise(name: "Spin / Indoor Bike", canonicalName: nil, sets: 1, reps: nil, durationSeconds: 180, load: nil, restSeconds: nil, distance: nil, notes: nil, focus: nil, supersetGroup: nil)
+                    ]
+                )
+            ],
+            source: .manual
+        )
+        let candidates = ActualsPlanCandidate.fromLibrary([workout])
+        XCTAssertEqual(candidates.count, 1)
+        XCTAssertEqual(candidates[0].title, "Bike ski row repeats")
+        // 6 rounds × 4 × 180s = 4320s — not the broken ~1 MIN wire duration.
+        XCTAssertEqual(candidates[0].durationSeconds, 4320)
+        XCTAssertEqual(candidates[0].type, .other)
+    }
+
 }

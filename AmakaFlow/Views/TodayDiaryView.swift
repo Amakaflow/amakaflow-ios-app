@@ -31,8 +31,18 @@ struct TodayDiaryView: View {
     @State private var verifiedSession: ActualsFillInSession?
     @State private var verifiedSourceName = ActualsCopy.sourceDisplayName(.strava)
     @State private var verifiedCardID: String?
+    /// AMA-2396: real Library workouts for Map match cards + Search all.
+    @State private var libraryCandidates: [ActualsPlanCandidate] = []
+    @State private var showLibraryMatchPicker = false
+    @State private var libraryPickerCardID: String?
 
     private var today: Date { Date() }
+
+    private var mapCandidates: [ActualsPlanCandidate] {
+        libraryCandidates.isEmpty
+            ? ActualsTodayDemoFeed.samplePlanCandidates
+            : libraryCandidates
+    }
 
     private var isViewingToday: Bool {
         Calendar.current.isDateInToday(selectedScrubberDay)
@@ -175,6 +185,7 @@ struct TodayDiaryView: View {
                 #endif
                 // Kick Strava re-pull first so Connect never flashes while history loads.
                 async let history: Void = historyViewModel.loadCompletions()
+                async let library: Void = loadLibraryCandidates()
                 if actualsSources.isConnected(.strava), !actualsDemo.isActive {
                     await actualsDemo.handleProviderConnected(
                         .strava,
@@ -182,7 +193,21 @@ struct TodayDiaryView: View {
                     )
                 }
                 await history
+                await library
                 syncScrubberToToday()
+            }
+            .sheet(isPresented: $showLibraryMatchPicker) {
+                ActualsLibraryMatchPicker(
+                    candidates: mapCandidates,
+                    onPick: { candidate in
+                        showLibraryMatchPicker = false
+                        guard let cardID = libraryPickerCardID else { return }
+                        applyLibraryMatchSelection(candidate, cardID: cardID)
+                    },
+                    onCancel: {
+                        showLibraryMatchPicker = false
+                    }
+                )
             }
             .refreshable {
                 await historyViewModel.refreshCompletions()
@@ -414,26 +439,18 @@ struct TodayDiaryView: View {
             activity: activity,
             matches: ActualsPlanMatcher.rank(
                 activity: activity,
-                candidates: ActualsTodayDemoFeed.samplePlanCandidates
+                candidates: mapCandidates
             ),
             onSelect: { match in
-                // Keep the session on Today — attach the plan, then RPE.
-                actualsDemo.applyLibraryMatch(
-                    planTitle: match.candidate.title,
-                    unmappedCardID: cardID
-                )
-                if let matched = actualsDemo.cards.first(where: { $0.id == cardID }) {
-                    actualsDemo.prepareFillIn(from: matched)
-                }
-                guard actualsDemo.fillInViewModel != nil else {
-                    actualsDestination = nil
-                    return
-                }
-                actualsDestination = .fillIn
+                applyLibraryMatchSelection(match.candidate, cardID: cardID)
             },
             onKeepAsIs: {
                 actualsDemo.applyKeepAsIs(unmappedCardID: cardID)
                 actualsDestination = nil
+            },
+            onSearchAll: {
+                libraryPickerCardID = cardID
+                showLibraryMatchPicker = true
             },
             onCaptureMatched: { draft, _ in
                 actualsDemo.applyCaptureMatched(draft: draft, unmappedCardID: cardID)
@@ -442,6 +459,42 @@ struct TodayDiaryView: View {
             }
         )
         .navigationBarBackButtonHidden(true)
+        .task {
+            if libraryCandidates.isEmpty {
+                await loadLibraryCandidates()
+            }
+        }
+    }
+
+    private func applyLibraryMatchSelection(
+        _ candidate: ActualsPlanCandidate,
+        cardID: String
+    ) {
+        actualsDemo.applyLibraryMatch(
+            planTitle: candidate.title,
+            unmappedCardID: cardID
+        )
+        if let matched = actualsDemo.cards.first(where: { $0.id == cardID }) {
+            actualsDemo.prepareFillIn(from: matched)
+        }
+        guard actualsDemo.fillInViewModel != nil else {
+            actualsDestination = nil
+            return
+        }
+        actualsDestination = .fillIn
+    }
+
+    @MainActor
+    private func loadLibraryCandidates() async {
+        do {
+            let workouts = try await APIService.shared.fetchWorkouts()
+            libraryCandidates = ActualsPlanCandidate.fromLibrary(workouts)
+        } catch {
+            // Keep sample fallback — Map still usable offline / unauthenticated.
+            if libraryCandidates.isEmpty {
+                libraryCandidates = ActualsTodayDemoFeed.samplePlanCandidates
+            }
+        }
     }
 
     @ViewBuilder
