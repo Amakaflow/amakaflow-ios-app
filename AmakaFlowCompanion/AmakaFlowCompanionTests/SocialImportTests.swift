@@ -966,13 +966,14 @@ final class APIServiceSocialImportContractTests: XCTestCase {
 
     func testInstagramPollRespectsDeadlineWhenTransientErrorsPersist() async {
         APIService.resetSocialAsyncPollTimingOverridesForTests()
-        // CI simulators can be slow enough that a sub-second deadline expires after
-        // only one poll; keep this short but above typical poll+sleep overhead.
-        APIService.socialAsyncPollDeadlineSecondsForTests = 1.0
-        APIService.socialAsyncPollIntervalNsForTests = 20_000_000
-        APIService.socialAsyncPollBackoffNsForTests = 20_000_000
-        // High enough that the shortened deadline fires first.
-        APIService.socialAsyncPollMaxTransientForTests = 100
+        // CI clones can spend >1s on the first poll (auth headers + scheduling).
+        // Keep the deadline short vs production, but wide enough that at least one
+        // retry fits after a slow first attempt. Short sleeps + a high transient
+        // cap ensure the deadline (504) fires before max-transient abort.
+        APIService.socialAsyncPollDeadlineSecondsForTests = 5.0
+        APIService.socialAsyncPollIntervalNsForTests = 10_000_000 // 10ms
+        APIService.socialAsyncPollBackoffNsForTests = 10_000_000
+        APIService.socialAsyncPollMaxTransientForTests = 500
         defer { APIService.resetSocialAsyncPollTimingOverridesForTests() }
 
         let pollLock = NSLock()
@@ -1023,7 +1024,8 @@ final class APIServiceSocialImportContractTests: XCTestCase {
         let polls = statusPollCount
         pollLock.unlock()
         XCTAssertGreaterThanOrEqual(polls, 2, "Should have retried at least once before deadline")
-        XCTAssertLessThan(polls, 40, "Must not infinite-loop past the deadline")
+        // Exponential backoff caps at 8× interval (shift≤3) → ~80ms sleeps.
+        XCTAssertLessThan(polls, 400, "Must not infinite-loop past the deadline")
     }
 
     func testInstagramPollAbortsAfterMaxConsecutiveTransientFailures() async {
