@@ -327,6 +327,7 @@ final class WorkoutEnrichmentPushPlannerTests: XCTestCase {
 
     /// AMA-2400 — user-owned rest left untouched must not fail Apple handoff when
     /// the mapper audits it as `skipped_already_present`.
+    @MainActor
     func testIncompleteEnrichmentFalseWhenBetweenSetRestAlreadyPresent() throws {
         var prefs = WorkoutPreferences.defaults
         prefs.sessionWarmup.enabled = true
