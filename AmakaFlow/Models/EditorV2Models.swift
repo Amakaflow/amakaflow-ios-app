@@ -171,7 +171,7 @@ struct EditorV2Group: Equatable, Identifiable, Sendable {
         self.enrichmentKind = enrichmentKind
     }
 
-    var metaLine: String { // swiftlint:disable:this cyclomatic_complexity
+    var metaLine: String {
         switch type {
         case .warmup: return "\(config.rounds ?? 2) ROUNDS · EASY"
         case .cooldown: return "\(config.rounds ?? 1) ROUNDS · EASY"

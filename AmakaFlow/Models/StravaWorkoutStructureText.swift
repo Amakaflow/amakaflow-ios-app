@@ -274,7 +274,7 @@ enum StravaWorkoutStructureText {
         return String(String.UnicodeScalarView(scalars))
     }
 
-    private static func blockHeader(_ block: Block) -> String {
+    private static func blockHeader(_ block: Block) -> String { // swiftlint:disable:this cyclomatic_complexity
         let rounds = max(1, block.rounds)
         let structureName = block.structure.displayName.uppercased()
         if let label = block.label?.trimmingCharacters(in: .whitespacesAndNewlines),
@@ -311,7 +311,7 @@ enum StravaWorkoutStructureText {
         ].contains(lowered)
     }
 
-    private static func planned(from exercise: Exercise, in block: Block) -> ExerciseActualPlanned {
+    private static func planned(from exercise: Exercise, in block: Block) -> ExerciseActualPlanned { // swiftlint:disable:this cyclomatic_complexity
         let sets = plannedSets(for: exercise, in: block)
         if let seconds = exercise.durationSeconds, seconds > 0 {
             return ExerciseActualPlanned(
