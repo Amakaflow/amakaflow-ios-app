@@ -63,6 +63,31 @@ struct ActualsCaptureDraft: Identifiable, Equatable {
         )
     }
 
+    /// Best-effort Workout for Strava structure + fill-in seeding after match-save.
+    func toWorkoutForMatch() -> Workout? {
+        guard let blocks, !blocks.isEmpty else { return nil }
+        let mapped: [Block] = blocks.map { block in
+            Block(
+                label: block.label,
+                structure: block.rounds > 1 ? .circuit : .straight,
+                rounds: max(1, block.rounds),
+                exercises: block.exercises.map { $0.toExercise() }
+            )
+        }
+        guard mapped.contains(where: { !$0.exercises.isEmpty }) else { return nil }
+        return Workout(
+            id: id,
+            name: title,
+            sport: WorkoutSport.parse(sport),
+            duration: max(0, estimatedMinutes * 60),
+            blocks: mapped,
+            description: nil,
+            source: .manual,
+            sourceUrl: nil,
+            creatorName: nil
+        )
+    }
+
     static func sampleHyrox() -> ActualsCaptureDraft {
         let blocks = [
             SocialImportBlock(

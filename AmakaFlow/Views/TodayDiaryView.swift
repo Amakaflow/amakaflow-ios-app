@@ -33,6 +33,8 @@ struct TodayDiaryView: View {
     @State private var verifiedCardID: String?
     /// AMA-2396: real Library workouts for Map match cards + Search all.
     @State private var libraryCandidates: [ActualsPlanCandidate] = []
+    /// Full workouts keyed by id — seeds fill-in + Strava structure on match.
+    @State private var libraryWorkoutsByID: [String: Workout] = [:]
     @State private var showLibraryMatchPicker = false
     @State private var libraryPickerCardID: String?
 
@@ -501,7 +503,8 @@ struct TodayDiaryView: View {
     ) {
         actualsDemo.applyLibraryMatch(
             planTitle: candidate.title,
-            unmappedCardID: cardID
+            unmappedCardID: cardID,
+            workout: libraryWorkoutsByID[candidate.id]
         )
         if let matched = actualsDemo.cards.first(where: { $0.id == cardID }) {
             actualsDemo.prepareFillIn(from: matched)
@@ -518,6 +521,9 @@ struct TodayDiaryView: View {
         do {
             let workouts = try await APIService.shared.fetchWorkouts()
             libraryCandidates = ActualsPlanCandidate.fromLibrary(workouts)
+            libraryWorkoutsByID = Dictionary(
+                uniqueKeysWithValues: workouts.map { ($0.id, $0) }
+            )
         } catch {
             // Keep sample fallback — Map still usable offline / unauthenticated.
             if libraryCandidates.isEmpty {
@@ -635,19 +641,17 @@ struct TodayDiaryView: View {
             return
         }
         let provider = StravaWriteBackFactory.makeDefault()
-        let structureBody = payload.exercises
-            .map { "\($0.name): \($0.actualSets)×\($0.actualReps)" }
-            .joined(separator: "\n")
         let outcome = await provider.writeBack(
             StravaWriteBackRequest(
                 activityId: activityId,
                 title: payload.title,
-                structureBody: structureBody,
+                structureBody: payload.stravaStructureBody,
                 currentDescription: payload.stravaCurrentDescription ?? "",
                 activityType: activityType,
                 recordingApp: payload.stravaRecordingApp,
                 isRace: payload.stravaIsRace,
-                rules: StravaWriteBackSettingsStore.shared.rules
+                rules: StravaWriteBackSettingsStore.shared.rules,
+                rpe: payload.rpe
             )
         )
         switch outcome {

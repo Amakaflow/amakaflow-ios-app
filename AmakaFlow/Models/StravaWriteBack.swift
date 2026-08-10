@@ -146,6 +146,7 @@ struct StravaWriteBackRequest: Equatable, Sendable {
     var recordingApp: String?
     var isRace: Bool
     var rules: StravaWriteBackRules
+    var rpe: Int? = nil
 }
 
 enum StravaWriteBackDecorator {
@@ -379,7 +380,7 @@ final class StubStravaWriteBackProvider: StravaWriteBackProviding {
                 isRace: request.isRace,
                 rules: request.rules,
                 structureBody: request.structureBody,
-                rpe: nil
+                rpe: request.rpe
             )
         )
         guard decision.shouldWrite, let decorated = decision.decoratedDescription else {
@@ -469,18 +470,24 @@ final class BFFStravaWriteBackProvider: StravaWriteBackProviding {
                 isRace: request.isRace,
                 rules: request.rules,
                 structureBody: request.structureBody,
-                rpe: nil
+                rpe: request.rpe
             )
         )
         guard decision.shouldWrite else {
             return .skipped(decision.state)
         }
+        let decorated = decision.decoratedDescription
+            ?? StravaWriteBackDecorator.decorate(description: request.currentDescription)
         do {
-            let result = try await client.applyWriteBack(activityId: request.activityId)
+            let result = try await client.applyWriteBack(
+                activityId: request.activityId,
+                title: request.title,
+                description: decorated
+            )
             if result.written {
-                let decorated = decision.decoratedDescription
-                    ?? StravaWriteBackDecorator.decorate(description: request.currentDescription)
-                return .updated(title: request.title, description: decorated)
+                let writtenTitle = result.title.isEmpty ? request.title : result.title
+                let writtenDescription = result.description.isEmpty ? decorated : result.description
+                return .updated(title: writtenTitle, description: writtenDescription)
             }
             // Upstream skipped (virtual / described / race) after fetch.
             let state = Self.decoration(fromUpstreamStatus: result.status)

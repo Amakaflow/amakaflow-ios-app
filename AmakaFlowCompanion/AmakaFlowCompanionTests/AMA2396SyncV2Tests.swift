@@ -248,7 +248,91 @@ final class AMA2396SyncV2Tests: XCTestCase {
         XCTAssertEqual(StravaWriteBackSignature.line, "— tracked with AmakaFlow")
     }
 
-    func testEvaluatePreservesForeignDescriptionWhenSkipDescribedOff() {
+    func testStructureBodyIncludesCircuitRoundsAndEquipmentEmoji() {
+        let workout = Workout(
+            id: "bike-ski-row",
+            name: "Bike ski row repeats",
+            sport: .mixed,
+            duration: 77 * 60,
+            blocks: [
+                Block(
+                    label: "Circuit",
+                    structure: .circuit,
+                    rounds: 6,
+                    exercises: [
+                        Exercise(
+                            name: "Assault Bike",
+                            canonicalName: nil,
+                            sets: 1,
+                            reps: nil,
+                            durationSeconds: 180,
+                            load: nil,
+                            restSeconds: nil,
+                            distance: nil,
+                            notes: nil,
+                            focus: nil,
+                            supersetGroup: nil
+                        ),
+                        Exercise(
+                            name: "Ski Erg",
+                            canonicalName: nil,
+                            sets: 1,
+                            reps: nil,
+                            durationSeconds: 180,
+                            load: nil,
+                            restSeconds: nil,
+                            distance: nil,
+                            notes: nil,
+                            focus: nil,
+                            supersetGroup: nil
+                        ),
+                        Exercise(
+                            name: "Rowing Machine",
+                            canonicalName: nil,
+                            sets: 1,
+                            reps: nil,
+                            durationSeconds: 180,
+                            load: nil,
+                            restSeconds: nil,
+                            distance: nil,
+                            notes: nil,
+                            focus: nil,
+                            supersetGroup: nil
+                        ),
+                        Exercise(
+                            name: "Spin / Indoor Bike",
+                            canonicalName: nil,
+                            sets: 1,
+                            reps: nil,
+                            durationSeconds: 180,
+                            load: nil,
+                            restSeconds: nil,
+                            distance: nil,
+                            notes: nil,
+                            focus: nil,
+                            supersetGroup: nil
+                        )
+                    ]
+                )
+            ],
+            source: .manual
+        )
+        let body = StravaWorkoutStructureText.structureBody(from: workout)
+        XCTAssertTrue(body.contains("6 ROUNDS"))
+        XCTAssertTrue(body.contains("🚴"))
+        XCTAssertTrue(body.contains("⛷️"))
+        XCTAssertTrue(body.contains("🚣"))
+        XCTAssertTrue(body.contains("Assault Bike"))
+        XCTAssertTrue(body.contains("Ski Erg"))
+        XCTAssertTrue(body.contains("Rowing Machine"))
+        XCTAssertTrue(body.contains("Spin / Indoor Bike"))
+        XCTAssertTrue(body.contains("3:00") || body.contains("180"))
+        let exercises = StravaWorkoutStructureText.fillInExercises(from: workout)
+        XCTAssertEqual(exercises.count, 4)
+        XCTAssertEqual(exercises[0].planned.note, "3:00")
+    }
+
+    func testEvaluatePreservesForeignDescriptionWhenSkipDescribedOff() throws {
         let decision = StravaWriteBackDecorator.evaluate(
             StravaWriteBackEvaluateInput(
                 activityType: "Run",

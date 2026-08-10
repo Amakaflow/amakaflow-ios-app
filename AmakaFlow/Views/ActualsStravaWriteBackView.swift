@@ -245,7 +245,14 @@ struct ActualsStravaWriteBackView: View {
     }
 
     private static let samplePreviewDescription = StravaWriteBackDecorator.previewDescription(
-        structureBody: "3×5 Back squat @ 85 kg\n3×8 Romanian deadlift @ 70 kg\n2×10 Split squat",
+        structureBody: """
+        CIRCUIT · 6 ROUNDS
+
+        🚴 Assault Bike — 1 × 3:00
+        ⛷️ Ski Erg — 1 × 3:00
+        🚣 Rowing Machine — 1 × 3:00
+        🚴 Spin / Indoor Bike — 1 × 3:00
+        """,
         rpe: 8
     )
 }

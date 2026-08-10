@@ -359,20 +359,18 @@ struct ActualsFillInView: View {
            writeSession.canEvaluateStravaWriteBack,
            let activityId = writeSession.stravaActivityId,
            let activityType = writeSession.stravaActivityType {
-            let structureBody = writeSession.exercises
-                .map { "\($0.name): \($0.actualSets)×\($0.actualReps)" }
-                .joined(separator: "\n")
             let currentDescription = writeSession.stravaCurrentDescription ?? ""
             let outcome = await writeBackProvider.writeBack(
                 StravaWriteBackRequest(
                     activityId: activityId,
                     title: writeSession.title,
-                    structureBody: structureBody,
+                    structureBody: writeSession.stravaStructureBody,
                     currentDescription: currentDescription,
                     activityType: activityType,
                     recordingApp: writeSession.stravaRecordingApp,
                     isRace: writeSession.stravaIsRace,
-                    rules: writeBackSettings.rules
+                    rules: writeBackSettings.rules,
+                    rpe: writeSession.rpe
                 )
             )
             switch outcome {

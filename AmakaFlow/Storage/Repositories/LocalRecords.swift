@@ -265,6 +265,8 @@ struct LocalActualsSession: Codable, FetchableRecord, MutablePersistableRecord, 
     var stravaCurrentDescription: String?
     var stravaRecordingApp: String?
     var stravaIsRace: Bool
+    /// AMA-2396 V7: full workout structure text for Strava write-back.
+    var structureBody: String?
 
     init(
         id: String,
@@ -282,7 +284,8 @@ struct LocalActualsSession: Codable, FetchableRecord, MutablePersistableRecord, 
         stravaActivityType: String? = nil,
         stravaCurrentDescription: String? = nil,
         stravaRecordingApp: String? = nil,
-        stravaIsRace: Bool = false
+        stravaIsRace: Bool = false,
+        structureBody: String? = nil
     ) {
         self.id = id
         self.title = title
@@ -300,6 +303,7 @@ struct LocalActualsSession: Codable, FetchableRecord, MutablePersistableRecord, 
         self.stravaCurrentDescription = stravaCurrentDescription
         self.stravaRecordingApp = stravaRecordingApp
         self.stravaIsRace = stravaIsRace
+        self.structureBody = structureBody
     }
 
     enum Columns: String, ColumnExpression {
@@ -314,6 +318,7 @@ struct LocalActualsSession: Codable, FetchableRecord, MutablePersistableRecord, 
         case stravaCurrentDescription = "strava_current_description"
         case stravaRecordingApp = "strava_recording_app"
         case stravaIsRace = "strava_is_race"
+        case structureBody = "structure_body"
     }
 
     enum CodingKeys: String, CodingKey {
@@ -329,6 +334,7 @@ struct LocalActualsSession: Codable, FetchableRecord, MutablePersistableRecord, 
         case stravaCurrentDescription = "strava_current_description"
         case stravaRecordingApp = "strava_recording_app"
         case stravaIsRace = "strava_is_race"
+        case structureBody = "structure_body"
     }
 }
 

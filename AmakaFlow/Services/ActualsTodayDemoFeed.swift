@@ -516,14 +516,18 @@ final class ActualsTodayDemoFeed: ObservableObject {
         let prior = cards.first { $0.id == unmappedCardID }
         let activity = prior?.activity ?? Self.unmappedCard().activity
         let timeLabel = prior?.timeLabel ?? "18:10"
+        let captureWorkout = draft.toWorkoutForMatch()
         let matched = makeMatchedCard(
             request: MatchedCardRequest(
                 cardID: unmappedCardID,
                 timeLabel: timeLabel,
                 title: draft.title,
                 activity: activity,
-                blockSummaries: draft.blockSummaries,
-                sourceLabel: "Matched · \(ActualsCopy.sourceDisplayName(activity?.provider ?? .garmin))"
+                blockSummaries: draft.blockSummaries.isEmpty
+                    ? [draft.title]
+                    : draft.blockSummaries,
+                sourceLabel: "Matched · \(ActualsCopy.sourceDisplayName(activity?.provider ?? .garmin))",
+                workout: captureWorkout
             )
         )
         if let session = matched.fillInSession {
@@ -534,18 +538,30 @@ final class ActualsTodayDemoFeed: ObservableObject {
     }
 
     /// Map → picked a library workout: keep the session row, attach that plan for RPE.
-    func applyLibraryMatch(planTitle: String, unmappedCardID: String = "today_demo_unmapped") {
+    func applyLibraryMatch(
+        planTitle: String,
+        unmappedCardID: String = "today_demo_unmapped",
+        workout: Workout? = nil
+    ) {
         let prior = cards.first { $0.id == unmappedCardID }
         let activity = prior?.activity ?? Self.unmappedCard().activity
         let timeLabel = prior?.timeLabel ?? "18:10"
+        let summaries: [String] = {
+            if let workout {
+                let names = workout.blocks.flatMap(\.exercises).map(\.name)
+                if !names.isEmpty { return names }
+            }
+            return [planTitle]
+        }()
         let matched = makeMatchedCard(
             request: MatchedCardRequest(
                 cardID: unmappedCardID,
                 timeLabel: timeLabel,
                 title: planTitle,
                 activity: activity,
-                blockSummaries: [planTitle],
-                sourceLabel: "Matched · \(ActualsCopy.sourceDisplayName(activity?.provider ?? .garmin))"
+                blockSummaries: summaries,
+                sourceLabel: "Matched · \(ActualsCopy.sourceDisplayName(activity?.provider ?? .garmin))",
+                workout: workout
             )
         )
         if let session = matched.fillInSession {
@@ -609,7 +625,9 @@ final class ActualsTodayDemoFeed: ObservableObject {
                     title: session.title,
                     activity: card.activity,
                     blockSummaries: session.exercises.map(\.name),
-                    sourceLabel: "Matched · \(ActualsCopy.sourceDisplayName(card.activity?.provider ?? .strava))"
+                    sourceLabel: "Matched · \(ActualsCopy.sourceDisplayName(card.activity?.provider ?? .strava))",
+                    structureBody: session.structureBody,
+                    seedExercises: session.exercises
                 )
             )
             return ActualsTodayDemoCard(
@@ -649,6 +667,33 @@ final class ActualsTodayDemoFeed: ObservableObject {
         let activity: ActualsUnmappedActivity?
         let blockSummaries: [String]
         let sourceLabel: String
+        /// Full Library workout when Map picks a real plan — seeds steps + Strava text.
+        let workout: Workout?
+        /// Precomputed structure (e.g. rehydrate from GRDB).
+        let structureBody: String?
+        let seedExercises: [ExerciseActual]?
+
+        init(
+            cardID: String,
+            timeLabel: String,
+            title: String,
+            activity: ActualsUnmappedActivity?,
+            blockSummaries: [String],
+            sourceLabel: String,
+            workout: Workout? = nil,
+            structureBody: String? = nil,
+            seedExercises: [ExerciseActual]? = nil
+        ) {
+            self.cardID = cardID
+            self.timeLabel = timeLabel
+            self.title = title
+            self.activity = activity
+            self.blockSummaries = blockSummaries
+            self.sourceLabel = sourceLabel
+            self.workout = workout
+            self.structureBody = structureBody
+            self.seedExercises = seedExercises
+        }
     }
 
     private func makeMatchedCard(request: MatchedCardRequest) -> ActualsTodayDemoCard {
@@ -677,20 +722,42 @@ final class ActualsTodayDemoFeed: ObservableObject {
         if let heartRate = activity?.avgHR {
             stats.append(("heart.fill", "\(heartRate)"))
         }
-        let moveCount = max(blockSummaries.count, 1)
+
+        let structureBody: String? = {
+            if let workout = request.workout {
+                let text = StravaWorkoutStructureText.structureBody(from: workout)
+                return text.isEmpty ? nil : text
+            }
+            if let stored = request.structureBody?.trimmingCharacters(in: .whitespacesAndNewlines),
+               !stored.isEmpty {
+                return stored
+            }
+            return nil
+        }()
+
+        let exercises: [ExerciseActual] = {
+            if let seeded = request.seedExercises, !seeded.isEmpty {
+                return Array(seeded.prefix(24))
+            }
+            if let workout = request.workout {
+                let fromWorkout = StravaWorkoutStructureText.fillInExercises(from: workout)
+                if !fromWorkout.isEmpty { return fromWorkout }
+            }
+            return blockSummaries.prefix(12).enumerated().map { offset, name in
+                let slug = name
+                    .lowercased()
+                    .replacingOccurrences(of: " ", with: "_")
+                    .filter { $0.isLetter || $0.isNumber || $0 == "_" }
+                return ExerciseActual(
+                    id: "capture_\(offset)_\(slug)",
+                    name: name,
+                    planned: ExerciseActualPlanned(sets: 1, reps: 1, note: "AS BUILT")
+                )
+            }
+        }()
+        let moveCount = max(exercises.count, blockSummaries.count, 1)
         stats.append(("dumbbell.fill", "\(moveCount) moves"))
 
-        let exercises: [ExerciseActual] = blockSummaries.prefix(6).enumerated().map { offset, name in
-            let slug = name
-                .lowercased()
-                .replacingOccurrences(of: " ", with: "_")
-                .filter { $0.isLetter || $0.isNumber || $0 == "_" }
-            return ExerciseActual(
-                id: "capture_\(offset)_\(slug)",
-                name: name,
-                planned: ExerciseActualPlanned(sets: 1, reps: 1, note: "AS BUILT")
-            )
-        }
         let fillSession = ActualsFillInSession(
             id: cardID,
             title: title,
@@ -710,7 +777,8 @@ final class ActualsTodayDemoFeed: ObservableObject {
             stravaActivityType: activity?.stravaTypeRaw,
             stravaCurrentDescription: activity?.activityDescription,
             stravaRecordingApp: activity?.recordingApp,
-            stravaIsRace: activity?.isRace ?? false
+            stravaIsRace: activity?.isRace ?? false,
+            structureBody: structureBody
         )
 
         return ActualsTodayDemoCard(

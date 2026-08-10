@@ -68,16 +68,28 @@ final class ActualsHistoryViewModel: ObservableObject {
 
     /// Map → library pick: attach plan + fill-in session (same as Today).
     @discardableResult
-    func applyLibraryMatch(planTitle: String, cardID: String) -> ActualsTodayDemoCard? {
+    func applyLibraryMatch(
+        planTitle: String,
+        cardID: String,
+        workout: Workout? = nil
+    ) -> ActualsTodayDemoCard? {
         guard let prior = card(withID: cardID) else { return nil }
+        let summaries: [String] = {
+            if let workout {
+                let names = workout.blocks.flatMap(\.exercises).map(\.name)
+                if !names.isEmpty { return names }
+            }
+            return [planTitle]
+        }()
         let matched = ActualsTodayDemoFeed.makeMatchedCard(
             request: ActualsTodayDemoFeed.MatchedCardRequest(
                 cardID: cardID,
                 timeLabel: prior.timeLabel,
                 title: planTitle,
                 activity: prior.activity,
-                blockSummaries: [planTitle],
-                sourceLabel: "Matched · \(ActualsCopy.sourceDisplayName(prior.activity?.provider ?? .strava))"
+                blockSummaries: summaries,
+                sourceLabel: "Matched · \(ActualsCopy.sourceDisplayName(prior.activity?.provider ?? .strava))",
+                workout: workout
             )
         )
         if let session = matched.fillInSession {
@@ -98,7 +110,8 @@ final class ActualsHistoryViewModel: ObservableObject {
                 title: draft.title,
                 activity: prior.activity,
                 blockSummaries: draft.blockSummaries.isEmpty ? [draft.title] : draft.blockSummaries,
-                sourceLabel: "Matched · \(ActualsCopy.sourceDisplayName(prior.activity?.provider ?? .strava))"
+                sourceLabel: "Matched · \(ActualsCopy.sourceDisplayName(prior.activity?.provider ?? .strava))",
+                workout: draft.toWorkoutForMatch()
             )
         )
         if let session = matched.fillInSession {
@@ -226,6 +239,7 @@ struct ActualsHistoryView: View {
     @State private var fillInRoute: HistoryFillInRoute?
     @State private var verifiedRoute: HistoryVerifiedRoute?
     @State private var libraryCandidates: [ActualsPlanCandidate] = ActualsTodayDemoFeed.samplePlanCandidates
+    @State private var libraryWorkoutsByID: [String: Workout] = [:]
     @State private var showLibraryMatchPicker = false
     @State private var libraryPickerCardID: String?
 
@@ -279,7 +293,11 @@ struct ActualsHistoryView: View {
                     showLibraryMatchPicker = false
                     guard let cardID = libraryPickerCardID else { return }
                     // Match then land on Fill-in (RPE + Save) — don't dump back to the list.
-                    _ = viewModel.applyLibraryMatch(planTitle: candidate.title, cardID: cardID)
+                    _ = viewModel.applyLibraryMatch(
+                        planTitle: candidate.title,
+                        cardID: cardID,
+                        workout: libraryWorkoutsByID[candidate.id]
+                    )
                     mapRoute = nil
                     openFillIn(cardID: cardID)
                 },
@@ -410,7 +428,8 @@ struct ActualsHistoryView: View {
             onSelect: { match in
                 _ = viewModel.applyLibraryMatch(
                     planTitle: match.candidate.title,
-                    cardID: route.cardID
+                    cardID: route.cardID,
+                    workout: libraryWorkoutsByID[match.candidate.id]
                 )
                 mapRoute = nil
                 openFillIn(cardID: route.cardID)
@@ -592,6 +611,9 @@ struct ActualsHistoryView: View {
         do {
             let workouts = try await APIService.shared.fetchWorkouts()
             libraryCandidates = ActualsPlanCandidate.fromLibrary(workouts)
+            libraryWorkoutsByID = Dictionary(
+                uniqueKeysWithValues: workouts.map { ($0.id, $0) }
+            )
         } catch {
             if libraryCandidates.isEmpty {
                 libraryCandidates = ActualsTodayDemoFeed.samplePlanCandidates

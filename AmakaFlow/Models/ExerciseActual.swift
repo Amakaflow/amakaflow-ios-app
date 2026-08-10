@@ -83,6 +83,8 @@ struct ActualsFillInSession: Equatable {
     var stravaCurrentDescription: String?
     var stravaRecordingApp: String?
     var stravaIsRace: Bool
+    /// Full Library/structure text for Strava (rounds + every step + emoji).
+    var structureBody: String?
 
     init(
         id: String,
@@ -95,7 +97,8 @@ struct ActualsFillInSession: Equatable {
         stravaActivityType: String? = nil,
         stravaCurrentDescription: String? = nil,
         stravaRecordingApp: String? = nil,
-        stravaIsRace: Bool = false
+        stravaIsRace: Bool = false,
+        structureBody: String? = nil
     ) {
         self.id = id
         self.title = title
@@ -108,11 +111,21 @@ struct ActualsFillInSession: Equatable {
         self.stravaCurrentDescription = stravaCurrentDescription
         self.stravaRecordingApp = stravaRecordingApp
         self.stravaIsRace = stravaIsRace
+        self.structureBody = structureBody
     }
 
     /// Write-back must not run with fabricated skip inputs.
     var canEvaluateStravaWriteBack: Bool {
         stravaActivityId != nil && stravaActivityType != nil
+    }
+
+    /// Prefer the stored Library structure; fall back to emoji-decorated rows.
+    var stravaStructureBody: String {
+        if let structureBody {
+            let trimmed = structureBody.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !trimmed.isEmpty { return trimmed }
+        }
+        return StravaWorkoutStructureText.structureBody(fromExercises: exercises)
     }
 
     var confirmedCount: Int {

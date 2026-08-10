@@ -67,7 +67,8 @@ final class ActualsRepository: @unchecked Sendable {
                 stravaActivityType: session.stravaActivityType,
                 stravaCurrentDescription: session.stravaCurrentDescription,
                 stravaRecordingApp: session.stravaRecordingApp,
-                stravaIsRace: session.stravaIsRace
+                stravaIsRace: session.stravaIsRace,
+                structureBody: session.structureBody
             )
             if let existing = try LocalActualsSession.fetchOne(database, key: session.id) {
                 header.createdAt = existing.createdAt
@@ -88,6 +89,9 @@ final class ActualsRepository: @unchecked Sendable {
                 }
                 if header.stravaRecordingApp == nil {
                     header.stravaRecordingApp = existing.stravaRecordingApp
+                }
+                if header.structureBody == nil {
+                    header.structureBody = existing.structureBody
                 }
             }
             try header.upsert(database)
@@ -166,7 +170,8 @@ final class ActualsRepository: @unchecked Sendable {
                 stravaActivityType: session.stravaActivityType,
                 stravaCurrentDescription: session.stravaCurrentDescription,
                 stravaRecordingApp: session.stravaRecordingApp,
-                stravaIsRace: session.stravaIsRace
+                stravaIsRace: session.stravaIsRace,
+                structureBody: session.structureBody
             )
             if let existing = try LocalActualsSession.fetchOne(database, key: session.id) {
                 header.createdAt = existing.createdAt
@@ -178,6 +183,9 @@ final class ActualsRepository: @unchecked Sendable {
                 }
                 if header.stravaActivityType == nil {
                     header.stravaActivityType = existing.stravaActivityType
+                }
+                if header.structureBody == nil {
+                    header.structureBody = existing.structureBody
                 }
             }
             try header.upsert(database)
@@ -242,7 +250,8 @@ final class ActualsRepository: @unchecked Sendable {
             stravaActivityType: header.stravaActivityType,
             stravaCurrentDescription: header.stravaCurrentDescription,
             stravaRecordingApp: header.stravaRecordingApp,
-            stravaIsRace: header.stravaIsRace
+            stravaIsRace: header.stravaIsRace,
+            structureBody: header.structureBody
         )
     }
 

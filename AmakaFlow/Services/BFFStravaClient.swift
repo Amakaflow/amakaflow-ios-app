@@ -99,12 +99,44 @@ struct StravaWriteBackAPIResultDTO: Codable, Equatable, Sendable {
     let activityId: Int
     let status: String
     let written: Bool
+    let title: String
+    let description: String
 
     enum CodingKeys: String, CodingKey {
         case activityId = "activity_id"
         case status
         case written
+        case title
+        case description
     }
+
+    init(
+        activityId: Int,
+        status: String,
+        written: Bool,
+        title: String = "",
+        description: String = ""
+    ) {
+        self.activityId = activityId
+        self.status = status
+        self.written = written
+        self.title = title
+        self.description = description
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        activityId = try container.decode(Int.self, forKey: .activityId)
+        status = try container.decode(String.self, forKey: .status)
+        written = try container.decode(Bool.self, forKey: .written)
+        title = try container.decodeIfPresent(String.self, forKey: .title) ?? ""
+        description = try container.decodeIfPresent(String.self, forKey: .description) ?? ""
+    }
+}
+
+private struct BFFStravaWriteBackBody: Encodable {
+    let title: String?
+    let description: String?
 }
 
 struct StravaRestoreAPIResultDTO: Codable, Equatable, Sendable {
@@ -224,14 +256,20 @@ nonisolated final class BFFStravaClient: @unchecked Sendable {
         )
     }
 
-    /// POST `/v1/strava/activities/{id}/writeback?userId=`
-    func applyWriteBack(activityId: String) async throws -> StravaWriteBackAPIResultDTO {
+    /// POST `/v1/strava/activities/{id}/writeback?userId=` with AmakaFlow title + structure.
+    func applyWriteBack(
+        activityId: String,
+        title: String?,
+        description: String?
+    ) async throws -> StravaWriteBackAPIResultDTO {
         let userId = try await requireUserID()
+        let body = BFFStravaWriteBackBody(title: title, description: description)
+        let bodyData = try JSONEncoder().encode(body)
         return try await send(
             method: "POST",
             path: "strava/activities/\(activityId)/writeback",
             queryItems: [URLQueryItem(name: "userId", value: userId)],
-            bodyData: nil
+            bodyData: bodyData
         )
     }
 
