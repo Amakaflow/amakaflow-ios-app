@@ -22,6 +22,7 @@ struct EditorV2ContentActions {
     var onBeginNextSupersetGroup: () -> Void = {}
 }
 
+// swiftlint:disable:next type_body_length
 enum EditorV2Content {
     @ViewBuilder
     static func main(

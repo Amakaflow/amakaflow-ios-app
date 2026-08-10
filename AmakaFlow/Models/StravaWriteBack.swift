@@ -6,6 +6,8 @@
 //  per-session decoration state. Protocol seam mirrors StubActualsProviderAuth.
 //
 
+// swiftlint:disable file_length
+
 import Combine
 import Foundation
 
@@ -146,7 +148,7 @@ struct StravaWriteBackRequest: Equatable, Sendable {
     var recordingApp: String?
     var isRace: Bool
     var rules: StravaWriteBackRules
-    var rpe: Int? = nil
+    var rpe: Int?
 }
 
 enum StravaWriteBackDecorator {

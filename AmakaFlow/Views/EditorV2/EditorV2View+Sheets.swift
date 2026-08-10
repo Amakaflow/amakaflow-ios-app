@@ -98,6 +98,17 @@ extension EditorV2View {
 
     func configSheet(_ item: ConfigGroupItem) -> some View {
         let isTarget = session.formatGroupKey == item.id
+        // Named closure avoids trailing_closure vs multiple_closures_with_trailing_closure.
+        let onRemoveSoftSection = {
+            if item.group.type == .cooldown {
+                session.removeCooldown()
+                showToast("Cool-down removed")
+            } else {
+                session.removeSessionWarmup()
+                showToast("Warm-up removed")
+            }
+            configGroupKey = nil
+        }
         return EditorV2GroupConfigSheet(
             groupKey: item.id,
             group: item.group,
@@ -125,16 +136,7 @@ extension EditorV2View {
                     showToast("Adding to this \(item.group.name.lowercased())")
                 }
                 : nil,
-            onRemoveSoftSection: {
-                if item.group.type == .cooldown {
-                    session.removeCooldown()
-                    showToast("Cool-down removed")
-                } else {
-                    session.removeSessionWarmup()
-                    showToast("Warm-up removed")
-                }
-                configGroupKey = nil
-            }
+            onRemoveSoftSection: onRemoveSoftSection
         )
         .presentationDetents([.medium, .large])
     }
@@ -147,8 +149,8 @@ extension EditorV2View {
         ) { targetID in
             session.pairSuperset(sourceID: source.id, targetID: targetID)
             pairSourceID = nil
-            let key = session.exercises.first(where: { $0.id == source.id })?.groupKey
-                ?? session.exercises.first(where: { $0.id == targetID })?.groupKey
+            let key = session.exercises.first { $0.id == source.id }?.groupKey
+                ?? session.exercises.first { $0.id == targetID }?.groupKey
             let memberCount = key.map { groupKey in
                 session.exercises.filter { $0.groupKey == groupKey }.count
             } ?? 0

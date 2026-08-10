@@ -8,6 +8,7 @@
 
 import Foundation
 
+// swiftlint:disable:next type_body_length
 enum StravaWorkoutStructureText {
     /// Full Library workout → Strava structure body (no ownership signature).
     static func structureBody(from workout: Workout) -> String {
@@ -95,8 +96,8 @@ enum StravaWorkoutStructureText {
         ) else {
             return structureBody
         }
-        let ns = structureBody as NSString
-        let matches = regex.matches(in: structureBody, range: NSRange(location: 0, length: ns.length))
+        let structureNSString = structureBody as NSString
+        let matches = regex.matches(in: structureBody, range: NSRange(location: 0, length: structureNSString.length))
         guard !matches.isEmpty else { return structureBody }
         var result = structureBody
         for match in matches.reversed() {

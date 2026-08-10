@@ -6,6 +6,8 @@
 //  wrong-day bug fixed (bucketed by `start_date_local`, not UTC).
 //
 
+// swiftlint:disable file_length
+
 import Combine
 import SwiftUI
 
@@ -54,8 +56,8 @@ final class ActualsHistoryViewModel: ObservableObject {
         let previousDaysBack = daysBack
         let previousGroups = dayGroups
         daysBack += 30
-        let ok = await load(replacingExisting: true)
-        if !ok {
+        let loadSucceeded = await load(replacingExisting: true)
+        if !loadSucceeded {
             // Failed pagination must not erase the window the athlete already has.
             daysBack = previousDaysBack
             dayGroups = previousGroups
@@ -239,6 +241,7 @@ private struct HistoryVerifiedRoute: Identifiable, Hashable {
     var id: String { "verified-\(cardID)" }
 }
 
+// swiftlint:disable:next type_body_length
 struct ActualsHistoryView: View {
     @StateObject private var viewModel: ActualsHistoryViewModel
     @State private var mapRoute: HistoryMapRoute?

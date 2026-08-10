@@ -5,6 +5,8 @@
 //  AMA-2307 / ADR-017 — Editor v2 type registry (screens-editor2.jsx E2_TYPES).
 //
 
+// swiftlint:disable file_length
+
 import SwiftUI
 
 /// Structure group kinds shown in Editor v2 (Hevy calm list).
@@ -108,6 +110,7 @@ enum EditorV2GroupType: String, CaseIterable, Equatable, Sendable {
     }
 
     /// Map ADR-017 clarify block types onto Editor v2 defaults (AMA-2326 chips).
+    // swiftlint:disable:next cyclomatic_complexity
     static func from(structureBlock type: StructureBlockType) -> EditorV2GroupType? {
         switch type.canonical {
         case .superset: return .superset

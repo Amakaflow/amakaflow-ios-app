@@ -7,6 +7,7 @@
 
 import SwiftUI
 
+// swiftlint:disable:next type_body_length
 struct EditorV2EditSheet: View {
     @State private var draft: EditorV2Exercise
     @State private var targetMemory: EditorV2EditTargetMemory

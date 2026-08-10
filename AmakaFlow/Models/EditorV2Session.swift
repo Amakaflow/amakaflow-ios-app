@@ -5,6 +5,8 @@
 //  AMA-2307 — pure Editor v2 state: flat exercises + group dict (screens-editor2.jsx).
 //
 
+// swiftlint:disable file_length
+
 import Foundation
 
 struct EditorV2Session: Equatable, Sendable {

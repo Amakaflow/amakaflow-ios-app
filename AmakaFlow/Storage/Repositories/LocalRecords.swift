@@ -338,6 +338,37 @@ struct LocalActualsSession: Codable, FetchableRecord, MutablePersistableRecord, 
     }
 }
 
+extension LocalActualsSession {
+    /// Keep Strava write-back metadata when a verified session is re-saved.
+    mutating func preserveWriteBack(
+        from existing: LocalActualsSession,
+        includeDraftFields: Bool = false
+    ) {
+        createdAt = existing.createdAt
+        stravaDecoration = existing.stravaDecoration
+        preUpdateTitle = existing.preUpdateTitle
+        preUpdateDescription = existing.preUpdateDescription
+        if includeDraftFields {
+            isDraft = false
+        }
+        if stravaActivityId == nil {
+            stravaActivityId = existing.stravaActivityId
+        }
+        if stravaActivityType == nil {
+            stravaActivityType = existing.stravaActivityType
+        }
+        if stravaCurrentDescription == nil {
+            stravaCurrentDescription = existing.stravaCurrentDescription
+        }
+        if stravaRecordingApp == nil {
+            stravaRecordingApp = existing.stravaRecordingApp
+        }
+        if structureBody == nil {
+            structureBody = existing.structureBody
+        }
+    }
+}
+
 struct LocalActualsExerciseRow: Codable, FetchableRecord, MutablePersistableRecord, Identifiable, Equatable {
     static let databaseTableName = "actuals_exercise_rows"
     static let persistenceConflictPolicy = PersistenceConflictPolicy(insert: .replace, update: .replace)

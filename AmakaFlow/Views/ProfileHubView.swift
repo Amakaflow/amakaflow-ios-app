@@ -19,6 +19,7 @@ enum ProfileHubRoute: Hashable {
     case actualsConnectSources
 }
 
+// swiftlint:disable:next type_body_length
 struct ProfileHubView: View {
     @Binding var navigateToSyncDashboard: Bool
     @Binding var path: NavigationPath

@@ -71,28 +71,7 @@ final class ActualsRepository: @unchecked Sendable {
                 structureBody: session.structureBody
             )
             if let existing = try LocalActualsSession.fetchOne(database, key: session.id) {
-                header.createdAt = existing.createdAt
-                // Preserve write-back state a prior verify/decorate pass recorded —
-                // a re-save (edit actuals) must not blank out the Strava linkage.
-                header.stravaDecoration = existing.stravaDecoration
-                header.preUpdateTitle = existing.preUpdateTitle
-                header.preUpdateDescription = existing.preUpdateDescription
-                header.isDraft = false
-                if header.stravaActivityId == nil {
-                    header.stravaActivityId = existing.stravaActivityId
-                }
-                if header.stravaActivityType == nil {
-                    header.stravaActivityType = existing.stravaActivityType
-                }
-                if header.stravaCurrentDescription == nil {
-                    header.stravaCurrentDescription = existing.stravaCurrentDescription
-                }
-                if header.stravaRecordingApp == nil {
-                    header.stravaRecordingApp = existing.stravaRecordingApp
-                }
-                if header.structureBody == nil {
-                    header.structureBody = existing.structureBody
-                }
+                header.preserveWriteBack(from: existing)
             }
             try header.upsert(database)
 
@@ -176,19 +155,7 @@ final class ActualsRepository: @unchecked Sendable {
                 structureBody: session.structureBody
             )
             if let existing = try LocalActualsSession.fetchOne(database, key: session.id) {
-                header.createdAt = existing.createdAt
-                header.stravaDecoration = existing.stravaDecoration
-                header.preUpdateTitle = existing.preUpdateTitle
-                header.preUpdateDescription = existing.preUpdateDescription
-                if header.stravaActivityId == nil {
-                    header.stravaActivityId = existing.stravaActivityId
-                }
-                if header.stravaActivityType == nil {
-                    header.stravaActivityType = existing.stravaActivityType
-                }
-                if header.structureBody == nil {
-                    header.structureBody = existing.structureBody
-                }
+                header.preserveWriteBack(from: existing, includeDraftFields: true)
             }
             try header.upsert(database)
 
