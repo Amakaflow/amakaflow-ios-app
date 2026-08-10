@@ -304,6 +304,74 @@ final class WorkoutEnrichmentPushPlannerTests: XCTestCase {
         XCTAssertNil(plan.offer(.exerciseWarmupSets))
     }
 
+    /// AMA-2400 — Wingate circuit stations look like `1 × 0:30` (sets + duration).
+    /// Warm-up ramps are for strength reps, not timed Assault Bike intervals.
+    func testTimedCircuitStationWithSetsDoesNotOfferWarmupSets() {
+        let circuit = SocialImportBlock(
+            label: nil,
+            rounds: 8,
+            exercises: [
+                SocialImportExercise(name: "Assault Bike", sets: 1, seconds: 30)
+            ],
+            type: "circuit"
+        )
+        let plan = WorkoutEnrichmentPushPlanner.plan(
+            blocks: [circuit],
+            tombstones: [],
+            prefs: .defaults
+        )
+        XCTAssertNil(plan.offer(.exerciseWarmupSets))
+        XCTAssertNotNil(plan.offer(.betweenSetRest))
+        XCTAssertNotNil(plan.offer(.cooldown))
+    }
+
+    /// AMA-2400 — user-owned rest left untouched must not fail Apple handoff when
+    /// the mapper audits it as `skipped_already_present`.
+    func testIncompleteEnrichmentFalseWhenBetweenSetRestAlreadyPresent() throws {
+        var prefs = WorkoutPreferences.defaults
+        prefs.sessionWarmup.enabled = true
+        prefs.cooldown.enabled = true
+        prefs.betweenSetRest.enabled = true
+        prefs.exerciseWarmupSets.enabled = false
+        let plan = WorkoutEnrichmentPushPlanner.plan(
+            blocks: [
+                SocialImportBlock(
+                    label: nil,
+                    rounds: 8,
+                    exercises: [
+                        SocialImportExercise(name: "Assault Bike", sets: 1, seconds: 30)
+                    ],
+                    type: "circuit",
+                    restSec: 60
+                )
+            ],
+            tombstones: [],
+            prefs: prefs,
+            target: .apple
+        )
+        let application = try WorkoutEnrichmentPushPlanner.application(
+            plan: plan,
+            decision: WorkoutEnrichmentPushPlanner.Decision(
+                checkedKinds: [.sessionWarmup, .betweenSetRest, .cooldown],
+                restSecOverride: 60,
+                restOpenOverride: false
+            ),
+            prefs: prefs,
+            tombstones: []
+        )
+        let summary = EnrichmentAppliedSummary(
+            prefsSource: "request_override",
+            added: ["session_warmup", "cooldown"],
+            skippedAlreadyPresent: ["between_set_rest"]
+        )
+        XCTAssertFalse(
+            WorkoutEnrichmentPushCoordinator.isIncompleteEnrichment(
+                application: application,
+                summary: summary
+            )
+        )
+    }
+
     /// AMA-2378 Task 5 — the ramp editor's "→ THEN YOUR K WORKING SETS" header
     /// needs a real working-set count per candidate, in the same order as
     /// `candidateExerciseNames` (a candidate's own `sets` is always declared —
