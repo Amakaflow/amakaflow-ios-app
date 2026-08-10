@@ -139,6 +139,42 @@ final class WorkoutModelTests: XCTestCase {
         }
     }
 
+    func testBlocksFromLegacyIntervals_preservesRestInsideMultiRoundRepeat() {
+        // AMA-2399: suggest-workout → Workout(intervals:) must keep work/rest children.
+        let intervals: [WorkoutInterval] = [
+            .repeat(
+                reps: 3,
+                intervals: [
+                    .time(seconds: 45, target: "hard"),
+                    .rest(seconds: 30),
+                ]
+            )
+        ]
+
+        let blocks = Workout.blocksFromLegacyIntervals(intervals)
+        XCTAssertEqual(blocks.count, 1)
+        XCTAssertEqual(blocks[0].structure, .circuit)
+        XCTAssertEqual(blocks[0].rounds, 3)
+        XCTAssertEqual(blocks[0].restBetweenSeconds, 30)
+        XCTAssertEqual(blocks[0].exercises.count, 1)
+        XCTAssertEqual(blocks[0].exercises[0].durationSeconds, 45)
+        XCTAssertNil(blocks[0].exercises[0].restSeconds)
+
+        let flattened = BlockToIntervalConverter.flatten(blocks)
+        XCTAssertEqual(
+            flattened,
+            [
+                .repeat(
+                    reps: 3,
+                    intervals: [
+                        .time(seconds: 45, target: "hard"),
+                        .rest(seconds: 30),
+                    ]
+                )
+            ]
+        )
+    }
+
     func testRepeatIntervalEncodeDecode() throws {
         let interval = WorkoutInterval.repeat(
             reps: 3,
