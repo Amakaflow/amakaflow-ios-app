@@ -63,14 +63,20 @@ final class ActualsProviderAuthTests: XCTestCase {
 
     func testAuthorizeSuccessMarksProviderConnected() async {
         let store = ActualsSourceConnectionStore(defaults: defaults)
-        let auth = MockActualsProviderAuth(outcomes: [.strava: .success])
+        let auth = MockActualsProviderAuth(outcomes: [.strava: .success(grantedWrite: false)])
 
         let outcome = await auth.authorize(.strava)
         ActualsProviderAuthAction.apply(outcome: outcome, provider: .strava, store: store)
 
-        XCTAssertEqual(outcome, .success)
+        XCTAssertEqual(outcome, .success(grantedWrite: false))
         XCTAssertTrue(store.isConnected(.strava))
         XCTAssertFalse(store.isConnected(.garmin))
+    }
+
+    func testWriteBackReconnectRequestsEditScopeCopy() {
+        let scopes = ActualsCopy.oauthScopes(for: .strava, includeWrite: true)
+        XCTAssertTrue(scopes[2].granted)
+        XCTAssertTrue(scopes[2].subtitle.contains("REQUESTED"))
     }
 
     // MARK: - Cancel → nothing linked
@@ -90,7 +96,13 @@ final class ActualsProviderAuthTests: XCTestCase {
     func testStubAuthorizeDefaultsToSuccess() async {
         let stub = StubActualsProviderAuth()
         let outcome = await stub.authorize(.strava)
-        XCTAssertEqual(outcome, .success)
+        XCTAssertEqual(outcome, .success(grantedWrite: false))
+    }
+
+    func testStubAuthorizeIncludeWriteReportsGrantedWrite() async {
+        let stub = StubActualsProviderAuth()
+        let outcome = await stub.authorize(.strava, includeWrite: true)
+        XCTAssertEqual(outcome, .success(grantedWrite: true))
     }
 
     func testStubNextOutcomeOverrideCancel() async {
@@ -100,6 +112,6 @@ final class ActualsProviderAuthTests: XCTestCase {
         XCTAssertEqual(cancelled, .cancelled)
         // Consumed — next call returns default success.
         let success = await stub.authorize(.strava)
-        XCTAssertEqual(success, .success)
+        XCTAssertEqual(success, .success(grantedWrite: false))
     }
 }

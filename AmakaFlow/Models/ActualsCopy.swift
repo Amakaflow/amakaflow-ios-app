@@ -299,6 +299,8 @@ enum ActualsCopy {
     static let oauthAuthorizeCTA = "Authorize"
     static let oauthCancelCTA = "Cancel"
     static let oauthUploadNotRequested = "NOT REQUESTED — AmakaFlow never posts to Strava"
+    static let oauthUploadRequestedWriteBack =
+        "REQUESTED — title + description only after you verify (signed write-back)"
     static let oauthGarminUploadNotRequested = "NOT REQUESTED — AmakaFlow never posts to Garmin"
     static let oauthStravaHostChrome = "🔒 strava.com/oauth/authorize"
     static let oauthGarminHostChrome = "🔒 connect.garmin.com/oauthConfirm"
@@ -306,8 +308,11 @@ enum ActualsCopy {
     static let oauthAuthorizeAccessibilityID = "af_actuals_oauth_authorize"
     static let oauthCancelAccessibilityID = "af_actuals_oauth_cancel"
 
-    /// Locked scope rows — upload is always false / struck-through.
-    static func oauthScopes(for provider: ActualsSourceProvider) -> [ActualsOAuthScopeRow] {
+    /// Locked scope rows — edit/upload is struck-through unless write-back reconnect.
+    static func oauthScopes(
+        for provider: ActualsSourceProvider,
+        includeWrite: Bool = false
+    ) -> [ActualsOAuthScopeRow] {
         switch provider {
         case .strava:
             return [
@@ -322,9 +327,9 @@ enum ActualsCopy {
                     subtitle: "Name and units only"
                 ),
                 ActualsOAuthScopeRow(
-                    granted: false,
+                    granted: includeWrite,
                     title: "Upload or edit your activities",
-                    subtitle: oauthUploadNotRequested
+                    subtitle: includeWrite ? oauthUploadRequestedWriteBack : oauthUploadNotRequested
                 )
             ]
         case .garmin:

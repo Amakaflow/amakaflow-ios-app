@@ -224,7 +224,8 @@ final class ActualsTodayDemoFeed: ObservableObject {
             } else {
                 sync.clear()
             }
-            cards = windowCards
+            // Re-apply local match/verify so a Strava re-pull does not wipe Save state.
+            cards = Self.applyLocalOverlays(to: windowCards, repository: repository)
         } catch is StravaLogicalSyncFailure {
             showMergeAsk = false
             cards = []
@@ -525,6 +526,10 @@ final class ActualsTodayDemoFeed: ObservableObject {
                 sourceLabel: "Matched · \(ActualsCopy.sourceDisplayName(activity?.provider ?? .garmin))"
             )
         )
+        if let session = matched.fillInSession {
+            try? repository.upsertMatchedDraft(session)
+            NotificationCenter.default.post(name: .actualsLocalSessionsDidChange, object: nil)
+        }
         upsertCard(matched, replacing: unmappedCardID, atFrontIfMissing: true)
     }
 
@@ -543,7 +548,70 @@ final class ActualsTodayDemoFeed: ObservableObject {
                 sourceLabel: "Matched · \(ActualsCopy.sourceDisplayName(activity?.provider ?? .garmin))"
             )
         )
+        if let session = matched.fillInSession {
+            try? repository.upsertMatchedDraft(session)
+            NotificationCenter.default.post(name: .actualsLocalSessionsDidChange, object: nil)
+        }
         upsertCard(matched, replacing: unmappedCardID, atFrontIfMissing: true)
+    }
+
+    /// Re-read GRDB match/verify overlays onto the current Strava cards (Today scrubber).
+    func reapplyLocalOverlays() {
+        cards = Self.applyLocalOverlays(to: cards, repository: repository)
+    }
+
+    /// Merge persisted match/verify sessions onto freshly pulled Strava cards.
+    static func applyLocalOverlays(
+        to cards: [ActualsTodayDemoCard],
+        repository: ActualsRepository
+    ) -> [ActualsTodayDemoCard] {
+        let byStrava = (try? repository.fetchSessionsKeyedByStravaActivityId()) ?? [:]
+        guard !byStrava.isEmpty else { return cards }
+        return cards.map { card in
+            guard let activityId = stravaActivityId(fromCardID: card.id),
+                  let session = byStrava[activityId] else {
+                return card
+            }
+            let decoration = (try? repository.fetchDecoration(forSessionID: session.id)) ?? card.stravaDecoration
+            if session.verified {
+                return ActualsTodayDemoCard(
+                    id: card.id,
+                    kind: .verified,
+                    timeLabel: card.timeLabel,
+                    title: session.title,
+                    stats: card.stats,
+                    sourceLabel: "Verified · RPE \(session.rpe ?? 0)",
+                    sourceProvider: card.sourceProvider ?? card.activity?.provider ?? .strava,
+                    session: card.session,
+                    activity: card.activity,
+                    fillInSession: session,
+                    stravaDecoration: decoration
+                )
+            }
+            let matched = makeMatchedCard(
+                request: MatchedCardRequest(
+                    cardID: card.id,
+                    timeLabel: card.timeLabel,
+                    title: session.title,
+                    activity: card.activity,
+                    blockSummaries: session.exercises.map(\.name),
+                    sourceLabel: "Matched · \(ActualsCopy.sourceDisplayName(card.activity?.provider ?? .strava))"
+                )
+            )
+            return ActualsTodayDemoCard(
+                id: matched.id,
+                kind: .fillInDebt,
+                timeLabel: matched.timeLabel,
+                title: session.title,
+                stats: matched.stats,
+                sourceLabel: matched.sourceLabel,
+                sourceProvider: matched.sourceProvider,
+                session: matched.session,
+                activity: matched.activity,
+                fillInSession: session,
+                stravaDecoration: decoration
+            )
+        }
     }
 
     private func upsertCard(

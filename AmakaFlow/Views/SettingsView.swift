@@ -140,8 +140,8 @@ struct SettingsView: View {
     /// AMA-2389: badge parity with ＋ From friends row.
     @ObservedObject private var friendsStore = FriendsSharingStore.shared
     /// AMA-2396: Settings → Strava must open Actuals Connect / write-back, not Connections hub.
-    @StateObject private var actualsSources = ActualsSourceConnectionStore()
-    @StateObject private var stravaWriteBackSettings = StravaWriteBackSettingsStore()
+    @ObservedObject private var actualsSources = ActualsSourceConnectionStore.shared
+    @ObservedObject private var stravaWriteBackSettings = StravaWriteBackSettingsStore.shared
     @EnvironmentObject private var garminConnectivity: GarminConnectManager
     @EnvironmentObject private var pairingService: PairingService
     @EnvironmentObject private var workoutsViewModel: WorkoutsViewModel

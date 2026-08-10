@@ -4,6 +4,7 @@
 //
 //  AMA-2391: Parse the post-OAuth deep link from strava-sync-api.
 //  Staging FRONTEND_URL must redirect to amakaflow://…/connected?status=…
+//  AMA-2396: also reads `scope=` so write-back unlocks only on activity:write.
 //
 
 import Foundation
@@ -26,18 +27,30 @@ enum StravaOAuthCallback {
 
         guard mentionsConnected else { return .failed }
 
-        let status = components?.queryItems?
+        let items = components?.queryItems ?? []
+        let status = items
             .first { $0.name.lowercased() == "status" }?
             .value?
             .lowercased()
 
         switch status {
         case "success":
-            return .success
+            let scope = items
+                .first { $0.name.lowercased() == "scope" }?
+                .value ?? ""
+            return .success(grantedWrite: scopeContainsWrite(scope))
         case "error":
             return .failed
         default:
             return .failed
         }
+    }
+
+    /// Strava returns comma-separated scopes (`activity:read_all,activity:write`).
+    static func scopeContainsWrite(_ scope: String) -> Bool {
+        scope
+            .split(separator: ",")
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() }
+            .contains("activity:write")
     }
 }

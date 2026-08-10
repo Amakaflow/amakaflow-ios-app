@@ -16,19 +16,23 @@ struct ActualsConnectSourcesView<Store: ActualsSourceConnecting>: View where Sto
 
     @State private var showAppleHealthPrimer = false
     @State private var oauthProvider: ActualsSourceProvider?
+    /// AMA-2396: next Strava OAuth must request `activity:write` (write-back reconnect).
+    @State private var oauthIncludeWrite = false
     /// AMA-2396: Strava row → write-back settings, once connected.
     @State private var showStravaWriteBack = false
-    @StateObject private var writeBackSettings = StravaWriteBackSettingsStore()
+    @ObservedObject private var writeBackSettings: StravaWriteBackSettingsStore
 
     init(
         store: Store,
         healthKit: (any ActualsHealthKitConnecting)? = nil,
         providerAuth: (any ActualsProviderAuthProviding)? = nil,
+        writeBackSettings: StravaWriteBackSettingsStore? = nil,
         onConnect: ((ActualsSourceProvider) -> Void)? = nil
     ) {
         self.store = store
         self.healthKit = healthKit ?? LiveActualsHealthKitConnector()
         self.providerAuth = providerAuth ?? ActualsProviderAuthFactory.makeDefault()
+        self.writeBackSettings = writeBackSettings ?? .shared
         // Children already markConnected on grant/success — default is parent UI only.
         self.onConnect = onConnect ?? { _ in }
     }
@@ -67,15 +71,12 @@ struct ActualsConnectSourcesView<Store: ActualsSourceConnecting>: View where Sto
             ActualsOAuthScopeView(
                 provider: provider,
                 store: store,
-                auth: providerAuth
-            ) {
-                // Write-back reconnect: unlock toggle after activity:write grant.
-                if provider == .strava,
-                   let live = providerAuth as? BFFActualsProviderAuth,
-                   live.includeWriteScope {
-                    writeBackSettings.hasActivityWriteScope = true
-                    writeBackSettings.writeBackEnabled = true
-                    live.includeWriteScope = false
+                auth: providerAuth,
+                includeWrite: oauthIncludeWrite
+            ) { outcome in
+                if provider == .strava {
+                    writeBackSettings.applyWriteGrantFromOAuth(grantedWrite: outcome.grantedWrite)
+                    oauthIncludeWrite = false
                 }
                 onConnect(provider)
             }
@@ -86,9 +87,7 @@ struct ActualsConnectSourcesView<Store: ActualsSourceConnecting>: View where Sto
                 // the dismiss settles so SwiftUI does not drop the destination.
                 showStravaWriteBack = false
                 Task { @MainActor in
-                    if let live = providerAuth as? BFFActualsProviderAuth {
-                        live.includeWriteScope = true
-                    }
+                    oauthIncludeWrite = true
                     try? await Task.sleep(nanoseconds: 350_000_000)
                     oauthProvider = .strava
                 }
@@ -264,7 +263,12 @@ struct ActualsConnectSourcesView<Store: ActualsSourceConnecting>: View where Sto
             } else {
                 showAppleHealthPrimer = true
             }
-        case .garmin, .strava:
+        case .garmin:
+            oauthIncludeWrite = false
+            oauthProvider = provider
+        case .strava:
+            // Fresh Connect stays read-only. Write-back Reconnect sets oauthIncludeWrite
+            // before pushing this destination — don't clear it here.
             oauthProvider = provider
         }
     }
@@ -292,7 +296,7 @@ struct ActualsConnectSourcesView<Store: ActualsSourceConnecting>: View where Sto
 
 extension ActualsConnectSourcesView where Store == ActualsSourceConnectionStore {
     init() {
-        self.init(store: ActualsSourceConnectionStore())
+        self.init(store: ActualsSourceConnectionStore.shared)
     }
 }
 

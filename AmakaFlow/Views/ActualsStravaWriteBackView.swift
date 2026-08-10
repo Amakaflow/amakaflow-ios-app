@@ -17,7 +17,7 @@ struct ActualsStravaWriteBackView: View {
         store: StravaWriteBackSettingsStore? = nil,
         onReconnect: (() -> Void)? = nil
     ) {
-        self.store = store ?? StravaWriteBackSettingsStore()
+        self.store = store ?? .shared
         self.onReconnect = onReconnect
     }
 

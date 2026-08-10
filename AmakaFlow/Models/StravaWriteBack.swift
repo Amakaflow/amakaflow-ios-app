@@ -275,6 +275,9 @@ enum StravaWriteBackDecorator {
 
 @MainActor
 final class StravaWriteBackSettingsStore: ObservableObject {
+    /// Shared so Settings / Connect / Fill-in see the same toggle + write-scope flags.
+    static let shared = StravaWriteBackSettingsStore()
+
     private enum Keys {
         /// UserDefaults key for the write-back toggle (stable string; do not rename).
         static let writeBackEnabled = "ama2396.strava.writeBackEnabled"
@@ -316,9 +319,19 @@ final class StravaWriteBackSettingsStore: ObservableObject {
 
     var statusLine: String {
         if writeBackEnabled, hasActivityWriteScope {
-            return "CONNECTED ✓ · READ + WRITE-BACK"
+            return ActualsCopy.writeBackStatusReadWrite
         }
-        return ActualsCopy.connectedBadge
+        if hasActivityWriteScope {
+            return "CONNECTED ✓ · WRITE READY · TOGGLE OFF"
+        }
+        return "CONNECTED ✓ · READ ONLY — RECONNECT FOR WRITE-BACK"
+    }
+
+    /// Call after a successful Strava OAuth that included `activity:write`.
+    func applyWriteGrantFromOAuth(grantedWrite: Bool) {
+        guard grantedWrite else { return }
+        hasActivityWriteScope = true
+        writeBackEnabled = true
     }
 }
 

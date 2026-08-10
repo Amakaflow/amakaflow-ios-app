@@ -19,15 +19,18 @@ final class ActualsHistoryViewModel: ObservableObject {
     private let client: BFFStravaClient
     private let calendar: Calendar
     private let now: () -> Date
+    private let repository: ActualsRepository
 
     init(
         client: BFFStravaClient? = nil,
         calendar: Calendar = .current,
-        now: @escaping () -> Date = Date.init
+        now: @escaping () -> Date = Date.init,
+        repository: ActualsRepository? = nil
     ) {
         self.client = client ?? BFFStravaClient.live()
         self.calendar = calendar
         self.now = now
+        self.repository = repository ?? ActualsRepository()
     }
 
     nonisolated deinit {}
@@ -77,6 +80,10 @@ final class ActualsHistoryViewModel: ObservableObject {
                 sourceLabel: "Matched · \(ActualsCopy.sourceDisplayName(prior.activity?.provider ?? .strava))"
             )
         )
+        if let session = matched.fillInSession {
+            try? repository.upsertMatchedDraft(session)
+            NotificationCenter.default.post(name: .actualsLocalSessionsDidChange, object: nil)
+        }
         mutateCard(id: cardID) { _ in matched }
         return matched
     }
@@ -94,12 +101,17 @@ final class ActualsHistoryViewModel: ObservableObject {
                 sourceLabel: "Matched · \(ActualsCopy.sourceDisplayName(prior.activity?.provider ?? .strava))"
             )
         )
+        if let session = matched.fillInSession {
+            try? repository.upsertMatchedDraft(session)
+            NotificationCenter.default.post(name: .actualsLocalSessionsDidChange, object: nil)
+        }
         mutateCard(id: cardID) { _ in matched }
         return matched
     }
 
     func markVerified(saved: ActualsFillInSession, cardID: String) {
         mutateCard(id: cardID) { $0.markingVerified(with: saved) }
+        NotificationCenter.default.post(name: .actualsLocalSessionsDidChange, object: nil)
     }
 
     func card(withID id: String) -> ActualsTodayDemoCard? {
@@ -135,11 +147,20 @@ final class ActualsHistoryViewModel: ObservableObject {
                 }
                 return false
             }
-            dayGroups = ActualsTodayDemoFeed.historyCards(
+            let groups = ActualsTodayDemoFeed.historyCards(
                 from: result.activities,
                 calendar: calendar,
                 now: now()
             )
+            dayGroups = groups.map { group in
+                (
+                    day: group.day,
+                    cards: ActualsTodayDemoFeed.applyLocalOverlays(
+                        to: group.cards,
+                        repository: repository
+                    )
+                )
+            }
             return true
         } catch {
             // Never crash History on a missing/expired token — keep what we have.
@@ -149,6 +170,11 @@ final class ActualsHistoryViewModel: ObservableObject {
             return false
         }
     }
+}
+
+extension Notification.Name {
+    /// Posted when a Strava card is matched or verified locally — Today re-applies overlays.
+    static let actualsLocalSessionsDidChange = Notification.Name("ama2396.actualsLocalSessionsDidChange")
 }
 
 /// Navigation payload for History → Map (keeps card identity through match).

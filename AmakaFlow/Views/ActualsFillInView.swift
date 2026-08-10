@@ -22,7 +22,7 @@ struct ActualsFillInView: View {
     var onUnverify: (() -> Void)?
     /// Fired after write-back persists a decoration so the Today rail can refresh.
     var onWriteBackDecoration: ((StravaDecorationState) -> Void)?
-    var writeBackSettings = StravaWriteBackSettingsStore()
+    var writeBackSettings = StravaWriteBackSettingsStore.shared
     var writeBackProvider: any StravaWriteBackProviding = StravaWriteBackFactory.makeDefault()
 
     @Environment(\.dismiss) private var dismiss

@@ -109,39 +109,117 @@ final class ActualsRepository: @unchecked Sendable {
 
     func fetchSession(id: String) throws -> ActualsFillInSession? {
         try dbQueue.read { database in
-            guard let header = try LocalActualsSession.fetchOne(database, key: id) else {
-                return nil
-            }
-            let rows = try LocalActualsExerciseRow
-                .filter(LocalActualsExerciseRow.Columns.sessionId == id)
-                .order(LocalActualsExerciseRow.Columns.position.asc)
+            try Self.session(id: id, database: database)
+        }
+    }
+
+    /// AMA-2396: Match/verify overlays keyed by Strava activity id so History + Today
+    /// survive sync reloads and tab changes.
+    func fetchSessionsKeyedByStravaActivityId() throws -> [String: ActualsFillInSession] {
+        try dbQueue.read { database in
+            let headers = try LocalActualsSession
+                .filter(sql: "strava_activity_id IS NOT NULL")
                 .fetchAll(database)
-            let exercises: [ExerciseActual] = rows.map { row in
-                ExerciseActual(
-                    id: row.exerciseKey,
-                    name: row.name,
-                    planned: ExerciseActualPlanned(
-                        sets: row.plannedSets,
-                        reps: row.plannedReps,
-                        weightKg: row.plannedWeightKg,
-                        note: row.plannedNote
-                    ),
-                    confirmation: ExerciseActualConfirmation(rawValue: row.confirmation),
-                    actualSets: row.actualSets,
-                    actualReps: row.actualReps,
-                    actualWeightKg: row.actualWeightKg
-                )
+            var result: [String: ActualsFillInSession] = [:]
+            for header in headers {
+                guard let activityId = header.stravaActivityId,
+                      let session = try Self.session(id: header.id, database: database) else {
+                    continue
+                }
+                // Prefer verified over draft when duplicates exist.
+                if let existing = result[activityId], existing.verified, !session.verified {
+                    continue
+                }
+                result[activityId] = session
             }
-            return ActualsFillInSession(
-                id: header.id,
-                title: header.title,
-                subtitle: header.subtitle,
-                exercises: exercises,
-                rpe: header.rpe,
-                verified: header.verified,
-                stravaActivityId: header.stravaActivityId
+            return result
+        }
+    }
+
+    /// Persist a Map match before RPE/Save so "matched" is not lost on History reload.
+    func upsertMatchedDraft(_ session: ActualsFillInSession) throws {
+        let timestamp = now()
+        try dbQueue.write { database in
+            var header = LocalActualsSession(
+                id: session.id,
+                title: session.title,
+                subtitle: session.subtitle,
+                rpe: session.rpe,
+                verified: false,
+                savedAt: timestamp,
+                createdAt: timestamp,
+                stravaActivityId: session.stravaActivityId,
+                isDraft: true
+            )
+            if let existing = try LocalActualsSession.fetchOne(database, key: session.id) {
+                header.createdAt = existing.createdAt
+                header.stravaDecoration = existing.stravaDecoration
+                header.preUpdateTitle = existing.preUpdateTitle
+                header.preUpdateDescription = existing.preUpdateDescription
+                if header.stravaActivityId == nil {
+                    header.stravaActivityId = existing.stravaActivityId
+                }
+            }
+            try header.upsert(database)
+
+            try LocalActualsExerciseRow
+                .filter(LocalActualsExerciseRow.Columns.sessionId == session.id)
+                .deleteAll(database)
+
+            for (index, exercise) in session.exercises.enumerated() {
+                var row = LocalActualsExerciseRow(
+                    id: "\(session.id)_\(exercise.id)",
+                    sessionId: session.id,
+                    exerciseKey: exercise.id,
+                    name: exercise.name,
+                    plannedSets: exercise.planned.sets,
+                    plannedReps: exercise.planned.reps,
+                    plannedWeightKg: exercise.planned.weightKg,
+                    plannedNote: exercise.planned.note,
+                    confirmation: exercise.confirmation?.rawValue ?? "",
+                    actualSets: exercise.actualSets,
+                    actualReps: exercise.actualReps,
+                    actualWeightKg: exercise.actualWeightKg,
+                    position: index
+                )
+                try row.insert(database)
+            }
+        }
+    }
+
+    private static func session(id: String, database: Database) throws -> ActualsFillInSession? {
+        guard let header = try LocalActualsSession.fetchOne(database, key: id) else {
+            return nil
+        }
+        let rows = try LocalActualsExerciseRow
+            .filter(LocalActualsExerciseRow.Columns.sessionId == id)
+            .order(LocalActualsExerciseRow.Columns.position.asc)
+            .fetchAll(database)
+        let exercises: [ExerciseActual] = rows.map { row in
+            ExerciseActual(
+                id: row.exerciseKey,
+                name: row.name,
+                planned: ExerciseActualPlanned(
+                    sets: row.plannedSets,
+                    reps: row.plannedReps,
+                    weightKg: row.plannedWeightKg,
+                    note: row.plannedNote
+                ),
+                confirmation: ExerciseActualConfirmation(rawValue: row.confirmation),
+                actualSets: row.actualSets,
+                actualReps: row.actualReps,
+                actualWeightKg: row.actualWeightKg
             )
         }
+        return ActualsFillInSession(
+            id: header.id,
+            title: header.title,
+            subtitle: header.subtitle,
+            exercises: exercises,
+            rpe: header.rpe,
+            verified: header.verified,
+            stravaActivityId: header.stravaActivityId
+        )
     }
 
     func isVerified(id: String) throws -> Bool {

@@ -16,7 +16,7 @@ import SwiftUI
 struct TodayDiaryView: View {
     @StateObject private var historyViewModel = ActivityHistoryViewModel()
     @ObservedObject private var watchConnectivity = WatchConnectivityManager.shared
-    @StateObject private var actualsSources = ActualsSourceConnectionStore()
+    @ObservedObject private var actualsSources = ActualsSourceConnectionStore.shared
     @StateObject private var actualsSyncProgress = ActualsSyncProgressStore()
     @StateObject private var actualsDemo = ActualsTodayDemoFeed()
     @State private var selectedCompletionId: String?
@@ -197,10 +197,15 @@ struct TodayDiaryView: View {
                         .strava,
                         sync: actualsSyncProgress
                     )
+                } else {
+                    actualsDemo.reapplyLocalOverlays()
                 }
                 await history
                 await library
                 syncScrubberToToday()
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .actualsLocalSessionsDidChange)) { _ in
+                actualsDemo.reapplyLocalOverlays()
             }
             .sheet(isPresented: $showLibraryMatchPicker) {
                 ActualsLibraryMatchPicker(
