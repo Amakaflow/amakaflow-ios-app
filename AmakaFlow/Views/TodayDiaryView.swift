@@ -215,7 +215,7 @@ struct TodayDiaryView: View {
                     onPick: { candidate in
                         showLibraryMatchPicker = false
                         guard let cardID = libraryPickerCardID else { return }
-                        applyLibraryMatchSelection(candidate, cardID: cardID)
+                        Task { await applyLibraryMatchSelection(candidate, cardID: cardID) }
                     },
                     onCancel: {
                         showLibraryMatchPicker = false
@@ -473,7 +473,7 @@ struct TodayDiaryView: View {
                 candidates: mapCandidates
             ),
             onSelect: { match in
-                applyLibraryMatchSelection(match.candidate, cardID: cardID)
+                Task { await applyLibraryMatchSelection(match.candidate, cardID: cardID) }
             },
             onKeepAsIs: {
                 actualsDemo.applyKeepAsIs(unmappedCardID: cardID)
@@ -497,14 +497,23 @@ struct TodayDiaryView: View {
         }
     }
 
+    @MainActor
     private func applyLibraryMatchSelection(
         _ candidate: ActualsPlanCandidate,
         cardID: String
-    ) {
+    ) async {
+        let workout = await ActualsLibraryWorkoutResolver.resolveDetail(
+            workoutID: candidate.id,
+            title: candidate.title,
+            local: libraryWorkoutsByID
+        )
+        if let workout {
+            libraryWorkoutsByID[workout.id] = workout
+        }
         actualsDemo.applyLibraryMatch(
             planTitle: candidate.title,
             unmappedCardID: cardID,
-            workout: libraryWorkoutsByID[candidate.id]
+            workout: workout
         )
         if let matched = actualsDemo.cards.first(where: { $0.id == cardID }) {
             actualsDemo.prepareFillIn(from: matched)
@@ -520,9 +529,10 @@ struct TodayDiaryView: View {
     private func loadLibraryCandidates() async {
         do {
             let workouts = try await APIService.shared.fetchWorkouts()
-            libraryCandidates = ActualsPlanCandidate.fromLibrary(workouts)
+            let enriched = WorkoutLibraryDetailStore.enrichCollection(workouts)
+            libraryCandidates = ActualsPlanCandidate.fromLibrary(enriched)
             libraryWorkoutsByID = Dictionary(
-                uniqueKeysWithValues: workouts.map { ($0.id, $0) }
+                uniqueKeysWithValues: enriched.map { ($0.id, $0) }
             )
         } catch {
             // Keep sample fallback — Map still usable offline / unauthenticated.

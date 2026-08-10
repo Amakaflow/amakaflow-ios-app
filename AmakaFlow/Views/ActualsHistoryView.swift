@@ -293,13 +293,12 @@ struct ActualsHistoryView: View {
                     showLibraryMatchPicker = false
                     guard let cardID = libraryPickerCardID else { return }
                     // Match then land on Fill-in (RPE + Save) — don't dump back to the list.
-                    _ = viewModel.applyLibraryMatch(
-                        planTitle: candidate.title,
-                        cardID: cardID,
-                        workout: libraryWorkoutsByID[candidate.id]
-                    )
-                    mapRoute = nil
-                    openFillIn(cardID: cardID)
+                    Task {
+                        await applyResolvedLibraryMatch(
+                            candidate: candidate,
+                            cardID: cardID
+                        )
+                    }
                 },
                 onCancel: {
                     showLibraryMatchPicker = false
@@ -426,13 +425,12 @@ struct ActualsHistoryView: View {
                 candidates: libraryCandidates
             ),
             onSelect: { match in
-                _ = viewModel.applyLibraryMatch(
-                    planTitle: match.candidate.title,
-                    cardID: route.cardID,
-                    workout: libraryWorkoutsByID[match.candidate.id]
-                )
-                mapRoute = nil
-                openFillIn(cardID: route.cardID)
+                Task {
+                    await applyResolvedLibraryMatch(
+                        candidate: match.candidate,
+                        cardID: route.cardID
+                    )
+                }
             },
             onKeepAsIs: {
                 viewModel.applyKeepAsIs(cardID: route.cardID)
@@ -607,12 +605,34 @@ struct ActualsHistoryView: View {
     }
 
     @MainActor
+    private func applyResolvedLibraryMatch(
+        candidate: ActualsPlanCandidate,
+        cardID: String
+    ) async {
+        let workout = await ActualsLibraryWorkoutResolver.resolveDetail(
+            workoutID: candidate.id,
+            title: candidate.title,
+            local: libraryWorkoutsByID
+        )
+        if let workout {
+            libraryWorkoutsByID[workout.id] = workout
+        }
+        _ = viewModel.applyLibraryMatch(
+            planTitle: candidate.title,
+            cardID: cardID,
+            workout: workout
+        )
+        mapRoute = nil
+        openFillIn(cardID: cardID)
+    }
+
     private func loadLibraryCandidates() async {
         do {
             let workouts = try await APIService.shared.fetchWorkouts()
-            libraryCandidates = ActualsPlanCandidate.fromLibrary(workouts)
+            let enriched = WorkoutLibraryDetailStore.enrichCollection(workouts)
+            libraryCandidates = ActualsPlanCandidate.fromLibrary(enriched)
             libraryWorkoutsByID = Dictionary(
-                uniqueKeysWithValues: workouts.map { ($0.id, $0) }
+                uniqueKeysWithValues: enriched.map { ($0.id, $0) }
             )
         } catch {
             if libraryCandidates.isEmpty {

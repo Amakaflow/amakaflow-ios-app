@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		AMA2396RESOLVERBLD /* ActualsLibraryWorkoutResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2396RESOLVERREF /* ActualsLibraryWorkoutResolver.swift */; };
 		AMA2393HONBLD /* WorkoutSportHonesty.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2393HONREF /* WorkoutSportHonesty.swift */; };
 		AMA2393PICKBLD /* WorkoutSportPickerSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2393PICKREF /* WorkoutSportPickerSheet.swift */; };
 		AMA2393TSTBLD /* WorkoutSportHonestyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2393TSTREF /* WorkoutSportHonestyTests.swift */; };
@@ -781,6 +782,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		AMA2396RESOLVERREF /* ActualsLibraryWorkoutResolver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActualsLibraryWorkoutResolver.swift; path = ../AmakaFlow/Services/ActualsLibraryWorkoutResolver.swift; sourceTree = SOURCE_ROOT; };
 		AMA2393HONREF /* WorkoutSportHonesty.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutSportHonesty.swift; path = ../AmakaFlow/Models/WorkoutSportHonesty.swift; sourceTree = SOURCE_ROOT; };
 		AMA2393PICKREF /* WorkoutSportPickerSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutSportPickerSheet.swift; path = ../AmakaFlow/Views/WorkoutSportPickerSheet.swift; sourceTree = SOURCE_ROOT; };
 		AMA2393TSTREF /* WorkoutSportHonestyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutSportHonestyTests.swift; path = AmakaFlowCompanionTests/WorkoutSportHonestyTests.swift; sourceTree = "<group>"; };
@@ -1900,6 +1902,7 @@
 				AMA2396V6REF /* V6_actuals_strava_writeback_meta.swift */,
 				AMA2396V7REF /* V7_actuals_structure_body.swift */,
 				AMA2396STRUCTREF /* StravaWorkoutStructureText.swift */,
+				AMA2396RESOLVERREF /* ActualsLibraryWorkoutResolver.swift */,
 				AMA2396HISTVIEWREF /* ActualsHistoryView.swift */,
 				AMA2396WBVIEWREF /* ActualsStravaWriteBackView.swift */,
 				AMA2378SEQVREF001 /* EnrichmentSequenceScreen.swift */,
@@ -3097,6 +3100,7 @@
 				AMA2396V6BLD /* V6_actuals_strava_writeback_meta.swift in Sources */,
 				AMA2396V7BLD /* V7_actuals_structure_body.swift in Sources */,
 				AMA2396STRUCTBLD /* StravaWorkoutStructureText.swift in Sources */,
+				AMA2396RESOLVERBLD /* ActualsLibraryWorkoutResolver.swift in Sources */,
 				AMA2396HISTVIEWBLD /* ActualsHistoryView.swift in Sources */,
 				AMA2396WBVIEWBLD /* ActualsStravaWriteBackView.swift in Sources */,
 				WATCHTITLEBLD /* WatchWorkoutTitlePolicy.swift in Sources */,

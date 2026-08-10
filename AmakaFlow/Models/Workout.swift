@@ -37,16 +37,20 @@ enum WorkoutInterval: Codable, Hashable {
         case "warmup":
             let seconds = try container.decode(Int.self, forKey: .seconds)
             let target = try container.decodeIfPresent(String.self, forKey: .target)
+                ?? container.decodeIfPresent(String.self, forKey: .name)
             self = .warmup(seconds: seconds, target: target)
             
         case "cooldown":
             let seconds = try container.decode(Int.self, forKey: .seconds)
             let target = try container.decodeIfPresent(String.self, forKey: .target)
+                ?? container.decodeIfPresent(String.self, forKey: .name)
             self = .cooldown(seconds: seconds, target: target)
             
         case "time":
             let seconds = try container.decode(Int.self, forKey: .seconds)
+            // Incoming payloads often put the machine name in `name`, not `target`.
             let target = try container.decodeIfPresent(String.self, forKey: .target)
+                ?? container.decodeIfPresent(String.self, forKey: .name)
             self = .time(seconds: seconds, target: target)
             
         case "reps":
@@ -61,6 +65,7 @@ enum WorkoutInterval: Codable, Hashable {
         case "distance":
             let meters = try container.decode(Int.self, forKey: .meters)
             let target = try container.decodeIfPresent(String.self, forKey: .target)
+                ?? container.decodeIfPresent(String.self, forKey: .name)
             self = .distance(meters: meters, target: target)
             
         case "repeat":

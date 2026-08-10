@@ -248,6 +248,69 @@ final class AMA2396SyncV2Tests: XCTestCase {
         XCTAssertEqual(StravaWriteBackSignature.line, "— tracked with AmakaFlow")
     }
 
+    func testLibraryWorkoutResolverParsesNamedTimedStepsFromBlocksJSON() throws {
+        let base = Workout(
+            id: "bike-ski-row",
+            name: "Bike ski row repeats",
+            sport: .mixed,
+            duration: 77 * 60,
+            blocks: [
+                Block(
+                    label: nil,
+                    structure: .circuit,
+                    rounds: 6,
+                    exercises: [
+                        Exercise(
+                            name: "Timed Work",
+                            canonicalName: nil,
+                            sets: 1,
+                            reps: nil,
+                            durationSeconds: 180,
+                            load: nil,
+                            restSeconds: nil,
+                            distance: nil,
+                            notes: nil,
+                            focus: nil,
+                            supersetGroup: nil
+                        )
+                    ]
+                )
+            ],
+            source: .manual
+        )
+        XCTAssertTrue(ActualsLibraryWorkoutResolver.looksPlaceholder(base))
+
+        let data: [String: Any] = [
+            "title": "Bike ski row repeats",
+            "sport": "mixed",
+            "blocks": [
+                [
+                    "label": "Circuit",
+                    "type": "circuit",
+                    "rounds": 6,
+                    "exercises": [
+                        ["name": "Assault Bike", "duration_sec": 180, "sets": 1],
+                        ["name": "Ski Erg", "duration_sec": 180, "sets": 1],
+                        ["name": "Rowing Machine", "duration_sec": 180, "sets": 1],
+                        ["name": "Spin / Indoor Bike", "duration_sec": 180, "sets": 1]
+                    ]
+                ]
+            ]
+        ]
+        let resolved = try XCTUnwrap(
+            ActualsLibraryWorkoutResolver.workout(fromBlocksJSON: data, base: base)
+        )
+        XCTAssertFalse(ActualsLibraryWorkoutResolver.looksPlaceholder(resolved))
+        let names = resolved.blocks.flatMap(\.exercises).map(\.name)
+        XCTAssertEqual(names, [
+            "Assault Bike", "Ski Erg", "Rowing Machine", "Spin / Indoor Bike"
+        ])
+        let body = StravaWorkoutStructureText.structureBody(from: resolved)
+        XCTAssertTrue(body.contains("Assault Bike"))
+        XCTAssertTrue(body.contains("🚴") || body.contains("⛷️") || body.contains("🚣"))
+        XCTAssertFalse(body.contains("Timed Work"))
+    }
+
     func testStructureBodyIncludesCircuitRoundsAndEquipmentEmoji() {
         let workout = Workout(
             id: "bike-ski-row",

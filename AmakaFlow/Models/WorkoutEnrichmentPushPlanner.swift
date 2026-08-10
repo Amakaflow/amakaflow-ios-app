@@ -292,19 +292,29 @@ enum WorkoutEnrichmentBlocksJSON {
     }
 
     private static func parseExercise(_ raw: [String: Any]) -> SocialImportExercise? {
-        guard let name = (raw["name"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines),
-              !name.isEmpty else { return nil }
+        let name = ((raw["name"] as? String) ?? (raw["target"] as? String))?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let name, !name.isEmpty else { return nil }
+        let repsRaw = raw["reps"]
+        let reps = repsRaw as? Int ?? (repsRaw as? String).flatMap(Int.init)
+        let seconds = raw["duration_sec"] as? Int
+            ?? raw["duration_seconds"] as? Int
+            ?? raw["seconds"] as? Int
+        let distance = raw["distance_m"] as? Int
+            ?? raw["distanceMeters"] as? Int
+            ?? (raw["distance"] as? Double).map { Int($0.rounded()) }
         return SocialImportExercise(
             name: name,
             sets: raw["sets"] as? Int,
-            reps: raw["reps"] as? Int,
-            seconds: raw["duration_sec"] as? Int,
-            distanceMeters: raw["distance_m"] as? Int,
-            restSeconds: raw["rest_sec"] as? Int,
-            exerciseId: raw["exercise_id"] as? String,
-            warmupSets: WarmupSetRow.parseList(raw["warmup_sets"]),
-            restOpen: raw["rest_open"] as? Bool,
-            structureSource: raw["structure_source"] as? String
+            reps: reps,
+            seconds: seconds,
+            distanceMeters: distance,
+            restSeconds: raw["rest_sec"] as? Int ?? raw["restSeconds"] as? Int,
+            exerciseId: (raw["exercise_id"] as? String) ?? (raw["exerciseId"] as? String),
+            warmupSets: WarmupSetRow.parseList(raw["warmup_sets"] ?? raw["warmupSets"]),
+            restOpen: (raw["rest_open"] as? Bool) ?? (raw["restOpen"] as? Bool),
+            structureSource: (raw["structure_source"] as? String)
+                ?? (raw["structureSource"] as? String)
         )
     }
 }
