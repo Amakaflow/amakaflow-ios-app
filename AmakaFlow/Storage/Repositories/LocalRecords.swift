@@ -17,7 +17,8 @@ enum SyncQueueStatus: String, Codable, CaseIterable {
 func encodeToJSONString<T: Encodable>(_ value: T) throws -> String {
     let encoder = JSONEncoder()
     encoder.dateEncodingStrategy = .iso8601
-    String(data: try encoder.encode(value), encoding: .utf8) ?? "{}"
+    let data = try encoder.encode(value)
+    return String(data: data, encoding: .utf8) ?? "{}"
 }
 
 struct LocalAcceptedSuggestion: Codable, FetchableRecord, MutablePersistableRecord, Identifiable, Equatable {
