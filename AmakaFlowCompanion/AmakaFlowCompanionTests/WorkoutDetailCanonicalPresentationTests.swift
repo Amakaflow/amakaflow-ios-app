@@ -315,4 +315,25 @@ final class WorkoutDetailCanonicalPresentationTests: XCTestCase {
         XCTAssertFalse(DDWorkoutDisplayGrouping.isWarmupOrCooldown(block))
         XCTAssertTrue(DDWorkoutDisplayGrouping.sectionTitle(for: block).contains("CIRCUIT"))
     }
+
+    func testSectionTimesFollowBlockOrderWithUniqueIds() {
+        let workout = Workout(
+            id: "dup",
+            name: "Dup",
+            sport: .cardio,
+            duration: 60,
+            blocks: [
+                Block(label: "A", structure: .circuit, rounds: 1, exercises: [timed("A", seconds: 60)]),
+                Block(label: "B", structure: .circuit, rounds: 1, exercises: [timed("B", seconds: 180)]),
+            ],
+            source: .manual
+        )
+        let sections = DDWorkoutDisplayGrouping.sections(for: workout)
+        XCTAssertEqual(sections.count, 2)
+        XCTAssertEqual(Set(sections.map(\.id)).count, 2, "section ids must stay unique even if block ids collide")
+        XCTAssertTrue(sections[0].id.hasSuffix("#0"))
+        XCTAssertTrue(sections[1].id.hasSuffix("#1"))
+        XCTAssertEqual(sections[0].note, "1 MIN")
+        XCTAssertEqual(sections[1].note, "3 MIN")
+    }
 }

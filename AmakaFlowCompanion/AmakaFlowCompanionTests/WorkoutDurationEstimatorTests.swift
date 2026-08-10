@@ -332,6 +332,23 @@ final class WorkoutDurationEstimatorTests: XCTestCase {
         XCTAssertTrue(estimate.isEstimate)
     }
 
+    func testStraightBlockHonorsExplicitSetsEvenWithRounds() {
+        let block = Block(
+            label: nil,
+            structure: .straight,
+            rounds: 5,
+            exercises: [
+                Exercise(name: "Bench", canonicalName: nil, sets: 3, reps: "8", durationSeconds: nil, load: nil, restSeconds: nil, distance: nil, notes: nil, focus: nil, supersetGroup: nil),
+                Exercise(name: "Row", canonicalName: nil, sets: 3, reps: "8", durationSeconds: nil, load: nil, restSeconds: nil, distance: nil, notes: nil, focus: nil, supersetGroup: nil),
+            ]
+        )
+        let estimate = WorkoutDurationEstimator.estimate(blocks: [block])
+        // Straight is not multi-station: each exercise uses sets=3 (not rounds×1).
+        // Per exercise: 3 × (8×3 + 15 + 60) = 3 × 99 = 297; ×2 = 594. No +5%.
+        XCTAssertEqual(estimate.totalSec, 594)
+        XCTAssertTrue(estimate.isEstimate)
+    }
+
     func testStructureWinsOverBogusStoredDuration() {
         let workout = Workout(
             id: "w",

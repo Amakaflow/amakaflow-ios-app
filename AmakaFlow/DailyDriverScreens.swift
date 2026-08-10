@@ -743,19 +743,17 @@ enum DDWorkoutDisplayGrouping {
         guard !sourceBlocks.isEmpty else { return [] }
 
         let estimate = WorkoutDurationEstimator.estimate(for: workout)
-        let sectionById = Dictionary(
-            estimate.perSection.map { ($0.blockId, $0) },
-            uniquingKeysWith: { first, _ in first }
-        )
-
-        return sourceBlocks.map { block in
-            let sectionEstimate = sectionById[block.id]
+        // Pair by order — not Block.id — so duplicate ids keep distinct section times.
+        return sourceBlocks.enumerated().map { index, block in
+            let sectionEstimate = estimate.perSection.indices.contains(index)
+                ? estimate.perSection[index]
+                : nil
             let timeLabel = WorkoutDurationEstimate.sectionMinuteLabel(
                 seconds: sectionEstimate?.seconds ?? 0,
                 isEstimate: sectionEstimate?.isEstimate ?? false
             )
             return DDWorkoutDisplaySection(
-                id: block.id,
+                id: "\(block.id)#\(index)",
                 title: sectionTitle(for: block),
                 note: timeLabel,
                 exercises: block.exercises,

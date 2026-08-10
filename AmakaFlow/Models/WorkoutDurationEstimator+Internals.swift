@@ -94,7 +94,9 @@ extension WorkoutDurationEstimator {
         case .circuit, .timedCircuit, .superset, .amrap, .emom, .tabata:
             return true
         case .straight:
-            return block.rounds > 1
+            // Straight lists keep per-exercise sets / rounds-as-sets — never
+            // treat them as a multi-station circuit for duration math.
+            return false
         }
     }
 

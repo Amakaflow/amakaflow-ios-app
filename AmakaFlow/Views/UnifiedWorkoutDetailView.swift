@@ -776,7 +776,7 @@ struct UnifiedWorkoutDetailView: View {
                     .padding(.top, 18)
                     .accessibilityIdentifier("af_workout_detail_blocks_empty")
             } else {
-                ForEach(Array(sections.enumerated()), id: \.element.id) { index, section in
+                ForEach(Array(sections.enumerated()), id: \.offset) { index, section in
                     DDWorkoutBlockSectionView(section: section, sectionIndex: index)
                         .padding(.top, 18)
                 }
