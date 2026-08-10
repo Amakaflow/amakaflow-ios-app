@@ -142,6 +142,9 @@ enum ActualsCopy {
     static let historyJumpToday = "Today ›"
     static let historyTitle = "History"
     static let historyProfileEntrySub = "STRAVA SYNC · LAST 30 DAYS · WRITE-BACK STATE"
+    /// Profile → Connect sources (AMA-2396 discoverability).
+    static let connectSourcesProfileTitle = "Strava & sources"
+    static let connectSourcesProfileSub = "LINK STRAVA · WRITE-BACK TOGGLE"
     static let historyLoadMore = "Load 30 more days…"
     static let historyFillInCTA = "Fill in ›"
     static let historyCountedCTA = "Counted ✓"
