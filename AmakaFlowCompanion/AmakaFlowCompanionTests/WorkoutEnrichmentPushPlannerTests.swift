@@ -325,6 +325,34 @@ final class WorkoutEnrichmentPushPlannerTests: XCTestCase {
         XCTAssertNotNil(plan.offer(.cooldown))
     }
 
+    /// AMA-2400 / CodeRabbit — blocks_json calorie stations must parse `calories`
+    /// so warmupSetCandidates can exclude them (not treat as strength ramps).
+    func testBlocksJSONCalorieStationWithSetsDoesNotOfferWarmupSets() {
+        let blocksJSON: [String: Any] = [
+            "blocks": [
+                [
+                    "type": "circuit",
+                    "rounds": 4,
+                    "exercises": [
+                        [
+                            "name": "Assault Bike",
+                            "sets": 1,
+                            "calories": 15
+                        ] as [String: Any]
+                    ]
+                ] as [String: Any]
+            ]
+        ]
+        let parsed = WorkoutEnrichmentBlocksJSON.parse(blocksJSON)
+        XCTAssertEqual(parsed.blocks.first?.exercises.first?.calories, 15)
+        let plan = WorkoutEnrichmentPushPlanner.plan(
+            blocks: parsed.blocks,
+            tombstones: [],
+            prefs: .defaults
+        )
+        XCTAssertNil(plan.offer(.exerciseWarmupSets))
+    }
+
     /// AMA-2400 — user-owned rest left untouched must not fail Apple handoff when
     /// the mapper audits it as `skipped_already_present`.
     @MainActor

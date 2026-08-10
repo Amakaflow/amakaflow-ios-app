@@ -306,13 +306,22 @@ enum WorkoutEnrichmentBlocksJSON {
             name: name,
             sets: raw["sets"] as? Int,
             reps: raw["reps"] as? Int,
-            seconds: raw["duration_sec"] as? Int,
-            distanceMeters: raw["distance_m"] as? Int,
-            restSeconds: raw["rest_sec"] as? Int,
-            exerciseId: raw["exercise_id"] as? String,
-            warmupSets: WarmupSetRow.parseList(raw["warmup_sets"]),
-            restOpen: raw["rest_open"] as? Bool,
-            structureSource: raw["structure_source"] as? String
+            seconds: raw["duration_sec"] as? Int
+                ?? raw["duration_seconds"] as? Int
+                ?? raw["seconds"] as? Int,
+            distanceMeters: raw["distance_m"] as? Int
+                ?? raw["distanceMeters"] as? Int
+                ?? (raw["distance"] as? Double).map { Int($0.rounded()) },
+            // AMA-2400: calorie stations must round-trip so warmupSetCandidates
+            // can exclude them (filter checks exercise.calories).
+            calories: raw["calories"] as? Int
+                ?? raw["cals"] as? Int,
+            restSeconds: raw["rest_sec"] as? Int ?? raw["restSeconds"] as? Int,
+            exerciseId: (raw["exercise_id"] as? String) ?? (raw["exerciseId"] as? String),
+            warmupSets: WarmupSetRow.parseList(raw["warmup_sets"] ?? raw["warmupSets"]),
+            restOpen: (raw["rest_open"] as? Bool) ?? (raw["restOpen"] as? Bool),
+            structureSource: (raw["structure_source"] as? String)
+                ?? (raw["structureSource"] as? String)
         )
     }
 }
