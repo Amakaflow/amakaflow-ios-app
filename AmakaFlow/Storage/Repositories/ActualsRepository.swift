@@ -117,7 +117,9 @@ final class ActualsRepository: @unchecked Sendable {
                     actualSets: exercise.actualSets,
                     actualReps: exercise.actualReps,
                     actualWeightKg: exercise.actualWeightKg,
-                    position: index
+                    position: index,
+                    structureHeader: exercise.structureHeader,
+                    structureBlockIndex: exercise.structureBlockIndex
                 )
                 try row.insert(database)
             }
@@ -208,7 +210,9 @@ final class ActualsRepository: @unchecked Sendable {
                     actualSets: exercise.actualSets,
                     actualReps: exercise.actualReps,
                     actualWeightKg: exercise.actualWeightKg,
-                    position: index
+                    position: index,
+                    structureHeader: exercise.structureHeader,
+                    structureBlockIndex: exercise.structureBlockIndex
                 )
                 try row.insert(database)
             }
@@ -236,7 +240,9 @@ final class ActualsRepository: @unchecked Sendable {
                 confirmation: ExerciseActualConfirmation(rawValue: row.confirmation),
                 actualSets: row.actualSets,
                 actualReps: row.actualReps,
-                actualWeightKg: row.actualWeightKg
+                actualWeightKg: row.actualWeightKg,
+                structureHeader: row.structureHeader,
+                structureBlockIndex: row.structureBlockIndex
             )
         }
         return ActualsFillInSession(

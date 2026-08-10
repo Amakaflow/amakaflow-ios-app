@@ -24,6 +24,8 @@ struct TodayDiaryView: View {
     /// AMA-2396: explicit selected day so the scrubber window can shift backward
     /// without a circular dependency on `scrubberDays[index]`.
     @State private var selectedScrubberDay: Date = Calendar.current.startOfDay(for: Date())
+    /// Avoid re-pinning the scrubber to calendar-today after match / history navigation.
+    @State private var didInitialScrubberSync = false
     @State private var showConnectSources = false
     @State private var actualsDestination: ActualsTodayDestination?
     @State private var activeMergedSession: ActualsSession?
@@ -204,7 +206,10 @@ struct TodayDiaryView: View {
                 }
                 await history
                 await library
-                syncScrubberToToday()
+                if !didInitialScrubberSync {
+                    syncScrubberToToday()
+                    didInitialScrubberSync = true
+                }
             }
             .onReceive(NotificationCenter.default.publisher(for: .actualsLocalSessionsDidChange)) { _ in
                 actualsDemo.reapplyLocalOverlays()
@@ -484,9 +489,19 @@ struct TodayDiaryView: View {
                 showLibraryMatchPicker = true
             },
             onCaptureMatched: { draft, _ in
+                // Same handoff as Library match / History: Build/Photo → fill-in,
+                // not back to the list (most common path is capture, not match).
+                pinScrubber(to: activity.startDate)
                 actualsDemo.applyCaptureMatched(draft: draft, unmappedCardID: cardID)
-                actualsDestination = nil
                 activeUnmapped = nil
+                if let matched = actualsDemo.cards.first(where: { $0.id == cardID }) {
+                    actualsDemo.prepareFillIn(from: matched)
+                }
+                guard actualsDemo.fillInViewModel != nil else {
+                    actualsDestination = nil
+                    return
+                }
+                actualsDestination = .fillIn
             }
         )
         .navigationBarBackButtonHidden(true)
@@ -568,6 +583,17 @@ struct TodayDiaryView: View {
             ActualsFillInView(
                 viewModel: viewModel,
                 onSaved: onSaved,
+                onBack: {
+                    _ = actualsDemo.persistFillInDraftProgress()
+                    if let cardID = actualsDemo.pendingFillInCardID,
+                       let start = actualsDemo.cards.first(where: { $0.id == cardID })?
+                        .activity?.startDate
+                        ?? actualsDemo.cards.first(where: { $0.id == cardID })?
+                        .session?.primaryRecording?.startDate {
+                        pinScrubber(to: start)
+                    }
+                    actualsDestination = nil
+                },
                 presentsVerifiedOnSave: false,
                 dismissOnSave: false,
                 onUnverify: onUnverify,
@@ -980,9 +1006,17 @@ struct TodayDiaryView: View {
     }
 
     private func syncScrubberToToday() {
-        selectedScrubberDay = Calendar.current.startOfDay(for: today)
-        if let todayIndex = scrubberDays.firstIndex(where: { $0.isToday }) {
-            scrubberSelectedIndex = todayIndex
+        pinScrubber(to: today)
+    }
+
+    /// Keep the day strip on the activity’s local calendar day after match / fill-in.
+    private func pinScrubber(to date: Date) {
+        let calendar = Calendar.current
+        let dayStart = calendar.startOfDay(for: date)
+        selectedScrubberDay = dayStart
+        didInitialScrubberSync = true
+        if let index = scrubberDays.firstIndex(where: { calendar.isDate($0.id, inSameDayAs: dayStart) }) {
+            scrubberSelectedIndex = index
         }
     }
 }

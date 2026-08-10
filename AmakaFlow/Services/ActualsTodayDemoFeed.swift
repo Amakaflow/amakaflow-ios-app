@@ -124,6 +124,23 @@ struct ActualsTodayDemoCard: Identifiable, Equatable {
             stravaDecoration: state
         )
     }
+
+    /// Keep kind (fill-in debt) while refreshing in-progress actuals after Back.
+    func withFillInSession(_ session: ActualsFillInSession) -> ActualsTodayDemoCard {
+        ActualsTodayDemoCard(
+            id: id,
+            kind: kind == .verified && !session.verified ? .fillInDebt : kind,
+            timeLabel: timeLabel,
+            title: title,
+            stats: stats,
+            sourceLabel: sourceLabel,
+            sourceProvider: sourceProvider,
+            session: self.session,
+            activity: activity,
+            fillInSession: session,
+            stravaDecoration: stravaDecoration
+        )
+    }
 }
 
 @MainActor
@@ -469,16 +486,79 @@ final class ActualsTodayDemoFeed: ObservableObject {
             ?? cards.first { $0.kind == .fillInDebt }
             ?? cards.first { $0.kind == .merged }
         pendingFillInCardID = source?.id
-        let session = source?.fillInSession
+        let fallback = source?.fillInSession
             ?? ActualsFillInSession.lowerBodyPosteriorSample(
                 id: "today_demo_fill_\(UUID().uuidString.prefix(6))"
             )
-        var seeded = session
-        if !seeded.exercises.isEmpty, seeded.exercises[0].confirmation == nil {
-            seeded.exercises[0].confirmation = .adjusted
-            seeded.exercises[0].actualWeightKg = 90
-        }
+        // Prefer GRDB draft/verified rows so Back → reopen keeps confirmations / RPE.
+        let seeded: ActualsFillInSession = {
+            if let persisted = try? repository.fetchSession(id: fallback.id) {
+                return Self.mergePersistedFillIn(persisted, fallback: fallback)
+            }
+            return Self.healMisencodedTimeCap(in: fallback)
+        }()
         fillInViewModel = ActualsFillInViewModel(session: seeded, repository: repository)
+    }
+
+    /// Persist in-progress fill-in when the athlete leaves mid-edit (not verified save).
+    @discardableResult
+    func persistFillInDraftProgress() -> Bool {
+        guard let viewModel = fillInViewModel else { return false }
+        do {
+            guard try viewModel.persistDraftProgress() else { return false }
+            let draft = viewModel.session
+            for index in cards.indices {
+                let card = cards[index]
+                let matchesPending = card.id == pendingFillInCardID
+                let matchesSession = card.fillInSession?.id == draft.id || card.id == draft.id
+                if matchesPending || matchesSession {
+                    cards[index] = card.withFillInSession(draft)
+                }
+            }
+            NotificationCenter.default.post(name: .actualsLocalSessionsDidChange, object: nil)
+            return true
+        } catch {
+            return false
+        }
+    }
+
+    /// Persisted draft wins for confirmations/RPE; fallback keeps structure/title if richer.
+    static func mergePersistedFillIn(
+        _ persisted: ActualsFillInSession,
+        fallback: ActualsFillInSession
+    ) -> ActualsFillInSession {
+        var merged = persisted
+        if merged.structureBody == nil || merged.structureBody?.isEmpty == true {
+            merged.structureBody = fallback.structureBody
+        }
+        if merged.stravaActivityId == nil {
+            merged.stravaActivityId = fallback.stravaActivityId
+        }
+        if merged.stravaActivityType == nil {
+            merged.stravaActivityType = fallback.stravaActivityType
+        }
+        if merged.exercises.isEmpty {
+            merged.exercises = fallback.exercises
+        } else if merged.exercises.allSatisfy({ $0.structureHeader == nil }),
+                  let body = merged.structureBody ?? fallback.structureBody {
+            merged.exercises = StravaWorkoutStructureText.stampingStructureHeaders(
+                onto: merged.exercises,
+                from: body
+            )
+        }
+        return healMisencodedTimeCap(in: merged)
+    }
+
+    /// Fix already-saved fill-in rows that show a minute cap as circuit rounds.
+    static func healMisencodedTimeCap(in session: ActualsFillInSession) -> ActualsFillInSession {
+        var healed = session
+        healed.exercises = StravaWorkoutStructureText.healMisencodedTimeCapRounds(
+            exercises: session.exercises
+        )
+        healed.structureBody = StravaWorkoutStructureText.healMisencodedTimeCapRounds(
+            structureBody: session.structureBody
+        )
+        return healed
     }
 
     /// After a successful verified save — timeline CTA becomes Verified, not Fill in.

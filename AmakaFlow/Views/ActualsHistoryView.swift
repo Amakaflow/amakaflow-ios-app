@@ -150,6 +150,12 @@ final class ActualsHistoryViewModel: ObservableObject {
         NotificationCenter.default.post(name: .actualsLocalSessionsDidChange, object: nil)
     }
 
+    /// Mid-edit Back — keep confirms / RPE on the History card + GRDB draft.
+    func applyFillInDraft(session: ActualsFillInSession, cardID: String) {
+        mutateCard(id: cardID) { $0.withFillInSession(session) }
+        NotificationCenter.default.post(name: .actualsLocalSessionsDidChange, object: nil)
+    }
+
     func card(withID id: String) -> ActualsTodayDemoCard? {
         for group in dayGroups {
             if let found = group.cards.first(where: { $0.id == id }) {
@@ -451,16 +457,21 @@ struct ActualsHistoryView: View {
 
     @ViewBuilder
     private func fillInDestination(for route: HistoryFillInRoute) -> some View {
-        if let session = viewModel.card(withID: route.cardID)?.fillInSession {
+        if let session = resolvedFillInSession(for: route.cardID) {
+            let fillInVM = ActualsFillInViewModel(
+                session: session,
+                repository: ActualsRepository()
+            )
             ActualsFillInView(
-                viewModel: ActualsFillInViewModel(
-                    session: session,
-                    repository: ActualsRepository()
-                ),
+                viewModel: fillInVM,
                 onSaved: { saved in
                     viewModel.markVerified(saved: saved, cardID: route.cardID)
                 },
                 onBack: {
+                    if !fillInVM.session.verified {
+                        try? fillInVM.persistDraftProgress()
+                        viewModel.applyFillInDraft(session: fillInVM.session, cardID: route.cardID)
+                    }
                     fillInRoute = nil
                 }
             )
@@ -470,6 +481,21 @@ struct ActualsHistoryView: View {
                 .foregroundColor(DailyDriver.foregroundDim)
                 .padding()
         }
+    }
+
+    /// Prefer GRDB draft so Back → reopen keeps mid-edit confirms / RPE.
+    private func resolvedFillInSession(for cardID: String) -> ActualsFillInSession? {
+        let fallback = viewModel.card(withID: cardID)?.fillInSession
+        if let persisted = try? ActualsRepository().fetchSession(id: cardID) {
+            return ActualsTodayDemoFeed.mergePersistedFillIn(
+                persisted,
+                fallback: fallback ?? persisted
+            )
+        }
+        if let fallback, let persisted = try? ActualsRepository().fetchSession(id: fallback.id) {
+            return ActualsTodayDemoFeed.mergePersistedFillIn(persisted, fallback: fallback)
+        }
+        return fallback
     }
 
     @ViewBuilder

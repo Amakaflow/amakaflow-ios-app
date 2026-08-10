@@ -99,6 +99,21 @@ final class ActualsFillInViewModel: ObservableObject {
         session.rpe = value
     }
 
+    /// AMA-2396: leave mid-edit without verifying — keep confirms / RPE / structure.
+    /// No-op when editing an already-verified session (Back discards unsaved tweaks).
+    @discardableResult
+    func persistDraftProgress() throws -> Bool {
+        lastSaveError = nil
+        guard !session.verified else { return false }
+        do {
+            try repository.upsertMatchedDraft(session)
+            return true
+        } catch {
+            lastSaveError = error.localizedDescription
+            throw error
+        }
+    }
+
     /// Local-first save. Sets `verified` only when all rows + RPE are present.
     @discardableResult
     func save() throws -> Bool {

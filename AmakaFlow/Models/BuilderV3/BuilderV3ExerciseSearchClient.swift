@@ -118,6 +118,62 @@ struct BuilderV3ExerciseSearchClient {
             return BuilderV3ExerciseFetchResult(items: fixture, mode: .mock)
         }
 
+        do {
+            // Strength → Core chip is `abs`, but many trunk moves are tagged
+            // `obliques` only (Cable Ab Twist). Merge both on the first page.
+            if muscle == "abs", offset == 0 {
+                async let absPage = listLivePage(
+                    category: category,
+                    muscle: "abs",
+                    equipment: equipment,
+                    limit: limit,
+                    offset: 0
+                )
+                async let obliquePage = listLivePage(
+                    category: category,
+                    muscle: "obliques",
+                    equipment: equipment,
+                    limit: limit,
+                    offset: 0
+                )
+                let (absRows, obliqueRows) = try await (absPage, obliquePage)
+                var seen = Set<String>()
+                var merged: [BuilderV3ExerciseItem] = []
+                for item in absRows + obliqueRows {
+                    guard seen.insert(item.id).inserted else { continue }
+                    merged.append(item)
+                }
+                return BuilderV3ExerciseFetchResult(
+                    items: merged,
+                    receivedRowCount: absRows.count,
+                    mode: .live
+                )
+            }
+
+            let rows = try await listLivePage(
+                category: category,
+                muscle: muscle,
+                equipment: equipment,
+                limit: limit,
+                offset: offset
+            )
+            return BuilderV3ExerciseFetchResult(
+                items: rows,
+                receivedRowCount: rows.count,
+                mode: .live
+            )
+        } catch {
+            return BuilderV3ExerciseFetchResult(items: fixture, mode: .mock)
+        }
+    }
+
+    private func listLivePage(
+        category: String,
+        muscle: String?,
+        equipment: String?,
+        limit: Int,
+        offset: Int
+    ) async throws -> [BuilderV3ExerciseItem] {
         var queryItems = [
             URLQueryItem(name: "category", value: category),
             URLQueryItem(name: "limit", value: String(limit)),
@@ -129,27 +185,17 @@ struct BuilderV3ExerciseSearchClient {
         if let equipment {
             queryItems.append(URLQueryItem(name: "equipment", value: equipment))
         }
-
-        do {
-            let request = try await apiService.makeAPIRequest(
-                path: "/v1/exercises",
-                queryItems: queryItems,
-                method: "GET"
-            )
-            let response = try await apiService.request(
-                request,
-                decode: BuilderV3ExerciseListResponse.self,
-                decoder: APIService.makeGeneratedDecoder()
-            )
-            let rows = response.exercises
-            return BuilderV3ExerciseFetchResult(
-                items: rows.compactMap { Self.mapRow($0) },
-                receivedRowCount: rows.count,
-                mode: .live
-            )
-        } catch {
-            return BuilderV3ExerciseFetchResult(items: fixture, mode: .mock)
-        }
+        let request = try await apiService.makeAPIRequest(
+            path: "/v1/exercises",
+            queryItems: queryItems,
+            method: "GET"
+        )
+        let response = try await apiService.request(
+            request,
+            decode: BuilderV3ExerciseListResponse.self,
+            decoder: APIService.makeGeneratedDecoder()
+        )
+        return response.exercises.compactMap { Self.mapRow($0) }
     }
 
     static func fixtureResults(matching query: String) -> [BuilderV3ExerciseItem] {

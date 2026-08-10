@@ -82,9 +82,7 @@ enum ActualsLibraryWorkoutResolver {
 
     static func workout(fromBlocksJSON data: [String: Any], base: Workout) -> Workout? {
         let parsed = WorkoutEnrichmentBlocksJSON.parse(data)
-        guard !parsed.blocks.isEmpty else { return nil }
-
-        let mapped: [Block] = parsed.blocks.compactMap { block in
+        let fromBlocks: [Block] = parsed.blocks.compactMap { block in
             let exercises = block.exercises.map { $0.toExercise() }
             guard !exercises.isEmpty else { return nil }
             return Block(
@@ -95,10 +93,16 @@ enum ActualsLibraryWorkoutResolver {
                 restBetweenSeconds: block.restSec
             )
         }
-        guard !mapped.isEmpty else { return nil }
-        // Reject if we still only have placeholders — better to keep incoming.
-        let names = mapped.flatMap(\.exercises).map(\.name)
-        if !names.isEmpty, names.allSatisfy(isPlaceholderName) {
+        let fromIntervals = blocksFromIntervalsJSON(data["intervals"]) ?? []
+
+        // Prefer real names. Empty / all-"Timed Work" blocks are common when the
+        // Library row is intervals-only (`name` + `target: null` on each step).
+        let mapped: [Block]
+        if hasRealExerciseNames(fromBlocks) {
+            mapped = fromBlocks
+        } else if hasRealExerciseNames(fromIntervals) {
+            mapped = fromIntervals
+        } else {
             return nil
         }
 
@@ -124,5 +128,74 @@ enum ActualsLibraryWorkoutResolver {
             createdAt: base.createdAt,
             sportPersisted: base.sportPersisted
         )
+    }
+
+    private static func hasRealExerciseNames(_ blocks: [Block]) -> Bool {
+        let names = blocks.flatMap(\.exercises).map(\.name)
+        guard !names.isEmpty else { return false }
+        return !names.allSatisfy(isPlaceholderName)
+    }
+
+    /// Incoming / workout_data often stores structure as intervals (repeat of timed steps)
+    /// with names on `name` and `target: null`.
+    private static func blocksFromIntervalsJSON(_ raw: Any?) -> [Block]? {
+        let intervals = decodeIntervalsSkippingUnknown(raw)
+        guard !intervals.isEmpty else { return nil }
+        let blocks = Workout.blocksFromLegacyIntervals(intervals)
+        return blocks.isEmpty ? nil : blocks
+    }
+
+    /// Decode interval arrays element-by-element so unknown kinds do not fail
+    /// the whole structure. Flat `round_start` markers (mapper/incoming) become
+    /// a `.repeat` so fill-in / Strava keep the round count.
+    private static func decodeIntervalsSkippingUnknown(_ raw: Any?) -> [WorkoutInterval] {
+        guard let items = raw as? [Any] else { return [] }
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+        var intervals: [WorkoutInterval] = []
+        var pendingRoundBody: [WorkoutInterval]?
+        var pendingRounds = 1
+
+        func flushRound() {
+            guard let body = pendingRoundBody, !body.isEmpty else {
+                pendingRoundBody = nil
+                return
+            }
+            intervals.append(.repeat(reps: max(1, pendingRounds), intervals: body))
+            pendingRoundBody = nil
+            pendingRounds = 1
+        }
+
+        for item in items {
+            guard let dict = item as? [String: Any] else { continue }
+            let kind = (dict["kind"] as? String)?.lowercased() ?? ""
+            if kind == "round_start" || kind == "roundstart" {
+                flushRound()
+                pendingRounds = dict["rounds"] as? Int ?? dict["reps"] as? Int ?? 1
+                pendingRoundBody = []
+                continue
+            }
+            if kind == "repeat" {
+                flushRound()
+                let reps = dict["reps"] as? Int ?? dict["rounds"] as? Int ?? 1
+                let kids = decodeIntervalsSkippingUnknown(dict["intervals"])
+                if !kids.isEmpty {
+                    intervals.append(.repeat(reps: max(1, reps), intervals: kids))
+                }
+                continue
+            }
+            guard JSONSerialization.isValidJSONObject(dict),
+                  let data = try? JSONSerialization.data(withJSONObject: dict),
+                  let interval = try? decoder.decode(WorkoutInterval.self, from: data) else {
+                continue
+            }
+            if pendingRoundBody != nil {
+                pendingRoundBody?.append(interval)
+            } else {
+                intervals.append(interval)
+            }
+        }
+        flushRound()
+        return intervals
     }
 }

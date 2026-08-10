@@ -123,6 +123,18 @@ enum BuilderV3TypeRegistry {
         systemImage: "arrow.triangle.2.circlepath",
         defaultTitle: "Supersets"
     )
+    /// Same underlying group type as supersets — three (or more) moves cycled
+    /// with rest after the last. Pairing a third exercise into a pair upgrades
+    /// the group label to Tri-set automatically.
+    static let triset = BuilderV3TypeSeed(
+        id: "lift_triset",
+        category: .lift,
+        label: "Tri-sets",
+        subtitle: "Three moves, back to back",
+        structureKind: .superset,
+        systemImage: "circle.grid.3x3.fill",
+        defaultTitle: "Tri-sets"
+    )
     static let push = BuilderV3TypeSeed(
         id: "lift_push",
         category: .lift,
@@ -267,7 +279,7 @@ enum BuilderV3TypeRegistry {
         systemImage: "square.dashed"
     )
 
-    static let lift: [BuilderV3TypeSeed] = [straightSets, superset, push, pull, legs, fullBody]
+    static let lift: [BuilderV3TypeSeed] = [straightSets, superset, triset, push, pull, legs, fullBody]
     static let conditioning: [BuilderV3TypeSeed] = [emom, amrap, tabata, forTime, circuit]
     static let run: [BuilderV3TypeSeed] = [intervals, tempo, longRun, racePace]
     static let recover: [BuilderV3TypeSeed] = [mobility, blank]
@@ -304,6 +316,9 @@ enum BuilderV3TypeRegistry {
             break
         case .superset:
             _ = session.startFormat(.superset)
+            if seed.id == "lift_triset" {
+                session.updateGroup("fmt") { $0.name = "Tri-set" }
+            }
         case .format(let type):
             _ = session.startFormat(type)
         case .splitStarter(let starter):

@@ -189,6 +189,9 @@ struct ActualsVerifiedView: View {
                     Text(metaLine)
                         .font(.system(size: 9, design: .monospaced))
                         .foregroundColor(DailyDriver.foregroundDim)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.8)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
             }
         }

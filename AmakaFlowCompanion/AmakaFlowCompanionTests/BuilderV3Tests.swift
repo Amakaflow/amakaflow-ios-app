@@ -316,6 +316,20 @@ final class BuilderV3Tests: XCTestCase {
         XCTAssertEqual(coreChip?.key, "abs")
     }
 
+    func testCoreFixtureCatalogIncludesClassCoreMoves() {
+        let core = BuilderV3ExerciseLibrary.fixtureItems(
+            category: "strength",
+            muscle: "abs",
+            equipment: nil
+        )
+        let names = Set(core.map(\.name))
+        XCTAssertTrue(names.contains("GHD Sit-Up"))
+        XCTAssertTrue(names.contains("Ab Pulse Ups"))
+        XCTAssertTrue(names.contains("Cable Ab Twist"))
+        XCTAssertTrue(names.contains("Roman Chair Side Crunch"))
+        XCTAssertFalse(core.isEmpty)
+    }
+
     func testDemoCatalogHasStableIdsAndRequiredCardio() {
         XCTAssertEqual(Set(BuilderV3ExerciseLibrary.demo.map(\.id)).count, BuilderV3ExerciseLibrary.demo.count)
         XCTAssertFalse(BuilderV3ExerciseLibrary.demo.contains { UUID(uuidString: $0.id) != nil })

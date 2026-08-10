@@ -36,21 +36,28 @@ enum WorkoutInterval: Codable, Hashable {
         switch kind {
         case "warmup":
             let seconds = try container.decode(Int.self, forKey: .seconds)
-            let target = try container.decodeIfPresent(String.self, forKey: .target)
-                ?? container.decodeIfPresent(String.self, forKey: .name)
+            let target = Self.firstNonEmpty(
+                try container.decodeIfPresent(String.self, forKey: .target),
+                try container.decodeIfPresent(String.self, forKey: .name)
+            )
             self = .warmup(seconds: seconds, target: target)
             
         case "cooldown":
             let seconds = try container.decode(Int.self, forKey: .seconds)
-            let target = try container.decodeIfPresent(String.self, forKey: .target)
-                ?? container.decodeIfPresent(String.self, forKey: .name)
+            let target = Self.firstNonEmpty(
+                try container.decodeIfPresent(String.self, forKey: .target),
+                try container.decodeIfPresent(String.self, forKey: .name)
+            )
             self = .cooldown(seconds: seconds, target: target)
             
         case "time":
             let seconds = try container.decode(Int.self, forKey: .seconds)
-            // Incoming payloads often put the machine name in `name`, not `target`.
-            let target = try container.decodeIfPresent(String.self, forKey: .target)
-                ?? container.decodeIfPresent(String.self, forKey: .name)
+            // Mapper `/workouts/incoming` sends machine names on `name` with
+            // `target: null` for timed steps — prefer whichever is non-empty.
+            let target = Self.firstNonEmpty(
+                try container.decodeIfPresent(String.self, forKey: .target),
+                try container.decodeIfPresent(String.self, forKey: .name)
+            )
             self = .time(seconds: seconds, target: target)
             
         case "reps":
@@ -64,8 +71,10 @@ enum WorkoutInterval: Codable, Hashable {
             
         case "distance":
             let meters = try container.decode(Int.self, forKey: .meters)
-            let target = try container.decodeIfPresent(String.self, forKey: .target)
-                ?? container.decodeIfPresent(String.self, forKey: .name)
+            let target = Self.firstNonEmpty(
+                try container.decodeIfPresent(String.self, forKey: .target),
+                try container.decodeIfPresent(String.self, forKey: .name)
+            )
             self = .distance(meters: meters, target: target)
             
         case "repeat":
@@ -84,6 +93,15 @@ enum WorkoutInterval: Codable, Hashable {
                 debugDescription: "Unknown interval kind: \(kind)"
             )
         }
+    }
+
+    private static func firstNonEmpty(_ values: String?...) -> String? {
+        for value in values {
+            guard let trimmed = value?.trimmingCharacters(in: .whitespacesAndNewlines),
+                  !trimmed.isEmpty else { continue }
+            return trimmed
+        }
+        return nil
     }
     
     func encode(to encoder: Encoder) throws {

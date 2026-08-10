@@ -355,6 +355,8 @@ struct LocalActualsExerciseRow: Codable, FetchableRecord, MutablePersistableReco
     var actualReps: Int
     var actualWeightKg: Double?
     var position: Int
+    var structureHeader: String?
+    var structureBlockIndex: Int?
 
     enum Columns: String, ColumnExpression {
         case id, sessionId = "session_id", exerciseKey = "exercise_key", name
@@ -363,6 +365,8 @@ struct LocalActualsExerciseRow: Codable, FetchableRecord, MutablePersistableReco
         case confirmation
         case actualSets = "actual_sets", actualReps = "actual_reps"
         case actualWeightKg = "actual_weight_kg", position
+        case structureHeader = "structure_header"
+        case structureBlockIndex = "structure_block_index"
     }
 
     enum CodingKeys: String, CodingKey {
@@ -376,5 +380,7 @@ struct LocalActualsExerciseRow: Codable, FetchableRecord, MutablePersistableReco
         case actualSets = "actual_sets"
         case actualReps = "actual_reps"
         case actualWeightKg = "actual_weight_kg"
+        case structureHeader = "structure_header"
+        case structureBlockIndex = "structure_block_index"
     }
 }

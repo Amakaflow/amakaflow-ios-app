@@ -413,7 +413,7 @@ extension WatchItemViewModel {
             }
         }
         if readiness.restEnabled {
-            pills.append(config.restOpen ? "OPEN REST" : "TIMED REST")
+            pills.append(config.restOpen ? "TRANSITION" : "TIMED REST")
             enrichmentSteps += 1
         }
         if readiness.cooldownEnabled {

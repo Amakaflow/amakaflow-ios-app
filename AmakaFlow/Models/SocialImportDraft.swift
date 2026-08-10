@@ -235,6 +235,9 @@ struct SocialImportBlock: Equatable, Codable {
     var type: String?
     /// Programmed rest intent in seconds (no timed/button toggle).
     var restSec: Int?
+    /// AMA-2396: duration cap for AMRAP / For time (`timeCapSec` on BFF StructureBlock).
+    /// Never encode the cap as `rounds` — that made fill-in show "60 ROUNDS".
+    var timeCapSec: Int?
     /// Provenance: explicit | inferred | user_confirmed | user_note | user_added |
     /// enrichment_default | unknown.
     var structureSource: String?
@@ -248,6 +251,7 @@ struct SocialImportBlock: Equatable, Codable {
     enum CodingKeys: String, CodingKey {
         case label, rounds, exercises, type
         case restSec
+        case timeCapSec
         case structureSource
         case enrichmentKind
         case restOpen
@@ -260,6 +264,7 @@ struct SocialImportBlock: Equatable, Codable {
         exercises: [SocialImportExercise],
         type: String? = nil,
         restSec: Int? = nil,
+        timeCapSec: Int? = nil,
         structureSource: String? = nil,
         enrichmentKind: String? = nil,
         restOpen: Bool? = nil,
@@ -270,6 +275,7 @@ struct SocialImportBlock: Equatable, Codable {
         self.exercises = exercises
         self.type = type
         self.restSec = restSec
+        self.timeCapSec = timeCapSec
         self.structureSource = structureSource
         self.enrichmentKind = enrichmentKind
         self.restOpen = restOpen

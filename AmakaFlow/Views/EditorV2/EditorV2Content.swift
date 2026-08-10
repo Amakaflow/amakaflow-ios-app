@@ -18,6 +18,8 @@ struct EditorV2ContentActions {
     /// AMA-2336 — quick-add the session warm-up from `workout_preferences`.
     var onAddWarmup: () -> Void = {}
     var onAddCooldown: () -> Void = {}
+    /// Close the current tri-set / superset and pin a fresh group for more adds.
+    var onBeginNextSupersetGroup: () -> Void = {}
 }
 
 enum EditorV2Content {
@@ -48,6 +50,7 @@ enum EditorV2Content {
             addExerciseButton(
                 emphasized: false,
                 plural: builderV3Canvas,
+                destinationName: group.name,
                 onAdd: actions.onAdd
             )
         } else {
@@ -57,6 +60,7 @@ enum EditorV2Content {
                     EditorV2GroupedRun(
                         group: group,
                         exercises: run.exercises,
+                        isInsertionTarget: session.formatGroupKey == key,
                         onPill: { actions.onConfigGroup(key) },
                         onOpen: { actions.onOpen($0.id) },
                         onMenu: { actions.onMenu($0.id) }
@@ -71,12 +75,63 @@ enum EditorV2Content {
                     }
                 }
             }
+            // After ＋ Another tri-set / superset the new group is empty — draw the slot
+            // so Add exercises has a visible destination (runs only include groups with moves).
+            if let fmtKey = session.formatGroupKey,
+               let group = session.groups[fmtKey],
+               !session.exercises.contains(where: { $0.groupKey == fmtKey }) {
+                formatPinnedPlaceholder(group: group, key: fmtKey, onConfig: actions.onConfigGroup)
+            }
+            if shouldOfferNextSupersetGroup(session: session) {
+                nextSupersetGroupButton(
+                    label: nextSupersetGroupLabel(session: session),
+                    action: actions.onBeginNextSupersetGroup
+                )
+            }
             addExerciseButton(
                 emphasized: false,
                 plural: builderV3Canvas,
+                destinationName: session.formatGroupKey.flatMap { session.groups[$0]?.name },
                 onAdd: actions.onAdd
             )
         }
+    }
+
+    private static func shouldOfferNextSupersetGroup(session: EditorV2Session) -> Bool {
+        guard let key = session.formatGroupKey,
+              let group = session.groups[key],
+              group.type == .superset else { return false }
+        return session.exercises.contains { $0.groupKey == key }
+    }
+
+    private static func nextSupersetGroupLabel(session: EditorV2Session) -> String {
+        let name = session.formatGroupKey.flatMap { session.groups[$0]?.name } ?? "Superset"
+        if name.localizedCaseInsensitiveContains("tri") {
+            return "＋ Another tri-set"
+        }
+        return "＋ Another superset"
+    }
+
+    private static func nextSupersetGroupButton(
+        label: String,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Text(label)
+                .ddDisplayText(12.5, weight: .bold)
+                .foregroundColor(DailyDriver.amber)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 11)
+                .background(DailyDriver.amber.opacity(0.12))
+                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .stroke(DailyDriver.amber.opacity(0.4), lineWidth: 1)
+                )
+        }
+        .buttonStyle(.plain)
+        .padding(.bottom, 8)
+        .accessibilityIdentifier("editor_v2_another_superset_group")
     }
 
     /// AMA-2372 mockup 6 — blank Builder v3 canvas (no format chips / old door).
@@ -200,14 +255,16 @@ enum EditorV2Content {
         onConfig: @escaping (String) -> Void
     ) -> some View {
         VStack(alignment: .leading, spacing: 0) {
-            EditorV2GroupPill(group: group) { onConfig(key) }
+            EditorV2GroupPill(group: group, isInsertionTarget: true) { onConfig(key) }
             VStack(spacing: 5) {
-                Text("Timing's set — add the moves")
+                Text("Next adds land in this \(group.name.lowercased())")
                     .ddDisplayText(13.5, weight: .bold)
                     .foregroundColor(DailyDriver.foreground)
                 Text(
-                    "Everything you add runs inside this \(group.type.label). "
-                        + "Tap the pill to change the numbers — or the format."
+                    group.type == .superset
+                        ? "Empty slot — exercises you add go here until you tap ＋ Another."
+                        : "Everything you add runs inside this \(group.type.label). "
+                            + "Tap the pill to change the numbers — or the format."
                 )
                 .font(.system(size: 11))
                 .foregroundColor(DailyDriver.foregroundMuted)
@@ -216,11 +273,20 @@ enum EditorV2Content {
             }
             .frame(maxWidth: .infinity)
             .padding(22)
+            .background(group.type.accentColor.opacity(0.06))
             .overlay(
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
                     .strokeBorder(style: StrokeStyle(lineWidth: 1.5, dash: [6]))
-                    .foregroundColor(DailyDriver.borderStrong)
+                    .foregroundColor(group.type.accentColor.opacity(0.65))
             )
+            .overlay(alignment: .leading) {
+                RoundedRectangle(cornerRadius: 2)
+                    .fill(group.type.accentColor)
+                    .frame(width: 3)
+                    .padding(.vertical, 1)
+            }
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .accessibilityIdentifier("editor_v2_format_insertion_slot")
         }
         .padding(.bottom, 10)
     }
@@ -268,9 +334,18 @@ enum EditorV2Content {
     static func addExerciseButton(
         emphasized: Bool,
         plural: Bool = false,
+        destinationName: String? = nil,
         onAdd: @escaping () -> Void
     ) -> some View {
-        let label = plural ? "＋ Add exercises" : "＋ Add exercise"
+        let label: String = {
+            if let destinationName {
+                let trimmed = destinationName.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !trimmed.isEmpty {
+                    return "＋ Add to this \(trimmed.lowercased())"
+                }
+            }
+            return plural ? "＋ Add exercises" : "＋ Add exercise"
+        }()
         return Button(action: onAdd) {
             Text(label)
                 .ddDisplayText(13.5, weight: .bold)

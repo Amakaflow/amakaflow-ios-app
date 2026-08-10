@@ -108,8 +108,10 @@ struct ActualsMapToPlanView: View {
                     draft: draft
                 ) { finalDraft, alsoLibrary in
                     capturePresentation = nil
+                    // Parent owns the next screen (fill-in). Dismissing here pops the
+                    // destination after the parent swaps to fill-in and lands on the
+                    // wrong scrubber day.
                     onCaptureMatched(finalDraft, alsoLibrary)
-                    dismiss()
                 }
                 .background(DailyDriver.screenBackground.ignoresSafeArea())
                 .ddSuppressFloatingChrome()

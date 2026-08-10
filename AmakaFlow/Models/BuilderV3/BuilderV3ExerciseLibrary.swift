@@ -85,6 +85,16 @@ enum BuilderV3ExerciseLibrary {
         BuilderV3ExerciseItem(id: "strength-goblet-squat", name: "Goblet Squat", muscle: "Quads", equipmentKey: "kettlebells", equipmentLabel: "Kettlebell"),
         BuilderV3ExerciseItem(id: "strength-pull-ups", name: "Pull Ups", muscle: "Lats", equipmentKey: "pull_up_bar", equipmentLabel: "Pull-up bar"),
         BuilderV3ExerciseItem(id: "strength-push-ups", name: "Push Ups", muscle: "Chest", equipmentKey: nil, equipmentLabel: "Bodyweight"),
+        // Core / abs — must exist under Strength → Core (chip key `abs`). Names
+        // mirror staging `exercises` where possible so MOCK dogfood matches LIVE.
+        BuilderV3ExerciseItem(id: "strength-ghd-sit-up", name: "GHD Sit-Up", muscle: "Abs", equipmentKey: nil, equipmentLabel: "Bodyweight"),
+        BuilderV3ExerciseItem(id: "strength-ab-pulse-ups", name: "Ab Pulse Ups", muscle: "Abs", equipmentKey: nil, equipmentLabel: "Bodyweight"),
+        BuilderV3ExerciseItem(id: "strength-cable-ab-twist", name: "Cable Ab Twist", muscle: "Obliques", equipmentKey: "cable", equipmentLabel: "Cable"),
+        BuilderV3ExerciseItem(id: "strength-cable-side-bend", name: "Cable Side Bend", muscle: "Obliques", equipmentKey: "cable", equipmentLabel: "Cable"),
+        BuilderV3ExerciseItem(id: "strength-roman-chair-side-crunch", name: "Roman Chair Side Crunch", muscle: "Obliques", equipmentKey: nil, equipmentLabel: "Bodyweight"),
+        BuilderV3ExerciseItem(id: "strength-crunch", name: "Crunch", muscle: "Abs", equipmentKey: nil, equipmentLabel: "Bodyweight"),
+        BuilderV3ExerciseItem(id: "strength-hanging-leg-raise", name: "Hanging Leg Raise", muscle: "Abs", equipmentKey: "pull_up_bar", equipmentLabel: "Pull-up bar"),
+        BuilderV3ExerciseItem(id: "strength-russian-twist", name: "Russian Twist", muscle: "Obliques", equipmentKey: nil, equipmentLabel: "Bodyweight"),
         BuilderV3ExerciseItem(id: "cardio-ski-erg", name: "Ski Erg", muscle: "Conditioning", equipmentKey: "ski_erg", equipmentLabel: "Ski Erg"),
         BuilderV3ExerciseItem(id: "cardio-treadmill-run", name: "Treadmill Run", muscle: "Conditioning", equipmentKey: "treadmill", equipmentLabel: "Treadmill"),
         BuilderV3ExerciseItem(id: "cardio-rowing-machine", name: "Rowing Machine", muscle: "Conditioning", equipmentKey: "rowing_machine", equipmentLabel: "Rower"),
@@ -142,10 +152,21 @@ enum BuilderV3ExerciseLibrary {
     static func fixtureItems(category: String, muscle: String?, equipment: String?) -> [BuilderV3ExerciseItem] {
         demo.filter { item in
             guard item.id.hasPrefix("\(category)-") else { return false }
-            if let muscle, canonicalMuscle(for: item) != muscle { return false }
+            if let muscle, !matchesMuscleFilter(canonicalMuscle(for: item), filter: muscle) {
+                return false
+            }
             if let equipment, item.equipmentKey != equipment { return false }
             return true
         }
+    }
+
+    /// Core chip uses key `abs` but catalog rows may be Abs / Obliques / Core.
+    static func matchesMuscleFilter(_ canonical: String, filter: String) -> Bool {
+        if canonical == filter { return true }
+        if filter == "abs" {
+            return canonical == "abs" || canonical == "obliques" || canonical == "core"
+        }
+        return false
     }
 
     private static func canonicalMuscle(for item: BuilderV3ExerciseItem) -> String {
@@ -154,6 +175,7 @@ enum BuilderV3ExerciseLibrary {
         case "hip flexors": return "hip_flexors"
         case "upper back": return "upper_back"
         case "lower back": return "lower_back"
+        case "core": return "abs"
         default: return item.muscle.lowercased().replacingOccurrences(of: " ", with: "_")
         }
     }

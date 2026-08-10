@@ -34,9 +34,25 @@ struct ActualsFillInView: View {
                     header
                         .padding(.top, 10)
 
-                    ForEach(viewModel.session.exercises) { exercise in
-                        exerciseRow(exercise)
-                            .padding(.top, 8)
+                    ForEach(viewModel.session.structureSections) { section in
+                        VStack(alignment: .leading, spacing: 8) {
+                            if let header = section.header, !header.isEmpty {
+                                ActualsStructureBandHeader(title: header)
+                                    .padding(.top, 6)
+                            }
+                            ForEach(section.exercises) { exercise in
+                                exerciseRow(exercise)
+                            }
+                        }
+                        .padding(.top, 8)
+                        .overlay(alignment: .leading) {
+                            if section.header != nil {
+                                RoundedRectangle(cornerRadius: 2)
+                                    .fill(DailyDriver.amber)
+                                    .frame(width: 3)
+                                    .padding(.top, section.header == nil ? 8 : 28)
+                            }
+                        }
                     }
 
                     Text(ActualsCopy.fillInRPEHeader)
@@ -79,11 +95,7 @@ struct ActualsFillInView: View {
     private var header: some View {
         VStack(alignment: .leading, spacing: 0) {
             Button {
-                if let onBack {
-                    onBack()
-                } else {
-                    dismiss()
-                }
+                leaveFillIn()
             } label: {
                 HStack(spacing: 4) {
                     Image(systemName: "chevron.left")
@@ -103,6 +115,9 @@ struct ActualsFillInView: View {
             Text(viewModel.progressLine)
                 .font(.system(size: 8.5, design: .monospaced))
                 .foregroundColor(DailyDriver.foregroundMuted)
+                .lineLimit(2)
+                .minimumScaleFactor(0.8)
+                .fixedSize(horizontal: false, vertical: true)
                 .padding(.top, 4)
 
             Button {
@@ -338,6 +353,18 @@ struct ActualsFillInView: View {
         .buttonStyle(.plain)
         .disabled(!ready)
         .accessibilityIdentifier(ActualsCopy.fillInSaveAccessibilityID)
+    }
+
+    /// Back mid-edit: keep draft progress unless this is an already-verified edit.
+    private func leaveFillIn() {
+        if !viewModel.session.verified {
+            try? viewModel.persistDraftProgress()
+        }
+        if let onBack {
+            onBack()
+        } else {
+            dismiss()
+        }
     }
 
     /// AMA-2396: never claim "Strava updated" until the write-back PUT actually
