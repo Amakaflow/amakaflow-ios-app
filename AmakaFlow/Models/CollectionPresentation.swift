@@ -17,10 +17,11 @@ enum CollectionPresentation {
         guard seconds > 0 else { return "TIME NOT SET" }
 
         let hours = seconds / 3600
-        let minutes = (seconds % 3600) / 60
+        let minutes = max(1, (seconds % 3600) / 60)
 
         if hours > 0 {
-            return "≈ \(hours)H \(minutes)M"
+            let remainderMinutes = (seconds % 3600) / 60
+            return "≈ \(hours)H \(remainderMinutes)M"
         }
         return "≈ \(minutes)M"
     }

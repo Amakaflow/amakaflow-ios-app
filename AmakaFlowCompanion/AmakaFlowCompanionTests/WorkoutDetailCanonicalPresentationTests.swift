@@ -302,5 +302,17 @@ final class WorkoutDetailCanonicalPresentationTests: XCTestCase {
         XCTAssertEqual(WorkoutSportHonesty.machineKindKey(forExerciseName: "Ski Erg"), "ski")
         XCTAssertEqual(WorkoutSportHonesty.systemImage(forExerciseName: "Ski Erg"), "figure.skiing.crosscountry")
         XCTAssertNotEqual(WorkoutSportHonesty.systemImage(forExerciseName: "Ski Erg"), "dumbbell.fill")
+        XCTAssertEqual(WorkoutSportHonesty.modalityChipKind(forExerciseName: "Jump Rope"), .cardio)
+    }
+
+    func testCoolCircuitIsNotTreatedAsCooldown() {
+        let block = Block(
+            label: "Cool Circuit",
+            structure: .circuit,
+            rounds: 5,
+            exercises: [timed("Ski Erg", seconds: 60)]
+        )
+        XCTAssertFalse(DDWorkoutDisplayGrouping.isWarmupOrCooldown(block))
+        XCTAssertTrue(DDWorkoutDisplayGrouping.sectionTitle(for: block).contains("CIRCUIT"))
     }
 }

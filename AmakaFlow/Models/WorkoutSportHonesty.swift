@@ -95,9 +95,10 @@ enum WorkoutSportHonesty {
         if machineKind(lowered) != nil || matchesRun(lowered) {
             return .cardio
         }
+        // "jump rope" is classified as cardio via machineKind — omit it here.
         if matches(
             lowered,
-            ["jump rope", "burpee", "bodyweight", "air squat", "push-up", "push up", "pull-up", "pull up"]
+            ["burpee", "bodyweight", "air squat", "push-up", "push up", "pull-up", "pull up"]
         ) {
             return .bodyweight
         }

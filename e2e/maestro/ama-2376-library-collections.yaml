@@ -193,8 +193,9 @@ appId: com.myamaka.AmakaFlowCompanion
 - assertVisible:
     text: "IN"
 - takeScreenshot: docs/ama-2376-visual-evidence/05-detail
+# Remove control id collapses into the chip container (see header NOTE) — tap by label.
 - tapOn:
-    id: "af_detail_collection_chip_.*_remove"
+    text: "Remove"
 - waitForAnimationToEnd:
     timeout: 2000
 - assertNotVisible:

@@ -564,6 +564,7 @@ struct UnifiedWorkoutDetailView: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(estimate.minuteLabel)
                         .ddDisplayText(19, weight: .heavy)
+                        .monospacedDigit()
                         .foregroundColor(DailyDriver.lime)
                     Text(estimate.totalSublabel)
                         .font(.system(size: 7.5, weight: .medium, design: .monospaced))
@@ -577,8 +578,9 @@ struct UnifiedWorkoutDetailView: View {
                     .frame(width: 1, height: 36)
 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(estimate.activeMinuteLabel == "TIME NOT SET" ? "—" : estimate.activeMinuteLabel)
+                    Text(estimate.activeSec > 0 ? estimate.activeMinuteLabel : "—")
                         .ddDisplayText(19, weight: .heavy)
+                        .monospacedDigit()
                         .foregroundColor(DailyDriver.foreground)
                     Text(estimate.activeSublabel)
                         .font(.system(size: 7.5, weight: .medium, design: .monospaced))
@@ -774,8 +776,8 @@ struct UnifiedWorkoutDetailView: View {
                     .padding(.top, 18)
                     .accessibilityIdentifier("af_workout_detail_blocks_empty")
             } else {
-                ForEach(sections) { section in
-                    DDWorkoutBlockSectionView(section: section)
+                ForEach(Array(sections.enumerated()), id: \.element.id) { index, section in
+                    DDWorkoutBlockSectionView(section: section, sectionIndex: index)
                         .padding(.top, 18)
                 }
                 .accessibilityIdentifier("af_workout_detail_blocks")
@@ -906,7 +908,7 @@ extension UnifiedWorkoutDetailView {
     }
 
     fileprivate var ddHeroDurationLabel: String {
-        WorkoutDurationEstimator.estimate(for: workout).minuteLabel
+        durationEstimate.minuteLabel
     }
 
     /// Max rounds among work blocks for hero chips (dd-detail-dark: "5 ROUNDS · ~20 MIN").
@@ -915,7 +917,7 @@ extension UnifiedWorkoutDetailView {
     }
 
     fileprivate var heroRoundCount: Int {
-        let workBlocks = workout.blocks.filter { !Self.isWarmupOrCooldown($0) }
+        let workBlocks = workout.blocks.filter { !DDWorkoutDisplayGrouping.isWarmupOrCooldown($0) }
         if !workBlocks.isEmpty {
             let structuredTotal = Self.heroRoundCount(for: workBlocks)
             if structuredTotal > 1 { return structuredTotal }
@@ -947,11 +949,6 @@ extension UnifiedWorkoutDetailView {
             return nil
         }
         return value
-    }
-
-    fileprivate static func isWarmupOrCooldown(_ block: Block) -> Bool {
-        let label = block.label?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() ?? ""
-        return label == "warm-up" || label == "warmup" || label == "cool-down" || label == "cooldown"
     }
 
     fileprivate var sourceHeroPill: String {

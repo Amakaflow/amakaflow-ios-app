@@ -31,30 +31,42 @@ struct WorkoutCaptionPresentation: Equatable, Sendable {
     }
 
     /// Pull a creator-stated finish time out of the caption when present
-    /// (`My time: 57.53`, `57:53`, etc.) for the TIME card footnote.
+    /// (`My time: 57.53`, `1:36:10`, etc.) for the TIME card footnote.
     static func creatorTimeLabel(from raw: String?) -> String? {
         guard let raw else { return nil }
-        // Prefer "My time: 57.53" / "finish in 57:53"; avoid fragile `[:\-]` classes
-        // that some ICU builds reject when compiling the pattern.
+        let range = NSRange(raw.startIndex..<raw.endIndex, in: raw)
+        for regex in creatorTimeRegexes {
+            guard let match = regex.firstMatch(in: raw, range: range),
+                  match.numberOfRanges >= 3,
+                  let firstR = Range(match.range(at: 1), in: raw),
+                  let secondR = Range(match.range(at: 2), in: raw)
+            else { continue }
+            let first = String(raw[firstR])
+            let second = String(raw[secondR])
+            if match.numberOfRanges >= 4,
+               let thirdR = Range(match.range(at: 3), in: raw),
+               match.range(at: 3).location != NSNotFound {
+                let third = String(raw[thirdR])
+                return "\(first):\(second):\(third)"
+            }
+            return "\(first):\(second)"
+        }
+        return nil
+    }
+
+    /// Compiled once — `timeCard` calls this on every detail render.
+    private static let creatorTimeRegexes: [NSRegularExpression] = {
         let patterns = [
+            // H:MM:SS first so 1:36:10 is not truncated to 1:36.
+            #"(?i)my\s+time\s*:?\s*(\d{1,2})[.:](\d{2})[.:](\d{2})"#,
+            #"(?i)(?:finished|finish)\s*(?:in)?\s*(\d{1,2})[.:](\d{2})[.:](\d{2})"#,
+            #"(?i)\btime\s*:?\s*(\d{1,2})[.:](\d{2})[.:](\d{2})"#,
             #"(?i)my\s+time\s*:?\s*(\d{1,2})[.:](\d{2})"#,
             #"(?i)(?:finished|finish)\s*(?:in)?\s*(\d{1,2})[.:](\d{2})"#,
             #"(?i)\btime\s*:?\s*(\d{1,2})[.:](\d{2})"#
         ]
-        for pattern in patterns {
-            guard let regex = try? NSRegularExpression(pattern: pattern) else { continue }
-            let range = NSRange(raw.startIndex..<raw.endIndex, in: raw)
-            guard let match = regex.firstMatch(in: raw, range: range),
-                  match.numberOfRanges >= 3,
-                  let minR = Range(match.range(at: 1), in: raw),
-                  let secR = Range(match.range(at: 2), in: raw)
-            else { continue }
-            let minutes = String(raw[minR])
-            let seconds = String(raw[secR])
-            return "\(minutes):\(seconds)"
-        }
-        return nil
-    }
+        return patterns.compactMap { try? NSRegularExpression(pattern: $0) }
+    }()
 
     private static func collapse(_ text: String) -> String {
         let lines = text

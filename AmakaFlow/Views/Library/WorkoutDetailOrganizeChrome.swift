@@ -196,23 +196,15 @@ private extension WorkoutDetailOrganizeChrome {
                     .foregroundColor(DailyDriver.foregroundMuted)
             }
             .buttonStyle(.plain)
+            .accessibilityLabel("Remove")
             .accessibilityIdentifier("af_detail_collection_chip_\(collection.id)_remove")
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
         .background(DailyDriver.card2)
         .clipShape(Capsule(style: .continuous))
-        .accessibilityIdentifier("af_detail_collection_chip_\(sanitizedChipName(collection.name))")
-    }
-
-    private func sanitizedChipName(_ name: String) -> String {
-        name.lowercased()
-            .replacingOccurrences(of: " ", with: "_")
-            .replacingOccurrences(
-                of: #"[^a-z0-9_]"#,
-                with: "",
-                options: .regularExpression
-            )
+        // Prefer stable collection id — names are not unique after sanitize.
+        .accessibilityIdentifier("af_detail_collection_chip_\(collection.id)")
     }
 }
 

@@ -299,6 +299,39 @@ final class WorkoutDurationEstimatorTests: XCTestCase {
         #endif
     }
 
+    func testTabataCapUsesThirtySecondsPerExercisePerRound() {
+        let block = Block(
+            label: nil,
+            structure: .tabata,
+            rounds: 8,
+            exercises: [
+                Exercise(name: "Squat", canonicalName: nil, sets: nil, reps: nil, durationSeconds: nil, load: nil, restSeconds: nil, distance: nil, notes: nil, focus: nil, supersetGroup: nil),
+                Exercise(name: "Push-Up", canonicalName: nil, sets: nil, reps: nil, durationSeconds: nil, load: nil, restSeconds: nil, distance: nil, notes: nil, focus: nil, supersetGroup: nil),
+            ]
+        )
+        let estimate = WorkoutDurationEstimator.estimate(blocks: [block])
+        // 8 rounds × 2 stations × 30s = 480s exact
+        XCTAssertEqual(estimate.totalSec, 480)
+        XCTAssertFalse(estimate.isEstimate)
+        XCTAssertEqual(estimate.minuteLabel, "8 MIN")
+    }
+
+    func testMultiStationIgnoresPerExerciseSets() {
+        let block = Block(
+            label: nil,
+            structure: .circuit,
+            rounds: 4,
+            exercises: [
+                Exercise(name: "Bike", canonicalName: nil, sets: 3, reps: "10", durationSeconds: nil, load: nil, restSeconds: nil, distance: nil, notes: nil, focus: nil, supersetGroup: nil),
+                Exercise(name: "Ski", canonicalName: nil, sets: 3, reps: "10", durationSeconds: nil, load: nil, restSeconds: nil, distance: nil, notes: nil, focus: nil, supersetGroup: nil),
+            ]
+        )
+        let estimate = WorkoutDurationEstimator.estimate(blocks: [block])
+        // Per round: 2 × (10×3 + 15) = 90; ×4 rounds = 360; +5% transitions ≈ 378
+        XCTAssertEqual(estimate.totalSec, 378)
+        XCTAssertTrue(estimate.isEstimate)
+    }
+
     func testStructureWinsOverBogusStoredDuration() {
         let workout = Workout(
             id: "w",

@@ -39,6 +39,11 @@ final class WorkoutCaptionPresentationTests: XCTestCase {
         XCTAssertEqual(WorkoutCaptionPresentation.creatorTimeLabel(from: raw), "57:53")
     }
 
+    func testCreatorTimeKeepsHourComponent() {
+        let raw = "Bike ski row — finished in 1:36:10. Save it!"
+        XCTAssertEqual(WorkoutCaptionPresentation.creatorTimeLabel(from: raw), "1:36:10")
+    }
+
     func testNilAndBlankYieldNil() {
         XCTAssertNil(WorkoutCaptionPresentation.present(nil))
         XCTAssertNil(WorkoutCaptionPresentation.present("   "))

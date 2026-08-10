@@ -743,7 +743,10 @@ enum DDWorkoutDisplayGrouping {
         guard !sourceBlocks.isEmpty else { return [] }
 
         let estimate = WorkoutDurationEstimator.estimate(for: workout)
-        let sectionById = Dictionary(uniqueKeysWithValues: estimate.perSection.map { ($0.blockId, $0) })
+        let sectionById = Dictionary(
+            estimate.perSection.map { ($0.blockId, $0) },
+            uniquingKeysWith: { first, _ in first }
+        )
 
         return sourceBlocks.map { block in
             let sectionEstimate = sectionById[block.id]
@@ -763,15 +766,6 @@ enum DDWorkoutDisplayGrouping {
         }
     }
 
-    /// Kept for callers/tests that still exercise the legacy helper; detail no longer uses it.
-    static func collapseStraightSetSingletons(_ blocks: [Block]) -> [Block] {
-        blocks
-    }
-
-    static func isCollapsibleSingleton(_ block: Block) -> Bool {
-        false
-    }
-
     static func isUnlabeledStraightSetContainer(_ block: Block) -> Bool {
         guard let label = block.label?.trimmingCharacters(in: .whitespacesAndNewlines), !label.isEmpty else {
             return true
@@ -784,10 +778,6 @@ enum DDWorkoutDisplayGrouping {
         block.structure == .straight
     }
 
-    static func shouldSuppressTitle(for block: Block, allBlocks: [Block]) -> Bool {
-        sectionTitle(for: block).isEmpty
-    }
-
     static func isGenericBlockLabel(_ label: String) -> Bool {
         label.range(
             of: #"^(Main block|Main|Block \d+)$"#,
@@ -797,7 +787,8 @@ enum DDWorkoutDisplayGrouping {
 
     static func isWarmupOrCooldown(_ block: Block) -> Bool {
         let label = block.label?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() ?? ""
-        return label.contains("warm") || label.contains("cool")
+        return ["warm-up", "warmup", "warm up", "cool-down", "cooldown", "cool down"]
+            .contains(label)
     }
 
     /// Title from the block's own label + structure fields only.
@@ -860,6 +851,7 @@ enum DDWorkoutDisplayGrouping {
 
 struct DDWorkoutBlockSectionView: View {
     let section: DDWorkoutDisplaySection
+    var sectionIndex: Int = 0
     @State private var infoExercise: Exercise?
 
     var body: some View {
@@ -947,7 +939,7 @@ struct DDWorkoutBlockSectionView: View {
             )
             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         }
-        .accessibilityIdentifier("af_detail_section")
+        .accessibilityIdentifier("af_detail_section_\(sectionIndex)")
         .fullScreenCover(item: $infoExercise) { exercise in
             NavigationStack {
                 DDExerciseInfoView(exercise: exercise)
@@ -966,7 +958,13 @@ struct DDWorkoutBlockSectionView: View {
 
     /// When `sets` is nil on a straight/single-station block, `block.rounds` is the set count.
     private func detailLine(for exercise: Exercise) -> String {
-        let multiStation = section.exercises.count > 1 && section.blockStructure != .straight
+        let proxyBlock = Block(
+            label: nil,
+            structure: section.blockStructure,
+            rounds: section.blockRounds,
+            exercises: section.exercises
+        )
+        let multiStation = WorkoutDurationEstimator.isMultiStation(proxyBlock)
         if exercise.sets == nil, !multiStation, section.blockRounds > 1 {
             let withSets = Exercise(
                 name: exercise.name,

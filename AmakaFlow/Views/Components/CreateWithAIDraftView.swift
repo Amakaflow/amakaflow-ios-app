@@ -368,7 +368,8 @@ struct CreateWithAIDraftView: View {
                 retry: { saveToLibrary() },
                 onSuccess: { saved in
                     workoutsViewModel.acceptSuggestedWorkout(saved)
-                    let minutes = max(1, saved.duration / 60)
+                    let estimate = WorkoutDurationEstimator.estimate(for: saved)
+                    let minutes = max(1, Int((Double(estimate.totalSec) / 60.0).rounded()))
                     DDToastCenter.shared.success(
                         DDToastCopy.savedToLibrary,
                         sub: DDToastCopy.savedSub(

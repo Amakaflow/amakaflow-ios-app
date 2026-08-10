@@ -124,10 +124,15 @@ extension WorkoutDurationEstimator {
 
     static func capSeconds(for block: Block) -> Int? {
         switch block.structure {
-        case .emom, .amrap, .tabata:
+        case .emom, .amrap:
             let allTimed = block.exercises.allSatisfy { ($0.durationSeconds ?? 0) > 0 }
             if allTimed { return nil }
             return max(1, block.rounds) * 60
+        case .tabata:
+            let allTimed = block.exercises.allSatisfy { ($0.durationSeconds ?? 0) > 0 }
+            if allTimed { return nil }
+            // Converter default: 20s work + 10s rest per exercise per round.
+            return max(1, block.rounds) * max(1, block.exercises.count) * 30
         case .straight, .superset, .circuit, .timedCircuit:
             return nil
         }
@@ -268,12 +273,6 @@ extension WorkoutDurationEstimator {
             isLastInRound: isLastInRound,
             repsHint: reps
         )
-        let restSample: Int
-        if let explicit = exercise.restSeconds {
-            restSample = explicit
-        } else {
-            restSample = reps <= heavyRepThreshold ? heavyRestSeconds : defaultRestSeconds
-        }
         return StepEstimate(
             row: WorkoutExerciseDuration(
                 exerciseId: exercise.id,
@@ -285,13 +284,16 @@ extension WorkoutDurationEstimator {
             activeSeconds: work,
             isEstimate: true,
             flags: SignalFlags(sawReps: true),
-            restUsed: restSample
+            // Report only rest that was actually added to the total.
+            restUsed: rest > 0 ? rest / max(1, sets) : nil
         )
     }
 
     static func effectiveSets(_ exercise: Exercise, block: Block) -> Int {
-        if let sets = exercise.sets, sets > 0 { return sets }
+        // Multi-station rounds already multiply the station sequence — ignore
+        // per-exercise sets so imports that keep both don't double-count.
         if isMultiStation(block) { return 1 }
+        if let sets = exercise.sets, sets > 0 { return sets }
         return max(1, block.rounds)
     }
 

@@ -39,7 +39,7 @@ struct WorkoutDurationEstimate: Equatable, Sendable {
     }
 
     var activeMinuteLabel: String {
-        Self.minuteLabel(seconds: activeSec, isEstimate: false)
+        Self.minuteLabel(seconds: activeSec, isEstimate: isEstimate)
     }
 
     var totalSublabel: String {
