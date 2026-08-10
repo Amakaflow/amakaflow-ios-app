@@ -61,7 +61,7 @@ enum StravaOAuthCallback {
             .replacingOccurrences(of: ",", with: " ")
             .lowercased()
         return normalized
-            .split(whereSeparator: { $0.isWhitespace })
+            .split(whereSeparator: \.isWhitespace)
             .map(String.init)
             .contains("activity:write")
     }

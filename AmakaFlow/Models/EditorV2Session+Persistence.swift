@@ -51,6 +51,7 @@ extension EditorV2Session {
     }
 
     /// Round-trip ADR-017 blocks for WorkoutSaveRequest (preserve structure_source).
+    // swiftlint:disable:next cyclomatic_complexity
     func toSocialImportBlocks() -> [SocialImportBlock] {
         var blocks: [SocialImportBlock] = []
         var flatBuffer: [SocialImportExercise] = []

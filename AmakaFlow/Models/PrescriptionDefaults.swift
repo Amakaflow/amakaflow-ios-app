@@ -174,7 +174,7 @@ extension PrescriptionFormatter {
         )
     }
 
-    private static func saveInterval( // swiftlint:disable:this cyclomatic_complexity
+    private static func saveInterval(
         name: String,
         prescription: EffectivePrescription,
         restSeconds: Int?,
