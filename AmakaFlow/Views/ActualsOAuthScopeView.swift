@@ -3,7 +3,7 @@
 //  AmakaFlow
 //
 //  AMA-2387: in-app OAuth scope confirm for Strava / Garmin.
-//  Upload scope is struck-through NOT REQUESTED (screens-actuals3.jsx).
+//  AMA-2396: write-back reconnect shows edit scope as requested.
 //
 
 import SwiftUI
@@ -12,7 +12,9 @@ struct ActualsOAuthScopeView<Store: ActualsSourceConnecting>: View where Store: 
     let provider: ActualsSourceProvider
     @ObservedObject var store: Store
     var auth: any ActualsProviderAuthProviding
-    var onFinished: () -> Void
+    /// AMA-2396: request `activity:write` on Authorize.
+    var includeWrite: Bool
+    var onFinished: (ActualsProviderAuthOutcome) -> Void
 
     @Environment(\.dismiss) private var dismiss
     @State private var isWorking = false
@@ -22,11 +24,13 @@ struct ActualsOAuthScopeView<Store: ActualsSourceConnecting>: View where Store: 
         provider: ActualsSourceProvider,
         store: Store,
         auth: (any ActualsProviderAuthProviding)? = nil,
-        onFinished: @escaping () -> Void = {}
+        includeWrite: Bool = false,
+        onFinished: @escaping (ActualsProviderAuthOutcome) -> Void = { _ in }
     ) {
         self.provider = provider
         self.store = store
         self.auth = auth ?? ActualsProviderAuthFactory.makeDefault()
+        self.includeWrite = includeWrite
         self.onFinished = onFinished
     }
 
@@ -135,7 +139,10 @@ struct ActualsOAuthScopeView<Store: ActualsSourceConnecting>: View where Store: 
 
     private var scopeCard: some View {
         VStack(spacing: 0) {
-            ForEach(Array(ActualsCopy.oauthScopes(for: provider).enumerated()), id: \.offset) { index, row in
+            ForEach(
+                Array(ActualsCopy.oauthScopes(for: provider, includeWrite: includeWrite).enumerated()),
+                id: \.offset
+            ) { index, row in
                 if index > 0 {
                     Rectangle().fill(DailyDriver.border).frame(height: 1)
                 }
@@ -180,15 +187,16 @@ struct ActualsOAuthScopeView<Store: ActualsSourceConnecting>: View where Store: 
         isWorking = true
         authorizeError = nil
         Task { @MainActor in
-            let outcome = await auth.authorize(provider)
+            let outcome = await auth.authorize(provider, includeWrite: includeWrite)
             ActualsProviderAuthAction.apply(outcome: outcome, provider: provider, store: store)
             isWorking = false
             switch outcome {
             case .success:
                 ActualsLinkFeedback.announceLinked(provider)
-                onFinished()
+                onFinished(outcome)
                 dismiss()
             case .cancelled:
+                onFinished(outcome)
                 dismiss()
             case .failed:
                 authorizeError = ActualsCopy.oauthAuthorizeFailed

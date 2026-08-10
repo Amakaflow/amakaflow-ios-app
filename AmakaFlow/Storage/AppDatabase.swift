@@ -131,6 +131,10 @@ struct AppDatabase {
         V2AddRequestIdToSyncQueue.register(into: &migrator)
         V3WorkoutCollections.register(into: &migrator)
         V4ActualsSessions.register(into: &migrator)
+        V5ActualsSyncV2.register(into: &migrator)
+        V6ActualsStravaWriteBackMeta.register(into: &migrator)
+        V7ActualsStructureBody.register(into: &migrator)
+        V8ActualsExerciseStructure.register(into: &migrator)
         return migrator
     }
 }

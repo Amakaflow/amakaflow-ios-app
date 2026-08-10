@@ -93,6 +93,9 @@ extension APIService {
         if block.rounds > 1 {
             object["rounds"] = block.rounds
         }
+        if let timeCapSec = block.timeCapSec, timeCapSec > 0 {
+            object["time_cap_sec"] = timeCapSec
+        }
         if let type = persistedBlockType(for: block) {
             object["type"] = type
         }

@@ -22,8 +22,10 @@ extension EditorV2View {
     }
 
     private var formatLabel: String? {
-        guard let key = session.formatGroupKey else { return nil }
-        return session.groups[key]?.type.label
+        guard let key = session.formatGroupKey, let group = session.groups[key] else { return nil }
+        // Prefer the display name (Tri-set) over the structural type label (Superset).
+        let name = group.name.trimmingCharacters(in: .whitespacesAndNewlines)
+        return name.isEmpty ? group.type.label : name
     }
 
     private func isInSuperset(_ exercise: EditorV2Exercise) -> Bool {
@@ -89,13 +91,28 @@ extension EditorV2View {
             }
             editExerciseID = nil
         }
-        .presentationDetents([.medium, .large])
+        // Tall form (Load + Between moves) — medium clipped the title under the grabber.
+        .presentationDetents([.large])
+        .presentationDragIndicator(.visible)
     }
 
     func configSheet(_ item: ConfigGroupItem) -> some View {
-        EditorV2GroupConfigSheet(
+        let isTarget = session.formatGroupKey == item.id
+        // Named closure avoids trailing_closure vs multiple_closures_with_trailing_closure.
+        let onRemoveSoftSection = {
+            if item.group.type == .cooldown {
+                session.removeCooldown()
+                showToast("Cool-down removed")
+            } else {
+                session.removeSessionWarmup()
+                showToast("Warm-up removed")
+            }
+            configGroupKey = nil
+        }
+        return EditorV2GroupConfigSheet(
             groupKey: item.id,
             group: item.group,
+            isInsertionTarget: isTarget,
             onChange: { session.groups[item.id] = $0 },
             onDone: { configGroupKey = nil },
             onUngroup: {
@@ -103,16 +120,23 @@ extension EditorV2View {
                 configGroupKey = nil
                 showToast("Ungrouped — now straight sets")
             },
-            onRemoveSoftSection: {
-                if item.group.type == .cooldown {
-                    session.removeCooldown()
-                    showToast("Cool-down removed")
-                } else {
-                    session.removeSessionWarmup()
-                    showToast("Warm-up removed")
+            onDiscardAndRepin: item.group.type == .superset
+                ? {
+                    let name = item.group.name
+                    if session.discardAndRepinSupersetGroup(item.id) != nil {
+                        configGroupKey = nil
+                        showToast("\(name) deleted — add moves to the new one")
+                    }
                 }
-                configGroupKey = nil
-            }
+                : nil,
+            onFocusForAdds: item.group.type == .superset && !isTarget
+                ? {
+                    session.focusFormatGroup(item.id)
+                    configGroupKey = nil
+                    showToast("Adding to this \(item.group.name.lowercased())")
+                }
+                : nil,
+            onRemoveSoftSection: onRemoveSoftSection
         )
         .presentationDetents([.medium, .large])
     }
@@ -125,7 +149,12 @@ extension EditorV2View {
         ) { targetID in
             session.pairSuperset(sourceID: source.id, targetID: targetID)
             pairSourceID = nil
-            showToast("Superset paired ✓")
+            let key = session.exercises.first { $0.id == source.id }?.groupKey
+                ?? session.exercises.first { $0.id == targetID }?.groupKey
+            let memberCount = key.map { groupKey in
+                session.exercises.filter { $0.groupKey == groupKey }.count
+            } ?? 0
+            showToast(memberCount >= 3 ? "Tri-set grouped ✓" : "Superset paired ✓")
         }
         .presentationDetents([.medium, .large])
     }

@@ -88,6 +88,7 @@ struct BuilderV3ExercisePickerSheet: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             header
+            selectedChips
             searchField
             tabPicker
             filterChips
@@ -113,6 +114,7 @@ struct BuilderV3ExercisePickerSheet: View {
                 Text("\(selectedNames.count) selected")
                     .font(.system(size: 11, weight: .semibold, design: .monospaced))
                     .foregroundColor(DailyDriver.lime)
+                    .accessibilityIdentifier("builder_v3_exercise_selected_count")
             }
             if fetchMode == .mock {
                 Text("MOCK")
@@ -126,6 +128,54 @@ struct BuilderV3ExercisePickerSheet: View {
         }
         .padding(.top, 8)
         .padding(.bottom, 12)
+    }
+
+    /// Always-visible selection strip so Create / search → category-grid doesn't hide what was picked.
+    @ViewBuilder
+    private var selectedChips: some View {
+        if !selectedNames.isEmpty {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(selectedNames, id: \.self) { name in
+                        Button {
+                            toggleSelection(name)
+                        } label: {
+                            HStack(spacing: 5) {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .font(.system(size: 12, weight: .semibold))
+                                Text(name)
+                                    .font(.system(size: 11.5, weight: .semibold))
+                                    .lineLimit(1)
+                                Image(systemName: "xmark")
+                                    .font(.system(size: 9, weight: .bold))
+                            }
+                            .foregroundColor(DailyDriver.ink)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .background(Capsule().fill(DailyDriver.lime))
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityIdentifier("builder_v3_selected_chip_\(name)")
+                    }
+                }
+            }
+            .padding(.bottom, 10)
+            .accessibilityIdentifier("builder_v3_selected_chips")
+        }
+    }
+
+    func isSelected(_ name: String) -> Bool {
+        selectedNames.contains { $0.caseInsensitiveCompare(name) == .orderedSame }
+    }
+
+    func toggleSelection(_ name: String) {
+        if let index = selectedNames.firstIndex(where: {
+            $0.caseInsensitiveCompare(name) == .orderedSame
+        }) {
+            selectedNames.remove(at: index)
+        } else {
+            selectedNames.append(name)
+        }
     }
 
     private var searchField: some View {

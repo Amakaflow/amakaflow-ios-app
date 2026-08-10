@@ -14,12 +14,12 @@ extension WatchItemViewModel {
     static func demoPills(isApple: Bool, title: String) -> [String] {
         let isEMOM = title.uppercased().contains("EMOM")
         if isApple {
-            return ["9 STEPS", "MOBILITY ×2", "RAMPS ×1", "OPEN REST"]
+            return ["9 STEPS", "MOBILITY ×2", "RAMPS ×1", "TRANSITION"]
         }
         if isEMOM {
             return ["4 STEPS", "EMOM 10 MIN", "NO PREP", "LAP REST"]
         }
-        return ["6 STEPS", "MOBILITY ×1", "NO RAMPS", "OPEN REST"]
+        return ["6 STEPS", "MOBILITY ×1", "NO RAMPS", "TRANSITION"]
     }
 
     static func demoWarmupNames(for title: String) -> [String] {

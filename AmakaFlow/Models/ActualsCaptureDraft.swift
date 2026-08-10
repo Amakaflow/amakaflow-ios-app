@@ -63,6 +63,59 @@ struct ActualsCaptureDraft: Identifiable, Equatable {
         )
     }
 
+    /// Best-effort Workout for Strava structure + fill-in seeding after match-save.
+    func toWorkoutForMatch() -> Workout? {
+        guard let blocks, !blocks.isEmpty else { return nil }
+        let mapped: [Block] = blocks.map { block in
+            let structure = WorkoutLibraryDetailStore.blockStructure(from: block.type)
+            let timedCap = Self.isTimedCapType(block.type)
+            // Timed formats: never treat legacy "rounds = minutes" as station repeats.
+            let rounds = timedCap ? 1 : max(1, block.rounds)
+            let label = Self.matchLabel(for: block, timedCap: timedCap)
+            return Block(
+                label: label,
+                structure: structure,
+                rounds: rounds,
+                exercises: block.exercises.map { $0.toExercise() }
+            )
+        }
+        guard mapped.contains(where: { !$0.exercises.isEmpty }) else { return nil }
+        return Workout(
+            id: id,
+            name: title,
+            sport: WorkoutSport.parse(sport),
+            duration: max(0, estimatedMinutes * 60),
+            blocks: mapped,
+            description: nil,
+            source: .manual,
+            sourceUrl: nil,
+            creatorName: nil
+        )
+    }
+
+    private static func isTimedCapType(_ type: String?) -> Bool {
+        switch type?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
+        case "amrap", "for-time", "fortime": return true
+        default: return false
+        }
+    }
+
+    /// Prefer an explicit cap label; heal legacy drafts that stuffed minutes into `rounds`.
+    private static func matchLabel(for block: SocialImportBlock, timedCap: Bool) -> String? {
+        let existing = block.label?.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let existing, !existing.isEmpty { return existing }
+        guard timedCap else { return existing }
+        let minutes: Int? = {
+            if let sec = block.timeCapSec, sec > 0 { return max(1, sec / 60) }
+            // Legacy Editor export put cap minutes in `rounds`.
+            if block.rounds > 1 { return block.rounds }
+            return nil
+        }()
+        guard let minutes else { return existing }
+        let kind = block.type?.lowercased().contains("amrap") == true ? "AMRAP" : "FOR TIME"
+        return "\(kind) · \(minutes) MIN CAP"
+    }
+
     static func sampleHyrox() -> ActualsCaptureDraft {
         let blocks = [
             SocialImportBlock(

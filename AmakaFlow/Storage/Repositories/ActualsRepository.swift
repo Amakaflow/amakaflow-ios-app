@@ -62,10 +62,16 @@ final class ActualsRepository: @unchecked Sendable {
                 rpe: rpe,
                 verified: true,
                 savedAt: timestamp,
-                createdAt: timestamp
+                createdAt: timestamp,
+                stravaActivityId: session.stravaActivityId,
+                stravaActivityType: session.stravaActivityType,
+                stravaCurrentDescription: session.stravaCurrentDescription,
+                stravaRecordingApp: session.stravaRecordingApp,
+                stravaIsRace: session.stravaIsRace,
+                structureBody: session.structureBody
             )
             if let existing = try LocalActualsSession.fetchOne(database, key: session.id) {
-                header.createdAt = existing.createdAt
+                header.preserveWriteBack(from: existing)
             }
             try header.upsert(database)
 
@@ -90,7 +96,9 @@ final class ActualsRepository: @unchecked Sendable {
                     actualSets: exercise.actualSets,
                     actualReps: exercise.actualReps,
                     actualWeightKg: exercise.actualWeightKg,
-                    position: index
+                    position: index,
+                    structureHeader: exercise.structureHeader,
+                    structureBlockIndex: exercise.structureBlockIndex
                 )
                 try row.insert(database)
             }
@@ -99,38 +107,125 @@ final class ActualsRepository: @unchecked Sendable {
 
     func fetchSession(id: String) throws -> ActualsFillInSession? {
         try dbQueue.read { database in
-            guard let header = try LocalActualsSession.fetchOne(database, key: id) else {
-                return nil
-            }
-            let rows = try LocalActualsExerciseRow
-                .filter(LocalActualsExerciseRow.Columns.sessionId == id)
-                .order(LocalActualsExerciseRow.Columns.position.asc)
+            try Self.session(id: id, database: database)
+        }
+    }
+
+    /// AMA-2396: Match/verify overlays keyed by Strava activity id so History + Today
+    /// survive sync reloads and tab changes.
+    func fetchSessionsKeyedByStravaActivityId() throws -> [String: ActualsFillInSession] {
+        try dbQueue.read { database in
+            let headers = try LocalActualsSession
+                .filter(sql: "strava_activity_id IS NOT NULL")
                 .fetchAll(database)
-            let exercises: [ExerciseActual] = rows.map { row in
-                ExerciseActual(
-                    id: row.exerciseKey,
-                    name: row.name,
-                    planned: ExerciseActualPlanned(
-                        sets: row.plannedSets,
-                        reps: row.plannedReps,
-                        weightKg: row.plannedWeightKg,
-                        note: row.plannedNote
-                    ),
-                    confirmation: ExerciseActualConfirmation(rawValue: row.confirmation),
-                    actualSets: row.actualSets,
-                    actualReps: row.actualReps,
-                    actualWeightKg: row.actualWeightKg
-                )
+            var result: [String: ActualsFillInSession] = [:]
+            for header in headers {
+                guard let activityId = header.stravaActivityId,
+                      let session = try Self.session(id: header.id, database: database) else {
+                    continue
+                }
+                // Prefer verified over draft when duplicates exist.
+                if let existing = result[activityId], existing.verified, !session.verified {
+                    continue
+                }
+                result[activityId] = session
             }
-            return ActualsFillInSession(
-                id: header.id,
-                title: header.title,
-                subtitle: header.subtitle,
-                exercises: exercises,
-                rpe: header.rpe,
-                verified: header.verified
+            return result
+        }
+    }
+
+    /// Persist a Map match before RPE/Save so "matched" is not lost on History reload.
+    func upsertMatchedDraft(_ session: ActualsFillInSession) throws {
+        let timestamp = now()
+        try dbQueue.write { database in
+            var header = LocalActualsSession(
+                id: session.id,
+                title: session.title,
+                subtitle: session.subtitle,
+                rpe: session.rpe,
+                verified: false,
+                savedAt: timestamp,
+                createdAt: timestamp,
+                stravaActivityId: session.stravaActivityId,
+                isDraft: true,
+                stravaActivityType: session.stravaActivityType,
+                stravaCurrentDescription: session.stravaCurrentDescription,
+                stravaRecordingApp: session.stravaRecordingApp,
+                stravaIsRace: session.stravaIsRace,
+                structureBody: session.structureBody
+            )
+            if let existing = try LocalActualsSession.fetchOne(database, key: session.id) {
+                header.preserveWriteBack(from: existing, includeDraftFields: true)
+            }
+            try header.upsert(database)
+
+            try LocalActualsExerciseRow
+                .filter(LocalActualsExerciseRow.Columns.sessionId == session.id)
+                .deleteAll(database)
+
+            for (index, exercise) in session.exercises.enumerated() {
+                var row = LocalActualsExerciseRow(
+                    id: "\(session.id)_\(exercise.id)",
+                    sessionId: session.id,
+                    exerciseKey: exercise.id,
+                    name: exercise.name,
+                    plannedSets: exercise.planned.sets,
+                    plannedReps: exercise.planned.reps,
+                    plannedWeightKg: exercise.planned.weightKg,
+                    plannedNote: exercise.planned.note,
+                    confirmation: exercise.confirmation?.rawValue ?? "",
+                    actualSets: exercise.actualSets,
+                    actualReps: exercise.actualReps,
+                    actualWeightKg: exercise.actualWeightKg,
+                    position: index,
+                    structureHeader: exercise.structureHeader,
+                    structureBlockIndex: exercise.structureBlockIndex
+                )
+                try row.insert(database)
+            }
+        }
+    }
+
+    private static func session(id: String, database: Database) throws -> ActualsFillInSession? {
+        guard let header = try LocalActualsSession.fetchOne(database, key: id) else {
+            return nil
+        }
+        let rows = try LocalActualsExerciseRow
+            .filter(LocalActualsExerciseRow.Columns.sessionId == id)
+            .order(LocalActualsExerciseRow.Columns.position.asc)
+            .fetchAll(database)
+        let exercises: [ExerciseActual] = rows.map { row in
+            ExerciseActual(
+                id: row.exerciseKey,
+                name: row.name,
+                planned: ExerciseActualPlanned(
+                    sets: row.plannedSets,
+                    reps: row.plannedReps,
+                    weightKg: row.plannedWeightKg,
+                    note: row.plannedNote
+                ),
+                confirmation: ExerciseActualConfirmation(rawValue: row.confirmation),
+                actualSets: row.actualSets,
+                actualReps: row.actualReps,
+                actualWeightKg: row.actualWeightKg,
+                structureHeader: row.structureHeader,
+                structureBlockIndex: row.structureBlockIndex
             )
         }
+        return ActualsFillInSession(
+            id: header.id,
+            title: header.title,
+            subtitle: header.subtitle,
+            exercises: exercises,
+            rpe: header.rpe,
+            verified: header.verified,
+            stravaActivityId: header.stravaActivityId,
+            stravaActivityType: header.stravaActivityType,
+            stravaCurrentDescription: header.stravaCurrentDescription,
+            stravaRecordingApp: header.stravaRecordingApp,
+            stravaIsRace: header.stravaIsRace,
+            structureBody: header.structureBody
+        )
     }
 
     func isVerified(id: String) throws -> Bool {
@@ -140,6 +235,83 @@ final class ActualsRepository: @unchecked Sendable {
                 sql: "SELECT verified FROM actuals_sessions WHERE id = ?",
                 arguments: [id]
             ) ?? false
+        }
+    }
+
+    // MARK: - AMA-2396: un-verify + Strava write-back state
+
+    /// Back to "Fill in" — actuals kept as a draft (exercise rows untouched), RPE
+    /// cleared, and no longer counted as verified. Never deletes the session.
+    func unverifySession(id: String) throws {
+        try dbQueue.write { database in
+            guard var session = try LocalActualsSession.fetchOne(database, key: id) else { return }
+            session.verified = false
+            session.rpe = nil
+            session.isDraft = true
+            try session.update(database)
+        }
+    }
+
+    /// Persist the badge state (`SZStravaBadge`) so it survives relaunch without
+    /// re-deriving from a live Strava fetch.
+    func storeDecoration(_ decoration: StravaDecorationState, forSessionID id: String) throws {
+        try dbQueue.write { database in
+            guard var session = try LocalActualsSession.fetchOne(database, key: id) else { return }
+            session.stravaDecoration = decoration.persistedRawValue
+            try session.update(database)
+        }
+    }
+
+    func clearDecoration(forSessionID id: String) throws {
+        try storeDecoration(.none, forSessionID: id)
+    }
+
+    func fetchDecoration(forSessionID id: String) throws -> StravaDecorationState {
+        try dbQueue.read { database in
+            let raw = try String.fetchOne(
+                database,
+                sql: "SELECT strava_decoration FROM actuals_sessions WHERE id = ?",
+                arguments: [id]
+            )
+            return StravaDecorationState(persistedRawValue: raw)
+        }
+    }
+
+    /// Snapshot what Strava had before our first write — "Undo our Strava text" and
+    /// "Un-verify" restore this instead of guessing.
+    func storePreUpdateSnapshot(_ snapshot: StravaPreUpdateSnapshot, forSessionID id: String) throws {
+        try dbQueue.write { database in
+            guard var session = try LocalActualsSession.fetchOne(database, key: id) else { return }
+            session.stravaActivityId = snapshot.activityId
+            session.preUpdateTitle = snapshot.preUpdateTitle
+            session.preUpdateDescription = snapshot.preUpdateDescription
+            try session.update(database)
+        }
+    }
+
+    func fetchPreUpdateSnapshot(forSessionID id: String) throws -> StravaPreUpdateSnapshot? {
+        try dbQueue.read { database in
+            guard let session = try LocalActualsSession.fetchOne(database, key: id),
+                  let activityId = session.stravaActivityId,
+                  let preUpdateTitle = session.preUpdateTitle,
+                  let preUpdateDescription = session.preUpdateDescription else {
+                return nil
+            }
+            return StravaPreUpdateSnapshot(
+                activityId: activityId,
+                preUpdateTitle: preUpdateTitle,
+                preUpdateDescription: preUpdateDescription,
+                rev: 1
+            )
+        }
+    }
+
+    func clearPreUpdateSnapshot(forSessionID id: String) throws {
+        try dbQueue.write { database in
+            guard var session = try LocalActualsSession.fetchOne(database, key: id) else { return }
+            session.preUpdateTitle = nil
+            session.preUpdateDescription = nil
+            try session.update(database)
         }
     }
 }

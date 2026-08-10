@@ -5,6 +5,8 @@
 //  AMA-2307 / ADR-017 — Editor v2 type registry (screens-editor2.jsx E2_TYPES).
 //
 
+// swiftlint:disable file_length
+
 import SwiftUI
 
 /// Structure group kinds shown in Editor v2 (Hevy calm list).
@@ -201,7 +203,8 @@ struct EditorV2Group: Equatable, Identifiable, Sendable {
         case .emom:
             return [EditorV2StepperSpec(label: "Minutes", key: .rounds, min: 1, max: 60, step: 1)]
         case .amrap, .fortime:
-            return [EditorV2StepperSpec(label: "Cap min", key: .capMinutes, min: 1, max: 90, step: 1)]
+            // 5-min steps — ±1 was too slow for common 10–60 min caps.
+            return [EditorV2StepperSpec(label: "Cap min", key: .capMinutes, min: 5, max: 90, step: 5)]
         case .tabata:
             return [
                 EditorV2StepperSpec(label: "Work s", key: .workSeconds, min: 5, max: 120, step: 5),
@@ -243,6 +246,9 @@ struct EditorV2Exercise: Identifiable, Equatable, Sendable {
     var durationSeconds: Int?
     var distanceMeters: Int?
     var weightKg: Double?
+    /// Explicit bodyweight load (shows in summary / exports as `bodyweight`).
+    /// Mutually exclusive with a weighted `weightKg` prescription.
+    var isBodyweight: Bool
     var restSeconds: Int?
     var calories: Int?
     /// An intentionally unbounded target. Enabling it clears all metric targets.
@@ -277,6 +283,7 @@ struct EditorV2Exercise: Identifiable, Equatable, Sendable {
         durationSeconds: Int? = nil,
         distanceMeters: Int? = nil,
         weightKg: Double? = nil,
+        isBodyweight: Bool = false,
         restSeconds: Int? = nil,
         calories: Int? = nil,
         openGoal: Bool = false,
@@ -297,6 +304,7 @@ struct EditorV2Exercise: Identifiable, Equatable, Sendable {
         self.durationSeconds = durationSeconds
         self.distanceMeters = distanceMeters
         self.weightKg = weightKg
+        self.isBodyweight = isBodyweight
         self.restSeconds = restSeconds
         self.calories = calories
         self.openGoal = openGoal
@@ -418,6 +426,31 @@ struct EditorV2Exercise: Identifiable, Equatable, Sendable {
         "\(formatWeight(weightKg)) kg"
     }
 
+    /// Prescription load string for save / social-import export.
+    var exportLoadString: String? {
+        if isBodyweight { return "bodyweight" }
+        return weightKg.map(Self.formatWeightLoad)
+    }
+
+    mutating func setBodyweightLoad() {
+        isBodyweight = true
+        weightKg = nil
+        stampUser("load")
+    }
+
+    mutating func setWeightedLoad(kilograms: Double) {
+        isBodyweight = false
+        weightKg = kilograms
+        stampUser("load")
+        stampUser("weight_kg")
+    }
+
+    mutating func clearLoad() {
+        isBodyweight = false
+        weightKg = nil
+        stampUser("load")
+    }
+
     /// Visible tap targets on a calm card: body + ⋯ only.
     static let maxVisibleControlsPerRow = 2
 }
@@ -428,11 +461,18 @@ extension PrescriptionFormatter {
     }
 
     static func resolvedLoadText(from exercise: EditorV2Exercise) -> String? {
-        exercise.weightKg.map { ExerciseLoad(value: $0, unit: "kg") }.flatMap(formattedLoad)
+        exerciseLoad(from: exercise).flatMap(formattedLoad)
+    }
+
+    static func exerciseLoad(from exercise: EditorV2Exercise) -> ExerciseLoad? {
+        if exercise.isBodyweight {
+            return ExerciseLoad(value: 0, unit: "bodyweight")
+        }
+        return exercise.weightKg.map { ExerciseLoad(value: $0, unit: "kg") }
     }
 
     static func effective(from exercise: EditorV2Exercise) -> EffectivePrescription {
-        let load = exercise.weightKg.map { ExerciseLoad(value: $0, unit: "kg") }
+        let load = exerciseLoad(from: exercise)
         var secondary = secondaryParts(
             load: load,
             notes: nil,

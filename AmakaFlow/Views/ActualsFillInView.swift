@@ -7,6 +7,8 @@
 
 import SwiftUI
 
+// AMA-2396: write-back toast path lives on this screen by design.
+// swiftlint:disable:next type_body_length
 struct ActualsFillInView: View {
     @ObservedObject var viewModel: ActualsFillInViewModel
     var onSaved: (ActualsFillInSession) -> Void = { _ in }
@@ -15,6 +17,13 @@ struct ActualsFillInView: View {
     var presentsVerifiedOnSave: Bool = true
     /// When false (and not presenting verified here), parent owns navigation after save.
     var dismissOnSave: Bool = true
+    /// AMA-2396: extra hook alongside the built-in repository un-verify (e.g. a
+    /// Today feed also needs its in-memory card flipped back to "Fill in").
+    var onUnverify: (() -> Void)?
+    /// Fired after write-back persists a decoration so the Today rail can refresh.
+    var onWriteBackDecoration: ((StravaDecorationState) -> Void)?
+    var writeBackSettings = StravaWriteBackSettingsStore.shared
+    var writeBackProvider: any StravaWriteBackProviding = StravaWriteBackFactory.makeDefault()
 
     @Environment(\.dismiss) private var dismiss
 
@@ -25,9 +34,25 @@ struct ActualsFillInView: View {
                     header
                         .padding(.top, 10)
 
-                    ForEach(viewModel.session.exercises) { exercise in
-                        exerciseRow(exercise)
-                            .padding(.top, 8)
+                    ForEach(viewModel.session.structureSections) { section in
+                        VStack(alignment: .leading, spacing: 8) {
+                            if let header = section.header, !header.isEmpty {
+                                ActualsStructureBandHeader(title: header)
+                                    .padding(.top, 6)
+                            }
+                            ForEach(section.exercises) { exercise in
+                                exerciseRow(exercise)
+                            }
+                        }
+                        .padding(.top, 8)
+                        .overlay(alignment: .leading) {
+                            if section.header != nil {
+                                RoundedRectangle(cornerRadius: 2)
+                                    .fill(DailyDriver.amber)
+                                    .frame(width: 3)
+                                    .padding(.top, section.header == nil ? 8 : 28)
+                            }
+                        }
                     }
 
                     Text(ActualsCopy.fillInRPEHeader)
@@ -70,11 +95,7 @@ struct ActualsFillInView: View {
     private var header: some View {
         VStack(alignment: .leading, spacing: 0) {
             Button {
-                if let onBack {
-                    onBack()
-                } else {
-                    dismiss()
-                }
+                leaveFillIn()
             } label: {
                 HStack(spacing: 4) {
                     Image(systemName: "chevron.left")
@@ -94,6 +115,9 @@ struct ActualsFillInView: View {
             Text(viewModel.progressLine)
                 .font(.system(size: 8.5, design: .monospaced))
                 .foregroundColor(DailyDriver.foregroundMuted)
+                .lineLimit(2)
+                .minimumScaleFactor(0.8)
+                .fixedSize(horizontal: false, vertical: true)
                 .padding(.top, 4)
 
             Button {
@@ -298,19 +322,17 @@ struct ActualsFillInView: View {
         return Button {
             do {
                 if try viewModel.save() {
-                    DDToastCenter.shared.success(
-                        ActualsCopy.fillInSavedToast,
-                        sub: ActualsCopy.fillInSavedToastSub
-                    )
+                    let savedSession = viewModel.session
                     // Present verified first (state lives on the VM so parent
                     // refresh from onSaved cannot drop the payoff).
                     if presentsVerifiedOnSave {
                         viewModel.showVerifiedPayoff = true
                     }
-                    onSaved(viewModel.session)
+                    onSaved(savedSession)
                     if !presentsVerifiedOnSave, dismissOnSave {
                         dismiss()
                     }
+                    Task { await resolveWriteBackAndToast(for: savedSession) }
                 }
             } catch {
                 DDToastCenter.shared.error(
@@ -331,6 +353,103 @@ struct ActualsFillInView: View {
         .buttonStyle(.plain)
         .disabled(!ready)
         .accessibilityIdentifier(ActualsCopy.fillInSaveAccessibilityID)
+    }
+
+    /// Back mid-edit: keep draft progress unless this is an already-verified edit.
+    private func leaveFillIn() {
+        if !viewModel.session.verified {
+            try? viewModel.persistDraftProgress()
+        }
+        if let onBack {
+            onBack()
+        } else {
+            dismiss()
+        }
+    }
+
+    /// AMA-2396: never claim "Strava updated" until the write-back PUT actually
+    /// confirms — the toast waits for `resolveWriteBackAndToast` before it claims
+    /// anything, then offers Undo back to "Fill in".
+    @MainActor
+    private func resolveWriteBackAndToast(for session: ActualsFillInSession) async {
+        var claimedStravaUpdate = false
+        // Refuse fabricated skip inputs — write-back needs real activity metadata.
+        // Prefer live session fields; fall back to card activity metadata when DB
+        // rows predate V6 write-back columns (type/description).
+        var writeSession = session
+        if !writeSession.canEvaluateStravaWriteBack,
+           let activityId = writeSession.stravaActivityId
+            ?? ActualsTodayDemoFeed.stravaActivityId(fromCardID: session.id) {
+            writeSession.stravaActivityId = activityId
+        }
+        if writeBackSettings.writeBackEnabled,
+           writeSession.canEvaluateStravaWriteBack,
+           let activityId = writeSession.stravaActivityId,
+           let activityType = writeSession.stravaActivityType {
+            let currentDescription = writeSession.stravaCurrentDescription ?? ""
+            let outcome = await writeBackProvider.writeBack(
+                StravaWriteBackRequest(
+                    activityId: activityId,
+                    title: writeSession.title,
+                    structureBody: writeSession.stravaStructureBody,
+                    currentDescription: currentDescription,
+                    activityType: activityType,
+                    recordingApp: writeSession.stravaRecordingApp,
+                    isRace: writeSession.stravaIsRace,
+                    rules: writeBackSettings.rules,
+                    rpe: writeSession.rpe
+                )
+            )
+            switch outcome {
+            case .updated:
+                claimedStravaUpdate = true
+                let snapshot = StravaPreUpdateSnapshot(
+                    activityId: activityId,
+                    preUpdateTitle: session.title,
+                    preUpdateDescription: currentDescription,
+                    rev: 1
+                )
+                try? viewModel.persistWriteBackState(snapshot: snapshot, decoration: .ours)
+                onWriteBackDecoration?(.ours)
+            case .skipped(let state):
+                try? viewModel.persistWriteBackState(snapshot: nil, decoration: state)
+                onWriteBackDecoration?(state)
+            case .restored, .failed, .cancelled:
+                break
+            }
+        }
+        let toastText = claimedStravaUpdate
+            ? ActualsCopy.verifiedToastWithStrava
+            : ActualsCopy.verifiedToastNoStrava
+        DDToastCenter.shared.undo(toastText, sub: ActualsCopy.fillInSavedToastSub) {
+            Task { @MainActor in
+                await restoreStravaThenUnverify()
+            }
+        }
+    }
+
+    @MainActor
+    private func restoreStravaThenUnverify() async {
+        if let snapshot = try? viewModel.fetchPreUpdateSnapshot() {
+            let outcome = await writeBackProvider.restore(
+                activityId: snapshot.activityId,
+                snapshot: snapshot
+            )
+            if case .restored = outcome {
+                try? viewModel.clearPreUpdateSnapshot()
+                try? viewModel.persistWriteBackState(snapshot: nil, decoration: .untouched)
+                onWriteBackDecoration?(.untouched)
+            }
+        }
+        do {
+            try viewModel.unverify()
+            onUnverify?()
+        } catch {
+            DDToastCenter.shared.error(
+                ActualsCopy.fillInSaveFailedTitle,
+                sub: viewModel.lastSaveError
+            )
+        }
     }
 }
 

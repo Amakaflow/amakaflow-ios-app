@@ -41,20 +41,23 @@ final class BFFActualsProviderAuth: NSObject, ActualsProviderAuthProviding {
         BFFActualsProviderAuth(client: .live())
     }
 
-    func authorize(_ provider: ActualsSourceProvider) async -> ActualsProviderAuthOutcome {
+    func authorize(
+        _ provider: ActualsSourceProvider,
+        includeWrite: Bool
+    ) async -> ActualsProviderAuthOutcome {
         switch provider {
         case .strava:
-            return await authorizeStrava()
+            return await authorizeStrava(includeWrite: includeWrite)
         case .garmin, .appleHealth:
             // Garmin OAuth is a separate ticket; never fake a link in Release.
             return .failed
         }
     }
 
-    private func authorizeStrava() async -> ActualsProviderAuthOutcome {
+    private func authorizeStrava(includeWrite: Bool) async -> ActualsProviderAuthOutcome {
         let authURL: URL
         do {
-            authURL = try await client.initiateOAuth()
+            authURL = try await client.initiateOAuth(includeWrite: includeWrite)
         } catch {
             return .failed
         }

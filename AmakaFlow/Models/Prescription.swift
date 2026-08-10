@@ -270,7 +270,8 @@ enum PrescriptionFormatter {
         }
 
         if restOpen {
-            parts.append("OPEN REST")
+            // Between moves (esp. supersets / tri-sets) open rest is a transition you end on watch.
+            parts.append("TRANSITION")
         } else if let restSeconds {
             parts.append("\(restSeconds)S REST")
         }

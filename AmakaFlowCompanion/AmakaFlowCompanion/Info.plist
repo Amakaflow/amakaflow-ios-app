@@ -23,6 +23,7 @@
 		<string>com-garmin-connect</string>
 		<string>garminconnect</string>
 		<string>ciqstore</string>
+		<string>strava</string>
 	</array>
 	<key>NSCameraUsageDescription</key>
 	<string>AmakaFlow uses the camera to scan QR codes for quick pairing with the web app.</string>

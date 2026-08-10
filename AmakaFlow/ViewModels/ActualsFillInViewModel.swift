@@ -99,6 +99,21 @@ final class ActualsFillInViewModel: ObservableObject {
         session.rpe = value
     }
 
+    /// AMA-2396: leave mid-edit without verifying — keep confirms / RPE / structure.
+    /// No-op when editing an already-verified session (Back discards unsaved tweaks).
+    @discardableResult
+    func persistDraftProgress() throws -> Bool {
+        lastSaveError = nil
+        guard !session.verified else { return false }
+        do {
+            try repository.upsertMatchedDraft(session)
+            return true
+        } catch {
+            lastSaveError = error.localizedDescription
+            throw error
+        }
+    }
+
     /// Local-first save. Sets `verified` only when all rows + RPE are present.
     @discardableResult
     func save() throws -> Bool {
@@ -123,5 +138,47 @@ final class ActualsFillInViewModel: ObservableObject {
             lastSaveError = error.localizedDescription
             throw error
         }
+    }
+
+    /// AMA-2396: toast Undo — back to "Fill in", RPE cleared, draft kept.
+    /// Surfaces persistence failures via `lastSaveError` (symmetric with `save()`).
+    @discardableResult
+    func unverify() throws -> Bool {
+        lastSaveError = nil
+        let previousVerified = session.verified
+        let previousRPE = session.rpe
+        let previousPayoff = showVerifiedPayoff
+        session.verified = false
+        session.rpe = nil
+        showVerifiedPayoff = false
+        do {
+            try repository.unverifySession(id: session.id)
+            return true
+        } catch {
+            session.verified = previousVerified
+            session.rpe = previousRPE
+            showVerifiedPayoff = previousPayoff
+            lastSaveError = error.localizedDescription
+            throw error
+        }
+    }
+
+    /// Persist Strava pre-update snapshot + badge after a write-back outcome.
+    func persistWriteBackState(
+        snapshot: StravaPreUpdateSnapshot?,
+        decoration: StravaDecorationState
+    ) throws {
+        if let snapshot {
+            try repository.storePreUpdateSnapshot(snapshot, forSessionID: session.id)
+        }
+        try repository.storeDecoration(decoration, forSessionID: session.id)
+    }
+
+    func fetchPreUpdateSnapshot() throws -> StravaPreUpdateSnapshot? {
+        try repository.fetchPreUpdateSnapshot(forSessionID: session.id)
+    }
+
+    func clearPreUpdateSnapshot() throws {
+        try repository.clearPreUpdateSnapshot(forSessionID: session.id)
     }
 }

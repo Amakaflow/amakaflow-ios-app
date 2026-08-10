@@ -31,6 +31,9 @@ protocol ActualsSourceConnecting: AnyObject {
 
 @MainActor
 final class ActualsSourceConnectionStore: ObservableObject, ActualsSourceConnecting {
+    /// Shared across Today / Settings / Profile so Connect does not "forget" on tab change.
+    static let shared = ActualsSourceConnectionStore()
+
     private enum Keys {
         static let connected = "ama2387.actuals.connectedProviders"
         static let everConnected = "ama2387.actuals.hasEverConnected"

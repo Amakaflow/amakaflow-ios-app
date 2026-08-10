@@ -13,11 +13,11 @@ final class BuilderV3Tests: XCTestCase {
     // MARK: - Category coverage
 
     func testEveryCategoryHasExpectedSeedCount() {
-        XCTAssertEqual(BuilderV3TypeRegistry.seeds(for: .lift).count, 6)
+        XCTAssertEqual(BuilderV3TypeRegistry.seeds(for: .lift).count, 7)
         XCTAssertEqual(BuilderV3TypeRegistry.seeds(for: .conditioning).count, 5)
         XCTAssertEqual(BuilderV3TypeRegistry.seeds(for: .run).count, 4)
         XCTAssertEqual(BuilderV3TypeRegistry.seeds(for: .recover).count, 2)
-        XCTAssertEqual(BuilderV3TypeRegistry.all.count, 17)
+        XCTAssertEqual(BuilderV3TypeRegistry.all.count, 18)
     }
 
     func testEverySeedHasAUniqueBuilderV3AccessibilityId() {
@@ -314,6 +314,20 @@ final class BuilderV3Tests: XCTestCase {
     func testCoreStrengthChipUsesCatalogAbsKey() {
         let coreChip = BuilderV3ExerciseLibrary.strengthMuscleChips.first { $0.label == "Core" }
         XCTAssertEqual(coreChip?.key, "abs")
+    }
+
+    func testCoreFixtureCatalogIncludesClassCoreMoves() {
+        let core = BuilderV3ExerciseLibrary.fixtureItems(
+            category: "strength",
+            muscle: "abs",
+            equipment: nil
+        )
+        let names = Set(core.map(\.name))
+        XCTAssertTrue(names.contains("GHD Sit-Up"))
+        XCTAssertTrue(names.contains("Ab Pulse Ups"))
+        XCTAssertTrue(names.contains("Cable Ab Twist"))
+        XCTAssertTrue(names.contains("Roman Chair Side Crunch"))
+        XCTAssertFalse(core.isEmpty)
     }
 
     func testDemoCatalogHasStableIdsAndRequiredCardio() {

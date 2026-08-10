@@ -161,4 +161,132 @@ final class ActualsFillInTests: XCTestCase {
         XCTAssertTrue(tables.contains("actuals_sessions"))
         XCTAssertTrue(tables.contains("actuals_exercise_rows"))
     }
+
+    // MARK: - Interrupt / Back mid-edit
+
+    func testBackMidFillInPersistsPartialProgressForReopen() throws {
+        let sessionID = "interrupt_\(UUID().uuidString)"
+        let vm = ActualsFillInViewModel(
+            session: ActualsFillInSession.lowerBodyPosteriorSample(id: sessionID),
+            repository: repo
+        )
+        vm.markAsPlanned(exerciseID: "back_squat")
+        vm.markAdjust(exerciseID: "rdl")
+        vm.setActualWeightKg(exerciseID: "rdl", kilograms: 75)
+        vm.selectRPE(6)
+
+        XCTAssertTrue(try vm.persistDraftProgress())
+        XCTAssertFalse(vm.verified)
+
+        let reloaded = try XCTUnwrap(repo.fetchSession(id: sessionID))
+        XCTAssertEqual(reloaded.verified, false)
+        XCTAssertEqual(reloaded.rpe, 6)
+        XCTAssertEqual(
+            reloaded.exercises.first { $0.id == "back_squat" }?.confirmation,
+            .asPlanned
+        )
+        XCTAssertEqual(
+            reloaded.exercises.first { $0.id == "rdl" }?.actualWeightKg,
+            75
+        )
+        XCTAssertNil(reloaded.exercises.first { $0.id == "split_squat" }?.confirmation)
+
+        // Reopen path: feed merge prefers GRDB draft over a clean card seed.
+        let cleanFallback = ActualsFillInSession.lowerBodyPosteriorSample(id: sessionID)
+        let merged = ActualsTodayDemoFeed.mergePersistedFillIn(reloaded, fallback: cleanFallback)
+        XCTAssertEqual(merged.rpe, 6)
+        XCTAssertEqual(merged.exercises.first { $0.id == "rdl" }?.confirmation, .adjusted)
+    }
+
+    func testVerifiedEditBackDoesNotPersistDraftDowngrade() throws {
+        let sessionID = "verified_edit_\(UUID().uuidString)"
+        var session = ActualsFillInSession.lowerBodyPosteriorSample(id: sessionID)
+        session.exercises = session.exercises.map { exercise in
+            var copy = exercise
+            copy.confirmation = .asPlanned
+            return copy
+        }
+        session.rpe = 8
+        session.verified = true
+        try repo.saveVerifiedSession(session)
+
+        let vm = ActualsFillInViewModel(
+            session: try XCTUnwrap(repo.fetchSession(id: sessionID)),
+            repository: repo
+        )
+        XCTAssertTrue(vm.verified)
+        vm.markAdjust(exerciseID: "back_squat")
+        vm.setActualWeightKg(exerciseID: "back_squat", kilograms: 95)
+
+        // Back without Save must not write a draft over the verified session.
+        XCTAssertFalse(try vm.persistDraftProgress())
+        let stillVerified = try XCTUnwrap(repo.fetchSession(id: sessionID))
+        XCTAssertTrue(stillVerified.verified == true)
+        XCTAssertEqual(stillVerified.rpe, 8)
+        XCTAssertEqual(
+            stillVerified.exercises.first { $0.id == "back_squat" }?.actualWeightKg,
+            85
+        )
+    }
+
+    func testPrepareFillInReloadsDraftWithoutDemoAutoAdjust() throws {
+        let sessionID = "no_auto_\(UUID().uuidString)"
+        var matched = ActualsFillInSession.lowerBodyPosteriorSample(id: sessionID)
+        matched.structureBody = "TRI-SET · 3 ROUNDS\n🏋️ Back squat — 3 × 5"
+        try repo.upsertMatchedDraft(matched)
+
+        let feed = ActualsTodayDemoFeed(repository: repo)
+        feed.activateAfterConnect(sync: ActualsSyncProgressStore())
+        // Inject a fill-in card pointing at the matched draft id.
+        let card = ActualsTodayDemoCard(
+            id: sessionID,
+            kind: .fillInDebt,
+            timeLabel: "06:14",
+            title: matched.title,
+            stats: [],
+            sourceLabel: "Matched · Strava",
+            sourceProvider: .strava,
+            session: nil,
+            activity: nil,
+            fillInSession: matched
+        )
+        feed.prepareFillIn(from: card)
+
+        let opened = try XCTUnwrap(feed.fillInViewModel?.session)
+        XCTAssertNil(opened.exercises.first?.confirmation)
+        XCTAssertNotEqual(opened.exercises.first?.actualWeightKg, 90)
+        XCTAssertEqual(opened.verified, false)
+    }
+
+    func testFeedPersistFillInDraftProgressUpdatesCard() throws {
+        let sessionID = "feed_draft_\(UUID().uuidString)"
+        let feed = ActualsTodayDemoFeed(repository: repo)
+        feed.activateAfterConnect(sync: ActualsSyncProgressStore())
+        let card = ActualsTodayDemoCard(
+            id: sessionID,
+            kind: .fillInDebt,
+            timeLabel: "06:14",
+            title: "Upper Body Tri Sets",
+            stats: [],
+            sourceLabel: "Matched · Strava",
+            sourceProvider: .strava,
+            session: nil,
+            activity: nil,
+            fillInSession: ActualsFillInSession.lowerBodyPosteriorSample(id: sessionID)
+        )
+        // Place card + open fill-in.
+        feed.prepareFillIn(from: card)
+        // Ensure pending id matches so persist can rewrite the in-memory card if present.
+        let vm = try XCTUnwrap(feed.fillInViewModel)
+        vm.markAsPlanned(exerciseID: "back_squat")
+        vm.selectRPE(7)
+        XCTAssertTrue(feed.persistFillInDraftProgress())
+
+        let stored = try XCTUnwrap(repo.fetchSession(id: sessionID))
+        XCTAssertEqual(stored.rpe, 7)
+        XCTAssertEqual(
+            stored.exercises.first { $0.id == "back_squat" }?.confirmation,
+            .asPlanned
+        )
+    }
 }

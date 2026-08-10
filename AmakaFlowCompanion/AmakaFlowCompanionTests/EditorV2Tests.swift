@@ -76,6 +76,108 @@ final class EditorV2Tests: XCTestCase {
         XCTAssertEqual(session.runs.first?.groupKey, key)
     }
 
+    func testTriSetFormatAddsLandInsideBandedGroup() {
+        var session = BuilderV3TypeRegistry.makeEditorSession(for: BuilderV3TypeRegistry.triset)
+        XCTAssertEqual(session.groups["fmt"]?.name, "Tri-set")
+
+        _ = session.addExercise(named: "Pull Ups")
+        // Must stay Tri-set while the third move is still being added — not flip to Superset.
+        XCTAssertEqual(session.groups["fmt"]?.name, "Tri-set")
+        _ = session.addExercise(named: "Single Arm Row")
+        XCTAssertEqual(session.groups["fmt"]?.name, "Tri-set")
+        _ = session.addExercise(named: "Forearm Twists")
+
+        XCTAssertEqual(session.exercises.count, 3)
+        XCTAssertTrue(session.exercises.allSatisfy { $0.groupKey == "fmt" })
+        XCTAssertEqual(session.groups["fmt"]?.name, "Tri-set")
+        XCTAssertEqual(session.runs.count, 1)
+        XCTAssertEqual(session.runs.first?.exercises.count, 3)
+
+        let secondKey = session.beginNextSupersetGroup()
+        XCTAssertNotEqual(secondKey, "fmt")
+        XCTAssertEqual(session.formatGroupKey, secondKey)
+        XCTAssertEqual(session.groups[secondKey]?.name, "Tri-set")
+        // Empty next group must stay pinned even though runs only show filled groups —
+        // canvas draws an insertion slot from formatGroupKey + zero members.
+        XCTAssertFalse(session.exercises.contains { $0.groupKey == secondKey })
+        XCTAssertEqual(session.runs.count, 1)
+        _ = session.addExercise(named: "Dumbbell Press")
+        XCTAssertEqual(session.groups[secondKey]?.name, "Tri-set")
+        _ = session.addExercise(named: "Band Pull Apart")
+        _ = session.addExercise(named: "TRX Tricep Extension")
+        XCTAssertEqual(session.runs.count, 2)
+        XCTAssertEqual(session.groups[secondKey]?.name, "Tri-set")
+        XCTAssertEqual(
+            Set(session.exercises.filter { $0.groupKey == secondKey }.map(\.name)),
+            ["Dumbbell Press", "Band Pull Apart", "TRX Tricep Extension"]
+        )
+    }
+
+    func testDiscardAndRepinSupersetKeepsTriSetMode() {
+        var session = BuilderV3TypeRegistry.makeEditorSession(for: BuilderV3TypeRegistry.triset)
+        _ = session.addExercise(named: "Pull Ups")
+        _ = session.addExercise(named: "Single Arm Row")
+        _ = session.addExercise(named: "Forearm Twist")
+        let secondKey = session.beginNextSupersetGroup()
+        _ = session.addExercise(named: "Dumbbell Press")
+
+        let freshKey = session.discardAndRepinSupersetGroup(secondKey)
+        XCTAssertNotNil(freshKey)
+        XCTAssertNotEqual(freshKey, secondKey)
+        XCTAssertEqual(session.formatGroupKey, freshKey)
+        XCTAssertEqual(session.groups[freshKey!]?.name, "Tri-set")
+        XCTAssertFalse(session.exercises.contains { $0.name == "Dumbbell Press" })
+        XCTAssertEqual(session.exercises.count, 3)
+        XCTAssertTrue(session.exercises.allSatisfy { $0.groupKey == "fmt" })
+
+        let next = session.addExercise(named: "Dumbbell Press")
+        XCTAssertEqual(next.groupKey, freshKey)
+    }
+
+    func testFocusFormatGroupRepinsAdds() {
+        var session = BuilderV3TypeRegistry.makeEditorSession(for: BuilderV3TypeRegistry.triset)
+        _ = session.addExercise(named: "Pull Ups")
+        let secondKey = session.beginNextSupersetGroup()
+        _ = session.addExercise(named: "Dumbbell Press")
+        session.formatGroupKey = nil
+
+        session.focusFormatGroup(secondKey)
+        XCTAssertEqual(session.formatGroupKey, secondKey)
+        let next = session.addExercise(named: "Band Pull Apart")
+        XCTAssertEqual(next.groupKey, secondKey)
+    }
+
+    func testStopAfterAnotherTriSetKeepsEmptySlotPinned() {
+        var session = BuilderV3TypeRegistry.makeEditorSession(for: BuilderV3TypeRegistry.triset)
+        _ = session.addExercise(named: "Pull Ups")
+        _ = session.addExercise(named: "Single Arm Row")
+        _ = session.addExercise(named: "Forearm Twist")
+        let nextKey = session.beginNextSupersetGroup()
+
+        // Athlete leaves the add sheet / stops mid-build — empty group must stay pinned
+        // so the next reopen doesn't silently fall back to straight-set adds.
+        XCTAssertEqual(session.formatGroupKey, nextKey)
+        XCTAssertFalse(session.exercises.contains { $0.groupKey == nextKey })
+        XCTAssertEqual(session.groups[nextKey]?.name, "Tri-set")
+        XCTAssertEqual(session.addExercise(named: "Dumbbell Press").groupKey, nextKey)
+    }
+
+    func testDiscardMistakenTriSetThenContinueBuilding() {
+        var session = BuilderV3TypeRegistry.makeEditorSession(for: BuilderV3TypeRegistry.triset)
+        _ = session.addExercise(named: "Pull Ups")
+        _ = session.addExercise(named: "Single Arm Row")
+        _ = session.addExercise(named: "Forearm Twist")
+        let badKey = session.beginNextSupersetGroup()
+        _ = session.addExercise(named: "Wrong Move")
+
+        let fresh = session.discardAndRepinSupersetGroup(badKey)
+        XCTAssertNotNil(fresh)
+        XCTAssertFalse(session.exercises.contains { $0.name == "Wrong Move" })
+        XCTAssertEqual(session.exercises.count, 3)
+        XCTAssertEqual(session.formatGroupKey, fresh)
+        XCTAssertEqual(session.addExercise(named: "Dumbbell Press").groupKey, fresh)
+    }
+
     // MARK: - Group / ungroup / runs as
 
     func testUngroupFlattensExercises() {
@@ -121,6 +223,38 @@ final class EditorV2Tests: XCTestCase {
         XCTAssertNotNil(key)
         XCTAssertEqual(session.exercises.first(where: { $0.id == "a" })?.groupKey, key)
         XCTAssertEqual(session.groups[key!]?.type, .superset)
+        XCTAssertEqual(session.groups[key!]?.name, "Superset")
+    }
+
+    func testPairingThirdExerciseUpgradesGroupToTriSet() throws {
+        var session = EditorV2Session(exercises: [
+            EditorV2Exercise(id: "pullups", name: "Pull Ups", sets: 3, reps: 8),
+            EditorV2Exercise(id: "rows", name: "Single Arm Row", sets: 3, reps: 10),
+            EditorV2Exercise(id: "twists", name: "Forearm Twists", sets: 3, reps: 15),
+            EditorV2Exercise(id: "press", name: "Dumbbell Press", sets: 3, reps: 10),
+            EditorV2Exercise(id: "pullapart", name: "Band Pull Apart", sets: 3, reps: 15),
+            EditorV2Exercise(id: "trx", name: "TRX Tricep Extension", sets: 3, reps: 12)
+        ])
+        session.pairSuperset(sourceID: "rows", targetID: "pullups")
+        let firstKey = try XCTUnwrap(session.exercises.first(where: { $0.id == "pullups" })?.groupKey)
+        XCTAssertEqual(session.groups[firstKey]?.name, "Superset")
+
+        session.pairSuperset(sourceID: "twists", targetID: "pullups")
+        XCTAssertEqual(session.groups[firstKey]?.name, "Tri-set")
+        XCTAssertEqual(
+            Set(session.exercises.filter { $0.groupKey == firstKey }.map(\.name)),
+            ["Pull Ups", "Single Arm Row", "Forearm Twists"]
+        )
+
+        session.pairSuperset(sourceID: "pullapart", targetID: "press")
+        session.pairSuperset(sourceID: "trx", targetID: "press")
+        let secondKey = try XCTUnwrap(session.exercises.first(where: { $0.id == "press" })?.groupKey)
+        XCTAssertNotEqual(firstKey, secondKey)
+        XCTAssertEqual(session.groups[secondKey]?.name, "Tri-set")
+        XCTAssertEqual(
+            Set(session.exercises.filter { $0.groupKey == secondKey }.map(\.name)),
+            ["Dumbbell Press", "Band Pull Apart", "TRX Tricep Extension"]
+        )
     }
 
     func testRemoveFromSupersetAndReorder() {
@@ -409,6 +543,19 @@ final class EditorV2Tests: XCTestCase {
         XCTAssertNotEqual(exercise.summaryLine, "60S REST")
     }
 
+    func testBodyweightAndWeightedLoadAppearInSummaryAndExport() {
+        var bodyweight = EditorV2Exercise(name: "Pull Ups", sets: 3, reps: 10, restSeconds: 60)
+        bodyweight.setBodyweightLoad()
+        XCTAssertEqual(bodyweight.summaryLine, "3 × 10 · bodyweight · 60S REST")
+        XCTAssertEqual(bodyweight.exportLoadString, "bodyweight")
+
+        var weighted = EditorV2Exercise(name: "Dumbbell Press", sets: 3, reps: 10, restSeconds: 60)
+        weighted.setWeightedLoad(kilograms: 22.5)
+        XCTAssertEqual(weighted.summaryLine, "3 × 10 · 22.5 kg · 60S REST")
+        XCTAssertEqual(weighted.exportLoadString, "22.5 kg")
+        XCTAssertFalse(weighted.isBodyweight)
+    }
+
     func testOpenGoalClearsMutuallyExclusiveTargetsAndFormatsOpenRest() {
         var exercise = EditorV2Exercise(
             name: "Assault Bike",
@@ -428,7 +575,7 @@ final class EditorV2Tests: XCTestCase {
         XCTAssertNil(exercise.durationSeconds)
         XCTAssertNil(exercise.distanceMeters)
         XCTAssertNil(exercise.calories)
-        XCTAssertEqual(exercise.summaryLine, "3 × OPEN · OPEN REST")
+        XCTAssertEqual(exercise.summaryLine, "3 × OPEN · TRANSITION")
     }
 
     func testRepRangeExportsThroughSocialImportBlocks() {

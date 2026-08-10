@@ -300,18 +300,23 @@ enum WorkoutEnrichmentBlocksJSON {
     }
 
     private static func parseExercise(_ raw: [String: Any]) -> SocialImportExercise? {
-        guard let name = (raw["name"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines),
-              !name.isEmpty else { return nil }
+        let name = ((raw["name"] as? String) ?? (raw["target"] as? String))?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let name, !name.isEmpty else { return nil }
+        let repsRaw = raw["reps"]
+        let reps = repsRaw as? Int ?? (repsRaw as? String).flatMap(Int.init)
+        let seconds = raw["duration_sec"] as? Int
+            ?? raw["duration_seconds"] as? Int
+            ?? raw["seconds"] as? Int
+        let distance = raw["distance_m"] as? Int
+            ?? raw["distanceMeters"] as? Int
+            ?? (raw["distance"] as? Double).map { Int($0.rounded()) }
         return SocialImportExercise(
             name: name,
             sets: raw["sets"] as? Int,
-            reps: raw["reps"] as? Int,
-            seconds: raw["duration_sec"] as? Int
-                ?? raw["duration_seconds"] as? Int
-                ?? raw["seconds"] as? Int,
-            distanceMeters: raw["distance_m"] as? Int
-                ?? raw["distanceMeters"] as? Int
-                ?? (raw["distance"] as? Double).map { Int($0.rounded()) },
+            reps: reps,
+            seconds: seconds,
+            distanceMeters: distance,
             // AMA-2400: calorie stations must round-trip so warmupSetCandidates
             // can exclude them (filter checks exercise.calories).
             calories: raw["calories"] as? Int

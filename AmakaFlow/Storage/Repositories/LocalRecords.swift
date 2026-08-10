@@ -17,7 +17,8 @@ enum SyncQueueStatus: String, Codable, CaseIterable {
 func encodeToJSONString<T: Encodable>(_ value: T) throws -> String {
     let encoder = JSONEncoder()
     encoder.dateEncodingStrategy = .iso8601
-    return String(data: try encoder.encode(value), encoding: .utf8) ?? "{}"
+    let data = try encoder.encode(value)
+    return String(data: data, encoding: .utf8) ?? "{}"
 }
 
 struct LocalAcceptedSuggestion: Codable, FetchableRecord, MutablePersistableRecord, Identifiable, Equatable {
@@ -237,6 +238,8 @@ struct LocalPinnedWorkout: Codable, FetchableRecord, MutablePersistableRecord, I
 }
 
 /// AMA-2387: verified fill-in session (local-first; sync later).
+/// AMA-2396: extended with per-session Strava write-back state so un-verify /
+/// remove-from-Strava can restore what was there before us without a re-fetch.
 struct LocalActualsSession: Codable, FetchableRecord, MutablePersistableRecord, Identifiable, Equatable {
     static let databaseTableName = "actuals_sessions"
     static let persistenceConflictPolicy = PersistenceConflictPolicy(insert: .replace, update: .replace)
@@ -248,16 +251,122 @@ struct LocalActualsSession: Codable, FetchableRecord, MutablePersistableRecord, 
     var verified: Bool
     var savedAt: Date
     var createdAt: Date
+    /// `StravaDecorationState.persistedRawValue` — nil means no Strava involvement.
+    var stravaDecoration: String?
+    /// Snapshot of Strava's title/description before our first write (restore-on-unverify).
+    var preUpdateTitle: String?
+    var preUpdateDescription: String?
+    /// Originating Strava activity id when this session came from a synced activity.
+    var stravaActivityId: String?
+    /// Un-verify keeps exercise rows but drops the session back to a draft — never
+    /// deletes the fill-in the athlete already did.
+    var isDraft: Bool
+    /// AMA-2396 V6: write-back skip-rule inputs (must survive relaunch).
+    var stravaActivityType: String?
+    var stravaCurrentDescription: String?
+    var stravaRecordingApp: String?
+    var stravaIsRace: Bool
+    /// AMA-2396 V7: full workout structure text for Strava write-back.
+    var structureBody: String?
+
+    init(
+        id: String,
+        title: String,
+        subtitle: String,
+        rpe: Int? = nil,
+        verified: Bool,
+        savedAt: Date,
+        createdAt: Date,
+        stravaDecoration: String? = nil,
+        preUpdateTitle: String? = nil,
+        preUpdateDescription: String? = nil,
+        stravaActivityId: String? = nil,
+        isDraft: Bool = false,
+        stravaActivityType: String? = nil,
+        stravaCurrentDescription: String? = nil,
+        stravaRecordingApp: String? = nil,
+        stravaIsRace: Bool = false,
+        structureBody: String? = nil
+    ) {
+        self.id = id
+        self.title = title
+        self.subtitle = subtitle
+        self.rpe = rpe
+        self.verified = verified
+        self.savedAt = savedAt
+        self.createdAt = createdAt
+        self.stravaDecoration = stravaDecoration
+        self.preUpdateTitle = preUpdateTitle
+        self.preUpdateDescription = preUpdateDescription
+        self.stravaActivityId = stravaActivityId
+        self.isDraft = isDraft
+        self.stravaActivityType = stravaActivityType
+        self.stravaCurrentDescription = stravaCurrentDescription
+        self.stravaRecordingApp = stravaRecordingApp
+        self.stravaIsRace = stravaIsRace
+        self.structureBody = structureBody
+    }
 
     enum Columns: String, ColumnExpression {
         case id, title, subtitle, rpe, verified
         case savedAt = "saved_at", createdAt = "created_at"
+        case stravaDecoration = "strava_decoration"
+        case preUpdateTitle = "pre_update_title"
+        case preUpdateDescription = "pre_update_description"
+        case stravaActivityId = "strava_activity_id"
+        case isDraft = "is_draft"
+        case stravaActivityType = "strava_activity_type"
+        case stravaCurrentDescription = "strava_current_description"
+        case stravaRecordingApp = "strava_recording_app"
+        case stravaIsRace = "strava_is_race"
+        case structureBody = "structure_body"
     }
 
     enum CodingKeys: String, CodingKey {
         case id, title, subtitle, rpe, verified
         case savedAt = "saved_at"
         case createdAt = "created_at"
+        case stravaDecoration = "strava_decoration"
+        case preUpdateTitle = "pre_update_title"
+        case preUpdateDescription = "pre_update_description"
+        case stravaActivityId = "strava_activity_id"
+        case isDraft = "is_draft"
+        case stravaActivityType = "strava_activity_type"
+        case stravaCurrentDescription = "strava_current_description"
+        case stravaRecordingApp = "strava_recording_app"
+        case stravaIsRace = "strava_is_race"
+        case structureBody = "structure_body"
+    }
+}
+
+extension LocalActualsSession {
+    /// Keep Strava write-back metadata when a verified session is re-saved.
+    mutating func preserveWriteBack(
+        from existing: LocalActualsSession,
+        includeDraftFields: Bool = false
+    ) {
+        createdAt = existing.createdAt
+        stravaDecoration = existing.stravaDecoration
+        preUpdateTitle = existing.preUpdateTitle
+        preUpdateDescription = existing.preUpdateDescription
+        if includeDraftFields {
+            isDraft = false
+        }
+        if stravaActivityId == nil {
+            stravaActivityId = existing.stravaActivityId
+        }
+        if stravaActivityType == nil {
+            stravaActivityType = existing.stravaActivityType
+        }
+        if stravaCurrentDescription == nil {
+            stravaCurrentDescription = existing.stravaCurrentDescription
+        }
+        if stravaRecordingApp == nil {
+            stravaRecordingApp = existing.stravaRecordingApp
+        }
+        if structureBody == nil {
+            structureBody = existing.structureBody
+        }
     }
 }
 
@@ -278,6 +387,8 @@ struct LocalActualsExerciseRow: Codable, FetchableRecord, MutablePersistableReco
     var actualReps: Int
     var actualWeightKg: Double?
     var position: Int
+    var structureHeader: String?
+    var structureBlockIndex: Int?
 
     enum Columns: String, ColumnExpression {
         case id, sessionId = "session_id", exerciseKey = "exercise_key", name
@@ -286,6 +397,8 @@ struct LocalActualsExerciseRow: Codable, FetchableRecord, MutablePersistableReco
         case confirmation
         case actualSets = "actual_sets", actualReps = "actual_reps"
         case actualWeightKg = "actual_weight_kg", position
+        case structureHeader = "structure_header"
+        case structureBlockIndex = "structure_block_index"
     }
 
     enum CodingKeys: String, CodingKey {
@@ -299,5 +412,7 @@ struct LocalActualsExerciseRow: Codable, FetchableRecord, MutablePersistableReco
         case actualSets = "actual_sets"
         case actualReps = "actual_reps"
         case actualWeightKg = "actual_weight_kg"
+        case structureHeader = "structure_header"
+        case structureBlockIndex = "structure_block_index"
     }
 }

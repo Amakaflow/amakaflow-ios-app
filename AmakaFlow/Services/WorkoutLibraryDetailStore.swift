@@ -138,13 +138,14 @@ enum WorkoutLibraryDetailStore {
     }
 
     /// Map ADR-017 / SocialImport block type strings onto Library `BlockStructure`.
-    /// `for-time` has no dedicated `BlockStructure` case yet — closest is circuit (multi-round).
+    /// `for-time` has no dedicated case — use `.straight` with the cap in `label`
+    /// so fill-in/Strava never treat the minute cap as circuit rounds.
     static func blockStructure(from type: String?) -> BlockStructure {
         switch type?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
         case "superset": return .superset
         case "circuit", "rounds", "warmup": return .circuit
         case "timed_circuit": return .timedCircuit
-        case "for-time", "fortime": return .circuit
+        case "for-time", "fortime": return .straight
         case "amrap": return .amrap
         case "emom": return .emom
         case "tabata": return .tabata

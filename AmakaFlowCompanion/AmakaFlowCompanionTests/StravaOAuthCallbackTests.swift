@@ -13,12 +13,30 @@ final class StravaOAuthCallbackTests: XCTestCase {
 
     func testSuccessCallbackFromFrontendURLShape() {
         let url = URL(string: "amakaflow://strava/connected?provider=strava&status=success")!
-        XCTAssertEqual(StravaOAuthCallback.outcome(from: url), .success)
+        XCTAssertEqual(StravaOAuthCallback.outcome(from: url), .success(grantedWrite: false))
     }
 
     func testSuccessCallbackTripleSlashShape() {
         let url = URL(string: "amakaflow:///connected?status=success")!
-        XCTAssertEqual(StravaOAuthCallback.outcome(from: url), .success)
+        XCTAssertEqual(StravaOAuthCallback.outcome(from: url), .success(grantedWrite: false))
+    }
+
+    func testSuccessCallbackWithWriteScope() {
+        let url = URL(
+            string: "amakaflow://strava/connected?status=success&scope=activity:read_all,activity:write"
+        )!
+        XCTAssertEqual(StravaOAuthCallback.outcome(from: url), .success(grantedWrite: true))
+    }
+
+    func testSuccessCallbackWithSpaceDelimitedWriteScope() {
+        let encoded = "activity:read_all%20activity:write"
+        let url = URL(string: "amakaflow://strava/connected?status=success&scope=\(encoded)")!
+        XCTAssertEqual(StravaOAuthCallback.outcome(from: url), .success(grantedWrite: true))
+    }
+
+    func testSuccessCallbackWithWriteGrantedFlag() {
+        let url = URL(string: "amakaflow://strava/connected?status=success&writeGranted=1")!
+        XCTAssertEqual(StravaOAuthCallback.outcome(from: url), .success(grantedWrite: true))
     }
 
     func testErrorCallbackMapsToFailed() {

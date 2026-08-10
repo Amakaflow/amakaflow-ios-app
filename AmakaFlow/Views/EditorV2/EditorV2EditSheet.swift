@@ -7,6 +7,7 @@
 
 import SwiftUI
 
+// swiftlint:disable:next type_body_length
 struct EditorV2EditSheet: View {
     @State private var draft: EditorV2Exercise
     @State private var targetMemory: EditorV2EditTargetMemory
@@ -19,27 +20,32 @@ struct EditorV2EditSheet: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            sheetHeading
-            targetEditors
-            if showsRestEditor { restEditors }
-            Button {
-                onDone(committedDraft())
-            } label: {
-                Text("Done")
-                    .ddDisplayText(14, weight: .bold)
-                    .foregroundColor(DailyDriver.ink)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
-                    .background(DailyDriver.foreground)
-                    .clipShape(Capsule())
+        ScrollView {
+            VStack(alignment: .leading, spacing: 14) {
+                sheetHeading
+                targetEditors
+                if draft.showsStrengthPrescriptionEditors { loadEditors }
+                if showsRestEditor { restEditors }
+                Button {
+                    onDone(committedDraft())
+                } label: {
+                    Text("Done")
+                        .ddDisplayText(14, weight: .bold)
+                        .foregroundColor(DailyDriver.ink)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .background(DailyDriver.foreground)
+                        .clipShape(Capsule())
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("af_exsheet_done")
             }
-            .buttonStyle(.plain)
-            .accessibilityIdentifier("af_exsheet_done")
-            Spacer(minLength: 8)
+            .padding(.horizontal, 18)
+            // Clear the sheet grabber — 8pt was clipping display titles like "Bench Press".
+            .padding(.top, 28)
+            .padding(.bottom, 28)
         }
-        .padding(.horizontal, 18)
-        .padding(.bottom, 24)
+        .scrollIndicators(.hidden)
         .background(DailyDriver.backgroundElevated)
         .preferredColorScheme(.dark)
     }
@@ -50,12 +56,15 @@ struct EditorV2EditSheet: View {
             Text(draft.name)
                 .ddDisplayText(18, weight: .bold)
                 .foregroundColor(DailyDriver.foreground)
+                .lineLimit(2)
+                .fixedSize(horizontal: false, vertical: true)
             Text(summaryDraft.summaryLine)
                 .font(.system(size: 9.5, weight: .medium, design: .monospaced))
                 .foregroundColor(DailyDriver.foregroundMuted)
+                .lineLimit(2)
+                .minimumScaleFactor(0.85)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.top, 8)
     }
 
     @ViewBuilder
@@ -84,7 +93,7 @@ struct EditorV2EditSheet: View {
         }
     }
 
-    /// AMA-2368 — Open (tap) vs Timed rest; timed stepper only when Timed selected.
+    /// AMA-2368 — Transition (open / tap) vs Timed rest; timed stepper only when Timed selected.
     private var showsRestEditor: Bool {
         draft.restSeconds != nil
             || draft.restOpen == true
@@ -99,23 +108,102 @@ struct EditorV2EditSheet: View {
         !isRestOpen
     }
 
+    private var isBodyweightLoad: Bool {
+        draft.isBodyweight
+    }
+
+    private var isWeightedLoad: Bool {
+        !draft.isBodyweight && draft.weightKg != nil
+    }
+
     @ViewBuilder
-    private var restEditors: some View {
-        sectionLabel("REST")
+    private var loadEditors: some View {
+        sectionLabel("LOAD")
         proportionalGrid {
             HStack(spacing: 4) {
-                restModeChip(title: "Open", selected: isRestOpen) {
-                    try? draft.setRestIntent(restSeconds: nil, restOpen: true)
+                restModeChip(title: "Bodyweight", selected: isBodyweightLoad) {
+                    draft.setBodyweightLoad()
                 }
-                .accessibilityIdentifier("af_exsheet_rest_open")
-                restModeChip(title: "Timed", selected: isTimedRest) {
-                    let seconds = draft.restSeconds ?? PrescriptionDefaults.defaultRestSec
-                    try? draft.setRestIntent(restSeconds: seconds, restOpen: false)
+                .accessibilityIdentifier("af_exsheet_load_bodyweight")
+                restModeChip(title: "Weighted", selected: isWeightedLoad) {
+                    let kilograms = draft.weightKg ?? 20
+                    draft.setWeightedLoad(kilograms: kilograms)
                 }
-                .accessibilityIdentifier("af_exsheet_rest_timed")
+                .accessibilityIdentifier("af_exsheet_load_weighted")
             }
         } right: {
-            if isTimedRest {
+            if isBodyweightLoad {
+                Text("NO EXTERNAL LOAD")
+                    .font(.system(size: 8.5, weight: .medium, design: .monospaced))
+                    .foregroundColor(DailyDriver.foregroundDim)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .accessibilityIdentifier("af_exsheet_load_bodyweight_caption")
+            } else {
+                weightStepperCell
+            }
+        }
+    }
+
+    private var weightStepperCell: some View {
+        let kilograms = draft.weightKg ?? 0
+        return VStack(alignment: .leading, spacing: 3) {
+            Text("WEIGHT KG")
+                .font(.system(size: 8.5, weight: .medium, design: .monospaced))
+                .foregroundColor(DailyDriver.foregroundMuted)
+            HStack(spacing: 2) {
+                Button {
+                    let next = max(0, kilograms - 2.5)
+                    if next == 0 {
+                        draft.clearLoad()
+                    } else {
+                        draft.setWeightedLoad(kilograms: next)
+                    }
+                } label: {
+                    Text("−").ddDisplayText(16, weight: .bold)
+                }
+                .buttonStyle(.plain)
+                .foregroundColor(DailyDriver.foregroundMuted)
+                Text(
+                    kilograms.truncatingRemainder(dividingBy: 1) == 0
+                        ? String(Int(kilograms))
+                        : String(format: "%.1f", kilograms)
+                )
+                .ddDisplayText(16, weight: .heavy)
+                .foregroundColor(DailyDriver.foreground)
+                .frame(maxWidth: .infinity)
+                Button {
+                    draft.setWeightedLoad(kilograms: min(300, kilograms + 2.5))
+                } label: {
+                    Text("＋").ddDisplayText(16, weight: .bold)
+                }
+                .buttonStyle(.plain)
+                .foregroundColor(DailyDriver.foregroundMuted)
+            }
+        }
+        .padding(.horizontal, 10)
+        .frame(maxWidth: .infinity, minHeight: 72, maxHeight: 72)
+        .background(DailyDriver.card2)
+        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .accessibilityIdentifier("af_exsheet_weight")
+    }
+
+    @ViewBuilder
+    private var restEditors: some View {
+        sectionLabel("BETWEEN MOVES")
+        if isTimedRest {
+            proportionalGrid {
+                HStack(spacing: 4) {
+                    restModeChip(title: "Transition", selected: isRestOpen) {
+                        try? draft.setRestIntent(restSeconds: nil, restOpen: true)
+                    }
+                    .accessibilityIdentifier("af_exsheet_rest_open")
+                    restModeChip(title: "Timed rest", selected: isTimedRest) {
+                        let seconds = draft.restSeconds ?? PrescriptionDefaults.defaultRestSec
+                        try? draft.setRestIntent(restSeconds: seconds, restOpen: false)
+                    }
+                    .accessibilityIdentifier("af_exsheet_rest_timed")
+                }
+            } right: {
                 EditorV2EditSheetStepperCell(
                     configuration: .init(
                         label: "DURATION",
@@ -127,13 +215,26 @@ struct EditorV2EditSheet: View {
                         accessibilityIdentifier: "af_exsheet_rest_duration"
                     )
                 ) { try? draft.setRestIntent(restSeconds: $0, restOpen: false) }
-            } else {
-                Text("YOU END REST ON THE WATCH — TAP / LAP")
-                    .font(.system(size: 8.5, weight: .medium, design: .monospaced))
-                    .foregroundColor(DailyDriver.foregroundDim)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .accessibilityIdentifier("af_exsheet_rest_open_caption")
             }
+        } else {
+            HStack(spacing: 4) {
+                restModeChip(title: "Transition", selected: isRestOpen) {
+                    try? draft.setRestIntent(restSeconds: nil, restOpen: true)
+                }
+                .accessibilityIdentifier("af_exsheet_rest_open")
+                restModeChip(title: "Timed rest", selected: isTimedRest) {
+                    let seconds = draft.restSeconds ?? PrescriptionDefaults.defaultRestSec
+                    try? draft.setRestIntent(restSeconds: seconds, restOpen: false)
+                }
+                .accessibilityIdentifier("af_exsheet_rest_timed")
+            }
+            Text("End transition on the watch — tap / lap")
+                .font(.system(size: 10, weight: .medium))
+                .foregroundColor(DailyDriver.foregroundDim)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.top, 2)
+                .accessibilityIdentifier("af_exsheet_rest_open_caption")
         }
     }
 

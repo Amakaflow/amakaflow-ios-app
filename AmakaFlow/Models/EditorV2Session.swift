@@ -5,6 +5,8 @@
 //  AMA-2307 — pure Editor v2 state: flat exercises + group dict (screens-editor2.jsx).
 //
 
+// swiftlint:disable file_length
+
 import Foundation
 
 struct EditorV2Session: Equatable, Sendable {
@@ -106,13 +108,27 @@ struct EditorV2Session: Equatable, Sendable {
     }
 
     /// Add exercise — defaults 3×10 · 60s flat, or plain reps inside timed formats.
+    /// Superset / tri-set format pins also land inside the active group so the
+    /// list shows one banded block (not loose straight-set cards).
     @discardableResult
     mutating func addExercise(named name: String) -> EditorV2Exercise {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
         let fmtKey = formatGroupKey
         let fmtType = fmtKey.flatMap { groups[$0]?.type }
-        let timed = fmtType.map { $0 != .superset } ?? false
         let exercise: EditorV2Exercise
+        if let fmtKey, fmtType == .superset {
+            exercise = EditorV2Exercise(
+                name: trimmed,
+                sets: 3,
+                reps: 10,
+                restSeconds: 60,
+                groupKey: fmtKey
+            )
+            exercises.append(exercise)
+            refreshSupersetGroupLabel(fmtKey)
+            return exercise
+        }
+        let timed = fmtType.map { $0 != .superset } ?? false
         if timed, let fmtKey {
             exercise = EditorV2Exercise(name: trimmed, reps: 10, groupKey: fmtKey)
         } else {
@@ -126,6 +142,27 @@ struct EditorV2Session: Equatable, Sendable {
         }
         exercises.append(exercise)
         return exercise
+    }
+
+    /// Close the current superset/tri-set and pin a fresh group for the next adds.
+    @discardableResult
+    mutating func beginNextSupersetGroup(preferredName: String? = nil) -> String {
+        let key = "ss\(UUID().uuidString)"
+        let priorName = formatGroupKey.flatMap { groups[$0]?.name }
+        let name: String = {
+            if let preferredName, !preferredName.isEmpty { return preferredName }
+            if priorName == "Tri-set" || priorName == "Tri-sets" { return "Tri-set" }
+            return "Superset"
+        }()
+        groups[key] = EditorV2Group(
+            id: key,
+            type: .superset,
+            name: name,
+            config: EditorV2GroupType.superset.defaultConfig,
+            structureSource: .userConfirmed
+        )
+        formatGroupKey = key
+        return key
     }
 
     mutating func updateGroup(_ key: String, patch: (inout EditorV2Group) -> Void) {
@@ -156,12 +193,38 @@ struct EditorV2Session: Equatable, Sendable {
         }
     }
 
+    /// Delete a mistaken superset / tri-set (members included) and pin a fresh empty
+    /// group with the same display name so format-first building continues — does
+    /// **not** fall back to ungrouped straight-set adds.
+    @discardableResult
+    mutating func discardAndRepinSupersetGroup(_ key: String) -> String? {
+        guard let group = groups[key], group.type == .superset else { return nil }
+        let preferredName: String = {
+            if group.name.localizedCaseInsensitiveContains("tri") { return "Tri-set" }
+            let trimmed = group.name.trimmingCharacters(in: .whitespacesAndNewlines)
+            return trimmed.isEmpty ? "Superset" : trimmed
+        }()
+        exercises.removeAll { $0.groupKey == key }
+        groups.removeValue(forKey: key)
+        if formatGroupKey == key {
+            formatGroupKey = nil
+        }
+        return beginNextSupersetGroup(preferredName: preferredName)
+    }
+
+    /// Pin an existing group as the add destination (resume after the pin was lost).
+    mutating func focusFormatGroup(_ key: String) {
+        guard groups[key] != nil else { return }
+        formatGroupKey = key
+    }
+
     mutating func removeFromSuperset(_ exerciseID: String) {
         updateExercise(exerciseID) { $0.groupKey = nil }
         pruneEmptyGroups()
     }
 
     /// Hevy "Superset X with:" — src moves adjacent to target and joins/creates group.
+    /// Three or more members keep the same structure type but display as a Tri-set.
     mutating func pairSuperset(sourceID: String, targetID: String) {
         guard let source = exercises.first(where: { $0.id == sourceID }),
               let target = exercises.first(where: { $0.id == targetID }) else { return }
@@ -193,7 +256,26 @@ struct EditorV2Session: Equatable, Sendable {
             moved.groupKey = key
             exercises.append(moved)
         }
+        refreshSupersetGroupLabel(key)
         pruneEmptyGroups()
+    }
+
+    /// Auto labels: keep an intentional Tri-set name while building (1–2 moves),
+    /// upgrade a Superset → Tri-set at 3+, never downgrade Tri-set → Superset.
+    mutating func refreshSupersetGroupLabel(_ key: String) {
+        guard var group = groups[key], group.type == .superset else { return }
+        let memberCount = exercises.filter { $0.groupKey == key }.count
+        let autoNames: Set<String> = ["Superset", "Tri-set", "Tri-sets"]
+        guard autoNames.contains(group.name) || group.name.isEmpty else { return }
+        let prefersTriSet = group.name == "Tri-set" || group.name == "Tri-sets"
+        if prefersTriSet {
+            group.name = "Tri-set"
+        } else if memberCount >= 3 {
+            group.name = "Tri-set"
+        } else {
+            group.name = "Superset"
+        }
+        groups[key] = group
     }
 
     mutating func moveExercise(from fromID: String, to toID: String) {

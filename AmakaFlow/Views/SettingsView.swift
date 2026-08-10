@@ -139,6 +139,9 @@ struct SettingsView: View {
     @State private var connectedTelegramId: Int?
     /// AMA-2389: badge parity with ＋ From friends row.
     @ObservedObject private var friendsStore = FriendsSharingStore.shared
+    /// AMA-2396: Settings → Strava must open Actuals Connect / write-back, not Connections hub.
+    @ObservedObject private var actualsSources = ActualsSourceConnectionStore.shared
+    @ObservedObject private var stravaWriteBackSettings = StravaWriteBackSettingsStore.shared
     @EnvironmentObject private var garminConnectivity: GarminConnectManager
     @EnvironmentObject private var pairingService: PairingService
     @EnvironmentObject private var workoutsViewModel: WorkoutsViewModel
@@ -428,7 +431,7 @@ struct SettingsView: View {
     private var ddConnectedAppsSection: some View {
         SettingsSectionCard(
             title: "Connected apps",
-            subtitle: "Garmin pull ON · Strava off · Telegram",
+            subtitle: connectedAppsSectionSubtitle,
             icon: "link",
             iconBackground: DailyDriver.blue,
             rowCount: 3
@@ -442,13 +445,24 @@ struct SettingsView: View {
                     destination: AnyView(connectionsHub)
                 )
                 ddSettingsDivider
-                ddSettingsLinkRow(
-                    icon: "figure.run",
-                    tint: DailyDriver.orange,
-                    title: "Strava",
-                    subtitle: "Manage in Connections",
-                    destination: AnyView(connectionsHub)
-                )
+                // Typed NavigationLink — AnyView(destination) drops nested
+                // navigationDestination (write-back / OAuth) and can hard-crash.
+                NavigationLink {
+                    ActualsConnectSourcesView(store: actualsSources) { _ in }
+                } label: {
+                    DDSettingsRow(
+                        icon: "figure.run",
+                        iconBackground: DailyDriver.orange,
+                        title: "Strava",
+                        detail: stravaSettingsRowSubtitle
+                    ) {
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundColor(DailyDriver.foregroundDim)
+                    }
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("af_settings_strava_row")
                 ddSettingsDivider
                 ddSettingsButtonRow(
                     icon: "paperplane.fill",
@@ -460,6 +474,33 @@ struct SettingsView: View {
                 }
             }
         }
+    }
+
+    /// Live summary for the Connected apps accordion (not the old hardcoded “Strava off”).
+    private var connectedAppsSectionSubtitle: String {
+        let garmin = garminConnectivity.isConnected ? "Garmin pull ON" : "Garmin off"
+        let strava: String
+        if !actualsSources.isConnected(.strava) {
+            strava = "Strava off"
+        } else if stravaWriteBackSettings.writeBackEnabled,
+                  stravaWriteBackSettings.hasActivityWriteScope {
+            strava = "Strava write-back ON"
+        } else {
+            strava = "Strava linked"
+        }
+        let telegram = isTelegramLinked ? "Telegram" : "Telegram off"
+        return "\(garmin) · \(strava) · \(telegram)"
+    }
+
+    private var stravaSettingsRowSubtitle: String {
+        if !actualsSources.isConnected(.strava) {
+            return "Connect · enable write-back"
+        }
+        if stravaWriteBackSettings.writeBackEnabled,
+           stravaWriteBackSettings.hasActivityWriteScope {
+            return "Write-back on · manage"
+        }
+        return "Write-back settings ›"
     }
 
     /// AMA-2389: Friends row in Settings accordion (manage door).

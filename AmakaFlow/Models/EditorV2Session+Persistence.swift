@@ -51,7 +51,7 @@ extension EditorV2Session {
     }
 
     /// Round-trip ADR-017 blocks for WorkoutSaveRequest (preserve structure_source).
-    func toSocialImportBlocks() -> [SocialImportBlock] {
+    func toSocialImportBlocks() -> [SocialImportBlock] { // swiftlint:disable:this cyclomatic_complexity
         var blocks: [SocialImportBlock] = []
         var flatBuffer: [SocialImportExercise] = []
 
@@ -83,21 +83,41 @@ extension EditorV2Session {
                         return nil
                     }
                 }()
+                // AMRAP / For time: cap is duration, not round count. Stuffing
+                // `capMinutes` into `rounds` made fill-in show "60 ROUNDS".
                 let rounds: Int = {
                     switch group.type {
                     case .amrap, .fortime:
-                        return group.config.capMinutes ?? 1
+                        return 1
                     default:
                         return group.config.rounds ?? 1
                     }
                 }()
+                let timeCapSec: Int? = {
+                    switch group.type {
+                    case .amrap, .fortime:
+                        guard let minutes = group.config.capMinutes, minutes > 0 else { return nil }
+                        return minutes * 60
+                    default:
+                        return nil
+                    }
+                }()
+                let label: String? = {
+                    switch group.type {
+                    case .amrap, .fortime:
+                        return group.metaLine
+                    default:
+                        return group.name
+                    }
+                }()
                 blocks.append(
                     SocialImportBlock(
-                        label: group.name,
+                        label: label,
                         rounds: max(1, rounds),
                         exercises: run.exercises.map(\.asSocialImportExercise),
                         type: group.type.structureBlockType.rawValue,
                         restSec: restSec,
+                        timeCapSec: timeCapSec,
                         structureSource: group.structureSource.rawValue,
                         enrichmentKind: group.enrichmentKind?.rawValue
                     )
@@ -154,7 +174,7 @@ private extension EditorV2Exercise {
             calories: calories,
             openGoal: openGoal,
             restSeconds: restSeconds,
-            load: weightKg.map(EditorV2Exercise.formatWeightLoad),
+            load: exportLoadString,
             fieldProvenance: provenance.isEmpty ? nil : provenance,
             exerciseId: exerciseId ?? WorkoutEnrichmentMutations.mintExerciseId(),
             warmupSets: warmupSets.isEmpty ? nil : warmupSets,

@@ -20,37 +20,22 @@ struct EditorV2Stepper: View {
     var valueText: ((Int) -> String)?
     var onChange: (Int) -> Void
 
+    @State private var repeatDirection: Int = 0
+    @State private var repeatTask: Task<Void, Never>?
+
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(label.uppercased())
                 .font(.system(size: 8.5, weight: .medium, design: .monospaced))
                 .foregroundColor(DailyDriver.foregroundMuted)
             HStack(spacing: 8) {
-                Button {
-                    onChange(Swift.max(min, value - step))
-                } label: {
-                    Text("−")
-                        .ddDisplayText(20, weight: .bold)
-                        .foregroundColor(DailyDriver.foregroundMuted)
-                        .padding(.horizontal, 6)
-                }
-                .buttonStyle(.plain)
-
+                stepperButton(title: "−", direction: -1)
                 Text(valueText?(value) ?? "\(value)\(unit)")
                     .ddDisplayText(17, weight: .heavy)
                     .foregroundColor(DailyDriver.foreground)
                     .monospacedDigit()
                     .frame(maxWidth: .infinity)
-
-                Button {
-                    onChange(Swift.min(max, value + step))
-                } label: {
-                    Text("＋")
-                        .ddDisplayText(20, weight: .bold)
-                        .foregroundColor(DailyDriver.foregroundMuted)
-                        .padding(.horizontal, 6)
-                }
-                .buttonStyle(.plain)
+                stepperButton(title: "＋", direction: 1)
             }
         }
         .padding(.horizontal, 12)
@@ -58,6 +43,59 @@ struct EditorV2Stepper: View {
         .frame(minWidth: 92)
         .background(DailyDriver.card2)
         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .onDisappear { stopRepeating() }
+    }
+
+    private func stepperButton(title: String, direction: Int) -> some View {
+        Text(title)
+            .ddDisplayText(20, weight: .bold)
+            .foregroundColor(DailyDriver.foregroundMuted)
+            .padding(.horizontal, 6)
+            .contentShape(Rectangle())
+            .onTapGesture {
+                applyStep(direction)
+            }
+            .onLongPressGesture(
+                minimumDuration: 0.35,
+                maximumDistance: 48,
+                pressing: { pressing in
+                    if pressing {
+                        startRepeating(direction: direction)
+                    } else {
+                        stopRepeating()
+                    }
+                },
+                perform: {}
+            )
+            .accessibilityLabel(direction < 0 ? "Decrease \(label)" : "Increase \(label)")
+            .accessibilityAddTraits(.isButton)
+    }
+
+    private func applyStep(_ direction: Int) {
+        if direction < 0 {
+            onChange(Swift.max(min, value - step))
+        } else {
+            onChange(Swift.min(max, value + step))
+        }
+    }
+
+    private func startRepeating(direction: Int) {
+        stopRepeating()
+        repeatDirection = direction
+        // Delay before first repeat so a short tap only counts once via onTapGesture.
+        repeatTask = Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(380))
+            while !Task.isCancelled, repeatDirection == direction {
+                applyStep(direction)
+                try? await Task.sleep(for: .milliseconds(90))
+            }
+        }
+    }
+
+    private func stopRepeating() {
+        repeatDirection = 0
+        repeatTask?.cancel()
+        repeatTask = nil
     }
 }
 
@@ -143,6 +181,7 @@ struct EditorV2ExerciseCard: View {
 
 struct EditorV2GroupPill: View {
     let group: EditorV2Group
+    var isInsertionTarget: Bool = false
     var onTap: () -> Void
 
     var body: some View {
@@ -159,6 +198,15 @@ struct EditorV2GroupPill: View {
                 Text(group.metaLine)
                     .font(.system(size: 8.5, weight: .medium, design: .monospaced))
                     .foregroundColor(DailyDriver.foregroundDim)
+                if isInsertionTarget {
+                    Text("ADDING HERE")
+                        .font(.system(size: 8, weight: .bold, design: .monospaced))
+                        .foregroundColor(DailyDriver.ink)
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 3)
+                        .background(Capsule().fill(DailyDriver.lime))
+                        .accessibilityIdentifier("editor_v2_insertion_target_badge")
+                }
                 Spacer(minLength: 0)
                 Image(systemName: "slider.horizontal.3")
                     .font(.system(size: 12, weight: .semibold))
@@ -177,13 +225,18 @@ struct EditorV2GroupPill: View {
 struct EditorV2GroupedRun: View {
     let group: EditorV2Group
     let exercises: [EditorV2Exercise]
+    var isInsertionTarget: Bool = false
     var onPill: () -> Void
     var onOpen: (EditorV2Exercise) -> Void
     var onMenu: (EditorV2Exercise) -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            EditorV2GroupPill(group: group, onTap: onPill)
+            EditorV2GroupPill(
+                group: group,
+                isInsertionTarget: isInsertionTarget,
+                onTap: onPill
+            )
             VStack(spacing: 0) {
                 ForEach(Array(exercises.enumerated()), id: \.element.id) { index, exercise in
                     EditorV2ExerciseCard(
@@ -198,17 +251,27 @@ struct EditorV2GroupedRun: View {
             .background(DailyDriver.card)
             .overlay(
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .stroke(DailyDriver.border, lineWidth: 1)
+                    .stroke(
+                        isInsertionTarget
+                            ? group.type.accentColor.opacity(0.7)
+                            : DailyDriver.border,
+                        lineWidth: isInsertionTarget ? 1.5 : 1
+                    )
             )
             .overlay(alignment: .leading) {
                 RoundedRectangle(cornerRadius: 2)
                     .fill(group.type.accentColor)
-                    .frame(width: 3)
+                    .frame(width: isInsertionTarget ? 4 : 3)
                     .padding(.vertical, 1)
             }
             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         }
         .padding(.bottom, 10)
+        .accessibilityIdentifier(
+            isInsertionTarget
+                ? "editor_v2_grouped_run_active_\(group.id)"
+                : "editor_v2_grouped_run_\(group.id)"
+        )
     }
 }
 

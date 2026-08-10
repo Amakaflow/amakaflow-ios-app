@@ -19,6 +19,8 @@ struct ActualsTodayDemoCard: Identifiable, Equatable {
         case unmapped
         case fillInDebt
         case verified
+        /// AMA-2396: keep-as-is — counts in Progress, no fill-in debt.
+        case counted
     }
 
     let id: String
@@ -32,9 +34,39 @@ struct ActualsTodayDemoCard: Identifiable, Equatable {
     let session: ActualsSession?
     let activity: ActualsUnmappedActivity?
     let fillInSession: ActualsFillInSession?
+    /// AMA-2396 A5: per-session Strava write-state badge.
+    let stravaDecoration: StravaDecorationState
+
+    init(
+        id: String,
+        kind: Kind,
+        timeLabel: String,
+        title: String,
+        stats: [(icon: String, value: String)],
+        sourceLabel: String,
+        sourceProvider: ActualsSourceProvider?,
+        session: ActualsSession?,
+        activity: ActualsUnmappedActivity?,
+        fillInSession: ActualsFillInSession?,
+        stravaDecoration: StravaDecorationState = .none
+    ) {
+        self.id = id
+        self.kind = kind
+        self.timeLabel = timeLabel
+        self.title = title
+        self.stats = stats
+        self.sourceLabel = sourceLabel
+        self.sourceProvider = sourceProvider
+        self.session = session
+        self.activity = activity
+        self.fillInSession = fillInSession
+        self.stravaDecoration = stravaDecoration
+    }
 
     static func == (lhs: ActualsTodayDemoCard, rhs: ActualsTodayDemoCard) -> Bool {
-        lhs.id == rhs.id && lhs.kind == rhs.kind
+        lhs.id == rhs.id
+            && lhs.kind == rhs.kind
+            && lhs.stravaDecoration == rhs.stravaDecoration
     }
 
     func markingVerified(with saved: ActualsFillInSession) -> ActualsTodayDemoCard {
@@ -50,7 +82,63 @@ struct ActualsTodayDemoCard: Identifiable, Equatable {
                 ?? session?.primaryRecording?.provider,
             session: session,
             activity: nil,
-            fillInSession: saved
+            fillInSession: saved,
+            stravaDecoration: stravaDecoration
+        )
+    }
+
+    func markingCounted() -> ActualsTodayDemoCard {
+        let provider = sourceProvider ?? activity?.provider
+        // Strava decoration is a statement about Strava — never promote it on Garmin/AH cards.
+        let nextDecoration: StravaDecorationState = {
+            guard provider == .strava else { return stravaDecoration }
+            return stravaDecoration == .none ? .untouched : stravaDecoration
+        }()
+        return ActualsTodayDemoCard(
+            id: id,
+            kind: .counted,
+            timeLabel: timeLabel,
+            title: title,
+            stats: stats,
+            sourceLabel: "Kept as-is",
+            sourceProvider: provider,
+            session: session,
+            activity: activity,
+            fillInSession: fillInSession,
+            stravaDecoration: nextDecoration
+        )
+    }
+
+    func withDecoration(_ state: StravaDecorationState) -> ActualsTodayDemoCard {
+        ActualsTodayDemoCard(
+            id: id,
+            kind: kind,
+            timeLabel: timeLabel,
+            title: title,
+            stats: stats,
+            sourceLabel: sourceLabel,
+            sourceProvider: sourceProvider,
+            session: session,
+            activity: activity,
+            fillInSession: fillInSession,
+            stravaDecoration: state
+        )
+    }
+
+    /// Keep kind (fill-in debt) while refreshing in-progress actuals after Back.
+    func withFillInSession(_ session: ActualsFillInSession) -> ActualsTodayDemoCard {
+        ActualsTodayDemoCard(
+            id: id,
+            kind: kind == .verified && !session.verified ? .fillInDebt : kind,
+            timeLabel: timeLabel,
+            title: title,
+            stats: stats,
+            sourceLabel: sourceLabel,
+            sourceProvider: sourceProvider,
+            session: self.session,
+            activity: activity,
+            fillInSession: session,
+            stravaDecoration: stravaDecoration
         )
     }
 }
@@ -122,8 +210,9 @@ final class ActualsTodayDemoFeed: ObservableObject {
         await activateFromStravaSync(sync: sync, client: client ?? BFFStravaClient.live())
     }
 
-    /// Replace Today cards with Strava sync-completed activities for **today only**.
-    /// API still backfills the last 30 days (progress copy); older days stay off this rail.
+    /// Replace Today cards with Strava sync-completed activities for the lookback window.
+    /// AMA-2396: keep all pulled days in `cards` so the scrubber can show past sessions;
+    /// `TodayDiaryView` filters to the selected local day.
     func activateFromStravaSync(
         sync: ActualsSyncProgressStore,
         client: BFFStravaClient
@@ -141,7 +230,8 @@ final class ActualsTodayDemoFeed: ObservableObject {
             isActive = true
             showMergeAsk = false
             let activities = result.activities
-            let todayCards = Self.cards(from: activities)
+            // Newest-first across the window (same order History uses).
+            let windowCards = Self.historyCards(from: activities).flatMap(\.cards)
             let total = max(result.syncedCount, activities.count)
             if total > 0 {
                 sync.beginBackfill(total: total)
@@ -151,7 +241,8 @@ final class ActualsTodayDemoFeed: ObservableObject {
             } else {
                 sync.clear()
             }
-            cards = todayCards
+            // Re-apply local match/verify so a Strava re-pull does not wipe Save state.
+            cards = Self.applyLocalOverlays(to: windowCards, repository: repository)
         } catch is StravaLogicalSyncFailure {
             showMergeAsk = false
             cards = []
@@ -167,16 +258,73 @@ final class ActualsTodayDemoFeed: ObservableObject {
     }
 
     /// Map API activities → unmapped Today cards for calendar-today only.
-    static func cards(from activities: [StravaCompletedActivityDTO]) -> [ActualsTodayDemoCard] {
-        let calendar = Calendar.current
+    /// AMA-2396: bucket by `start_date_local` (not UTC) so evening sessions don't
+    /// land on the wrong day; sort newest-first (18:34 above 12:19).
+    static func cards(
+        from activities: [StravaCompletedActivityDTO],
+        calendar: Calendar = .current,
+        now: Date = Date()
+    ) -> [ActualsTodayDemoCard] {
+        cards(
+            from: activities,
+            on: calendar.startOfDay(for: now),
+            calendar: calendar,
+            now: now
+        )
+    }
+
+    /// All activities for a local day, newest-first.
+    static func cards(
+        from activities: [StravaCompletedActivityDTO],
+        on day: Date,
+        calendar: Calendar = .current,
+        now: Date = Date()
+    ) -> [ActualsTodayDemoCard] {
         let parsed = activities.compactMap { activity -> (StravaCompletedActivityDTO, Date)? in
-            guard let date = parseStravaStartDate(activity.startDate) else { return nil }
-            guard calendar.isDateInToday(date) else { return nil }
+            guard let date = resolveStartDate(activity, calendar: calendar, now: now) else {
+                return nil
+            }
+            guard calendar.isDate(date, inSameDayAs: day) else { return nil }
             return (activity, date)
         }
         .sorted { $0.1 > $1.1 }
 
         return parsed.map { card(from: $0.0, startDate: $0.1) }
+    }
+
+    /// Full 30-day (or longer) history rows, day-bucketed newest-first.
+    static func historyCards(
+        from activities: [StravaCompletedActivityDTO],
+        calendar: Calendar = .current,
+        now: Date = Date()
+    ) -> [(day: Date, cards: [ActualsTodayDemoCard])] {
+        let parsed: [(StravaCompletedActivityDTO, Date)] = activities.compactMap { activity in
+            guard let date = resolveStartDate(activity, calendar: calendar, now: now) else {
+                return nil
+            }
+            return (activity, date)
+        }
+        let buckets = ActualsDayBucketing.bucketByLocalDay(
+            parsed,
+            startDate: { $0.1 },
+            calendar: calendar
+        )
+        return buckets.map { day, items in
+            (day, items.map { card(from: $0.0, startDate: $0.1) })
+        }
+    }
+
+    static func resolveStartDate(
+        _ activity: StravaCompletedActivityDTO,
+        calendar: Calendar = .current,
+        now: Date = Date()
+    ) -> Date? {
+        ActualsDayBucketing.resolveStartDate(
+            startDateLocal: activity.startDateLocal,
+            startDateUTC: activity.startDate,
+            calendar: calendar,
+            now: now
+        )
     }
 
     private static func card(
@@ -194,7 +342,9 @@ final class ActualsTodayDemoFeed: ObservableObject {
             distanceMeters: distanceMeters,
             calories: nil,
             avgHR: nil,
-            type: workoutType
+            type: workoutType,
+            stravaTypeRaw: activity.type,
+            activityDescription: activity.description
         )
         var stats: [(icon: String, value: String)] = [
             ("clock", "\(max(1, activity.durationMin))m")
@@ -236,12 +386,51 @@ final class ActualsTodayDemoFeed: ObservableObject {
     }
 
     private static func parseStravaStartDate(_ raw: String) -> Date? {
-        let fractional = ISO8601DateFormatter()
-        fractional.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        if let date = fractional.date(from: raw) { return date }
-        let plain = ISO8601DateFormatter()
-        plain.formatOptions = [.withInternetDateTime]
-        return plain.date(from: raw)
+        ActualsDayBucketing.parseISO8601(raw)
+    }
+
+    /// AMA-2396: cards for live Strava sync keep the `strava_<id>` prefix through
+    /// merge/mapping — extract it so write-back knows which activity to update.
+    static func stravaActivityId(fromCardID cardID: String) -> String? {
+        let prefix = "strava_"
+        guard cardID.hasPrefix(prefix) else { return nil }
+        return String(cardID.dropFirst(prefix.count))
+    }
+
+    /// AMA-2396: Keep as-is marks the session counted (Progress), clears fill-in debt.
+    func applyKeepAsIs(unmappedCardID: String) {
+        guard let index = cards.firstIndex(where: { $0.id == unmappedCardID }) else { return }
+        cards[index] = cards[index].markingCounted()
+    }
+
+    /// AMA-2396 A3: un-verify — actuals kept as draft, RPE cleared, badge cleared.
+    func applyUnverify(sessionID: String) {
+        for index in cards.indices {
+            guard let saved = cards[index].fillInSession, saved.id == sessionID
+                    || cards[index].id == sessionID else { continue }
+            var draft = saved
+            draft.verified = false
+            draft.rpe = nil
+            let card = cards[index]
+            cards[index] = ActualsTodayDemoCard(
+                id: card.id,
+                kind: .fillInDebt,
+                timeLabel: card.timeLabel,
+                title: card.title,
+                stats: card.stats,
+                sourceLabel: "Fill in · draft",
+                sourceProvider: card.sourceProvider,
+                session: card.session,
+                activity: card.activity,
+                fillInSession: draft,
+                stravaDecoration: .none
+            )
+        }
+    }
+
+    func applyDecoration(cardID: String, state: StravaDecorationState) {
+        guard let index = cards.firstIndex(where: { $0.id == cardID }) else { return }
+        cards[index] = cards[index].withDecoration(state)
     }
 
     /// Cold-start demo: pretend a source is already linked and Today has Actuals debt.
@@ -297,16 +486,79 @@ final class ActualsTodayDemoFeed: ObservableObject {
             ?? cards.first { $0.kind == .fillInDebt }
             ?? cards.first { $0.kind == .merged }
         pendingFillInCardID = source?.id
-        let session = source?.fillInSession
+        let fallback = source?.fillInSession
             ?? ActualsFillInSession.lowerBodyPosteriorSample(
                 id: "today_demo_fill_\(UUID().uuidString.prefix(6))"
             )
-        var seeded = session
-        if !seeded.exercises.isEmpty, seeded.exercises[0].confirmation == nil {
-            seeded.exercises[0].confirmation = .adjusted
-            seeded.exercises[0].actualWeightKg = 90
-        }
+        // Prefer GRDB draft/verified rows so Back → reopen keeps confirmations / RPE.
+        let seeded: ActualsFillInSession = {
+            if let persisted = try? repository.fetchSession(id: fallback.id) {
+                return Self.mergePersistedFillIn(persisted, fallback: fallback)
+            }
+            return Self.healMisencodedTimeCap(in: fallback)
+        }()
         fillInViewModel = ActualsFillInViewModel(session: seeded, repository: repository)
+    }
+
+    /// Persist in-progress fill-in when the athlete leaves mid-edit (not verified save).
+    @discardableResult
+    func persistFillInDraftProgress() -> Bool {
+        guard let viewModel = fillInViewModel else { return false }
+        do {
+            guard try viewModel.persistDraftProgress() else { return false }
+            let draft = viewModel.session
+            for index in cards.indices {
+                let card = cards[index]
+                let matchesPending = card.id == pendingFillInCardID
+                let matchesSession = card.fillInSession?.id == draft.id || card.id == draft.id
+                if matchesPending || matchesSession {
+                    cards[index] = card.withFillInSession(draft)
+                }
+            }
+            NotificationCenter.default.post(name: .actualsLocalSessionsDidChange, object: nil)
+            return true
+        } catch {
+            return false
+        }
+    }
+
+    /// Persisted draft wins for confirmations/RPE; fallback keeps structure/title if richer.
+    static func mergePersistedFillIn(
+        _ persisted: ActualsFillInSession,
+        fallback: ActualsFillInSession
+    ) -> ActualsFillInSession {
+        var merged = persisted
+        if merged.structureBody == nil || merged.structureBody?.isEmpty == true {
+            merged.structureBody = fallback.structureBody
+        }
+        if merged.stravaActivityId == nil {
+            merged.stravaActivityId = fallback.stravaActivityId
+        }
+        if merged.stravaActivityType == nil {
+            merged.stravaActivityType = fallback.stravaActivityType
+        }
+        if merged.exercises.isEmpty {
+            merged.exercises = fallback.exercises
+        } else if merged.exercises.allSatisfy({ $0.structureHeader == nil }),
+                  let body = merged.structureBody ?? fallback.structureBody {
+            merged.exercises = StravaWorkoutStructureText.stampingStructureHeaders(
+                onto: merged.exercises,
+                from: body
+            )
+        }
+        return healMisencodedTimeCap(in: merged)
+    }
+
+    /// Fix already-saved fill-in rows that show a minute cap as circuit rounds.
+    static func healMisencodedTimeCap(in session: ActualsFillInSession) -> ActualsFillInSession {
+        var healed = session
+        healed.exercises = StravaWorkoutStructureText.healMisencodedTimeCapRounds(
+            exercises: session.exercises
+        )
+        healed.structureBody = StravaWorkoutStructureText.healMisencodedTimeCapRounds(
+            structureBody: session.structureBody
+        )
+        return healed
     }
 
     /// After a successful verified save — timeline CTA becomes Verified, not Fill in.
@@ -344,35 +596,134 @@ final class ActualsTodayDemoFeed: ObservableObject {
         let prior = cards.first { $0.id == unmappedCardID }
         let activity = prior?.activity ?? Self.unmappedCard().activity
         let timeLabel = prior?.timeLabel ?? "18:10"
+        let captureWorkout = draft.toWorkoutForMatch()
         let matched = makeMatchedCard(
             request: MatchedCardRequest(
                 cardID: unmappedCardID,
                 timeLabel: timeLabel,
                 title: draft.title,
                 activity: activity,
-                blockSummaries: draft.blockSummaries,
-                sourceLabel: "Matched · \(ActualsCopy.sourceDisplayName(activity?.provider ?? .garmin))"
+                blockSummaries: draft.blockSummaries.isEmpty
+                    ? [draft.title]
+                    : draft.blockSummaries,
+                sourceLabel: "Matched · \(ActualsCopy.sourceDisplayName(activity?.provider ?? .garmin))",
+                workout: captureWorkout
             )
         )
+        if let session = matched.fillInSession {
+            try? repository.upsertMatchedDraft(session)
+            NotificationCenter.default.post(name: .actualsLocalSessionsDidChange, object: nil)
+        }
         upsertCard(matched, replacing: unmappedCardID, atFrontIfMissing: true)
     }
 
     /// Map → picked a library workout: keep the session row, attach that plan for RPE.
-    func applyLibraryMatch(planTitle: String, unmappedCardID: String = "today_demo_unmapped") {
+    func applyLibraryMatch(
+        planTitle: String,
+        unmappedCardID: String = "today_demo_unmapped",
+        workout: Workout? = nil
+    ) {
         let prior = cards.first { $0.id == unmappedCardID }
         let activity = prior?.activity ?? Self.unmappedCard().activity
         let timeLabel = prior?.timeLabel ?? "18:10"
+        let summaries: [String] = {
+            if let workout {
+                let names = workout.blocks.flatMap(\.exercises).map(\.name)
+                if !names.isEmpty { return names }
+            }
+            return [planTitle]
+        }()
         let matched = makeMatchedCard(
             request: MatchedCardRequest(
                 cardID: unmappedCardID,
                 timeLabel: timeLabel,
                 title: planTitle,
                 activity: activity,
-                blockSummaries: [planTitle],
-                sourceLabel: "Matched · \(ActualsCopy.sourceDisplayName(activity?.provider ?? .garmin))"
+                blockSummaries: summaries,
+                sourceLabel: "Matched · \(ActualsCopy.sourceDisplayName(activity?.provider ?? .garmin))",
+                workout: workout
             )
         )
+        if let session = matched.fillInSession {
+            try? repository.upsertMatchedDraft(session)
+            NotificationCenter.default.post(name: .actualsLocalSessionsDidChange, object: nil)
+        }
         upsertCard(matched, replacing: unmappedCardID, atFrontIfMissing: true)
+    }
+
+    /// Re-read GRDB match/verify overlays onto the current Strava cards (Today scrubber).
+    func reapplyLocalOverlays() {
+        cards = Self.applyLocalOverlays(to: cards, repository: repository)
+    }
+
+    /// Merge persisted match/verify sessions onto freshly pulled Strava cards.
+    static func applyLocalOverlays(
+        to cards: [ActualsTodayDemoCard],
+        repository: ActualsRepository
+    ) -> [ActualsTodayDemoCard] {
+        let byStrava = (try? repository.fetchSessionsKeyedByStravaActivityId()) ?? [:]
+        guard !byStrava.isEmpty else { return cards }
+        return cards.map { card in
+            guard let activityId = stravaActivityId(fromCardID: card.id),
+                  var session = byStrava[activityId] else {
+                return card
+            }
+            // Cold-launch DB rows may predate V6 metadata — fill from the live Strava card.
+            if let activity = card.activity {
+                if session.stravaActivityId == nil { session.stravaActivityId = activityId }
+                if session.stravaActivityType == nil {
+                    session.stravaActivityType = activity.stravaTypeRaw
+                }
+                if session.stravaCurrentDescription == nil {
+                    session.stravaCurrentDescription = activity.activityDescription
+                }
+                if session.stravaRecordingApp == nil {
+                    session.stravaRecordingApp = activity.recordingApp
+                }
+                session.stravaIsRace = activity.isRace
+            }
+            let decoration = (try? repository.fetchDecoration(forSessionID: session.id)) ?? card.stravaDecoration
+            if session.verified {
+                return ActualsTodayDemoCard(
+                    id: card.id,
+                    kind: .verified,
+                    timeLabel: card.timeLabel,
+                    title: session.title,
+                    stats: card.stats,
+                    sourceLabel: "Verified · RPE \(session.rpe ?? 0)",
+                    sourceProvider: card.sourceProvider ?? card.activity?.provider ?? .strava,
+                    session: card.session,
+                    activity: card.activity,
+                    fillInSession: session,
+                    stravaDecoration: decoration
+                )
+            }
+            let matched = makeMatchedCard(
+                request: MatchedCardRequest(
+                    cardID: card.id,
+                    timeLabel: card.timeLabel,
+                    title: session.title,
+                    activity: card.activity,
+                    blockSummaries: session.exercises.map(\.name),
+                    sourceLabel: "Matched · \(ActualsCopy.sourceDisplayName(card.activity?.provider ?? .strava))",
+                    structureBody: session.structureBody,
+                    seedExercises: session.exercises
+                )
+            )
+            return ActualsTodayDemoCard(
+                id: matched.id,
+                kind: .fillInDebt,
+                timeLabel: matched.timeLabel,
+                title: session.title,
+                stats: matched.stats,
+                sourceLabel: matched.sourceLabel,
+                sourceProvider: matched.sourceProvider,
+                session: matched.session,
+                activity: matched.activity,
+                fillInSession: session,
+                stravaDecoration: decoration
+            )
+        }
     }
 
     private func upsertCard(
@@ -389,16 +740,49 @@ final class ActualsTodayDemoFeed: ObservableObject {
         }
     }
 
-    private struct MatchedCardRequest {
+    struct MatchedCardRequest {
         let cardID: String
         let timeLabel: String
         let title: String
         let activity: ActualsUnmappedActivity?
         let blockSummaries: [String]
         let sourceLabel: String
+        /// Full Library workout when Map picks a real plan — seeds steps + Strava text.
+        let workout: Workout?
+        /// Precomputed structure (e.g. rehydrate from GRDB).
+        let structureBody: String?
+        let seedExercises: [ExerciseActual]?
+
+        init(
+            cardID: String,
+            timeLabel: String,
+            title: String,
+            activity: ActualsUnmappedActivity?,
+            blockSummaries: [String],
+            sourceLabel: String,
+            workout: Workout? = nil,
+            structureBody: String? = nil,
+            seedExercises: [ExerciseActual]? = nil
+        ) {
+            self.cardID = cardID
+            self.timeLabel = timeLabel
+            self.title = title
+            self.activity = activity
+            self.blockSummaries = blockSummaries
+            self.sourceLabel = sourceLabel
+            self.workout = workout
+            self.structureBody = structureBody
+            self.seedExercises = seedExercises
+        }
     }
 
     private func makeMatchedCard(request: MatchedCardRequest) -> ActualsTodayDemoCard {
+        Self.makeMatchedCard(request: request)
+    }
+
+    /// Shared by Today + History so Map → match always attaches a fill-in session
+    /// (RPE / Save / write-back), not just a renamed title.
+    static func makeMatchedCard(request: MatchedCardRequest) -> ActualsTodayDemoCard {
         let cardID = request.cardID
         let timeLabel = request.timeLabel
         let title = request.title
@@ -418,20 +802,42 @@ final class ActualsTodayDemoFeed: ObservableObject {
         if let heartRate = activity?.avgHR {
             stats.append(("heart.fill", "\(heartRate)"))
         }
-        let moveCount = max(blockSummaries.count, 1)
+
+        let structureBody: String? = {
+            if let workout = request.workout {
+                let text = StravaWorkoutStructureText.structureBody(from: workout)
+                return text.isEmpty ? nil : text
+            }
+            if let stored = request.structureBody?.trimmingCharacters(in: .whitespacesAndNewlines),
+               !stored.isEmpty {
+                return stored
+            }
+            return nil
+        }()
+
+        let exercises: [ExerciseActual] = {
+            if let seeded = request.seedExercises, !seeded.isEmpty {
+                return Array(seeded.prefix(24))
+            }
+            if let workout = request.workout {
+                let fromWorkout = StravaWorkoutStructureText.fillInExercises(from: workout)
+                if !fromWorkout.isEmpty { return fromWorkout }
+            }
+            return blockSummaries.prefix(12).enumerated().map { offset, name in
+                let slug = name
+                    .lowercased()
+                    .replacingOccurrences(of: " ", with: "_")
+                    .filter { $0.isLetter || $0.isNumber || $0 == "_" }
+                return ExerciseActual(
+                    id: "capture_\(offset)_\(slug)",
+                    name: name,
+                    planned: ExerciseActualPlanned(sets: 1, reps: 1, note: "AS BUILT")
+                )
+            }
+        }()
+        let moveCount = max(exercises.count, blockSummaries.count, 1)
         stats.append(("dumbbell.fill", "\(moveCount) moves"))
 
-        let exercises: [ExerciseActual] = blockSummaries.prefix(6).enumerated().map { offset, name in
-            let slug = name
-                .lowercased()
-                .replacingOccurrences(of: " ", with: "_")
-                .filter { $0.isLetter || $0.isNumber || $0 == "_" }
-            return ExerciseActual(
-                id: "capture_\(offset)_\(slug)",
-                name: name,
-                planned: ExerciseActualPlanned(sets: 1, reps: 1, note: "AS BUILT")
-            )
-        }
         let fillSession = ActualsFillInSession(
             id: cardID,
             title: title,
@@ -446,7 +852,13 @@ final class ActualsTodayDemoFeed: ObservableObject {
                 ]
                 : Array(exercises),
             rpe: nil,
-            verified: false
+            verified: false,
+            stravaActivityId: Self.stravaActivityId(fromCardID: cardID),
+            stravaActivityType: activity?.stravaTypeRaw,
+            stravaCurrentDescription: activity?.activityDescription,
+            stravaRecordingApp: activity?.recordingApp,
+            stravaIsRace: activity?.isRace ?? false,
+            structureBody: structureBody
         )
 
         return ActualsTodayDemoCard(

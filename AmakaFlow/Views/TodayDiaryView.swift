@@ -16,22 +16,47 @@ import SwiftUI
 struct TodayDiaryView: View {
     @StateObject private var historyViewModel = ActivityHistoryViewModel()
     @ObservedObject private var watchConnectivity = WatchConnectivityManager.shared
-    @StateObject private var actualsSources = ActualsSourceConnectionStore()
+    @ObservedObject private var actualsSources = ActualsSourceConnectionStore.shared
     @StateObject private var actualsSyncProgress = ActualsSyncProgressStore()
     @StateObject private var actualsDemo = ActualsTodayDemoFeed()
     @State private var selectedCompletionId: String?
     @State private var scrubberSelectedIndex = 0
+    /// AMA-2396: explicit selected day so the scrubber window can shift backward
+    /// without a circular dependency on `scrubberDays[index]`.
+    @State private var selectedScrubberDay: Date = Calendar.current.startOfDay(for: Date())
+    /// Avoid re-pinning the scrubber to calendar-today after match / history navigation.
+    @State private var didInitialScrubberSync = false
     @State private var showConnectSources = false
     @State private var actualsDestination: ActualsTodayDestination?
     @State private var activeMergedSession: ActualsSession?
     @State private var activeUnmapped: ActualsUnmappedActivity?
     @State private var verifiedSession: ActualsFillInSession?
     @State private var verifiedSourceName = ActualsCopy.sourceDisplayName(.strava)
+    @State private var verifiedCardID: String?
+    /// AMA-2396: real Library workouts for Map match cards + Search all.
+    @State private var libraryCandidates: [ActualsPlanCandidate] = []
+    /// Full workouts keyed by id — seeds fill-in + Strava structure on match.
+    @State private var libraryWorkoutsByID: [String: Workout] = [:]
+    @State private var showLibraryMatchPicker = false
+    @State private var libraryPickerCardID: String?
 
     private var today: Date { Date() }
 
+    private var mapCandidates: [ActualsPlanCandidate] {
+        libraryCandidates.isEmpty
+            ? ActualsTodayDemoFeed.samplePlanCandidates
+            : libraryCandidates
+    }
+
+    private var isViewingToday: Bool {
+        Calendar.current.isDateInToday(selectedScrubberDay)
+    }
+
     private var todaysCompletions: [WorkoutCompletion] {
-        historyViewModel.todaysCompletions
+        let calendar = Calendar.current
+        return historyViewModel.completions
+            .filter { calendar.isDate($0.startedAt, inSameDayAs: selectedScrubberDay) }
+            .sorted { $0.startedAt > $1.startedAt }
     }
 
     private var usesTodayFixture: Bool {
@@ -39,7 +64,16 @@ struct TodayDiaryView: View {
     }
 
     private var scrubberDays: [DDScrubberDay] {
-        historyViewModel.completions.scrubberDays(now: today)
+        // AMA-2396: dots include Strava Actuals (sync lookback), not only completion history.
+        let completionDates = historyViewModel.completions.map(\.startedAt)
+        let actualsDates = actualsDemo.cards.compactMap { card -> Date? in
+            card.activity?.startDate ?? card.session?.primaryRecording?.startDate
+        }
+        return ActualsHistoryScrubber.days(
+            activityDates: completionDates + actualsDates,
+            now: today,
+            selectedDay: selectedScrubberDay
+        )
     }
 
     private var watchConnected: Bool {
@@ -66,12 +100,27 @@ struct TodayDiaryView: View {
         actualsDemo.isRefreshing && actualsSources.isConnected(.strava)
     }
 
-    /// Linked, sync done, nothing for calendar-today.
+    /// Actuals rail cards restricted to the scrubber-selected local day.
+    private var actualsCardsForSelectedDay: [ActualsTodayDemoCard] {
+        let calendar = Calendar.current
+        return actualsDemo.cards.filter { card in
+            if let start = card.activity?.startDate {
+                return calendar.isDate(start, inSameDayAs: selectedScrubberDay)
+            }
+            if let start = card.session?.primaryRecording?.startDate {
+                return calendar.isDate(start, inSameDayAs: selectedScrubberDay)
+            }
+            // Fixture / undated demo cards only belong on calendar-today.
+            return calendar.isDateInToday(selectedScrubberDay)
+        }
+    }
+
+    /// Linked, sync done, nothing for the selected local day.
     private var showsLinkedStravaEmptyToday: Bool {
         actualsSources.isConnected(.strava)
             && actualsDemo.isActive
             && !actualsDemo.isRefreshing
-            && actualsDemo.cards.isEmpty
+            && actualsCardsForSelectedDay.isEmpty
             && todaysCompletions.isEmpty
     }
 
@@ -82,6 +131,16 @@ struct TodayDiaryView: View {
 
                 if !scrubberDays.isEmpty {
                     DDDayScrubber(days: scrubberDays, selectedIndex: $scrubberSelectedIndex)
+                        .onChange(of: scrubberSelectedIndex) { _, newIndex in
+                            let days = scrubberDays
+                            guard days.indices.contains(newIndex) else { return }
+                            selectedScrubberDay = days[newIndex].id
+                        }
+                    Text(ActualsCopy.historyScrubberHint)
+                        .font(.system(size: 8, design: .monospaced))
+                        .foregroundColor(DailyDriver.foregroundDim)
+                        .padding(.horizontal, 18)
+                        .padding(.bottom, 4)
                 }
 
                 ScrollView {
@@ -102,7 +161,7 @@ struct TodayDiaryView: View {
                                 showConnectSources = true
                             }
                             .padding(.top, 12)
-                        } else if showsActualsDemoRail, !actualsDemo.cards.isEmpty {
+                        } else if showsActualsDemoRail, !actualsCardsForSelectedDay.isEmpty {
                             actualsDemoContent
                         } else if showsLinkedStravaEmptyToday {
                             linkedStravaEmptyTodayState
@@ -136,14 +195,37 @@ struct TodayDiaryView: View {
                 #endif
                 // Kick Strava re-pull first so Connect never flashes while history loads.
                 async let history: Void = historyViewModel.loadCompletions()
+                async let library: Void = loadLibraryCandidates()
                 if actualsSources.isConnected(.strava), !actualsDemo.isActive {
                     await actualsDemo.handleProviderConnected(
                         .strava,
                         sync: actualsSyncProgress
                     )
+                } else {
+                    actualsDemo.reapplyLocalOverlays()
                 }
                 await history
-                syncScrubberToToday()
+                await library
+                if !didInitialScrubberSync {
+                    syncScrubberToToday()
+                    didInitialScrubberSync = true
+                }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .actualsLocalSessionsDidChange)) { _ in
+                actualsDemo.reapplyLocalOverlays()
+            }
+            .sheet(isPresented: $showLibraryMatchPicker) {
+                ActualsLibraryMatchPicker(
+                    candidates: mapCandidates,
+                    onPick: { candidate in
+                        showLibraryMatchPicker = false
+                        guard let cardID = libraryPickerCardID else { return }
+                        Task { await applyLibraryMatchSelection(candidate, cardID: cardID) }
+                    },
+                    onCancel: {
+                        showLibraryMatchPicker = false
+                    }
+                )
             }
             .refreshable {
                 await historyViewModel.refreshCompletions()
@@ -206,7 +288,7 @@ struct TodayDiaryView: View {
         }
 
         VStack(alignment: .leading, spacing: 0) {
-            ForEach(Array(actualsDemo.cards.enumerated()), id: \.element.id) { index, card in
+            ForEach(Array(actualsCardsForSelectedDay.enumerated()), id: \.element.id) { index, card in
                 Button {
                     openActualsCard(card)
                 } label: {
@@ -216,7 +298,7 @@ struct TodayDiaryView: View {
                         time: card.timeLabel,
                         title: card.title,
                         stats: card.stats,
-                        sourceLabel: card.sourceLabel,
+                        sourceLabel: todaySourceLabel(for: card),
                         showsChevron: true,
                         trailingAction: AnyView(actualsTrailingAction(for: card))
                     )
@@ -250,6 +332,10 @@ struct TodayDiaryView: View {
             Text(ActualsCopy.verifiedTimelineCTA)
                 .ddDisplayText(12, weight: .bold)
                 .foregroundColor(DailyDriver.lime)
+        case .counted:
+            Text(ActualsCopy.historyCountedCTA)
+                .ddDisplayText(12, weight: .bold)
+                .foregroundColor(DailyDriver.lime)
         }
     }
 
@@ -259,7 +345,7 @@ struct TodayDiaryView: View {
             return Self.symbolName(for: card.activity?.type)
         case .merged: return "applewatch"
         case .fillInDebt: return "figure.strengthtraining.traditional"
-        case .verified:
+        case .verified, .counted:
             if card.session != nil { return "applewatch" }
             if card.title.localizedCaseInsensitiveContains("run") { return "figure.run" }
             return "figure.strengthtraining.traditional"
@@ -274,7 +360,7 @@ struct TodayDiaryView: View {
                 : DailyDriver.card2
         case .merged: return DailyDriver.blue
         case .fillInDebt: return DailyDriver.lime
-        case .verified:
+        case .verified, .counted:
             return card.session != nil ? DailyDriver.blue : DailyDriver.lime
         }
     }
@@ -286,6 +372,20 @@ struct TodayDiaryView: View {
         case .ride: return "bicycle"
         case .strength: return "dumbbell.fill"
         case .other, .none: return "figure.mixed.cardio"
+        }
+    }
+
+    /// Surface write-back state on Today (History already shows SZStravaBadge).
+    private func todaySourceLabel(for card: ActualsTodayDemoCard) -> String {
+        switch card.stravaDecoration {
+        case .ours:
+            return "\(card.sourceLabel) · STRAVA ✓ OURS"
+        case .skipped:
+            return "\(card.sourceLabel) · STRAVA SKIPPED"
+        case .untouched:
+            return "\(card.sourceLabel) · STRAVA UNTOUCHED"
+        case .none:
+            return card.sourceLabel
         }
     }
 
@@ -306,106 +406,356 @@ struct TodayDiaryView: View {
             guard actualsDemo.fillInViewModel != nil else { return }
             actualsDestination = .fillIn
         case .verified:
+            // Carry card id on the route — setting verifiedSession in the same
+            // frame races navigationDestination and pops a blank screen.
+            verifiedCardID = card.id
+            verifiedSourceName = sourceDisplayName(for: card)
             if let saved = card.fillInSession {
                 verifiedSession = saved
-                verifiedSourceName = sourceDisplayName(for: card)
-                actualsDestination = .verified
+            } else if let loaded = try? ActualsRepository().fetchSession(id: card.id) {
+                verifiedSession = loaded
+            }
+            actualsDestination = .verified(cardID: card.id)
+        case .counted:
+            break
+        }
+    }
+
+    @ViewBuilder
+    private func actualsDestinationView(_ destination: ActualsTodayDestination) -> some View {
+        switch destination {
+        case .mergedDetail:
+            mergedDetailDestinationView
+        case .mapToPlan(let cardID, let activity):
+            mapToPlanDestinationView(cardID: cardID, activity: activity)
+        case .matchSave:
+            // Match-save is presented from Map (fullScreenCover). Pop if we land here.
+            missingDestinationFallback(nil)
+        case .fillIn:
+            fillInDestinationView
+        case .verified(let cardID):
+            verifiedDestinationView(cardID: cardID)
+        }
+    }
+
+    @ViewBuilder
+    private var mergedDetailDestinationView: some View {
+        if let session = activeMergedSession {
+            ActualsMergedDetailView(
+                session: session,
+                onSplit: { restored in
+                    actualsDemo.applySplit(
+                        restored: restored,
+                        fromMergedSessionID: session.id
+                    )
+                    actualsDestination = nil
+                    activeMergedSession = nil
+                },
+                onFillIn: {
+                    if let merged = actualsDemo.cards.first(where: { $0.kind == .merged }) {
+                        actualsDemo.prepareFillIn(from: merged)
+                    } else {
+                        actualsDemo.prepareFillIn()
+                    }
+                    guard actualsDemo.fillInViewModel != nil else { return }
+                    actualsDestination = .fillIn
+                }
+            )
+            .navigationBarBackButtonHidden(true)
+        } else {
+            missingDestinationFallback("Couldn't open that session.")
+        }
+    }
+
+    private func mapToPlanDestinationView(
+        cardID: String,
+        activity: ActualsUnmappedActivity
+    ) -> some View {
+        ActualsMapToPlanView(
+            activity: activity,
+            matches: ActualsPlanMatcher.rank(
+                activity: activity,
+                candidates: mapCandidates
+            ),
+            onSelect: { match in
+                Task { await applyLibraryMatchSelection(match.candidate, cardID: cardID) }
+            },
+            onKeepAsIs: {
+                actualsDemo.applyKeepAsIs(unmappedCardID: cardID)
+                actualsDestination = nil
+            },
+            onSearchAll: {
+                libraryPickerCardID = cardID
+                showLibraryMatchPicker = true
+            },
+            onCaptureMatched: { draft, _ in
+                // Same handoff as Library match / History: Build/Photo → fill-in,
+                // not back to the list (most common path is capture, not match).
+                pinScrubber(to: activity.startDate)
+                actualsDemo.applyCaptureMatched(draft: draft, unmappedCardID: cardID)
+                activeUnmapped = nil
+                if let matched = actualsDemo.cards.first(where: { $0.id == cardID }) {
+                    actualsDemo.prepareFillIn(from: matched)
+                }
+                guard actualsDemo.fillInViewModel != nil else {
+                    actualsDestination = nil
+                    return
+                }
+                actualsDestination = .fillIn
+            }
+        )
+        .navigationBarBackButtonHidden(true)
+        .task {
+            if libraryCandidates.isEmpty {
+                await loadLibraryCandidates()
+            }
+        }
+    }
+
+    @MainActor
+    private func applyLibraryMatchSelection(
+        _ candidate: ActualsPlanCandidate,
+        cardID: String
+    ) async {
+        let workout = await ActualsLibraryWorkoutResolver.resolveDetail(
+            workoutID: candidate.id,
+            title: candidate.title,
+            local: libraryWorkoutsByID
+        )
+        if let workout {
+            libraryWorkoutsByID[workout.id] = workout
+        }
+        actualsDemo.applyLibraryMatch(
+            planTitle: candidate.title,
+            unmappedCardID: cardID,
+            workout: workout
+        )
+        if let matched = actualsDemo.cards.first(where: { $0.id == cardID }) {
+            actualsDemo.prepareFillIn(from: matched)
+        }
+        guard actualsDemo.fillInViewModel != nil else {
+            actualsDestination = nil
+            return
+        }
+        actualsDestination = .fillIn
+    }
+
+    @MainActor
+    private func loadLibraryCandidates() async {
+        do {
+            let workouts = try await APIService.shared.fetchWorkouts()
+            let enriched = WorkoutLibraryDetailStore.enrichCollection(workouts)
+            libraryCandidates = ActualsPlanCandidate.fromLibrary(enriched)
+            libraryWorkoutsByID = Dictionary(
+                uniqueKeysWithValues: enriched.map { ($0.id, $0) }
+            )
+        } catch {
+            // Keep sample fallback — Map still usable offline / unauthenticated.
+            if libraryCandidates.isEmpty {
+                libraryCandidates = ActualsTodayDemoFeed.samplePlanCandidates
             }
         }
     }
 
     @ViewBuilder
-    // swiftlint:disable:next cyclomatic_complexity
-    private func actualsDestinationView(_ destination: ActualsTodayDestination) -> some View {
-        switch destination {
-        case .mergedDetail:
-            if let session = activeMergedSession {
-                ActualsMergedDetailView(
-                    session: session,
-                    onSplit: { restored in
-                        actualsDemo.applySplit(
-                            restored: restored,
-                            fromMergedSessionID: session.id
-                        )
-                        actualsDestination = nil
-                        activeMergedSession = nil
-                    },
-                    onFillIn: {
-                        if let merged = actualsDemo.cards.first(where: { $0.kind == .merged }) {
-                            actualsDemo.prepareFillIn(from: merged)
-                        } else {
-                            actualsDemo.prepareFillIn()
-                        }
-                        guard actualsDemo.fillInViewModel != nil else { return }
-                        actualsDestination = .fillIn
-                    }
-                )
-                .navigationBarBackButtonHidden(true)
-            } else {
-                missingDestinationFallback("Couldn't open that session.")
-            }
-        case .mapToPlan(let cardID, let activity):
-            ActualsMapToPlanView(
-                activity: activity,
-                matches: ActualsPlanMatcher.rank(
-                    activity: activity,
-                    candidates: ActualsTodayDemoFeed.samplePlanCandidates
-                ),
-                onSelect: { match in
-                    // Keep the session on Today — attach the plan, then RPE.
-                    actualsDemo.applyLibraryMatch(
-                        planTitle: match.candidate.title,
-                        unmappedCardID: cardID
-                    )
-                    if let matched = actualsDemo.cards.first(where: { $0.id == cardID }) {
-                        actualsDemo.prepareFillIn(from: matched)
-                    }
-                    guard actualsDemo.fillInViewModel != nil else {
-                        actualsDestination = nil
-                        return
-                    }
-                    actualsDestination = .fillIn
-                },
-                onKeepAsIs: {
-                    actualsDestination = nil
-                },
-                onCaptureMatched: { draft, _ in
-                    actualsDemo.applyCaptureMatched(draft: draft, unmappedCardID: cardID)
-                    actualsDestination = nil
-                    activeUnmapped = nil
+    private var fillInDestinationView: some View {
+        if let viewModel = actualsDemo.fillInViewModel {
+            // Named closures avoid trailing_closure vs multiple_closures_with_trailing_closure.
+            let onSaved: (ActualsFillInSession) -> Void = { session in
+                verifiedSession = session
+                if let card = actualsDemo.cards.first(where: {
+                    $0.id == actualsDemo.pendingFillInCardID || $0.fillInSession?.id == session.id
+                }) {
+                    verifiedCardID = card.id
+                    verifiedSourceName = sourceDisplayName(for: card)
                 }
+                actualsDemo.markVerified(saved: session)
+                actualsDestination = .verified(cardID: verifiedCardID ?? session.id)
+            }
+            let onUnverify = {
+                actualsDemo.applyUnverify(sessionID: viewModel.session.id)
+            }
+            let onWriteBackDecoration: (StravaDecorationState) -> Void = { state in
+                if let cardID = verifiedCardID {
+                    actualsDemo.applyDecoration(cardID: cardID, state: state)
+                }
+            }
+            ActualsFillInView(
+                viewModel: viewModel,
+                onSaved: onSaved,
+                onBack: {
+                    _ = actualsDemo.persistFillInDraftProgress()
+                    if let cardID = actualsDemo.pendingFillInCardID,
+                       let start = actualsDemo.cards.first(where: { $0.id == cardID })?
+                        .activity?.startDate
+                        ?? actualsDemo.cards.first(where: { $0.id == cardID })?
+                        .session?.primaryRecording?.startDate {
+                        pinScrubber(to: start)
+                    }
+                    actualsDestination = nil
+                },
+                presentsVerifiedOnSave: false,
+                dismissOnSave: false,
+                onUnverify: onUnverify,
+                onWriteBackDecoration: onWriteBackDecoration
             )
             .navigationBarBackButtonHidden(true)
-        case .matchSave:
-            // Match-save is presented from Map (fullScreenCover). Pop if we land here.
-            missingDestinationFallback(nil)
-        case .fillIn:
-            if let viewModel = actualsDemo.fillInViewModel {
-                ActualsFillInView(
-                    viewModel: viewModel,
-                    onSaved: { session in
-                        verifiedSession = session
-                        if let card = actualsDemo.cards.first(where: {
-                            $0.id == actualsDemo.pendingFillInCardID || $0.fillInSession?.id == session.id
-                        }) {
-                            verifiedSourceName = sourceDisplayName(for: card)
-                        }
-                        actualsDemo.markVerified(saved: session)
-                        actualsDestination = .verified
-                    },
-                    presentsVerifiedOnSave: false,
-                    dismissOnSave: false
-                )
-                .navigationBarBackButtonHidden(true)
-            } else {
-                missingDestinationFallback("Couldn't open fill-in.")
+        } else {
+            missingDestinationFallback("Couldn't open fill-in.")
+        }
+    }
+
+    @ViewBuilder
+    private func verifiedDestinationView(cardID: String) -> some View {
+        let card = actualsDemo.cards.first { $0.id == cardID }
+        let session = card?.fillInSession
+            ?? verifiedSession
+            ?? (try? ActualsRepository().fetchSession(id: cardID))
+        if let session {
+            let sourceName = card.map(sourceDisplayName(for:)) ?? verifiedSourceName
+            let decoration = card?.stravaDecoration
+                ?? ((try? ActualsRepository().fetchDecoration(forSessionID: session.id)) ?? .none)
+            let onEditActuals = {
+                actualsDemo.prepareFillIn(from: card)
+                guard actualsDemo.fillInViewModel != nil else { return }
+                actualsDestination = .fillIn
             }
-        case .verified:
-            if let session = verifiedSession {
-                ActualsVerifiedView(session: session, sourceName: verifiedSourceName)
-                    .navigationBarBackButtonHidden(true)
-            } else {
-                missingDestinationFallback(nil)
+            let onUnverify: () -> Void = {
+                Task { await unverifyVerifiedSession(session) }
+            }
+            let onUnmatch = {
+                let activity = card?.activity
+                    ?? ActualsTodayDemoFeed.sampleUnmappedActivity()
+                actualsDestination = .mapToPlan(cardID: cardID, activity: activity)
+            }
+            let onWriteToStrava: (() -> Void)? = {
+                let settings = StravaWriteBackSettingsStore.shared
+                guard settings.writeBackEnabled, settings.hasActivityWriteScope else { return nil }
+                guard decoration != .ours else { return nil }
+                return {
+                    Task { await pushVerifiedWriteBack(session: session, cardID: cardID) }
+                }
+            }()
+            ActualsVerifiedView(
+                session: session,
+                sourceName: sourceName,
+                decoration: decoration,
+                onEditActuals: onEditActuals,
+                onWriteToStrava: onWriteToStrava,
+                onRemoveFromStrava: removeVerifiedFromStrava,
+                onUnverify: onUnverify,
+                onUnmatch: onUnmatch
+            )
+            .navigationBarBackButtonHidden(true)
+        } else {
+            missingDestinationFallback("Couldn't open that verified session.")
+        }
+    }
+
+    @MainActor
+    private func pushVerifiedWriteBack(session: ActualsFillInSession, cardID: String) async {
+        var payload = session
+        if let activity = actualsDemo.cards.first(where: { $0.id == cardID })?.activity {
+            if payload.stravaActivityId == nil {
+                payload.stravaActivityId = ActualsTodayDemoFeed.stravaActivityId(fromCardID: cardID)
+            }
+            if payload.stravaActivityType == nil {
+                payload.stravaActivityType = activity.stravaTypeRaw
+            }
+            if payload.stravaCurrentDescription == nil {
+                payload.stravaCurrentDescription = activity.activityDescription
+            }
+            if payload.stravaRecordingApp == nil {
+                payload.stravaRecordingApp = activity.recordingApp
+            }
+            payload.stravaIsRace = activity.isRace
+        }
+        guard payload.canEvaluateStravaWriteBack,
+              let activityId = payload.stravaActivityId,
+              let activityType = payload.stravaActivityType else {
+            DDToastCenter.shared.error("Missing Strava activity details for write-back")
+            return
+        }
+        let provider = StravaWriteBackFactory.makeDefault()
+        let outcome = await provider.writeBack(
+            StravaWriteBackRequest(
+                activityId: activityId,
+                title: payload.title,
+                structureBody: payload.stravaStructureBody,
+                currentDescription: payload.stravaCurrentDescription ?? "",
+                activityType: activityType,
+                recordingApp: payload.stravaRecordingApp,
+                isRace: payload.stravaIsRace,
+                rules: StravaWriteBackSettingsStore.shared.rules,
+                rpe: payload.rpe
+            )
+        )
+        switch outcome {
+        case .updated:
+            try? ActualsRepository().storeDecoration(.ours, forSessionID: payload.id)
+            actualsDemo.applyDecoration(cardID: cardID, state: .ours)
+            DDToastCenter.shared.success(ActualsCopy.verifiedToastWithStrava)
+        case .skipped(let state):
+            try? ActualsRepository().storeDecoration(state, forSessionID: payload.id)
+            actualsDemo.applyDecoration(cardID: cardID, state: state)
+            DDToastCenter.shared.error("Strava skipped this activity")
+        case .failed(let message):
+            DDToastCenter.shared.error("Strava write-back failed", sub: message)
+        case .restored, .cancelled:
+            break
+        }
+    }
+
+    private func unverifyVerifiedSession(_ session: ActualsFillInSession) async {
+        let repository = ActualsRepository()
+        let provider = StravaWriteBackFactory.makeDefault()
+        let sessionID = session.id
+        let cardID = verifiedCardID
+        if let snapshot = try? repository.fetchPreUpdateSnapshot(forSessionID: sessionID) {
+            let outcome = await provider.restore(
+                activityId: snapshot.activityId,
+                snapshot: snapshot
+            )
+            if case .restored = outcome {
+                try? repository.clearPreUpdateSnapshot(forSessionID: sessionID)
+                try? repository.storeDecoration(.untouched, forSessionID: sessionID)
+                if let cardID {
+                    await MainActor.run {
+                        actualsDemo.applyDecoration(cardID: cardID, state: .untouched)
+                    }
+                }
+            }
+        }
+        await MainActor.run {
+            actualsDemo.applyUnverify(sessionID: sessionID)
+            try? repository.unverifySession(id: sessionID)
+            actualsDestination = nil
+        }
+    }
+
+    private func removeVerifiedFromStrava() {
+        guard let cardID = verifiedCardID, let session = verifiedSession else { return }
+        let sessionID = session.id
+        Task {
+            let repository = ActualsRepository()
+            let provider = StravaWriteBackFactory.makeDefault()
+            var restoredOK = false
+            if let snapshot = try? repository.fetchPreUpdateSnapshot(forSessionID: sessionID) {
+                let outcome = await provider.restore(
+                    activityId: snapshot.activityId,
+                    snapshot: snapshot
+                )
+                if case .restored = outcome {
+                    try? repository.clearPreUpdateSnapshot(forSessionID: sessionID)
+                    restoredOK = true
+                }
+            }
+            // Only flip local badge after a successful restore (or when nothing to restore).
+            if restoredOK || (try? repository.fetchPreUpdateSnapshot(forSessionID: sessionID)) == nil {
+                try? repository.storeDecoration(.untouched, forSessionID: sessionID)
+                await MainActor.run {
+                    actualsDemo.applyDecoration(cardID: cardID, state: .untouched)
+                }
             }
         }
     }
@@ -450,25 +800,42 @@ struct TodayDiaryView: View {
 
     private var headerRow: some View {
         HStack(alignment: .center) {
-            Text("Today")
+            Text(headerTitle)
                 .ddDisplayText(32, weight: .heavy)
                 .foregroundColor(DailyDriver.foreground)
                 .accessibilityIdentifier("af_today_title")
             Spacer(minLength: 0)
-            NavigationLink {
-                DDDeviceDetailView()
-                    .ddSuppressFloatingChrome()
-            } label: {
-                DDWatchReadinessPill(
-                    isConnected: watchConnected || usesTodayFixture || showsActualsDemoRail,
-                    batteryPercent: usesTodayFixture ? DDDeviceFixture.batteryPercent : nil
-                )
+            if !isViewingToday {
+                Button {
+                    syncScrubberToToday()
+                } label: {
+                    Text(ActualsCopy.historyJumpToday)
+                        .ddDisplayText(12, weight: .bold)
+                        .foregroundColor(DailyDriver.lime)
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("af_today_jump_today")
+            } else {
+                NavigationLink {
+                    DDDeviceDetailView()
+                        .ddSuppressFloatingChrome()
+                } label: {
+                    DDWatchReadinessPill(
+                        isConnected: watchConnected || usesTodayFixture || showsActualsDemoRail,
+                        batteryPercent: usesTodayFixture ? DDDeviceFixture.batteryPercent : nil
+                    )
+                }
+                .buttonStyle(.plain)
             }
-            .buttonStyle(.plain)
         }
         .padding(.horizontal, 18)
         .padding(.top, 8)
         .padding(.bottom, 6)
+    }
+
+    private var headerTitle: String {
+        if isViewingToday { return "Today" }
+        return selectedScrubberDay.formatted(.dateTime.weekday(.wide))
     }
 
     private var loadingState: some View {
@@ -639,8 +1006,17 @@ struct TodayDiaryView: View {
     }
 
     private func syncScrubberToToday() {
-        if let todayIndex = scrubberDays.firstIndex(where: { $0.isToday }) {
-            scrubberSelectedIndex = todayIndex
+        pinScrubber(to: today)
+    }
+
+    /// Keep the day strip on the activity’s local calendar day after match / fill-in.
+    private func pinScrubber(to date: Date) {
+        let calendar = Calendar.current
+        let dayStart = calendar.startOfDay(for: date)
+        selectedScrubberDay = dayStart
+        didInitialScrubberSync = true
+        if let index = scrubberDays.firstIndex(where: { calendar.isDate($0.id, inSameDayAs: dayStart) }) {
+            scrubberSelectedIndex = index
         }
     }
 }
@@ -653,7 +1029,8 @@ private enum ActualsTodayDestination: Hashable, Identifiable {
     case mapToPlan(cardID: String, activity: ActualsUnmappedActivity)
     case matchSave
     case fillIn
-    case verified
+    /// Card id only — session is resolved when the destination builds (avoids blank race).
+    case verified(cardID: String)
 
     var id: String {
         switch self {
@@ -662,7 +1039,7 @@ private enum ActualsTodayDestination: Hashable, Identifiable {
             return "mapToPlan-\(cardID)-\(activity.startDate.timeIntervalSince1970)"
         case .matchSave: return "matchSave"
         case .fillIn: return "fillIn"
-        case .verified: return "verified"
+        case .verified(let cardID): return "verified-\(cardID)"
         }
     }
 }

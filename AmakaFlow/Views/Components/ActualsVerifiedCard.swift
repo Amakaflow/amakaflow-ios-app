@@ -14,6 +14,8 @@ struct ActualsVerifiedDeltaRow: Identifiable, Equatable {
     let actualLine: String
     let deltaLabel: String
     let isAsPlanned: Bool
+    let structureHeader: String?
+    let structureBlockIndex: Int?
 }
 
 enum ActualsVerifiedDeltas {
@@ -25,9 +27,15 @@ enum ActualsVerifiedDeltas {
                 name: exercise.name,
                 actualLine: exercise.actualDisplayLine,
                 deltaLabel: delta.label,
-                isAsPlanned: delta.isAsPlanned
+                isAsPlanned: delta.isAsPlanned,
+                structureHeader: exercise.structureHeader,
+                structureBlockIndex: exercise.structureBlockIndex
             )
         }
+    }
+
+    static func sections(from rows: [ActualsVerifiedDeltaRow]) -> [ActualsVerifiedDeltaSection] {
+        ActualsVerifiedDeltaSection.sections(from: rows)
     }
 
     static func calloutBody(sourceName: String, rpe: Int) -> String {
@@ -45,6 +53,9 @@ extension ExerciseActual {
         if let note = planned.note, !note.isEmpty, actualWeightKg == nil, planned.weightKg == nil {
             // Preserve note-style lines when weight wasn't tracked (e.g. split squat 2×20).
             if confirmation == .asPlanned || (actualSets == planned.sets && actualReps == planned.reps) {
+                if actualReps == 1 {
+                    return "\(actualSets) × \(note)"
+                }
                 return "\(actualSets) × \(actualReps) · \(note)"
             }
         }
@@ -82,12 +93,78 @@ extension ExerciseActual {
     }
 }
 
+struct ActualsVerifiedDeltaSection: Identifiable, Equatable {
+    let id: String
+    let header: String?
+    let rows: [ActualsVerifiedDeltaRow]
+
+    static func sections(from rows: [ActualsVerifiedDeltaRow]) -> [ActualsVerifiedDeltaSection] {
+        var result: [ActualsVerifiedDeltaSection] = []
+        var buffer: [ActualsVerifiedDeltaRow] = []
+        var currentHeader: String?
+        var currentBlock: Int?
+
+        func flush() {
+            guard !buffer.isEmpty else { return }
+            let id = [
+                currentBlock.map(String.init) ?? "flat",
+                String(result.count),
+                buffer[0].id
+            ].joined(separator: "_")
+            result.append(
+                ActualsVerifiedDeltaSection(id: id, header: currentHeader, rows: buffer)
+            )
+            buffer = []
+        }
+
+        for row in rows {
+            if buffer.isEmpty {
+                currentHeader = row.structureHeader
+                currentBlock = row.structureBlockIndex
+                buffer.append(row)
+                continue
+            }
+            let sameBlock = row.structureBlockIndex != nil
+                && row.structureBlockIndex == currentBlock
+            let sameHeader = row.structureHeader == currentHeader
+            if sameBlock || (row.structureBlockIndex == nil && currentBlock == nil && sameHeader) {
+                buffer.append(row)
+            } else {
+                flush()
+                currentHeader = row.structureHeader
+                currentBlock = row.structureBlockIndex
+                buffer.append(row)
+            }
+        }
+        flush()
+        return result
+    }
+}
+
+struct ActualsStructureBandHeader: View {
+    let title: String
+
+    var body: some View {
+        Text(title)
+            .font(.system(size: 8.5, weight: .bold, design: .monospaced))
+            .foregroundColor(DailyDriver.amber)
+            .padding(.horizontal, 9)
+            .padding(.vertical, 4)
+            .background(Capsule().fill(DailyDriver.amber.opacity(0.18)))
+            .accessibilityIdentifier("af_actuals_structure_header")
+    }
+}
+
 struct ActualsVerifiedCard: View {
     let sourceName: String
     let rpe: Int
     let rows: [ActualsVerifiedDeltaRow]
     /// Optional payoff line under the list (JSX mentions next-editor ghosts).
     var footerNote: String? = ActualsCopy.verifiedGhostFooter
+
+    private var sections: [ActualsVerifiedDeltaSection] {
+        ActualsVerifiedDeltas.sections(from: rows)
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -99,21 +176,11 @@ struct ActualsVerifiedCard: View {
                 .padding(.top, 14)
                 .padding(.bottom, 8)
 
-            VStack(spacing: 0) {
-                ForEach(Array(rows.enumerated()), id: \.element.id) { index, row in
-                    if index > 0 {
-                        Rectangle().fill(DailyDriver.border).frame(height: 1)
-                    }
-                    deltaRow(row)
+            VStack(alignment: .leading, spacing: 12) {
+                ForEach(sections) { section in
+                    verifiedSection(section)
                 }
             }
-            .padding(.horizontal, 14)
-            .background(DailyDriver.card)
-            .overlay(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .stroke(DailyDriver.border, lineWidth: 1)
-            )
-            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
             .accessibilityIdentifier(ActualsCopy.verifiedCardAccessibilityID)
 
             if let footerNote {
@@ -128,6 +195,38 @@ struct ActualsVerifiedCard: View {
         }
     }
 
+    @ViewBuilder
+    private func verifiedSection(_ section: ActualsVerifiedDeltaSection) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            if let header = section.header, !header.isEmpty {
+                ActualsStructureBandHeader(title: header)
+            }
+            VStack(spacing: 0) {
+                ForEach(Array(section.rows.enumerated()), id: \.element.id) { index, row in
+                    if index > 0 {
+                        Rectangle().fill(DailyDriver.border).frame(height: 1)
+                    }
+                    deltaRow(row)
+                }
+            }
+            .padding(.horizontal, 14)
+            .background(DailyDriver.card)
+            .overlay(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(DailyDriver.border, lineWidth: 1)
+            )
+            .overlay(alignment: .leading) {
+                if section.header != nil {
+                    RoundedRectangle(cornerRadius: 2)
+                        .fill(DailyDriver.amber)
+                        .frame(width: 3)
+                        .padding(.vertical, 1)
+                }
+            }
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        }
+    }
+
     private var callout: some View {
         VStack(alignment: .leading, spacing: 5) {
             HStack(spacing: 8) {
@@ -137,6 +236,7 @@ struct ActualsVerifiedCard: View {
                 Text(ActualsCopy.verifiedHeadline)
                     .ddDisplayText(13, weight: .bold)
                     .foregroundColor(DailyDriver.lime)
+                Spacer(minLength: 8)
             }
             Text(ActualsVerifiedDeltas.calloutBody(sourceName: sourceName, rpe: rpe))
                 .font(.system(size: 11))

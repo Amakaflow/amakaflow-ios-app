@@ -16,16 +16,23 @@ struct ActualsConnectSourcesView<Store: ActualsSourceConnecting>: View where Sto
 
     @State private var showAppleHealthPrimer = false
     @State private var oauthProvider: ActualsSourceProvider?
+    /// AMA-2396: next Strava OAuth must request `activity:write` (write-back reconnect).
+    @State private var oauthIncludeWrite = false
+    /// AMA-2396: Strava row → write-back settings, once connected.
+    @State private var showStravaWriteBack = false
+    @ObservedObject private var writeBackSettings: StravaWriteBackSettingsStore
 
     init(
         store: Store,
         healthKit: (any ActualsHealthKitConnecting)? = nil,
         providerAuth: (any ActualsProviderAuthProviding)? = nil,
+        writeBackSettings: StravaWriteBackSettingsStore? = nil,
         onConnect: ((ActualsSourceProvider) -> Void)? = nil
     ) {
         self.store = store
         self.healthKit = healthKit ?? LiveActualsHealthKitConnector()
         self.providerAuth = providerAuth ?? ActualsProviderAuthFactory.makeDefault()
+        self.writeBackSettings = writeBackSettings ?? .shared
         // Children already markConnected on grant/success — default is parent UI only.
         self.onConnect = onConnect ?? { _ in }
     }
@@ -39,6 +46,9 @@ struct ActualsConnectSourcesView<Store: ActualsSourceConnecting>: View where Sto
                 VStack(spacing: 9) {
                     ForEach(ActualsSourceProvider.allCases) { provider in
                         sourceRow(provider)
+                        if provider == .strava, store.isConnected(.strava) {
+                            stravaWriteBackEntryRow
+                        }
                     }
                 }
                 .padding(.top, 16)
@@ -58,14 +68,70 @@ struct ActualsConnectSourcesView<Store: ActualsSourceConnecting>: View where Sto
             }
         }
         .navigationDestination(item: $oauthProvider) { provider in
+            // Capture includeWrite for this push — clearing the flag later must not
+            // change what Authorize requests / what we unlock on success.
+            let requestedWrite = oauthIncludeWrite
             ActualsOAuthScopeView(
                 provider: provider,
                 store: store,
-                auth: providerAuth
-            ) {
+                auth: providerAuth,
+                includeWrite: requestedWrite
+            ) { outcome in
+                if provider == .strava {
+                    // Prefer parsed scope; if Strava/redirect omitted scope after a
+                    // write reconnect, still unlock — Authorize was for write.
+                    let unlock = outcome.grantedWrite || (requestedWrite && outcome.isSuccess)
+                    writeBackSettings.applyWriteGrantFromOAuth(grantedWrite: unlock)
+                    oauthIncludeWrite = false
+                    if unlock {
+                        DDToastCenter.shared.success("Strava write-back enabled")
+                    }
+                }
                 onConnect(provider)
             }
         }
+        .navigationDestination(isPresented: $showStravaWriteBack) {
+            ActualsStravaWriteBackView(store: writeBackSettings) {
+                startWriteBackReconnect()
+            }
+        }
+    }
+
+    /// Pop write-back settings, then push Strava OAuth with `activity:write`.
+    private func startWriteBackReconnect() {
+        showStravaWriteBack = false
+        oauthIncludeWrite = true
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 350_000_000)
+            oauthProvider = .strava
+        }
+    }
+
+    // MARK: - Strava write-back entry
+
+    private var stravaWriteBackEntryRow: some View {
+        Button {
+            showStravaWriteBack = true
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: "arrow.triangle.2.circlepath")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(DailyDriver.foregroundMuted)
+                Text("Write-back settings")
+                    .font(.system(size: 11.5, weight: .semibold))
+                    .foregroundColor(DailyDriver.foregroundMuted)
+                Spacer(minLength: 8)
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundColor(DailyDriver.foregroundDim)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .background(DailyDriver.card2)
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("af_actuals_strava_writeback_entry")
     }
 
     // MARK: - Header
@@ -112,32 +178,27 @@ struct ActualsConnectSourcesView<Store: ActualsSourceConnecting>: View where Sto
             Spacer(minLength: 8)
 
             if connected {
-                // OAuth sources stay tappable so a local CONNECTED from stub dogfood
-                // (or expired token) can start a real authorize again.
-                if provider == .strava || provider == .garmin {
-                    Button {
-                        connectTapped(provider)
-                    } label: {
-                        Text(ActualsCopy.connectButton)
-                            .ddDisplayText(12, weight: .bold)
-                            .foregroundColor(DailyDriver.ink)
-                            .padding(.horizontal, 14)
-                            .padding(.vertical, 8)
-                            .background(connectButtonBackground(for: provider))
-                            .clipShape(Capsule())
-                    }
-                    .buttonStyle(.plain)
-                    .fixedSize()
-                    .accessibilityIdentifier(provider.accessibilityConnectID)
-                } else {
+                VStack(alignment: .trailing, spacing: 6) {
                     Text(
                         store.isFreshlyLinked(provider)
                             ? ActualsCopy.linkedJustNowBadge
                             : ActualsCopy.connectedBadge
                     )
-                        .font(.system(size: 9, design: .monospaced))
-                        .foregroundColor(DailyDriver.lime)
-                        .fixedSize()
+                    .font(.system(size: 9, design: .monospaced))
+                    .foregroundColor(DailyDriver.lime)
+                    .fixedSize()
+                    // Re-auth without looking "not connected" — Connect CTA was confusing dogfood.
+                    if provider == .strava || provider == .garmin {
+                        Button {
+                            connectTapped(provider)
+                        } label: {
+                            Text(ActualsCopy.reconnectButton)
+                                .font(.system(size: 10, weight: .semibold))
+                                .foregroundColor(DailyDriver.foregroundMuted)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityIdentifier(provider.accessibilityConnectID)
+                    }
                 }
             } else {
                 let opensSettings = provider == .appleHealth
@@ -209,7 +270,12 @@ struct ActualsConnectSourcesView<Store: ActualsSourceConnecting>: View where Sto
             } else {
                 showAppleHealthPrimer = true
             }
-        case .garmin, .strava:
+        case .garmin:
+            oauthIncludeWrite = false
+            oauthProvider = provider
+        case .strava:
+            // Fresh Connect stays read-only. Write-back Reconnect sets oauthIncludeWrite
+            // before pushing this destination — don't clear it here.
             oauthProvider = provider
         }
     }
@@ -237,7 +303,7 @@ struct ActualsConnectSourcesView<Store: ActualsSourceConnecting>: View where Sto
 
 extension ActualsConnectSourcesView where Store == ActualsSourceConnectionStore {
     init() {
-        self.init(store: ActualsSourceConnectionStore())
+        self.init(store: ActualsSourceConnectionStore.shared)
     }
 }
 

@@ -71,25 +71,37 @@ struct EditorV2MenuSheet: View {
 struct EditorV2GroupConfigSheet: View {
     let groupKey: String
     @State private var group: EditorV2Group
+    /// True when this group is already the format pin (next adds land here).
+    var isInsertionTarget: Bool = false
     var onChange: (EditorV2Group) -> Void
     var onDone: () -> Void
     var onUngroup: () -> Void
+    /// Delete the group + its moves, then re-pin an empty format group (tri-set / superset).
+    var onDiscardAndRepin: (() -> Void)?
+    /// Re-pin this group so Add exercises targets it again.
+    var onFocusForAdds: (() -> Void)?
     /// AMA-2336 — soft sections are deleted (tombstoned), never "ungrouped".
     var onRemoveSoftSection: () -> Void
 
     init(
         groupKey: String,
         group: EditorV2Group,
+        isInsertionTarget: Bool = false,
         onChange: @escaping (EditorV2Group) -> Void,
         onDone: @escaping () -> Void,
         onUngroup: @escaping () -> Void,
+        onDiscardAndRepin: (() -> Void)? = nil,
+        onFocusForAdds: (() -> Void)? = nil,
         onRemoveSoftSection: @escaping () -> Void = {}
     ) {
         self.groupKey = groupKey
         _group = State(initialValue: group)
+        self.isInsertionTarget = isInsertionTarget
         self.onChange = onChange
         self.onDone = onDone
         self.onUngroup = onUngroup
+        self.onDiscardAndRepin = onDiscardAndRepin
+        self.onFocusForAdds = onFocusForAdds
         self.onRemoveSoftSection = onRemoveSoftSection
     }
 
@@ -126,7 +138,11 @@ struct EditorV2GroupConfigSheet: View {
                     ) { newValue in
                         setValue(newValue, for: row.key)
                     }
+                    .gridCellColumns(row.key == .capMinutes && group.stepperRows.count == 1 ? 2 : 1)
                 }
+            }
+            if group.stepperRows.contains(where: { $0.key == .capMinutes }) {
+                capMinutesQuickPicks
             }
             Button(action: onDone) {
                 Text("Done")
@@ -151,14 +167,37 @@ struct EditorV2GroupConfigSheet: View {
                 .buttonStyle(.plain)
                 .accessibilityIdentifier("editor_v2_remove_soft_section")
             } else {
+                if group.type == .superset, !isInsertionTarget, let onFocusForAdds {
+                    Button(action: onFocusForAdds) {
+                        Text("Add more moves to this \(group.name.lowercased())")
+                            .ddDisplayText(12.5, weight: .bold)
+                            .foregroundColor(DailyDriver.lime)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 13)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("editor_v2_focus_format_group")
+                }
+                if group.type == .superset, let onDiscardAndRepin {
+                    Button(action: onDiscardAndRepin) {
+                        Text("Delete this \(group.name.lowercased()) — start a new one")
+                            .ddDisplayText(12.5, weight: .bold)
+                            .foregroundColor(DailyDriver.destructive)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 13)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("editor_v2_discard_superset_group")
+                }
                 Button(action: onUngroup) {
-                    Text("Ungroup — back to straight sets")
+                    Text("Ungroup — keep exercises as straight sets")
                         .ddDisplayText(12.5, weight: .bold)
                         .foregroundColor(DailyDriver.foregroundMuted)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 13)
                 }
                 .buttonStyle(.plain)
+                .accessibilityIdentifier("editor_v2_ungroup")
             }
             Spacer(minLength: 8)
         }
@@ -185,6 +224,36 @@ struct EditorV2GroupConfigSheet: View {
         case .workSeconds: group.config.workSeconds = value
         }
         onChange(group)
+    }
+
+    private static let capMinutePresets = [5, 10, 12, 15, 20, 30, 45, 60]
+
+    private var capMinutesQuickPicks: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("QUICK CAP")
+                .font(.system(size: 9, weight: .medium, design: .monospaced))
+                .foregroundColor(DailyDriver.foregroundMuted)
+            EditorV2FlowWrap {
+                ForEach(Self.capMinutePresets, id: \.self) { minutes in
+                    let selected = value(for: .capMinutes) == minutes
+                    Button {
+                        setValue(minutes, for: .capMinutes)
+                    } label: {
+                        Text("\(minutes)m")
+                            .ddDisplayText(12, weight: .bold)
+                            .foregroundColor(selected ? DailyDriver.ink : DailyDriver.foreground)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 7)
+                            .background(Capsule().fill(selected ? DailyDriver.foreground : DailyDriver.card2))
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("editor_v2_cap_preset_\(minutes)")
+                    .accessibilityAddTraits(selected ? .isSelected : [])
+                }
+            }
+        }
+        .padding(.top, 2)
+        .accessibilityIdentifier("editor_v2_cap_quick_picks")
     }
 }
 

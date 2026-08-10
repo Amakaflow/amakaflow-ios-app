@@ -154,7 +154,7 @@ extension PrescriptionFormatter {
 
     /// Map editor row → save/push interval using the same primary metric as UI.
     static func saveInterval(from exercise: EditorV2Exercise) -> WorkoutSaveInterval {
-        let load = exercise.weightKg.map(EditorV2Exercise.formatWeightLoad)
+        let load = exercise.exportLoadString
         return saveInterval(
             name: exercise.name,
             prescription: effective(from: exercise),

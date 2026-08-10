@@ -55,22 +55,26 @@ extension BuilderV3ExercisePickerSheet {
                 if !trimmedQuery.isEmpty, !hasExactMatch {
                     Button {
                         // Select only — batch footer commits via onAddExercises (no double-add).
-                        if !selectedNames.contains(trimmedQuery) {
-                            selectedNames.append(trimmedQuery)
-                        }
-                        if !createdItems.contains(where: { $0.name == trimmedQuery }) {
+                        // Keep the query so the new row stays visible with a checkmark; chips also pin it.
+                        toggleSelection(trimmedQuery)
+                        if !createdItems.contains(where: {
+                            $0.name.caseInsensitiveCompare(trimmedQuery) == .orderedSame
+                        }) {
                             createdItems.append(
                                 BuilderV3ExerciseItem(
                                     name: trimmedQuery,
                                     muscle: "Custom",
                                     equipmentKey: nil,
-                                    equipmentLabel: "Bodyweight"
+                                    equipmentLabel: "Custom"
                                 )
                             )
                         }
-                        query = ""
                     } label: {
-                        Text("＋ Create “\(trimmedQuery)”")
+                        Text(
+                            isSelected(trimmedQuery)
+                                ? "✓ “\(trimmedQuery)” selected"
+                                : "＋ Create “\(trimmedQuery)”"
+                        )
                             .ddDisplayText(12.5, weight: .bold)
                             .foregroundColor(DailyDriver.lime)
                             .frame(maxWidth: .infinity)
@@ -138,19 +142,15 @@ extension BuilderV3ExercisePickerSheet {
     }
 
     func exerciseRow(_ item: BuilderV3ExerciseItem) -> some View {
-        let isSelected = selectedNames.contains(item.name)
+        let selected = isSelected(item.name)
         let inGym = BuilderV3GymOverlay.isInGym(equipmentKey: item.equipmentKey, availableKeys: availableEquipmentKeys)
         return Button {
-            if let index = selectedNames.firstIndex(of: item.name) {
-                selectedNames.remove(at: index)
-            } else {
-                selectedNames.append(item.name)
-            }
+            toggleSelection(item.name)
         } label: {
             HStack(spacing: 11) {
-                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                Image(systemName: selected ? "checkmark.circle.fill" : "circle")
                     .font(.system(size: 18))
-                    .foregroundColor(isSelected ? DailyDriver.lime : DailyDriver.foregroundDim)
+                    .foregroundColor(selected ? DailyDriver.lime : DailyDriver.foregroundDim)
                     .accessibilityIdentifier("builder_v3_exercise_checkbox_\(item.name)")
                 VStack(alignment: .leading, spacing: 2) {
                     Text(item.name)

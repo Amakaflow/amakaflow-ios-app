@@ -2,13 +2,15 @@
 //  ActualsMapToPlanView.swift
 //  AmakaFlow
 //
-//  AMA-2387: unmatched activity → "Which workout was this?" + Map v2 capture.
-//  Builder / photo / match-save are presented here (item-based covers) so the
-//  first tap never lands on an empty fullScreenCover.
+//  AMA-2396 A1: Map page v3 — selectable match cards + one pinned CTA
+//  that relabels (Keep-as-is ↔ Match to "<name>"). No amber explainer,
+//  no floating text actions.
 //
 
 import SwiftUI
 
+// AMA-2396: Map v3 keeps match list + capture + pinned CTA in one screen by design.
+// swiftlint:disable:next type_body_length
 struct ActualsMapToPlanView: View {
     let activity: ActualsUnmappedActivity
     let matches: [ActualsPlanMatch]
@@ -19,6 +21,7 @@ struct ActualsMapToPlanView: View {
     var onCaptureMatched: (ActualsCaptureDraft, _ alsoSavedToLibrary: Bool) -> Void = { _, _ in }
 
     @Environment(\.dismiss) private var dismiss
+    @State private var selectedMatchID: String?
     /// Single cover state so builder/photo → match-save never races two presentations.
     @State private var capturePresentation: CapturePresentation?
 
@@ -36,59 +39,51 @@ struct ActualsMapToPlanView: View {
         }
     }
 
+    private var selectedMatch: ActualsPlanMatch? {
+        matches.first { $0.id == selectedMatchID }
+    }
+
+    private var pinnedCTALabel: String {
+        ActualsMapCTAState.label(
+            selectedMatchTitle: selectedMatch?.candidate.title,
+            activityTitle: activity.title
+        )
+    }
+
+    private var pinnedIsMatch: Bool {
+        ActualsMapCTAState.isMatchSelected(selectedMatch?.candidate.title)
+    }
+
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 0) {
-                header
-                    .padding(.top, 10)
+        ZStack(alignment: .bottom) {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 0) {
+                    header
+                        .padding(.top, 10)
 
-                statsGrid
-                    .padding(.top, 12)
+                    statsGrid
+                        .padding(.top, 12)
 
-                askCallout
-                    .padding(.top, 12)
+                    askPrompt
+                        .padding(.top, 16)
 
-                captureSection
-                    .padding(.top, 14)
-
-                Text(matches.isEmpty ? ActualsCopy.mapOrMatchHeader : ActualsCopy.mapBestMatchesHeader)
-                    .font(.system(size: 8.5, design: .monospaced))
-                    .foregroundColor(DailyDriver.foregroundDim)
-                    .padding(.top, 16)
-                    .padding(.bottom, 8)
-
-                ForEach(Array(matches.enumerated()), id: \.element.id) { index, match in
-                    candidateRow(match, index: index + 1)
-                        .padding(.bottom, 8)
-                }
-
-                Button(action: onSearchAll) {
-                    Text(ActualsCopy.mapSearchAllCTA)
-                        .ddDisplayText(12.5, weight: .bold)
-                        .foregroundColor(DailyDriver.foregroundMuted)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 10)
-                }
-                .buttonStyle(.plain)
-
-                Button(
-                    action: {
-                        onKeepAsIs()
-                        dismiss()
-                    },
-                    label: {
-                        Text(ActualsCopy.mapKeepAsNamedCTA(title: activity.title))
-                            .ddDisplayText(12, weight: .bold)
-                            .foregroundColor(DailyDriver.foregroundDim)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 2)
+                    ForEach(Array(matches.enumerated()), id: \.element.id) { index, match in
+                        candidateRow(match, index: index + 1)
+                            .padding(.bottom, 7)
                     }
-                )
-                .buttonStyle(.plain)
-                .accessibilityIdentifier(ActualsCopy.mapKeepAsIsAccessibilityID)
+
+                    searchAllRow
+                        .padding(.bottom, 14)
+
+                    captureSection
+                }
+                .padding(.horizontal, 18)
+                .padding(.bottom, 96)
             }
-            .padding(.horizontal, 18)
-            .padding(.bottom, 96)
+
+            pinnedCTA
+                .padding(.horizontal, 14)
+                .padding(.bottom, 12)
         }
         .background(DailyDriver.screenBackground.ignoresSafeArea())
         .preferredColorScheme(.dark)
@@ -113,8 +108,10 @@ struct ActualsMapToPlanView: View {
                     draft: draft
                 ) { finalDraft, alsoLibrary in
                     capturePresentation = nil
+                    // Parent owns the next screen (fill-in). Dismissing here pops the
+                    // destination after the parent swaps to fill-in and lands on the
+                    // wrong scrubber day.
                     onCaptureMatched(finalDraft, alsoLibrary)
-                    dismiss()
                 }
                 .background(DailyDriver.screenBackground.ignoresSafeArea())
                 .ddSuppressFloatingChrome()
@@ -147,10 +144,10 @@ struct ActualsMapToPlanView: View {
                 )
                 VStack(alignment: .leading, spacing: 3) {
                     Text(activity.title)
-                        .ddDisplayText(22, weight: .heavy)
+                        .ddDisplayText(21, weight: .heavy)
                         .foregroundColor(DailyDriver.foreground)
                     Text(activityMeta)
-                        .font(.system(size: 9, design: .monospaced))
+                        .font(.system(size: 8.5, design: .monospaced))
                         .foregroundColor(DailyDriver.foregroundDim)
                 }
             }
@@ -171,28 +168,27 @@ struct ActualsMapToPlanView: View {
     // MARK: - Stats
 
     private var statsGrid: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 7) {
             statCell(
                 value: "\(max(1, Int((activity.durationSeconds / 60).rounded())))",
                 unit: "MIN"
             )
             statCell(value: caloriesLabel, unit: "CAL")
             statCell(value: hrLabel, unit: "BPM")
-            statCell(value: movesLabel, unit: "MOVES")
         }
     }
 
     private func statCell(value: String, unit: String) -> some View {
-        VStack(spacing: 3) {
+        VStack(spacing: 2) {
             Text(value)
-                .ddDisplayText(19, weight: .heavy)
+                .ddDisplayText(17, weight: .heavy)
                 .foregroundColor(DailyDriver.foreground)
             Text(unit)
-                .font(.system(size: 8, design: .monospaced))
+                .font(.system(size: 7.5, design: .monospaced))
                 .foregroundColor(DailyDriver.foregroundDim)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 11)
+        .padding(.vertical, 9)
         .background(DailyDriver.card)
         .overlay(
             RoundedRectangle(cornerRadius: 14, style: .continuous)
@@ -211,68 +207,133 @@ struct ActualsMapToPlanView: View {
         return "\(Int(heartRate.rounded()))"
     }
 
-    private var movesLabel: String { "—" }
+    // MARK: - Ask + candidates + capture
 
-    // MARK: - Ask + capture + candidates
-
-    private var askCallout: some View {
-        VStack(alignment: .leading, spacing: 4) {
+    private var askPrompt: some View {
+        VStack(alignment: .leading, spacing: 2) {
             Text(ActualsCopy.mapAskTitle)
-                .ddDisplayText(13, weight: .bold)
+                .ddDisplayText(15, weight: .bold)
                 .foregroundColor(DailyDriver.foreground)
-            Text(matches.isEmpty ? ActualsCopy.mapAskBodyNoMatch : ActualsCopy.mapAskBody)
-                .font(.system(size: 11))
-                .foregroundColor(DailyDriver.foregroundMuted)
-                .lineSpacing(2)
-                .fixedSize(horizontal: false, vertical: true)
+            Text(ActualsCopy.mapAskMono)
+                .font(.system(size: 8, design: .monospaced))
+                .foregroundColor(DailyDriver.foregroundDim)
+                .padding(.bottom, 9)
         }
-        .padding(.horizontal, 13)
-        .padding(.vertical, 11)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(DailyDriver.amber.opacity(0.12))
-        .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(DailyDriver.amber.opacity(0.4), lineWidth: 1)
-        )
-        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+    }
+
+    private var searchAllRow: some View {
+        Button(action: onSearchAll) {
+            HStack(spacing: 10) {
+                Image(systemName: "magnifyingglass")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(DailyDriver.foregroundMuted)
+                Text(ActualsCopy.mapSearchAllCTA)
+                    .font(.system(size: 12.5, weight: .semibold))
+                    .foregroundColor(DailyDriver.foregroundMuted)
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 13)
+            .padding(.vertical, 11)
+            .background(DailyDriver.card)
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(
+                        DailyDriver.border.opacity(0.9),
+                        style: StrokeStyle(lineWidth: 1, dash: [5, 4])
+                    )
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        }
+        .buttonStyle(.plain)
     }
 
     private var captureSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 7) {
             Text(ActualsCopy.mapCaptureSectionHeader)
                 .font(.system(size: 8.5, design: .monospaced))
                 .foregroundColor(DailyDriver.foregroundDim)
 
-            DDDoorRow(
-                icon: "square.and.pencil",
-                iconBackground: DailyDriver.card2,
-                title: ActualsCopy.mapCaptureBuildTitle,
-                subtitle: ActualsCopy.mapCaptureBuildSub
-            ) {
-                capturePresentation = .builder
+            HStack(spacing: 8) {
+                captureTile(
+                    CaptureTileConfig(
+                        icon: "square.and.pencil",
+                        iconBackground: DailyDriver.card2,
+                        iconInk: .white,
+                        title: ActualsCopy.mapCaptureBuildTitle,
+                        subtitle: ActualsCopy.mapCaptureBuildSub,
+                        accessibilityID: ActualsCopy.mapCaptureBuildAccessibilityID
+                    )
+                ) {
+                    capturePresentation = .builder
+                }
+                captureTile(
+                    CaptureTileConfig(
+                        icon: "camera.fill",
+                        iconBackground: DailyDriver.purple,
+                        iconInk: DailyDriver.ink,
+                        title: ActualsCopy.mapCapturePhotoTitle,
+                        subtitle: ActualsCopy.mapCapturePhotoSub,
+                        accessibilityID: ActualsCopy.mapCapturePhotoAccessibilityID
+                    )
+                ) {
+                    capturePresentation = .photo
+                }
             }
-            .accessibilityIdentifier(ActualsCopy.mapCaptureBuildAccessibilityID)
-
-            DDDoorRow(
-                icon: "camera.fill",
-                iconBackground: DailyDriver.purple,
-                title: ActualsCopy.mapCapturePhotoTitle,
-                subtitle: ActualsCopy.mapCapturePhotoSub
-            ) {
-                capturePresentation = .photo
-            }
-            .accessibilityIdentifier(ActualsCopy.mapCapturePhotoAccessibilityID)
         }
     }
 
-    private func candidateRow(_ match: ActualsPlanMatch, index: Int) -> some View {
-        Button {
-            onSelect(match)
-            dismiss()
-        } label: {
-            HStack(spacing: 12) {
+    private struct CaptureTileConfig {
+        let icon: String
+        let iconBackground: Color
+        let iconInk: Color
+        let title: String
+        let subtitle: String
+        let accessibilityID: String
+    }
+
+    private func captureTile(
+        _ config: CaptureTileConfig,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            VStack(alignment: .leading, spacing: 0) {
                 DDIconChip(
-                    systemName: "figure.run",
+                    systemName: config.icon,
+                    background: config.iconBackground,
+                    foreground: config.iconInk,
+                    size: 30
+                )
+                Text(config.title)
+                    .ddDisplayText(13, weight: .bold)
+                    .foregroundColor(DailyDriver.foreground)
+                    .padding(.top, 7)
+                Text(config.subtitle)
+                    .font(.system(size: 7.5, design: .monospaced))
+                    .foregroundColor(DailyDriver.foregroundDim)
+                    .padding(.top, 2)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 11)
+            .background(DailyDriver.card)
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(DailyDriver.border, lineWidth: 1)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier(config.accessibilityID)
+    }
+
+    private func candidateRow(_ match: ActualsPlanMatch, index: Int) -> some View {
+        let selected = selectedMatchID == match.id
+        return Button {
+            selectedMatchID = selected ? nil : match.id
+        } label: {
+            HStack(spacing: 11) {
+                DDIconChip(
+                    systemName: "dumbbell.fill",
                     background: DailyDriver.card2,
                     size: 32
                 )
@@ -280,49 +341,103 @@ struct ActualsMapToPlanView: View {
                     Text(match.candidate.title)
                         .ddDisplayText(13.5, weight: .bold)
                         .foregroundColor(DailyDriver.foreground)
-                    Text(match.candidate.sourceLabel)
+                    Text("\(match.candidate.sourceLabel) · \(match.whyLine)")
                         .font(.system(size: 8, design: .monospaced))
-                        .foregroundColor(DailyDriver.foregroundDim)
-                        .lineLimit(1)
-                    Text(match.whyLine)
-                        .font(.system(size: 8, design: .monospaced))
-                        .foregroundColor(DailyDriver.foregroundDim)
+                        .foregroundColor(match.isBest ? DailyDriver.lime : DailyDriver.amber)
                         .lineLimit(1)
                 }
                 Spacer(minLength: 8)
-                Image(systemName: "link")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(match.isBest ? DailyDriver.lime : DailyDriver.foregroundDim)
+                ZStack {
+                    Circle()
+                        .stroke(DailyDriver.border.opacity(0.9), lineWidth: 1.5)
+                        .frame(width: 20, height: 20)
+                        .opacity(selected ? 0 : 1)
+                    if selected {
+                        Circle()
+                            .fill(DailyDriver.lime)
+                            .frame(width: 20, height: 20)
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundColor(DailyDriver.ink)
+                    }
+                }
             }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 12)
+            .padding(.horizontal, 13)
+            .padding(.vertical, 11)
             .background(DailyDriver.card)
             .overlay(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
                     .stroke(
-                        match.isBest ? DailyDriver.lime.opacity(0.45) : DailyDriver.border,
-                        lineWidth: 1
+                        selected ? DailyDriver.lime : DailyDriver.border,
+                        lineWidth: selected ? 1.5 : 1
                     )
             )
-            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
         }
         .buttonStyle(.plain)
         .accessibilityIdentifier(ActualsCopy.mapCandidateAccessibilityID(index))
+        .accessibilityAddTraits(selected ? .isSelected : [])
+    }
+
+    // MARK: - Pinned CTA
+
+    private var pinnedCTA: some View {
+        Button {
+            if let selectedMatch {
+                onSelect(selectedMatch)
+                dismiss()
+            } else {
+                onKeepAsIs()
+                dismiss()
+            }
+        } label: {
+            Text(pinnedCTALabel)
+                .ddDisplayText(14, weight: .bold)
+                .foregroundColor(pinnedIsMatch ? DailyDriver.ink : DailyDriver.foreground)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+                .background(
+                    pinnedIsMatch
+                        ? DailyDriver.lime
+                        : Color(red: 20 / 255, green: 20 / 255, blue: 22 / 255).opacity(0.95)
+                )
+                .overlay(
+                    Capsule(style: .continuous)
+                        .stroke(
+                            pinnedIsMatch ? Color.clear : DailyDriver.border.opacity(0.9),
+                            lineWidth: 1
+                        )
+                )
+                .clipShape(Capsule(style: .continuous))
+                .shadow(
+                    color: pinnedIsMatch
+                        ? DailyDriver.lime.opacity(0.45)
+                        : Color.black.opacity(0.55),
+                    radius: pinnedIsMatch ? 14 : 12,
+                    y: pinnedIsMatch ? 0 : 8
+                )
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier(
+            pinnedIsMatch
+                ? ActualsCopy.mapPinnedCTAAccessibilityID
+                : ActualsCopy.mapKeepAsIsAccessibilityID
+        )
     }
 }
 
 #if DEBUG
-#Preview("Map to plan v2") {
+#Preview("Map to plan v3") {
     let start = Date()
     let activity = ActualsUnmappedActivity(
-        title: "Gym session",
-        provider: .garmin,
+        title: "Erg cardio",
+        provider: .strava,
         startDate: start,
-        durationSeconds: 44 * 60,
+        durationSeconds: 101 * 60,
         distanceMeters: nil,
-        calories: 486,
-        avgHR: 151,
-        type: .strength
+        calories: nil,
+        avgHR: nil,
+        type: .other
     )
     let candidates = [
         ActualsPlanCandidate(
@@ -330,6 +445,12 @@ struct ActualsMapToPlanView: View {
             scheduledStart: start.addingTimeInterval(-180),
             durationSeconds: 48 * 60, distanceMeters: nil,
             type: .strength, targetAvgHR: nil
+        ),
+        ActualsPlanCandidate(
+            id: "2", title: "Engine builder — 30 min", sourceLabel: "MY WORKOUTS",
+            scheduledStart: nil,
+            durationSeconds: 30 * 60, distanceMeters: nil,
+            type: .other, targetAvgHR: nil
         )
     ]
     let matches = ActualsPlanMatcher.rank(activity: activity, candidates: candidates)

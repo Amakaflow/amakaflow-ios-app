@@ -141,7 +141,12 @@ struct EditorV2View: View {
                                 showToast("\(type.label) — add the moves, timing is set")
                             },
                             onAddWarmup: { quickAddSoftSection(.sessionWarmup) },
-                            onAddCooldown: { quickAddSoftSection(.cooldown) }
+                            onAddCooldown: { quickAddSoftSection(.cooldown) },
+                            onBeginNextSupersetGroup: {
+                                let key = session.beginNextSupersetGroup()
+                                let name = session.groups[key]?.name ?? "Superset"
+                                showToast("\(name) ready — add the next moves")
+                            }
                         ),
                         builderV3Canvas: builderV3Seed != nil
                     )
