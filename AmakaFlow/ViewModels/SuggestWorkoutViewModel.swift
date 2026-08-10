@@ -5,6 +5,7 @@
 //  ViewModel for the "Suggest Workout" feature (AMA-1265).
 //  Calls POST /coach/suggest-workout and manages loading/success/error states.
 //
+// swiftlint:disable file_length
 
 import Combine
 import Foundation
