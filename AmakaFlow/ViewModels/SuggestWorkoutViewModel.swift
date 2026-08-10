@@ -69,12 +69,13 @@ extension Components.Schemas.SuggestWorkoutInterval {
         case .distance(let meters, let target):
             self.init(kind: "distance", meters: meters, target: target)
         case .repeat(let reps, let intervals):
+            let children = intervals.map(Components.Schemas.SuggestWorkoutInterval.init(workoutInterval:))
             self.init(
+                intervals: children,
                 kind: "repeat",
                 reps: reps,
-                target: Self.encodeRepeatChildren(
-                    intervals.map(Components.Schemas.SuggestWorkoutInterval.init(workoutInterval:))
-                )
+                // Compat for older clients / fixtures that unpack via target.
+                target: Self.encodeRepeatChildren(children)
             )
         case .rest(let seconds):
             self.init(kind: "rest", seconds: seconds)
@@ -91,7 +92,9 @@ extension Components.Schemas.SuggestWorkoutInterval {
             return .cooldown(seconds: seconds, target: target)
         case "time":
             guard let seconds else { return nil }
-            return .time(seconds: seconds, target: target)
+            // AMA-2399: ignore the repeat-compat base64 blob if it ever lands here.
+            let displayTarget = Self.isRepeatCompatTarget(target) ? nil : target
+            return .time(seconds: seconds, target: displayTarget)
         case "reps":
             guard let reps, let name else { return nil }
             return .reps(sets: sets, reps: reps, name: name, load: load, restSec: restSec, followAlongUrl: followAlongUrl)
@@ -100,12 +103,21 @@ extension Components.Schemas.SuggestWorkoutInterval {
             return .distance(meters: meters, target: target)
         case "repeat":
             guard let reps else { return nil }
-            return .repeat(reps: reps, intervals: Self.decodeRepeatChildren(from: target))
+            // Prefer first-class nested intervals (AMA-2399); fall back to
+            // the legacy target-encoded payload for older server responses.
+            let nested = (intervals ?? []).compactMap(\.workoutInterval)
+            let children = nested.isEmpty ? Self.decodeRepeatChildren(from: target) : nested
+            return .repeat(reps: reps, intervals: children)
         case "rest":
             return .rest(seconds: seconds)
         default:
             return nil
         }
+    }
+
+    private static func isRepeatCompatTarget(_ value: String?) -> Bool {
+        guard let value else { return false }
+        return value.hasPrefix(repeatPayloadPrefix)
     }
 
     private static func encodeRepeatChildren(_ intervals: [Components.Schemas.SuggestWorkoutInterval]) -> String? {

@@ -760,16 +760,53 @@ final class SuggestWorkoutViewModelTests: XCTestCase {
 
     let workout = try await buildWorkout(.single(kind: repeatInterval))
 
+    // AMA-2399: nested `intervals` round-trip preserves rest children.
+    XCTAssertEqual(workout.intervals, [repeatInterval])
+  }
+
+  func testBuildWorkout_decodesBackendNestedRepeatIntervals() async throws {
+    // Wire shape from chat-api `_to_ios_response` for Wingate-style asks.
+    let json = """
+    {
+      "blocks": [
+        {
+          "kind": "repeat",
+          "reps": 6,
+          "intervals": [
+            {"kind": "time", "seconds": 30, "target": "assault bike — hard"},
+            {"kind": "time", "seconds": 60, "target": "assault bike — easy"}
+          ]
+        }
+      ],
+      "warmUp": {"seconds": 300, "target": "assault bike"},
+      "cooldown": {"seconds": 300, "target": "assault bike"},
+      "name": "Wingate Three",
+      "sport": "conditioning",
+      "durationSeconds": 1140,
+      "whyThis": ["Matches your Wingate assault-bike ask."]
+    }
+    """
+    let data = Data(json.utf8)
+    let response = try JSONDecoder().decode(SuggestWorkoutResponse.self, from: data)
+    let workout = try await buildWorkout(response)
+
+    XCTAssertEqual(workout.name, "Wingate Three")
+    XCTAssertEqual(workout.sport, .conditioning)
+    XCTAssertEqual(workout.duration, 1140)
     XCTAssertEqual(
       workout.intervals,
       [
+        .warmup(seconds: 300, target: "assault bike"),
         .repeat(
-          reps: 3,
-          intervals: [.time(seconds: 45, target: "hard")]
-        )
+          reps: 6,
+          intervals: [
+            .time(seconds: 30, target: "assault bike — hard"),
+            .time(seconds: 60, target: "assault bike — easy"),
+          ]
+        ),
+        .cooldown(seconds: 300, target: "assault bike"),
       ]
     )
-    XCTAssertEqual(workout.duration, 60)
   }
 
   func testGeneratedSuggestWorkoutRepeatRoundTripPreservesNestedRest() {

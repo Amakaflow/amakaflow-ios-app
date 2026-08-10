@@ -178,12 +178,12 @@ struct CreateWithAIDraftRow: View {
             }
             return parts.joined(separator: " ")
         case .time(let seconds, let target):
-            if let target, !target.isEmpty { return target }
-            return "\(max(1, seconds / 60)) min"
+            if let target, !target.isEmpty { return "\(seconds)s · \(target)" }
+            return "\(seconds)s"
         case .distance(_, let target):
             return target
         case .repeat(_, let intervals):
-            return "\(intervals.count) exercises"
+            return Self.repeatDetail(intervals)
         default:
             return nil
         }
@@ -216,9 +216,59 @@ struct CreateWithAIDraftRow: View {
         case .time(_, let target): return target ?? "Timed work"
         case .reps(_, _, let name, _, _, _): return name
         case .distance(let meters, _): return "\(meters)m"
-        case .repeat(let reps, _): return "Repeat x\(reps)"
+        case .repeat(let reps, let intervals):
+            if let summary = Self.repeatTitle(reps: reps, intervals: intervals) {
+                return summary
+            }
+            return "Repeat ×\(reps)"
         case .rest: return "Rest"
         }
+    }
+
+    /// e.g. "Assault bike · 6×" for timed interval blocks.
+    private static func repeatTitle(reps: Int, intervals: [WorkoutInterval]) -> String? {
+        let names = intervals.compactMap { interval -> String? in
+            switch interval {
+            case .time(_, let target):
+                guard let target, !target.isEmpty else { return nil }
+                // "assault bike — hard" → "assault bike"
+                let base = target
+                    .components(separatedBy: "—")
+                    .first?
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                return (base?.isEmpty == false) ? base : target
+            case .reps(_, _, let name, _, _, _):
+                return name
+            default:
+                return nil
+            }
+        }
+        guard let first = names.first else { return nil }
+        return "\(first) · \(reps)×"
+    }
+
+    /// e.g. "30s hard / 60s easy"
+    private static func repeatDetail(_ intervals: [WorkoutInterval]) -> String {
+        let parts: [String] = intervals.compactMap { interval in
+            switch interval {
+            case .time(let seconds, let target):
+                if let target, let effort = target.components(separatedBy: "—").last?
+                    .trimmingCharacters(in: .whitespacesAndNewlines),
+                   !effort.isEmpty, effort.lowercased() != target.lowercased() {
+                    return "\(seconds)s \(effort)"
+                }
+                return "\(seconds)s"
+            case .rest(let seconds):
+                if let seconds { return "\(seconds)s rest" }
+                return "rest"
+            default:
+                return nil
+            }
+        }
+        if !parts.isEmpty {
+            return parts.joined(separator: " / ")
+        }
+        return "\(intervals.count) steps"
     }
 
     private func summaryDetail(_ interval: WorkoutInterval) -> String? {
