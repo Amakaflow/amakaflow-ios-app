@@ -68,30 +68,42 @@ struct ActualsConnectSourcesView<Store: ActualsSourceConnecting>: View where Sto
             }
         }
         .navigationDestination(item: $oauthProvider) { provider in
+            // Capture includeWrite for this push — clearing the flag later must not
+            // change what Authorize requests / what we unlock on success.
+            let requestedWrite = oauthIncludeWrite
             ActualsOAuthScopeView(
                 provider: provider,
                 store: store,
                 auth: providerAuth,
-                includeWrite: oauthIncludeWrite
+                includeWrite: requestedWrite
             ) { outcome in
                 if provider == .strava {
-                    writeBackSettings.applyWriteGrantFromOAuth(grantedWrite: outcome.grantedWrite)
+                    // Prefer parsed scope; if Strava/redirect omitted scope after a
+                    // write reconnect, still unlock — Authorize was for write.
+                    let unlock = outcome.grantedWrite || (requestedWrite && outcome.isSuccess)
+                    writeBackSettings.applyWriteGrantFromOAuth(grantedWrite: unlock)
                     oauthIncludeWrite = false
+                    if unlock {
+                        DDToastCenter.shared.success("Strava write-back enabled")
+                    }
                 }
                 onConnect(provider)
             }
         }
         .navigationDestination(isPresented: $showStravaWriteBack) {
             ActualsStravaWriteBackView(store: writeBackSettings) {
-                // Reconnect needs the write scope — pop first, then push OAuth after
-                // the dismiss settles so SwiftUI does not drop the destination.
-                showStravaWriteBack = false
-                Task { @MainActor in
-                    oauthIncludeWrite = true
-                    try? await Task.sleep(nanoseconds: 350_000_000)
-                    oauthProvider = .strava
-                }
+                startWriteBackReconnect()
             }
+        }
+    }
+
+    /// Pop write-back settings, then push Strava OAuth with `activity:write`.
+    private func startWriteBackReconnect() {
+        showStravaWriteBack = false
+        oauthIncludeWrite = true
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 350_000_000)
+            oauthProvider = .strava
         }
     }
 

@@ -328,10 +328,16 @@ final class StravaWriteBackSettingsStore: ObservableObject {
     }
 
     /// Call after a successful Strava OAuth that included `activity:write`.
+    /// - Parameter grantedWrite: true when callback scope contains write, or when
+    ///   this reconnect explicitly requested write and Strava returned success
+    ///   (scope echo is empty on some redirect chains).
     func applyWriteGrantFromOAuth(grantedWrite: Bool) {
         guard grantedWrite else { return }
         hasActivityWriteScope = true
         writeBackEnabled = true
+        defaults.set(true, forKey: Keys.hasWriteScope)
+        defaults.set(true, forKey: Keys.writeBackEnabled)
+        objectWillChange.send()
     }
 }
 

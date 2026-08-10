@@ -26,14 +26,9 @@ struct ActualsStravaWriteBackView: View {
             get: { store.writeBackEnabled },
             set: { newValue in
                 if newValue, !store.hasActivityWriteScope {
+                    // Don't leave a fake ON state — start write-scope OAuth now.
                     store.writeBackEnabled = false
-                    DDToastCenter.shared.present(
-                        DDToastEvent(
-                            kind: .error,
-                            text: ActualsCopy.writeBackReconnectToast,
-                            action: "Reconnect"
-                        ) { onReconnect?() }
-                    )
+                    onReconnect?()
                 } else {
                     store.writeBackEnabled = newValue
                 }
@@ -47,8 +42,15 @@ struct ActualsStravaWriteBackView: View {
                 header
                     .padding(.top, 10)
 
+                if !store.hasActivityWriteScope {
+                    enableWritePermissionBanner
+                        .padding(.top, 14)
+                }
+
                 writeBackToggleRow
                     .padding(.top, 16)
+                    .opacity(store.hasActivityWriteScope ? 1 : 0.45)
+                    .allowsHitTesting(store.hasActivityWriteScope)
 
                 skipRulesSection
                     .padding(.top, 18)
@@ -79,6 +81,36 @@ struct ActualsStravaWriteBackView: View {
                 .font(.system(size: 9, design: .monospaced))
                 .foregroundColor(DailyDriver.lime)
         }
+    }
+
+    /// Primary CTA — toggle alone kept resetting because write scope was never granted.
+    private var enableWritePermissionBanner: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(ActualsCopy.writeBackReconnectToast)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundColor(DailyDriver.foreground)
+                .fixedSize(horizontal: false, vertical: true)
+            Button {
+                onReconnect?()
+            } label: {
+                Text("Enable write permission")
+                    .ddDisplayText(13.5, weight: .bold)
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(DailyDriver.stravaBrand)
+                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("af_actuals_writeback_enable")
+        }
+        .padding(14)
+        .background(DailyDriver.card)
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(DailyDriver.stravaBrand.opacity(0.5), lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 
     // MARK: - Write-back toggle

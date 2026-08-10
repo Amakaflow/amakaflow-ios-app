@@ -38,7 +38,15 @@ enum StravaOAuthCallback {
             let scope = items
                 .first { $0.name.lowercased() == "scope" }?
                 .value ?? ""
-            return .success(grantedWrite: scopeContainsWrite(scope))
+            let writeFlag = items
+                .first { $0.name.lowercased() == "writegranted" }?
+                .value?
+                .lowercased()
+            // Prefer explicit writeGranted=1 from backend; also accept scope text.
+            let grantedWrite = writeFlag == "1"
+                || writeFlag == "true"
+                || scopeContainsWrite(scope)
+            return .success(grantedWrite: grantedWrite)
         case "error":
             return .failed
         default:
