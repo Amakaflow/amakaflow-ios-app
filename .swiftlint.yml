@@ -41,6 +41,7 @@ excluded:
   - "**/DerivedData/**"
   - "**/SourcePackages/**"
   - "**/.spm/**"
+  - AmakaFlow/Generated
   - AmakaFlowCompanion/AmakaFlowCompanion.xcodeproj
   - AmakaFlowCompanion/AmakaFlowCompanionTests
   - AmakaFlowCompanion/AmakaFlowCompanionUITests

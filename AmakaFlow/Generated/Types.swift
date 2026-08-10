@@ -3595,6 +3595,9 @@ public enum Components {
         public struct SuggestWorkoutInterval: Codable, Hashable, Sendable {
             /// - Remark: Generated from `#/components/schemas/SuggestWorkoutInterval/followAlongUrl`.
             public var followAlongUrl: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/SuggestWorkoutInterval/intervals`.
+            /// AMA-2399: nested children for `kind == "repeat"`.
+            public var intervals: [Components.Schemas.SuggestWorkoutInterval]?
             /// - Remark: Generated from `#/components/schemas/SuggestWorkoutInterval/kind`.
             public var kind: Swift.String
             /// - Remark: Generated from `#/components/schemas/SuggestWorkoutInterval/load`.
@@ -3617,6 +3620,7 @@ public enum Components {
             ///
             /// - Parameters:
             ///   - followAlongUrl:
+            ///   - intervals:
             ///   - kind:
             ///   - load:
             ///   - meters:
@@ -3628,6 +3632,7 @@ public enum Components {
             ///   - target:
             public init(
                 followAlongUrl: Swift.String? = nil,
+                intervals: [Components.Schemas.SuggestWorkoutInterval]? = nil,
                 kind: Swift.String,
                 load: Swift.String? = nil,
                 meters: Swift.Int? = nil,
@@ -3639,6 +3644,7 @@ public enum Components {
                 target: Swift.String? = nil
             ) {
                 self.followAlongUrl = followAlongUrl
+                self.intervals = intervals
                 self.kind = kind
                 self.load = load
                 self.meters = meters
@@ -3651,6 +3657,7 @@ public enum Components {
             }
             public enum CodingKeys: String, CodingKey {
                 case followAlongUrl
+                case intervals
                 case kind
                 case load
                 case meters

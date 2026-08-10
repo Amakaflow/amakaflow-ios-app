@@ -550,16 +550,20 @@ struct Workout: Identifiable, Codable, Hashable {
 
             case .repeat(let reps, let subIntervals):
                 flushMain()
-                let subExercises = subIntervals.compactMap { Workout.exerciseFromLegacyInterval($0) }
-                if !subExercises.isEmpty {
-                    blocks.append(Block(label: nil, structure: .circuit, rounds: reps, exercises: subExercises))
+                // AMA-2399: map nested rests onto restSeconds / restBetweenSeconds.
+                let packed = Self.exercisesPreservingRests(from: subIntervals, rounds: reps)
+                if !packed.exercises.isEmpty {
+                    blocks.append(Block(
+                        label: nil,
+                        structure: .circuit,
+                        rounds: reps,
+                        exercises: packed.exercises,
+                        restBetweenSeconds: packed.restBetweenSeconds
+                    ))
                 }
 
             case .rest:
-                // Skip — rest is structural, handled by restSeconds on exercises
-                // and restBetweenSeconds on blocks. Converting rest intervals into
-                // Exercise objects would cause BlockToIntervalConverter to emit
-                // spurious .time intervals.
+                // Top-level rest is structural (nested rests handled in `.repeat` above).
                 break
             }
         }
@@ -587,7 +591,7 @@ struct Workout: Identifiable, Codable, Hashable {
                             durationSeconds: nil, load: nil, restSeconds: nil,
                             distance: Double(meters), notes: target, supersetGroup: nil)
         case .rest:
-            // Skip — rest is structural, not an exercise
+            // Handled by exercisesPreservingRests — not an exercise row.
             return nil
         default:
             return nil
@@ -638,6 +642,58 @@ struct Workout: Identifiable, Codable, Hashable {
         }
         // Unparseable — store original string as unit, value 0
         return ExerciseLoad(value: 0, unit: loadString)
+    }
+}
+
+// MARK: - Legacy repeat rest packing (AMA-2399)
+extension Workout {
+    /// Pack repeat children into exercises, attaching `.rest` to the preceding
+    /// work interval. For multi-round repeats, the trailing rest becomes
+    /// `restBetweenSeconds` so flatten emits it at the end of each round.
+    fileprivate static func exercisesPreservingRests(
+        from subIntervals: [WorkoutInterval],
+        rounds: Int
+    ) -> (exercises: [Exercise], restBetweenSeconds: Int?) {
+        var exercises: [Exercise] = []
+        for interval in subIntervals {
+            switch interval {
+            case .rest(let seconds):
+                guard !exercises.isEmpty else { continue }
+                let lastIndex = exercises.count - 1
+                if exercises[lastIndex].restSeconds == nil {
+                    exercises[lastIndex] = copyExercise(exercises[lastIndex], restSeconds: seconds)
+                }
+            default:
+                if let mapped = exerciseFromLegacyInterval(interval) {
+                    exercises.append(mapped)
+                }
+            }
+        }
+
+        var restBetween: Int?
+        // Multi-round circuits restore end-of-round rest via restBetweenSeconds
+        // (flatten does not emit the last exercise's restSeconds).
+        if rounds > 1, let lastIndex = exercises.indices.last, let trailing = exercises[lastIndex].restSeconds {
+            restBetween = trailing
+            exercises[lastIndex] = copyExercise(exercises[lastIndex], restSeconds: nil)
+        }
+        return (exercises, restBetween)
+    }
+
+    private static func copyExercise(_ base: Exercise, restSeconds: Int?) -> Exercise {
+        Exercise(
+            name: base.name,
+            canonicalName: base.canonicalName,
+            sets: base.sets,
+            reps: base.reps,
+            durationSeconds: base.durationSeconds,
+            load: base.load,
+            restSeconds: restSeconds,
+            distance: base.distance,
+            notes: base.notes,
+            focus: base.focus,
+            supersetGroup: base.supersetGroup
+        )
     }
 }
 
