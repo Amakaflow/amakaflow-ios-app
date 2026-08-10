@@ -445,15 +445,24 @@ struct SettingsView: View {
                     destination: AnyView(connectionsHub)
                 )
                 ddSettingsDivider
-                ddSettingsLinkRow(
-                    icon: "figure.run",
-                    tint: DailyDriver.orange,
-                    title: "Strava",
-                    subtitle: stravaSettingsRowSubtitle,
-                    destination: AnyView(
-                        ActualsConnectSourcesView(store: actualsSources) { _ in }
-                    )
-                )
+                // Typed NavigationLink — AnyView(destination) drops nested
+                // navigationDestination (write-back / OAuth) and can hard-crash.
+                NavigationLink {
+                    ActualsConnectSourcesView(store: actualsSources) { _ in }
+                } label: {
+                    DDSettingsRow(
+                        icon: "figure.run",
+                        iconBackground: DailyDriver.orange,
+                        title: "Strava",
+                        detail: stravaSettingsRowSubtitle
+                    ) {
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundColor(DailyDriver.foregroundDim)
+                    }
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("af_settings_strava_row")
                 ddSettingsDivider
                 ddSettingsButtonRow(
                     icon: "paperplane.fill",
