@@ -193,8 +193,9 @@ final class ActualsTodayDemoFeed: ObservableObject {
         await activateFromStravaSync(sync: sync, client: client ?? BFFStravaClient.live())
     }
 
-    /// Replace Today cards with Strava sync-completed activities for **today only**.
-    /// API still backfills the last 30 days (progress copy); older days stay off this rail.
+    /// Replace Today cards with Strava sync-completed activities for the lookback window.
+    /// AMA-2396: keep all pulled days in `cards` so the scrubber can show past sessions;
+    /// `TodayDiaryView` filters to the selected local day.
     func activateFromStravaSync(
         sync: ActualsSyncProgressStore,
         client: BFFStravaClient
@@ -212,7 +213,8 @@ final class ActualsTodayDemoFeed: ObservableObject {
             isActive = true
             showMergeAsk = false
             let activities = result.activities
-            let todayCards = Self.cards(from: activities)
+            // Newest-first across the window (same order History uses).
+            let windowCards = Self.historyCards(from: activities).flatMap(\.cards)
             let total = max(result.syncedCount, activities.count)
             if total > 0 {
                 sync.beginBackfill(total: total)
@@ -222,7 +224,7 @@ final class ActualsTodayDemoFeed: ObservableObject {
             } else {
                 sync.clear()
             }
-            cards = todayCards
+            cards = windowCards
         } catch is StravaLogicalSyncFailure {
             showMergeAsk = false
             cards = []
@@ -558,7 +560,7 @@ final class ActualsTodayDemoFeed: ObservableObject {
         }
     }
 
-    private struct MatchedCardRequest {
+    struct MatchedCardRequest {
         let cardID: String
         let timeLabel: String
         let title: String
@@ -568,6 +570,12 @@ final class ActualsTodayDemoFeed: ObservableObject {
     }
 
     private func makeMatchedCard(request: MatchedCardRequest) -> ActualsTodayDemoCard {
+        Self.makeMatchedCard(request: request)
+    }
+
+    /// Shared by Today + History so Map → match always attaches a fill-in session
+    /// (RPE / Save / write-back), not just a renamed title.
+    static func makeMatchedCard(request: MatchedCardRequest) -> ActualsTodayDemoCard {
         let cardID = request.cardID
         let timeLabel = request.timeLabel
         let title = request.title

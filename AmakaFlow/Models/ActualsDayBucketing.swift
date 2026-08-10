@@ -104,21 +104,20 @@ enum ActualsDayBucketing {
         for date: Date,
         calendar: Calendar = .current
     ) -> String {
-        let locale = calendar.locale ?? .current
-        let weekday = date.formatted(
-            Date.FormatStyle()
-                .weekday(.abbreviated)
-                .locale(locale)
-                .timeZone(calendar.timeZone)
-                .calendar(calendar)
-        ).uppercased()
-        let month = date.formatted(
-            Date.FormatStyle()
-                .month(.abbreviated)
-                .locale(locale)
-                .timeZone(calendar.timeZone)
-                .calendar(calendar)
-        ).uppercased()
+        // Avoid FormatStyle `.calendar(_:)` / `.timeZone(_:)` chaining — the property
+        // getters shadow the setters when a local is also named `calendar`.
+        var weekdayStyle = Date.FormatStyle()
+            .weekday(.abbreviated)
+            .locale(calendar.locale ?? .current)
+        weekdayStyle.calendar = calendar
+        weekdayStyle.timeZone = calendar.timeZone
+        var monthStyle = Date.FormatStyle()
+            .month(.abbreviated)
+            .locale(calendar.locale ?? .current)
+        monthStyle.calendar = calendar
+        monthStyle.timeZone = calendar.timeZone
+        let weekday = date.formatted(weekdayStyle).uppercased()
+        let month = date.formatted(monthStyle).uppercased()
         let day = calendar.component(.day, from: date)
         return "\(weekday) · \(month) \(day)"
     }
@@ -158,17 +157,16 @@ enum ActualsHistoryScrubber {
         }
 
         let locale = calendar.locale ?? .current
+        var weekdayStyle = Date.FormatStyle()
+            .weekday(.narrow)
+            .locale(locale)
+        weekdayStyle.calendar = calendar
+        weekdayStyle.timeZone = calendar.timeZone
         var result: [DDScrubberDay] = []
         var cursor = earliest
         while cursor <= end {
             let dayNumber = calendar.component(.day, from: cursor)
-            let weekday = cursor.formatted(
-                Date.FormatStyle()
-                    .weekday(.narrow)
-                    .locale(locale)
-                    .timeZone(calendar.timeZone)
-                    .calendar(calendar)
-            ).uppercased()
+            let weekday = cursor.formatted(weekdayStyle).uppercased()
             let isToday = calendar.isDate(cursor, inSameDayAs: today)
             let isFuture = cursor > today
             let hasActivity = activityDates.contains { calendar.isDate($0, inSameDayAs: cursor) }

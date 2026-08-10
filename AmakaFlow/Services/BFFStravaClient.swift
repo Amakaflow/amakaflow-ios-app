@@ -95,6 +95,57 @@ struct StravaSyncCompletedResultDTO: Codable, Equatable, Sendable {
     }
 }
 
+struct StravaWriteBackAPIResultDTO: Codable, Equatable, Sendable {
+    let activityId: Int
+    let status: String
+    let written: Bool
+
+    enum CodingKeys: String, CodingKey {
+        case activityId = "activity_id"
+        case status
+        case written
+    }
+}
+
+struct StravaRestoreAPIResultDTO: Codable, Equatable, Sendable {
+    let activityId: Int
+    let restored: Bool
+    let title: String
+    let description: String
+    let message: String
+
+    enum CodingKeys: String, CodingKey {
+        case activityId = "activity_id"
+        case restored
+        case title
+        case description
+        case message
+    }
+
+    init(
+        activityId: Int,
+        restored: Bool,
+        title: String = "",
+        description: String = "",
+        message: String = ""
+    ) {
+        self.activityId = activityId
+        self.restored = restored
+        self.title = title
+        self.description = description
+        self.message = message
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        activityId = try container.decode(Int.self, forKey: .activityId)
+        restored = try container.decode(Bool.self, forKey: .restored)
+        title = try container.decodeIfPresent(String.self, forKey: .title) ?? ""
+        description = try container.decodeIfPresent(String.self, forKey: .description) ?? ""
+        message = try container.decodeIfPresent(String.self, forKey: .message) ?? ""
+    }
+}
+
 private struct BFFStravaSyncCompletedBody: Encodable {
     let userId: String
     let daysBack: Int
@@ -141,12 +192,17 @@ nonisolated final class BFFStravaClient: @unchecked Sendable {
     }
 
     /// POST `/v1/strava/oauth/initiate?userId=` → Strava authorize URL.
-    func initiateOAuth() async throws -> URL {
+    /// - Parameter includeWrite: AMA-2396 write-back reconnect — request `activity:write`.
+    func initiateOAuth(includeWrite: Bool = false) async throws -> URL {
         let userId = try await requireUserID()
+        var query = [URLQueryItem(name: "userId", value: userId)]
+        if includeWrite {
+            query.append(URLQueryItem(name: "includeWrite", value: "true"))
+        }
         let response: StravaOAuthInitiateResponse = try await send(
             method: "POST",
             path: "strava/oauth/initiate",
-            queryItems: [URLQueryItem(name: "userId", value: userId)],
+            queryItems: query,
             bodyData: nil
         )
         guard let url = URL(string: response.url) else {
@@ -165,6 +221,28 @@ nonisolated final class BFFStravaClient: @unchecked Sendable {
             path: "strava/sync-completed",
             queryItems: nil,
             bodyData: bodyData
+        )
+    }
+
+    /// POST `/v1/strava/activities/{id}/writeback?userId=`
+    func applyWriteBack(activityId: String) async throws -> StravaWriteBackAPIResultDTO {
+        let userId = try await requireUserID()
+        return try await send(
+            method: "POST",
+            path: "strava/activities/\(activityId)/writeback",
+            queryItems: [URLQueryItem(name: "userId", value: userId)],
+            bodyData: nil
+        )
+    }
+
+    /// POST `/v1/strava/activities/{id}/restore?userId=`
+    func restoreWriteBack(activityId: String) async throws -> StravaRestoreAPIResultDTO {
+        let userId = try await requireUserID()
+        return try await send(
+            method: "POST",
+            path: "strava/activities/\(activityId)/restore",
+            queryItems: [URLQueryItem(name: "userId", value: userId)],
+            bodyData: nil
         )
     }
 

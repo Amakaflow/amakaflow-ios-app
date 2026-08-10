@@ -31,6 +31,8 @@ final class BFFActualsProviderAuth: NSObject, ActualsProviderAuthProviding {
     private let client: BFFStravaClient
     private var authSession: ASWebAuthenticationSession?
     private var continuation: CheckedContinuation<ActualsProviderAuthOutcome, Never>?
+    /// AMA-2396: set true before authorize when write-back reconnect needs `activity:write`.
+    var includeWriteScope = false
 
     init(client: BFFStravaClient) {
         self.client = client
@@ -54,7 +56,7 @@ final class BFFActualsProviderAuth: NSObject, ActualsProviderAuthProviding {
     private func authorizeStrava() async -> ActualsProviderAuthOutcome {
         let authURL: URL
         do {
-            authURL = try await client.initiateOAuth()
+            authURL = try await client.initiateOAuth(includeWrite: includeWriteScope)
         } catch {
             return .failed
         }

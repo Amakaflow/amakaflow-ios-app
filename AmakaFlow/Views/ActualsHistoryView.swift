@@ -59,6 +59,69 @@ final class ActualsHistoryViewModel: ObservableObject {
         }
     }
 
+    func applyKeepAsIs(cardID: String) {
+        mutateCard(id: cardID) { $0.markingCounted() }
+    }
+
+    /// Map → library pick: attach plan + fill-in session (same as Today).
+    @discardableResult
+    func applyLibraryMatch(planTitle: String, cardID: String) -> ActualsTodayDemoCard? {
+        guard let prior = card(withID: cardID) else { return nil }
+        let matched = ActualsTodayDemoFeed.makeMatchedCard(
+            request: ActualsTodayDemoFeed.MatchedCardRequest(
+                cardID: cardID,
+                timeLabel: prior.timeLabel,
+                title: planTitle,
+                activity: prior.activity,
+                blockSummaries: [planTitle],
+                sourceLabel: "Matched · \(ActualsCopy.sourceDisplayName(prior.activity?.provider ?? .strava))"
+            )
+        )
+        mutateCard(id: cardID) { _ in matched }
+        return matched
+    }
+
+    @discardableResult
+    func applyCaptureMatched(draft: ActualsCaptureDraft, cardID: String) -> ActualsTodayDemoCard? {
+        guard let prior = card(withID: cardID) else { return nil }
+        let matched = ActualsTodayDemoFeed.makeMatchedCard(
+            request: ActualsTodayDemoFeed.MatchedCardRequest(
+                cardID: cardID,
+                timeLabel: prior.timeLabel,
+                title: draft.title,
+                activity: prior.activity,
+                blockSummaries: draft.blockSummaries.isEmpty ? [draft.title] : draft.blockSummaries,
+                sourceLabel: "Matched · \(ActualsCopy.sourceDisplayName(prior.activity?.provider ?? .strava))"
+            )
+        )
+        mutateCard(id: cardID) { _ in matched }
+        return matched
+    }
+
+    func markVerified(saved: ActualsFillInSession, cardID: String) {
+        mutateCard(id: cardID) { $0.markingVerified(with: saved) }
+    }
+
+    func card(withID id: String) -> ActualsTodayDemoCard? {
+        for group in dayGroups {
+            if let found = group.cards.first(where: { $0.id == id }) {
+                return found
+            }
+        }
+        return nil
+    }
+
+    private func mutateCard(id: String, transform: (ActualsTodayDemoCard) -> ActualsTodayDemoCard) {
+        for groupIndex in dayGroups.indices {
+            if let cardIndex = dayGroups[groupIndex].cards.firstIndex(where: { $0.id == id }) {
+                var group = dayGroups[groupIndex]
+                group.cards[cardIndex] = transform(group.cards[cardIndex])
+                dayGroups[groupIndex] = group
+                return
+            }
+        }
+    }
+
     /// Returns `true` when groups were successfully replaced from the network.
     @discardableResult
     private func load(replacingExisting: Bool) async -> Bool {
@@ -88,8 +151,27 @@ final class ActualsHistoryViewModel: ObservableObject {
     }
 }
 
+/// Navigation payload for History → Map (keeps card identity through match).
+private struct HistoryMapRoute: Identifiable, Hashable {
+    let cardID: String
+    let activity: ActualsUnmappedActivity
+
+    var id: String { "map-\(cardID)" }
+}
+
+private struct HistoryFillInRoute: Identifiable, Hashable {
+    let cardID: String
+
+    var id: String { "fill-\(cardID)" }
+}
+
 struct ActualsHistoryView: View {
     @StateObject private var viewModel: ActualsHistoryViewModel
+    @State private var mapRoute: HistoryMapRoute?
+    @State private var fillInRoute: HistoryFillInRoute?
+    @State private var libraryCandidates: [ActualsPlanCandidate] = ActualsTodayDemoFeed.samplePlanCandidates
+    @State private var showLibraryMatchPicker = false
+    @State private var libraryPickerCardID: String?
 
     @MainActor
     init(viewModel: ActualsHistoryViewModel? = nil) {
@@ -123,6 +205,29 @@ struct ActualsHistoryView: View {
         .preferredColorScheme(.dark)
         .task {
             await viewModel.loadIfNeeded()
+            await loadLibraryCandidates()
+        }
+        .navigationDestination(item: $mapRoute) { route in
+            mapDestination(for: route)
+        }
+        .navigationDestination(item: $fillInRoute) { route in
+            fillInDestination(for: route)
+        }
+        .sheet(isPresented: $showLibraryMatchPicker) {
+            ActualsLibraryMatchPicker(
+                candidates: libraryCandidates,
+                onPick: { candidate in
+                    showLibraryMatchPicker = false
+                    guard let cardID = libraryPickerCardID else { return }
+                    // Match then land on Fill-in (RPE + Save) — don't dump back to the list.
+                    _ = viewModel.applyLibraryMatch(planTitle: candidate.title, cardID: cardID)
+                    mapRoute = nil
+                    openFillIn(cardID: cardID)
+                },
+                onCancel: {
+                    showLibraryMatchPicker = false
+                }
+            )
         }
         .accessibilityIdentifier(ActualsCopy.historyAccessibilityID)
     }
@@ -157,7 +262,7 @@ struct ActualsHistoryView: View {
                     viewModel.bannerExpanded.toggle()
                 }
             } label: {
-                Text(ActualsCopy.historyBannerShow)
+                Text(viewModel.bannerExpanded ? "Hide ›" : ActualsCopy.historyBannerShow)
                     .ddDisplayText(12, weight: .bold)
                     .foregroundColor(DailyDriver.lime)
             }
@@ -197,13 +302,95 @@ struct ActualsHistoryView: View {
 
                         VStack(spacing: 7) {
                             ForEach(group.cards) { card in
-                                dayRow(card)
-                                    .accessibilityIdentifier("af_actuals_history_row_\(card.id)")
+                                Button {
+                                    openCard(card)
+                                } label: {
+                                    dayRow(card)
+                                }
+                                .buttonStyle(.plain)
+                                .accessibilityIdentifier("af_actuals_history_row_\(card.id)")
                             }
                         }
                     }
                 }
             }
+        }
+    }
+
+    private func openCard(_ card: ActualsTodayDemoCard) {
+        switch card.kind {
+        case .unmapped, .merged:
+            let activity = card.activity ?? ActualsTodayDemoFeed.sampleUnmappedActivity()
+            mapRoute = HistoryMapRoute(cardID: card.id, activity: activity)
+        case .fillInDebt:
+            // Already matched — go to Fill-in (RPE + Save), not Map again.
+            // Rebuild session if an earlier match only renamed the title.
+            if card.fillInSession == nil {
+                _ = viewModel.applyLibraryMatch(planTitle: card.title, cardID: card.id)
+            }
+            openFillIn(cardID: card.id)
+        case .verified, .counted:
+            break
+        }
+    }
+
+    private func openFillIn(cardID: String) {
+        guard viewModel.card(withID: cardID)?.fillInSession != nil else { return }
+        fillInRoute = HistoryFillInRoute(cardID: cardID)
+    }
+
+    private func mapDestination(for route: HistoryMapRoute) -> some View {
+        ActualsMapToPlanView(
+            activity: route.activity,
+            matches: ActualsPlanMatcher.rank(
+                activity: route.activity,
+                candidates: libraryCandidates
+            ),
+            onSelect: { match in
+                _ = viewModel.applyLibraryMatch(
+                    planTitle: match.candidate.title,
+                    cardID: route.cardID
+                )
+                mapRoute = nil
+                openFillIn(cardID: route.cardID)
+            },
+            onKeepAsIs: {
+                viewModel.applyKeepAsIs(cardID: route.cardID)
+                mapRoute = nil
+            },
+            onSearchAll: {
+                libraryPickerCardID = route.cardID
+                showLibraryMatchPicker = true
+            },
+            onCaptureMatched: { draft, _ in
+                _ = viewModel.applyCaptureMatched(draft: draft, cardID: route.cardID)
+                mapRoute = nil
+                openFillIn(cardID: route.cardID)
+            }
+        )
+        .navigationBarBackButtonHidden(true)
+    }
+
+    @ViewBuilder
+    private func fillInDestination(for route: HistoryFillInRoute) -> some View {
+        if let session = viewModel.card(withID: route.cardID)?.fillInSession {
+            ActualsFillInView(
+                viewModel: ActualsFillInViewModel(
+                    session: session,
+                    repository: ActualsRepository()
+                ),
+                onSaved: { saved in
+                    viewModel.markVerified(saved: saved, cardID: route.cardID)
+                },
+                onBack: {
+                    fillInRoute = nil
+                }
+            )
+            .navigationBarBackButtonHidden(true)
+        } else {
+            Text("Couldn't open fill-in for that session.")
+                .foregroundColor(DailyDriver.foregroundDim)
+                .padding()
         }
     }
 
@@ -238,8 +425,13 @@ struct ActualsHistoryView: View {
     @ViewBuilder
     private func rowCTA(for card: ActualsTodayDemoCard) -> some View {
         switch card.kind {
-        case .unmapped, .fillInDebt, .merged:
+        case .unmapped, .merged:
             Text(ActualsCopy.historyFillInCTA)
+                .ddDisplayText(11.5, weight: .bold)
+                .foregroundColor(DailyDriver.amber)
+        case .fillInDebt:
+            // Matched — next step is Log RPE / Save, not "map again".
+            Text("Log RPE ›")
                 .ddDisplayText(11.5, weight: .bold)
                 .foregroundColor(DailyDriver.amber)
         case .verified:
@@ -299,5 +491,17 @@ struct ActualsHistoryView: View {
                 .foregroundColor(DailyDriver.border)
         )
         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+    }
+
+    @MainActor
+    private func loadLibraryCandidates() async {
+        do {
+            let workouts = try await APIService.shared.fetchWorkouts()
+            libraryCandidates = ActualsPlanCandidate.fromLibrary(workouts)
+        } catch {
+            if libraryCandidates.isEmpty {
+                libraryCandidates = ActualsTodayDemoFeed.samplePlanCandidates
+            }
+        }
     }
 }

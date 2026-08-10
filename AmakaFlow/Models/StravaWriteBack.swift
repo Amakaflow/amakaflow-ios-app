@@ -426,16 +426,89 @@ final class MockStravaWriteBackProvider: StravaWriteBackProviding {
     }
 }
 
+/// Live write-back via mobile-BFF → strava-sync-api (AMA-2396).
+final class BFFStravaWriteBackProvider: StravaWriteBackProviding {
+    private let client: BFFStravaClient
+
+    init(client: BFFStravaClient) {
+        self.client = client
+    }
+
+    @MainActor
+    static func live() -> BFFStravaWriteBackProvider {
+        BFFStravaWriteBackProvider(client: .live())
+    }
+
+    func writeBack(_ request: StravaWriteBackRequest) async -> StravaWriteBackOutcome {
+        // Client-side skip preview (same rules as stub) — avoids a network round
+        // trip when we already know Strava must not be touched.
+        let decision = StravaWriteBackDecorator.evaluate(
+            StravaWriteBackEvaluateInput(
+                activityType: request.activityType,
+                recordingApp: request.recordingApp,
+                description: request.currentDescription,
+                isRace: request.isRace,
+                rules: request.rules,
+                structureBody: request.structureBody,
+                rpe: nil
+            )
+        )
+        guard decision.shouldWrite else {
+            return .skipped(decision.state)
+        }
+        do {
+            let result = try await client.applyWriteBack(activityId: request.activityId)
+            if result.written {
+                let decorated = decision.decoratedDescription
+                    ?? StravaWriteBackDecorator.decorate(description: request.currentDescription)
+                return .updated(title: request.title, description: decorated)
+            }
+            // Upstream skipped (virtual / described / race) after fetch.
+            let state = Self.decoration(fromUpstreamStatus: result.status)
+            return .skipped(state)
+        } catch {
+            return .failed(error.localizedDescription)
+        }
+    }
+
+    func restore(
+        activityId: String,
+        snapshot: StravaPreUpdateSnapshot
+    ) async -> StravaWriteBackOutcome {
+        _ = snapshot
+        do {
+            let result = try await client.restoreWriteBack(activityId: activityId)
+            return result.restored ? .restored : .failed(result.message)
+        } catch {
+            return .failed(error.localizedDescription)
+        }
+    }
+
+    private static func decoration(fromUpstreamStatus status: String) -> StravaDecorationState {
+        if status.contains("virtual") {
+            return .skipped(rule: .virtual)
+        }
+        if status.contains("described") {
+            return .skipped(rule: .described)
+        }
+        if status.contains("race") {
+            return .skipped(rule: .race)
+        }
+        return .untouched
+    }
+}
+
 enum StravaWriteBackFactory {
+    @MainActor
     static func makeDefault() -> any StravaWriteBackProviding {
         if ProcessInfo.processInfo.environment["UITEST_USE_FIXTURES"] == "1" {
             return StubStravaWriteBackProvider()
         }
         #if DEBUG
-        return StubStravaWriteBackProvider()
-        #else
-        // Live BFF path lands with AMA-2391 write-back deploy; stub until then.
-        return StubStravaWriteBackProvider()
+        if ProcessInfo.processInfo.environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1" {
+            return StubStravaWriteBackProvider()
+        }
         #endif
+        return BFFStravaWriteBackProvider.live()
     }
 }

@@ -3,7 +3,8 @@
 //  AmakaFlow
 //
 //  AMA-2387 / AMA-2391: Strava / Garmin OAuth via BFF.
-//  Never request activity:write / upload scopes (design-handoff/ACTUALS.md).
+//  Default scope is read-only; AMA-2396 write-back reconnect requests
+//  activity:write via `BFFActualsProviderAuth.includeWriteScope`.
 //  Live: `BFFActualsProviderAuth`. Stub: previews + UITEST_USE_FIXTURES.
 //
 

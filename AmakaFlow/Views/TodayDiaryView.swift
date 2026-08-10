@@ -60,7 +60,13 @@ struct TodayDiaryView: View {
     }
 
     private var scrubberDays: [DDScrubberDay] {
-        historyViewModel.completions.scrubberDays(
+        // AMA-2396: dots include Strava Actuals (sync lookback), not only completion history.
+        let completionDates = historyViewModel.completions.map(\.startedAt)
+        let actualsDates = actualsDemo.cards.compactMap { card -> Date? in
+            card.activity?.startDate ?? card.session?.primaryRecording?.startDate
+        }
+        return ActualsHistoryScrubber.days(
+            activityDates: completionDates + actualsDates,
             now: today,
             selectedDay: selectedScrubberDay
         )
@@ -544,7 +550,7 @@ struct TodayDiaryView: View {
                 guard actualsDemo.fillInViewModel != nil else { return }
                 actualsDestination = .fillIn
             }
-            let onUnverify = {
+            let onUnverify: () -> Void = {
                 Task { await unverifyVerifiedSession(session) }
             }
             let onUnmatch = {

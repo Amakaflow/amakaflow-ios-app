@@ -69,6 +69,14 @@ struct ActualsConnectSourcesView<Store: ActualsSourceConnecting>: View where Sto
                 store: store,
                 auth: providerAuth
             ) {
+                // Write-back reconnect: unlock toggle after activity:write grant.
+                if provider == .strava,
+                   let live = providerAuth as? BFFActualsProviderAuth,
+                   live.includeWriteScope {
+                    writeBackSettings.hasActivityWriteScope = true
+                    writeBackSettings.writeBackEnabled = true
+                    live.includeWriteScope = false
+                }
                 onConnect(provider)
             }
         }
@@ -78,6 +86,9 @@ struct ActualsConnectSourcesView<Store: ActualsSourceConnecting>: View where Sto
                 // the dismiss settles so SwiftUI does not drop the destination.
                 showStravaWriteBack = false
                 Task { @MainActor in
+                    if let live = providerAuth as? BFFActualsProviderAuth {
+                        live.includeWriteScope = true
+                    }
                     try? await Task.sleep(nanoseconds: 350_000_000)
                     oauthProvider = .strava
                 }
