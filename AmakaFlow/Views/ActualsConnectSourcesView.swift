@@ -127,8 +127,8 @@ struct ActualsConnectSourcesView<Store: ActualsSourceConnecting>: View where Sto
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 10)
-            .background(DailyDriver.card2.opacity(0.6))
-            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .background(DailyDriver.card2)
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         }
         .buttonStyle(.plain)
         .accessibilityIdentifier("af_actuals_strava_writeback_entry")

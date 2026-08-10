@@ -9,7 +9,7 @@
 import SwiftUI
 
 struct ActualsStravaWriteBackView: View {
-    @ObservedObject var store: StravaWriteBackSettingsStore
+    @StateObject private var store: StravaWriteBackSettingsStore
     /// Write-back toggle flipped ON without the write scope — caller owns the reconnect flow.
     var onReconnect: (() -> Void)?
 
@@ -17,7 +17,7 @@ struct ActualsStravaWriteBackView: View {
         store: StravaWriteBackSettingsStore? = nil,
         onReconnect: (() -> Void)? = nil
     ) {
-        self.store = store ?? .shared
+        _store = StateObject(wrappedValue: store ?? .shared)
         self.onReconnect = onReconnect
     }
 

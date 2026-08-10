@@ -144,7 +144,7 @@ struct ActualsVerifiedView: View {
                 showMenu = false
                 row.action()
             }
-            .presentationDetents([.height(CGFloat(96 + menuRows.count * 64))])
+            .presentationDetents([.height(CGFloat(96 + menuRows.count * 64)), .medium])
         }
     }
 
