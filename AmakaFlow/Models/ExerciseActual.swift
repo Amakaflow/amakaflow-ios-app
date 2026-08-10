@@ -77,6 +77,12 @@ struct ActualsFillInSession: Equatable {
     /// AMA-2396: originating Strava activity id — non-nil only for sessions that
     /// came from a synced Strava activity (drives write-back eligibility).
     var stravaActivityId: String?
+    /// Raw Strava sport/type — required before write-back so skip rules can fire.
+    var stravaActivityType: String?
+    /// Current Strava description before our write (skipDescribed / preserve-append).
+    var stravaCurrentDescription: String?
+    var stravaRecordingApp: String?
+    var stravaIsRace: Bool
 
     init(
         id: String,
@@ -85,7 +91,11 @@ struct ActualsFillInSession: Equatable {
         exercises: [ExerciseActual],
         rpe: Int? = nil,
         verified: Bool,
-        stravaActivityId: String? = nil
+        stravaActivityId: String? = nil,
+        stravaActivityType: String? = nil,
+        stravaCurrentDescription: String? = nil,
+        stravaRecordingApp: String? = nil,
+        stravaIsRace: Bool = false
     ) {
         self.id = id
         self.title = title
@@ -94,6 +104,15 @@ struct ActualsFillInSession: Equatable {
         self.rpe = rpe
         self.verified = verified
         self.stravaActivityId = stravaActivityId
+        self.stravaActivityType = stravaActivityType
+        self.stravaCurrentDescription = stravaCurrentDescription
+        self.stravaRecordingApp = stravaRecordingApp
+        self.stravaIsRace = stravaIsRace
+    }
+
+    /// Write-back must not run with fabricated skip inputs.
+    var canEvaluateStravaWriteBack: Bool {
+        stravaActivityId != nil && stravaActivityType != nil
     }
 
     var confirmedCount: Int {

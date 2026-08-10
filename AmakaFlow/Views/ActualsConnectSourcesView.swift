@@ -74,9 +74,13 @@ struct ActualsConnectSourcesView<Store: ActualsSourceConnecting>: View where Sto
         }
         .navigationDestination(isPresented: $showStravaWriteBack) {
             ActualsStravaWriteBackView(store: writeBackSettings) {
-                // Reconnect needs the write scope — route back through OAuth.
+                // Reconnect needs the write scope — pop first, then push OAuth after
+                // the dismiss settles so SwiftUI does not drop the destination.
                 showStravaWriteBack = false
-                oauthProvider = .strava
+                Task { @MainActor in
+                    try? await Task.sleep(nanoseconds: 350_000_000)
+                    oauthProvider = .strava
+                }
             }
         }
     }

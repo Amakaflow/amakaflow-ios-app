@@ -25,6 +25,12 @@ struct ActualsUnmappedActivity: Equatable, Hashable {
     let calories: Double?
     let avgHR: Double?
     let type: ActualsWorkoutType
+    /// Raw Strava `type` / `sport_type` for write-back skip rules (e.g. `VirtualRide`).
+    var stravaTypeRaw: String? = nil
+    /// Pre-write Strava description body used by skipDescribed / append-preserve.
+    var activityDescription: String = ""
+    var recordingApp: String? = nil
+    var isRace: Bool = false
 
     var endDate: Date {
         startDate.addingTimeInterval(durationSeconds)

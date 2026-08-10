@@ -258,7 +258,10 @@ enum StravaWriteBackDecorator {
         } else if input.structureBody.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             decorated = decorate(description: input.description)
         } else {
-            decorated = previewDescription(structureBody: input.structureBody, rpe: input.rpe)
+            // Preserve a foreign body when skipDescribed is off — append our signed block.
+            let ours = previewDescription(structureBody: input.structureBody, rpe: input.rpe)
+            let existing = input.description.trimmingCharacters(in: .whitespacesAndNewlines)
+            decorated = existing.isEmpty ? ours : "\(existing)\n\n\(ours)"
         }
         return StravaWriteBackDecision(
             shouldWrite: true,
@@ -385,7 +388,15 @@ final class StubStravaWriteBackProvider: StravaWriteBackProviding {
         snapshot: StravaPreUpdateSnapshot
     ) async -> StravaWriteBackOutcome {
         restoreCalls += 1
-        if let nextOutcome { return nextOutcome }
+        // Only honor explicit restore/fail stubs — never treat a write outcome as restore.
+        if let nextOutcome {
+            switch nextOutcome {
+            case .restored, .failed, .cancelled:
+                return nextOutcome
+            case .updated, .skipped:
+                break
+            }
+        }
         #if DEBUG
         snapshots.removeValue(forKey: activityId)
         return .restored

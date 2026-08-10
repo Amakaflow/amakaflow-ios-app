@@ -104,8 +104,21 @@ enum ActualsDayBucketing {
         for date: Date,
         calendar: Calendar = .current
     ) -> String {
-        let weekday = date.formatted(.dateTime.weekday(.abbreviated)).uppercased()
-        let month = date.formatted(.dateTime.month(.abbreviated)).uppercased()
+        let locale = calendar.locale ?? .current
+        let weekday = date.formatted(
+            Date.FormatStyle()
+                .weekday(.abbreviated)
+                .locale(locale)
+                .timeZone(calendar.timeZone)
+                .calendar(calendar)
+        ).uppercased()
+        let month = date.formatted(
+            Date.FormatStyle()
+                .month(.abbreviated)
+                .locale(locale)
+                .timeZone(calendar.timeZone)
+                .calendar(calendar)
+        ).uppercased()
         let day = calendar.component(.day, from: date)
         return "\(weekday) · \(month) \(day)"
     }
@@ -129,10 +142,11 @@ enum ActualsHistoryScrubber {
         includeFuturePlannedSlot: Bool = true
     ) -> [DDScrubberDay] {
         let today = calendar.startOfDay(for: now)
-        let selected = calendar.startOfDay(for: selectedDay ?? today)
+        // selectedDay retained for API compatibility — full 30-day strip is always returned;
+        // the view scrolls to the selection.
+        _ = selectedDay
 
-        // Window: prefer centering selection near the trailing edge (today).
-        // Always clamp to [today - 29, today].
+        // Full navigable strip: [today - 29, today] (+ optional dimmed tomorrow).
         guard let earliest = calendar.date(byAdding: .day, value: -(lookbackDays - 1), to: today) else {
             return []
         }
@@ -140,30 +154,21 @@ enum ActualsHistoryScrubber {
         var end = today
         if includeFuturePlannedSlot,
            let tomorrow = calendar.date(byAdding: .day, value: 1, to: today) {
-            // Show one future slot for planned-only affordance (dimmed).
             end = tomorrow
         }
 
-        // Start so the window of `visibleCount` ends at `end`, but never before earliest.
-        let startOffset = -(visibleCount - 1)
-        guard var windowStart = calendar.date(byAdding: .day, value: startOffset, to: end) else {
-            return []
-        }
-        if windowStart < earliest { windowStart = earliest }
-
-        // If selection is older than the window, shift window back to include it.
-        if selected < windowStart {
-            windowStart = selected
-            if let shiftedEnd = calendar.date(byAdding: .day, value: visibleCount - 1, to: windowStart) {
-                end = min(shiftedEnd, end)
-            }
-        }
-
+        let locale = calendar.locale ?? .current
         var result: [DDScrubberDay] = []
-        var cursor = windowStart
+        var cursor = earliest
         while cursor <= end {
             let dayNumber = calendar.component(.day, from: cursor)
-            let weekday = cursor.formatted(.dateTime.weekday(.narrow)).uppercased()
+            let weekday = cursor.formatted(
+                Date.FormatStyle()
+                    .weekday(.narrow)
+                    .locale(locale)
+                    .timeZone(calendar.timeZone)
+                    .calendar(calendar)
+            ).uppercased()
             let isToday = calendar.isDate(cursor, inSameDayAs: today)
             let isFuture = cursor > today
             let hasActivity = activityDates.contains { calendar.isDate($0, inSameDayAs: cursor) }

@@ -14,7 +14,7 @@ final class ActualsHistoryViewModel: ObservableObject {
     @Published private(set) var dayGroups: [(day: Date, cards: [ActualsTodayDemoCard])] = []
     @Published private(set) var isLoading = false
     @Published private(set) var daysBack = 30
-    @Published var bannerExpanded = false
+    @Published var bannerExpanded = true
 
     private let client: BFFStravaClient
     private let calendar: Calendar
@@ -44,31 +44,46 @@ final class ActualsHistoryViewModel: ObservableObject {
 
     func loadIfNeeded() async {
         guard dayGroups.isEmpty, !isLoading else { return }
-        await load()
+        await load(replacingExisting: true)
     }
 
     func loadMore() async {
+        let previousDaysBack = daysBack
+        let previousGroups = dayGroups
         daysBack += 30
-        await load()
+        let ok = await load(replacingExisting: true)
+        if !ok {
+            // Failed pagination must not erase the window the athlete already has.
+            daysBack = previousDaysBack
+            dayGroups = previousGroups
+        }
     }
 
-    private func load() async {
+    /// Returns `true` when groups were successfully replaced from the network.
+    @discardableResult
+    private func load(replacingExisting: Bool) async -> Bool {
         isLoading = true
         defer { isLoading = false }
         do {
             let result = try await client.syncCompleted(daysBack: daysBack)
             guard result.success else {
-                dayGroups = []
-                return
+                if replacingExisting, dayGroups.isEmpty {
+                    dayGroups = []
+                }
+                return false
             }
             dayGroups = ActualsTodayDemoFeed.historyCards(
                 from: result.activities,
                 calendar: calendar,
                 now: now()
             )
+            return true
         } catch {
-            // Never crash History on a missing/expired token — show what we have.
-            dayGroups = []
+            // Never crash History on a missing/expired token — keep what we have.
+            if dayGroups.isEmpty {
+                dayGroups = []
+            }
+            return false
         }
     }
 }
@@ -174,16 +189,16 @@ struct ActualsHistoryView: View {
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 20)
             } else {
-                ForEach(Array(viewModel.dayGroups.enumerated()), id: \.offset) { _, group in
+                ForEach(viewModel.dayGroups, id: \.day) { group in
                     VStack(alignment: .leading, spacing: 8) {
                         Text(ActualsDayBucketing.historyDayHeader(for: group.day))
                             .font(.system(size: 9, weight: .bold, design: .monospaced))
                             .foregroundColor(DailyDriver.foregroundMuted)
 
                         VStack(spacing: 7) {
-                            ForEach(Array(group.cards.enumerated()), id: \.element.id) { index, card in
+                            ForEach(group.cards) { card in
                                 dayRow(card)
-                                    .accessibilityIdentifier("af_actuals_history_row_\(group.cards[index].id)")
+                                    .accessibilityIdentifier("af_actuals_history_row_\(card.id)")
                             }
                         }
                     }

@@ -141,6 +141,7 @@ enum ActualsCopy {
         "TIMES ARE YOUR LOCAL TIME · NEWEST FIRST — THE WRONG-DAY BUG DIES HERE"
     static let historyJumpToday = "Today ›"
     static let historyTitle = "History"
+    static let historyProfileEntrySub = "STRAVA SYNC · LAST 30 DAYS · WRITE-BACK STATE"
     static let historyLoadMore = "Load 30 more days…"
     static let historyFillInCTA = "Fill in ›"
     static let historyCountedCTA = "Counted ✓"

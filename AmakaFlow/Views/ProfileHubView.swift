@@ -209,7 +209,7 @@ struct ProfileHubView: View {
                     Text(ActualsCopy.historyTitle)
                         .ddDisplayText(14, weight: .bold)
                         .foregroundColor(DailyDriver.foreground)
-                    Text("STRAVA SYNC · LAST 30 DAYS · WRITE-BACK STATE")
+                    Text(ActualsCopy.historyProfileEntrySub)
                         .font(.system(size: 8, design: .monospaced))
                         .foregroundColor(DailyDriver.foregroundDim)
                 }

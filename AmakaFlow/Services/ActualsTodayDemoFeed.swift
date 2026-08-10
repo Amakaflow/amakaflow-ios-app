@@ -88,18 +88,24 @@ struct ActualsTodayDemoCard: Identifiable, Equatable {
     }
 
     func markingCounted() -> ActualsTodayDemoCard {
-        ActualsTodayDemoCard(
+        let provider = sourceProvider ?? activity?.provider
+        // Strava decoration is a statement about Strava — never promote it on Garmin/AH cards.
+        let nextDecoration: StravaDecorationState = {
+            guard provider == .strava else { return stravaDecoration }
+            return stravaDecoration == .none ? .untouched : stravaDecoration
+        }()
+        return ActualsTodayDemoCard(
             id: id,
             kind: .counted,
             timeLabel: timeLabel,
             title: title,
             stats: stats,
             sourceLabel: "Kept as-is",
-            sourceProvider: sourceProvider ?? activity?.provider,
+            sourceProvider: provider,
             session: session,
             activity: activity,
             fillInSession: fillInSession,
-            stravaDecoration: stravaDecoration == .none ? .untouched : stravaDecoration
+            stravaDecoration: nextDecoration
         )
     }
 
@@ -316,7 +322,9 @@ final class ActualsTodayDemoFeed: ObservableObject {
             distanceMeters: distanceMeters,
             calories: nil,
             avgHR: nil,
-            type: workoutType
+            type: workoutType,
+            stravaTypeRaw: activity.type,
+            activityDescription: activity.description
         )
         var stats: [(icon: String, value: String)] = [
             ("clock", "\(max(1, activity.durationMin))m")
@@ -608,7 +616,11 @@ final class ActualsTodayDemoFeed: ObservableObject {
                 : Array(exercises),
             rpe: nil,
             verified: false,
-            stravaActivityId: Self.stravaActivityId(fromCardID: cardID)
+            stravaActivityId: Self.stravaActivityId(fromCardID: cardID),
+            stravaActivityType: activity?.stravaTypeRaw,
+            stravaCurrentDescription: activity?.activityDescription,
+            stravaRecordingApp: activity?.recordingApp,
+            stravaIsRace: activity?.isRace ?? false
         )
 
         return ActualsTodayDemoCard(

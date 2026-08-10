@@ -88,8 +88,6 @@ struct ActualsVerifiedCard: View {
     let rows: [ActualsVerifiedDeltaRow]
     /// Optional payoff line under the list (JSX mentions next-editor ghosts).
     var footerNote: String? = ActualsCopy.verifiedGhostFooter
-    /// AMA-2396: per-session Strava write-state badge shown next to the callout.
-    var decoration: StravaDecorationState = .none
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -140,7 +138,6 @@ struct ActualsVerifiedCard: View {
                     .ddDisplayText(13, weight: .bold)
                     .foregroundColor(DailyDriver.lime)
                 Spacer(minLength: 8)
-                SZStravaBadge(decoration: decoration)
             }
             Text(ActualsVerifiedDeltas.calloutBody(sourceName: sourceName, rpe: rpe))
                 .font(.system(size: 11))

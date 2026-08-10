@@ -20,6 +20,8 @@ struct ActualsFillInView: View {
     /// AMA-2396: extra hook alongside the built-in repository un-verify (e.g. a
     /// Today feed also needs its in-memory card flipped back to "Fill in").
     var onUnverify: (() -> Void)?
+    /// Fired after write-back persists a decoration so the Today rail can refresh.
+    var onWriteBackDecoration: ((StravaDecorationState) -> Void)?
     var writeBackSettings = StravaWriteBackSettingsStore()
     var writeBackProvider: any StravaWriteBackProviding = StravaWriteBackFactory.makeDefault()
 
@@ -344,32 +346,76 @@ struct ActualsFillInView: View {
     @MainActor
     private func resolveWriteBackAndToast(for session: ActualsFillInSession) async {
         var claimedStravaUpdate = false
-        if let activityId = session.stravaActivityId, writeBackSettings.writeBackEnabled {
+        // Refuse fabricated skip inputs — write-back needs real activity metadata.
+        if writeBackSettings.writeBackEnabled,
+           session.canEvaluateStravaWriteBack,
+           let activityId = session.stravaActivityId,
+           let activityType = session.stravaActivityType {
             let structureBody = session.exercises
                 .map { "\($0.name): \($0.actualSets)×\($0.actualReps)" }
                 .joined(separator: "\n")
+            let currentDescription = session.stravaCurrentDescription ?? ""
             let outcome = await writeBackProvider.writeBack(
                 StravaWriteBackRequest(
                     activityId: activityId,
                     title: session.title,
                     structureBody: structureBody,
-                    currentDescription: "",
-                    activityType: "workout",
-                    recordingApp: nil,
-                    isRace: false,
+                    currentDescription: currentDescription,
+                    activityType: activityType,
+                    recordingApp: session.stravaRecordingApp,
+                    isRace: session.stravaIsRace,
                     rules: writeBackSettings.rules
                 )
             )
-            if case .updated = outcome {
+            switch outcome {
+            case .updated:
                 claimedStravaUpdate = true
+                let snapshot = StravaPreUpdateSnapshot(
+                    activityId: activityId,
+                    preUpdateTitle: session.title,
+                    preUpdateDescription: currentDescription,
+                    rev: 1
+                )
+                try? viewModel.persistWriteBackState(snapshot: snapshot, decoration: .ours)
+                onWriteBackDecoration?(.ours)
+            case .skipped(let state):
+                try? viewModel.persistWriteBackState(snapshot: nil, decoration: state)
+                onWriteBackDecoration?(state)
+            case .restored, .failed, .cancelled:
+                break
             }
         }
         let toastText = claimedStravaUpdate
             ? ActualsCopy.verifiedToastWithStrava
             : ActualsCopy.verifiedToastNoStrava
         DDToastCenter.shared.undo(toastText, sub: ActualsCopy.fillInSavedToastSub) {
-            viewModel.unverify()
+            Task { @MainActor in
+                await restoreStravaThenUnverify()
+            }
+        }
+    }
+
+    @MainActor
+    private func restoreStravaThenUnverify() async {
+        if let snapshot = try? viewModel.fetchPreUpdateSnapshot() {
+            let outcome = await writeBackProvider.restore(
+                activityId: snapshot.activityId,
+                snapshot: snapshot
+            )
+            if case .restored = outcome {
+                try? viewModel.clearPreUpdateSnapshot()
+                try? viewModel.persistWriteBackState(snapshot: nil, decoration: .untouched)
+                onWriteBackDecoration?(.untouched)
+            }
+        }
+        do {
+            try viewModel.unverify()
             onUnverify?()
+        } catch {
+            DDToastCenter.shared.error(
+                ActualsCopy.fillInSaveFailedTitle,
+                sub: viewModel.lastSaveError
+            )
         }
     }
 }

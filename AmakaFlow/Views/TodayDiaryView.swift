@@ -80,12 +80,27 @@ struct TodayDiaryView: View {
         actualsDemo.isRefreshing && actualsSources.isConnected(.strava)
     }
 
-    /// Linked, sync done, nothing for calendar-today.
+    /// Actuals rail cards restricted to the scrubber-selected local day.
+    private var actualsCardsForSelectedDay: [ActualsTodayDemoCard] {
+        let calendar = Calendar.current
+        return actualsDemo.cards.filter { card in
+            if let start = card.activity?.startDate {
+                return calendar.isDate(start, inSameDayAs: selectedScrubberDay)
+            }
+            if let start = card.session?.primaryRecording?.startDate {
+                return calendar.isDate(start, inSameDayAs: selectedScrubberDay)
+            }
+            // Fixture / undated demo cards only belong on calendar-today.
+            return calendar.isDateInToday(selectedScrubberDay)
+        }
+    }
+
+    /// Linked, sync done, nothing for the selected local day.
     private var showsLinkedStravaEmptyToday: Bool {
         actualsSources.isConnected(.strava)
             && actualsDemo.isActive
             && !actualsDemo.isRefreshing
-            && actualsDemo.cards.isEmpty
+            && actualsCardsForSelectedDay.isEmpty
             && todaysCompletions.isEmpty
     }
 
@@ -126,7 +141,7 @@ struct TodayDiaryView: View {
                                 showConnectSources = true
                             }
                             .padding(.top, 12)
-                        } else if showsActualsDemoRail, !actualsDemo.cards.isEmpty {
+                        } else if showsActualsDemoRail, !actualsCardsForSelectedDay.isEmpty {
                             actualsDemoContent
                         } else if showsLinkedStravaEmptyToday {
                             linkedStravaEmptyTodayState
@@ -230,7 +245,7 @@ struct TodayDiaryView: View {
         }
 
         VStack(alignment: .leading, spacing: 0) {
-            ForEach(Array(actualsDemo.cards.enumerated()), id: \.element.id) { index, card in
+            ForEach(Array(actualsCardsForSelectedDay.enumerated()), id: \.element.id) { index, card in
                 Button {
                     openActualsCard(card)
                 } label: {
@@ -438,6 +453,7 @@ struct TodayDiaryView: View {
                 if let card = actualsDemo.cards.first(where: {
                     $0.id == actualsDemo.pendingFillInCardID || $0.fillInSession?.id == session.id
                 }) {
+                    verifiedCardID = card.id
                     verifiedSourceName = sourceDisplayName(for: card)
                 }
                 actualsDemo.markVerified(saved: session)
@@ -446,12 +462,18 @@ struct TodayDiaryView: View {
             let onUnverify = {
                 actualsDemo.applyUnverify(sessionID: viewModel.session.id)
             }
+            let onWriteBackDecoration: (StravaDecorationState) -> Void = { state in
+                if let cardID = verifiedCardID {
+                    actualsDemo.applyDecoration(cardID: cardID, state: state)
+                }
+            }
             ActualsFillInView(
                 viewModel: viewModel,
                 onSaved: onSaved,
                 presentsVerifiedOnSave: false,
                 dismissOnSave: false,
-                onUnverify: onUnverify
+                onUnverify: onUnverify,
+                onWriteBackDecoration: onWriteBackDecoration
             )
             .navigationBarBackButtonHidden(true)
         } else {
@@ -470,9 +492,7 @@ struct TodayDiaryView: View {
                 actualsDestination = .fillIn
             }
             let onUnverify = {
-                actualsDemo.applyUnverify(sessionID: session.id)
-                try? ActualsRepository().unverifySession(id: session.id)
-                actualsDestination = nil
+                Task { await unverifyVerifiedSession(session) }
             }
             let onUnmatch = {
                 guard let cardID = verifiedCardID else {
@@ -499,23 +519,56 @@ struct TodayDiaryView: View {
         }
     }
 
+    private func unverifyVerifiedSession(_ session: ActualsFillInSession) async {
+        let repository = ActualsRepository()
+        let provider = StravaWriteBackFactory.makeDefault()
+        let sessionID = session.id
+        let cardID = verifiedCardID
+        if let snapshot = try? repository.fetchPreUpdateSnapshot(forSessionID: sessionID) {
+            let outcome = await provider.restore(
+                activityId: snapshot.activityId,
+                snapshot: snapshot
+            )
+            if case .restored = outcome {
+                try? repository.clearPreUpdateSnapshot(forSessionID: sessionID)
+                try? repository.storeDecoration(.untouched, forSessionID: sessionID)
+                if let cardID {
+                    await MainActor.run {
+                        actualsDemo.applyDecoration(cardID: cardID, state: .untouched)
+                    }
+                }
+            }
+        }
+        await MainActor.run {
+            actualsDemo.applyUnverify(sessionID: sessionID)
+            try? repository.unverifySession(id: sessionID)
+            actualsDestination = nil
+        }
+    }
+
     private func removeVerifiedFromStrava() {
-        guard let cardID = verifiedCardID else { return }
+        guard let cardID = verifiedCardID, let session = verifiedSession else { return }
+        let sessionID = session.id
         Task {
             let repository = ActualsRepository()
             let provider = StravaWriteBackFactory.makeDefault()
-            if let snapshot = try? repository.fetchPreUpdateSnapshot(forSessionID: cardID) {
+            var restoredOK = false
+            if let snapshot = try? repository.fetchPreUpdateSnapshot(forSessionID: sessionID) {
                 let outcome = await provider.restore(
                     activityId: snapshot.activityId,
                     snapshot: snapshot
                 )
                 if case .restored = outcome {
-                    try? repository.clearPreUpdateSnapshot(forSessionID: cardID)
+                    try? repository.clearPreUpdateSnapshot(forSessionID: sessionID)
+                    restoredOK = true
                 }
             }
-            try? repository.storeDecoration(.untouched, forSessionID: cardID)
-            await MainActor.run {
-                actualsDemo.applyDecoration(cardID: cardID, state: .untouched)
+            // Only flip local badge after a successful restore (or when nothing to restore).
+            if restoredOK || (try? repository.fetchPreUpdateSnapshot(forSessionID: sessionID)) == nil {
+                try? repository.storeDecoration(.untouched, forSessionID: sessionID)
+                await MainActor.run {
+                    actualsDemo.applyDecoration(cardID: cardID, state: .untouched)
+                }
             }
         }
     }

@@ -244,6 +244,108 @@ final class AMA2396SyncV2Tests: XCTestCase {
         XCTAssertEqual(decorated, decoratedAgain)
     }
 
+    func testWriteBackSignatureLineMatchesTrackedCopy() {
+        XCTAssertEqual(StravaWriteBackSignature.line, "— tracked with AmakaFlow")
+    }
+
+    func testEvaluatePreservesForeignDescriptionWhenSkipDescribedOff() {
+        let decision = StravaWriteBackDecorator.evaluate(
+            StravaWriteBackEvaluateInput(
+                activityType: "Run",
+                recordingApp: nil,
+                description: "Coach notes from another app",
+                isRace: false,
+                rules: StravaWriteBackRules(
+                    skipVirtual: true,
+                    skipDescribed: false,
+                    skipRaces: true
+                ),
+                structureBody: "Back squat: 3×5",
+                rpe: 7
+            )
+        )
+        XCTAssertTrue(decision.shouldWrite)
+        XCTAssertEqual(decision.state, .ours)
+        let decorated = try XCTUnwrap(decision.decoratedDescription)
+        XCTAssertTrue(decorated.hasPrefix("Coach notes from another app"))
+        XCTAssertTrue(decorated.contains("Back squat: 3×5"))
+        XCTAssertTrue(decorated.contains(StravaWriteBackSignature.line))
+    }
+
+    func testEvaluateSkipsDescribedWhenRuleOn() {
+        let decision = StravaWriteBackDecorator.evaluate(
+            StravaWriteBackEvaluateInput(
+                activityType: "Run",
+                recordingApp: nil,
+                description: "Someone else's words",
+                isRace: false,
+                rules: .default,
+                structureBody: "Tempo: 4×8",
+                rpe: nil
+            )
+        )
+        XCTAssertFalse(decision.shouldWrite)
+        if case .skipped(rule: .described) = decision.state {
+            // expected
+        } else {
+            XCTFail("expected skipped(described), got \(decision.state)")
+        }
+        XCTAssertNil(decision.decoratedDescription)
+    }
+
+    func testMarkingCountedPromotesDecorationOnlyForStrava() {
+        let garmin = ActualsTodayDemoCard(
+            id: "garmin_1",
+            kind: .unmapped,
+            timeLabel: "12:00",
+            title: "Easy spin",
+            stats: [],
+            sourceLabel: "Garmin",
+            sourceProvider: .garmin,
+            session: nil,
+            activity: nil,
+            fillInSession: nil,
+            stravaDecoration: .none
+        ).markingCounted()
+        XCTAssertEqual(garmin.stravaDecoration, .none)
+
+        let strava = ActualsTodayDemoCard(
+            id: "strava_1",
+            kind: .unmapped,
+            timeLabel: "12:00",
+            title: "Easy run",
+            stats: [],
+            sourceLabel: "Strava",
+            sourceProvider: .strava,
+            session: nil,
+            activity: nil,
+            fillInSession: nil,
+            stravaDecoration: .none
+        ).markingCounted()
+        XCTAssertEqual(strava.stravaDecoration, .untouched)
+    }
+
+    func testFillInSessionRequiresWriteBackMetadata() {
+        var session = ActualsFillInSession.lowerBodyPosteriorSample()
+        session.stravaActivityId = "99"
+        XCTAssertFalse(session.canEvaluateStravaWriteBack)
+        session.stravaActivityType = "Run"
+        XCTAssertTrue(session.canEvaluateStravaWriteBack)
+    }
+
+    func testScrubberReturnsFullLookbackStrip() {
+        let now = Self.date("2026-08-09T12:00:00Z")
+        let days = ActualsHistoryScrubber.days(
+            activityDates: [],
+            now: now,
+            includeFuturePlannedSlot: true
+        )
+        // 30 past days through today (30) + 1 future slot.
+        XCTAssertEqual(days.count, ActualsHistoryScrubber.lookbackDays + 1)
+        XCTAssertTrue(days.contains { $0.isToday })
+        XCTAssertEqual(days.filter(\.isFuture).count, 1)
+    }
+
     // MARK: - Helpers
 
     private static func date(_ iso: String) -> Date {
@@ -254,6 +356,10 @@ final class AMA2396SyncV2Tests: XCTestCase {
         }
         let fallback = ISO8601DateFormatter()
         fallback.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        return fallback.date(from: iso) ?? Date()
+        if let date = fallback.date(from: iso) {
+            return date
+        }
+        XCTFail("unparseable fixture date: \(iso)")
+        return Date.distantPast
     }
 }

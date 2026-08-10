@@ -361,42 +361,64 @@ struct DDDayScrubber: View {
     @Binding var selectedIndex: Int
 
     var body: some View {
-        HStack(spacing: 6) {
-            ForEach(Array(days.enumerated()), id: \.offset) { index, day in
-                Button {
-                    if day.isSelectable {
-                        selectedIndex = index
+        ScrollViewReader { proxy in
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 6) {
+                    ForEach(Array(days.enumerated()), id: \.element.id) { index, day in
+                        Button {
+                            if day.isSelectable {
+                                selectedIndex = index
+                            }
+                        } label: {
+                            VStack(spacing: 2) {
+                                Text(day.weekdayLabel)
+                                    .font(.system(size: 9, weight: .medium, design: .monospaced))
+                                    .foregroundColor(DailyDriver.foregroundMuted)
+                                Text("\(day.dayNumber)")
+                                    .ddDisplayText(13, weight: .bold)
+                                    .foregroundColor(
+                                        index == selectedIndex
+                                            ? DailyDriver.foreground
+                                            : DailyDriver.foregroundMuted
+                                    )
+                                Circle()
+                                    .fill(dotColor(for: day))
+                                    .frame(width: 4, height: 4)
+                                    .padding(.top, 2)
+                            }
+                            .frame(width: 44)
+                            .padding(.vertical, 8)
+                            .background(index == selectedIndex ? DailyDriver.card2 : Color.clear)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                    .stroke(
+                                        index == selectedIndex
+                                            ? DailyDriver.border.opacity(0.9)
+                                            : Color.clear,
+                                        lineWidth: 1
+                                    )
+                            )
+                            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                            .opacity(day.isFuture ? 0.3 : (index == selectedIndex ? 1 : 0.55))
+                        }
+                        .buttonStyle(.plain)
+                        // AMA-2396: past days are always tappable for history; future = planned-only (dim).
+                        .disabled(day.isFuture)
+                        .id(index)
                     }
-                } label: {
-                    VStack(spacing: 2) {
-                        Text(day.weekdayLabel)
-                            .font(.system(size: 9, weight: .medium, design: .monospaced))
-                            .foregroundColor(DailyDriver.foregroundMuted)
-                        Text("\(day.dayNumber)")
-                            .ddDisplayText(13, weight: .bold)
-                            .foregroundColor(index == selectedIndex ? DailyDriver.foreground : DailyDriver.foregroundMuted)
-                        Circle()
-                            .fill(dotColor(for: day))
-                            .frame(width: 4, height: 4)
-                            .padding(.top, 2)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 8)
-                    .background(index == selectedIndex ? DailyDriver.card2 : Color.clear)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .stroke(index == selectedIndex ? DailyDriver.border.opacity(0.9) : Color.clear, lineWidth: 1)
-                    )
-                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                    .opacity(day.isFuture ? 0.3 : (index == selectedIndex ? 1 : 0.55))
                 }
-                .buttonStyle(.plain)
-                // AMA-2396: past days are always tappable for history; future = planned-only (dim).
-                .disabled(day.isFuture)
+                .padding(.horizontal, 18)
+            }
+            .padding(.vertical, 6)
+            .onAppear {
+                proxy.scrollTo(selectedIndex, anchor: .center)
+            }
+            .onChange(of: selectedIndex) { _, newIndex in
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    proxy.scrollTo(newIndex, anchor: .center)
+                }
             }
         }
-        .padding(.horizontal, 18)
-        .padding(.vertical, 6)
     }
 
     private func dotColor(for day: DDScrubberDay) -> Color {
