@@ -1349,4 +1349,57 @@ final class AMA2396SyncV2Tests: XCTestCase {
         XCTAssertTrue(paths[1].contains("/writeback"), paths[1])
     }
 
+    func testWriteBackProviderFailsWhenVerifyReturnsUnverified() async throws {
+        MockURLProtocol.reset()
+        defer { MockURLProtocol.reset() }
+
+        var paths: [String] = []
+        MockURLProtocol.requestHandler = { request in
+            let path = request.url?.path ?? ""
+            paths.append(path)
+            let data: Data
+            if path.contains("/verify") {
+                data = Data(#"{"activity_id":42,"verified":false,"amakaflow_session_id":"sess-1"}"#.utf8)
+            } else {
+                data = Data(#"{"activity_id":42,"status":"written","written":true,"title":"Upper","description":"signed"}"#.utf8)
+            }
+            let response = HTTPURLResponse(
+                url: request.url!,
+                statusCode: 200,
+                httpVersion: nil,
+                headerFields: ["Content-Type": "application/json"]
+            )!
+            return (response, data)
+        }
+
+        let client = BFFStravaClient(
+            baseURL: "https://mock.test/v1",
+            session: MockURLProtocol.mockSession(),
+            bearerTokenProvider: { "test-token" },
+            userIDProvider: { "user-1" }
+        )
+        let provider = BFFStravaWriteBackProvider(client: client)
+        let outcome = await provider.writeBack(
+            StravaWriteBackRequest(
+                activityId: "42",
+                title: "Upper",
+                structureBody: "Press 3x5",
+                currentDescription: "",
+                activityType: "WeightTraining",
+                recordingApp: nil,
+                isRace: false,
+                rules: .default,
+                rpe: 8,
+                amakaflowSessionId: "sess-1"
+            )
+        )
+
+        guard case .failed(let message) = outcome else {
+            return XCTFail("expected failed, got \(outcome)")
+        }
+        XCTAssertEqual(message, BFFStravaClientError.sessionNotVerified.localizedDescription)
+        XCTAssertEqual(paths.count, 1)
+        XCTAssertTrue(paths[0].contains("/verify"), paths[0])
+    }
+
 }

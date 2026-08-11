@@ -487,10 +487,13 @@ final class BFFStravaWriteBackProvider: StravaWriteBackProviding {
             // Best-effort: apply also marks when missing (TF ≤390 / older BFF).
             // Auth failures still abort so we don't mask reconnect needs.
             do {
-                _ = try await client.verifySession(
+                let verification = try await client.verifySession(
                     activityId: request.activityId,
                     amakaflowSessionId: request.amakaflowSessionId
                 )
+                guard verification.verified else {
+                    return .failed(BFFStravaClientError.sessionNotVerified.localizedDescription)
+                }
             } catch let error as BFFStravaClientError where error == .authenticationRequired {
                 throw error
             } catch {
