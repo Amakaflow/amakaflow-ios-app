@@ -114,12 +114,15 @@ final class APIServiceContractTests: XCTestCase {
     XCTAssertEqual(workout.blocks[0].structure, .circuit)
     XCTAssertEqual(workout.blocks[0].rounds, 3)
     XCTAssertEqual(workout.blocks[0].exercises[0].name, "SQUAT")
+    // AMA-2399: multi-round rest is restored as a nested `.rest` sibling
+    // (via restBetweenSeconds), not folded into reps.restSec.
     XCTAssertEqual(
       workout.intervals.first,
       .repeat(
         reps: 3,
         intervals: [
-          .reps(sets: nil, reps: 10, name: "SQUAT", load: nil, restSec: 60, followAlongUrl: nil)
+          .reps(sets: nil, reps: 10, name: "SQUAT", load: nil, restSec: nil, followAlongUrl: nil),
+          .rest(seconds: 60),
         ]
       ))
   }
@@ -154,11 +157,15 @@ final class APIServiceContractTests: XCTestCase {
     XCTAssertEqual(workout.blocks.count, 4)
     XCTAssertEqual(workout.intervals.first, .warmup(seconds: 300, target: "easy ski"))
     XCTAssertTrue(workout.intervals.contains(.distance(meters: 1000, target: "run")))
+    // AMA-2399: nested repeat rest survives round-trip; top-level rest is still dropped.
     XCTAssertTrue(
       workout.intervals.contains(
         .repeat(
           reps: 2,
-          intervals: [.time(seconds: 45, target: "wall balls")]
+          intervals: [
+            .time(seconds: 45, target: "wall balls"),
+            .rest(seconds: 30),
+          ]
         )))
     XCTAssertFalse(workout.intervals.contains(.rest(seconds: 60)))
   }
