@@ -433,10 +433,17 @@ final class ActualsTodayDemoFeed: ObservableObject {
         cards[index] = cards[index].markingCounted()
     }
 
-    /// AMA-2405: persist a lazy-fetched Strava description onto the card.
+    /// AMA-2405: persist a lazy-fetched Strava description onto the card (+ session row).
     func applyActivityDescription(cardID: String, description: String) {
         guard let index = cards.firstIndex(where: { $0.id == cardID }) else { return }
-        cards[index] = cards[index].withActivityDescription(description)
+        let updated = cards[index].withActivityDescription(description)
+        cards[index] = updated
+        if let session = updated.fillInSession {
+            try? repository.updateStravaCurrentDescription(
+                sessionID: session.id,
+                description: description
+            )
+        }
     }
 
     /// AMA-2396 A3: un-verify — actuals kept as draft, RPE cleared, badge cleared.

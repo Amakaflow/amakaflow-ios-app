@@ -262,6 +262,15 @@ final class ActualsRepository: @unchecked Sendable {
         }
     }
 
+    /// AMA-2405: keep a lazy-fetched Strava description across refresh/relaunch.
+    func updateStravaCurrentDescription(sessionID: String, description: String) throws {
+        try dbQueue.write { database in
+            guard var session = try LocalActualsSession.fetchOne(database, key: sessionID) else { return }
+            session.stravaCurrentDescription = description
+            try session.update(database)
+        }
+    }
+
     func clearDecoration(forSessionID id: String) throws {
         try storeDecoration(.none, forSessionID: id)
     }

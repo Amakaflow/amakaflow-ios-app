@@ -71,6 +71,12 @@ final class ActualsHistoryViewModel: ObservableObject {
     /// AMA-2405: cache Strava description after counted-detail lazy fetch.
     func applyActivityDescription(cardID: String, description: String) {
         mutateCard(id: cardID) { $0.withActivityDescription(description) }
+        if let session = card(withID: cardID)?.fillInSession {
+            try? repository.updateStravaCurrentDescription(
+                sessionID: session.id,
+                description: description
+            )
+        }
     }
 
     /// Map → library pick: attach plan + fill-in session (same as Today).
