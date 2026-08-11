@@ -152,20 +152,6 @@ enum ActualsCopy {
     static let historyLoadMore = "Load 30 more days…"
     static let historyFillInCTA = "Fill in ›"
     static let historyCountedCTA = "Counted ✓"
-
-    // MARK: - Counted / Strava description (AMA-2405)
-
-    static let countedHeadline = "Counted · kept as-is"
-    static let countedCalloutAccessibilityID = "af_actuals_counted_callout"
-    static let stravaDescriptionLabel = "STRAVA DESCRIPTION"
-    static let stravaDescriptionEmpty = "No description on this Strava activity."
-    static let stravaDescriptionLoading = "Loading Strava description…"
-    static let stravaDescriptionLoadFailed = "Couldn't load the Strava description."
-    static let countedDetailAccessibilityID = "af_actuals_counted_detail"
-
-    static func countedCalloutBody(sourceName: String) -> String {
-        "\(sourceName) metrics kept as-is — counted once in Progress."
-    }
     static let historyLegend =
         "STRAVA ✓ OURS = WE WROTE IT (SIGNED “— TRACKED WITH AMAKAFLOW”, SAFE TO REFRESH) · SKIPPED = A RULE HELD US BACK · UNTOUCHED = THEIR WORDS, WE NEVER WRITE."
     static let historyBannerShow = "Show ›"
@@ -384,6 +370,22 @@ enum ActualsCopy {
 
     static func oauthAuthorizeHeadline(for provider: ActualsSourceProvider) -> String {
         "Authorize AmakaFlow to connect to \(sourceDisplayName(provider))"
+    }
+}
+
+// MARK: - Counted / Strava description (AMA-2405)
+
+extension ActualsCopy {
+    static let countedHeadline = "Counted · kept as-is"
+    static let countedCalloutAccessibilityID = "af_actuals_counted_callout"
+    static let stravaDescriptionLabel = "STRAVA DESCRIPTION"
+    static let stravaDescriptionEmpty = "No description on this Strava activity."
+    static let stravaDescriptionLoading = "Loading Strava description…"
+    static let stravaDescriptionLoadFailed = "Couldn't load the Strava description."
+    static let countedDetailAccessibilityID = "af_actuals_counted_detail"
+
+    static func countedCalloutBody(sourceName: String) -> String {
+        "\(sourceName) metrics kept as-is — counted once in Progress."
     }
 }
 
