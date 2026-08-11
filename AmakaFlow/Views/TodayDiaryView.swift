@@ -417,7 +417,7 @@ struct TodayDiaryView: View {
             }
             actualsDestination = .verified(cardID: card.id)
         case .counted:
-            break
+            actualsDestination = .counted(cardID: card.id)
         }
     }
 
@@ -435,6 +435,8 @@ struct TodayDiaryView: View {
             fillInDestinationView
         case .verified(let cardID):
             verifiedDestinationView(cardID: cardID)
+        case .counted(let cardID):
+            countedDestinationView(cardID: cardID)
         }
     }
 
@@ -612,6 +614,11 @@ struct TodayDiaryView: View {
             ?? verifiedSession
             ?? (try? ActualsRepository().fetchSession(id: cardID))
         if let session {
+            let detailSession = Self.enrichedVerifiedSession(
+                session,
+                cardID: cardID,
+                cachedDescription: card?.activity?.activityDescription
+            )
             let sourceName = card.map(sourceDisplayName(for:)) ?? verifiedSourceName
             let decoration = card?.stravaDecoration
                 ?? ((try? ActualsRepository().fetchDecoration(forSessionID: session.id)) ?? .none)
@@ -637,7 +644,7 @@ struct TodayDiaryView: View {
                 }
             }()
             ActualsVerifiedView(
-                session: session,
+                session: detailSession,
                 sourceName: sourceName,
                 decoration: decoration,
                 onEditActuals: onEditActuals,
@@ -645,11 +652,49 @@ struct TodayDiaryView: View {
                 onRemoveFromStrava: removeVerifiedFromStrava,
                 onUnverify: onUnverify,
                 onUnmatch: onUnmatch
-            )
+            ) { description in
+                actualsDemo.applyActivityDescription(cardID: cardID, description: description)
+            }
             .navigationBarBackButtonHidden(true)
         } else {
             missingDestinationFallback("Couldn't open that verified session.")
         }
+    }
+
+    @ViewBuilder
+    private func countedDestinationView(cardID: String) -> some View {
+        if let card = actualsDemo.cards.first(where: { $0.id == cardID }) {
+            let source = sourceDisplayName(for: card).uppercased()
+            ActualsCountedDetailView(
+                title: card.title,
+                metaLine: "\(card.timeLabel) · \(card.sourceLabel.uppercased()) · FROM \(source)",
+                sourceName: sourceDisplayName(for: card),
+                decoration: card.stravaDecoration,
+                stravaActivityId: ActualsTodayDemoFeed.stravaActivityId(fromCardID: card.id),
+                initialDescription: card.activity?.activityDescription ?? ""
+            ) { description in
+                actualsDemo.applyActivityDescription(cardID: cardID, description: description)
+            }
+        } else {
+            missingDestinationFallback("Couldn't open that counted session.")
+        }
+    }
+
+    /// AMA-2405: backfill activity id + cached description for lazy Strava text.
+    private static func enrichedVerifiedSession(
+        _ session: ActualsFillInSession,
+        cardID: String,
+        cachedDescription: String?
+    ) -> ActualsFillInSession {
+        var next = session
+        if next.stravaActivityId == nil {
+            next.stravaActivityId = ActualsTodayDemoFeed.stravaActivityId(fromCardID: cardID)
+        }
+        if (next.stravaCurrentDescription ?? "").isEmpty,
+           let cachedDescription, !cachedDescription.isEmpty {
+            next.stravaCurrentDescription = cachedDescription
+        }
+        return next
     }
 
     @MainActor
@@ -1032,6 +1077,8 @@ private enum ActualsTodayDestination: Hashable, Identifiable {
     case fillIn
     /// Card id only — session is resolved when the destination builds (avoids blank race).
     case verified(cardID: String)
+    /// AMA-2405: counted / kept-as-is read-only detail (Strava description).
+    case counted(cardID: String)
 
     var id: String {
         switch self {
@@ -1041,6 +1088,7 @@ private enum ActualsTodayDestination: Hashable, Identifiable {
         case .matchSave: return "matchSave"
         case .fillIn: return "fillIn"
         case .verified(let cardID): return "verified-\(cardID)"
+        case .counted(let cardID): return "counted-\(cardID)"
         }
     }
 }

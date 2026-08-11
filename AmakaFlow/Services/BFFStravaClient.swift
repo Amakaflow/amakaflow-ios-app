@@ -280,6 +280,17 @@ nonisolated final class BFFStravaClient: @unchecked Sendable {
         )
     }
 
+    /// GET `/v1/strava/activities/{id}?userId=` — AMA-2405 detail (description).
+    func getActivityDetail(activityId: String) async throws -> StravaCompletedActivityDTO {
+        let userId = try await requireUserID()
+        return try await send(
+            method: "GET",
+            path: "strava/activities/\(activityId)",
+            queryItems: [URLQueryItem(name: "userId", value: userId)],
+            bodyData: nil
+        )
+    }
+
     /// POST `/v1/strava/activities/{id}/verify?userId=` — AMA-2403 write-back gate.
     func verifySession(
         activityId: String,

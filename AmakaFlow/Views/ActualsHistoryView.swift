@@ -9,6 +9,7 @@
 // swiftlint:disable file_length
 
 import Combine
+import OSLog
 import SwiftUI
 
 @MainActor
@@ -66,6 +67,28 @@ final class ActualsHistoryViewModel: ObservableObject {
 
     func applyKeepAsIs(cardID: String) {
         mutateCard(id: cardID) { $0.markingCounted() }
+    }
+
+    /// AMA-2405: cache Strava description after counted-detail lazy fetch.
+    func applyActivityDescription(cardID: String, description: String) {
+        mutateCard(id: cardID) { $0.withActivityDescription(description) }
+        let activityId = card(withID: cardID)?.fillInSession?.stravaActivityId
+            ?? ActualsTodayDemoFeed.stravaActivityId(fromCardID: cardID)
+        guard let activityId, !activityId.isEmpty else { return }
+        do {
+            try repository.upsertStravaActivityDescription(
+                activityId: activityId,
+                description: description
+            )
+        } catch {
+            // In-memory card already updated; keep UI and log for diagnosis.
+            Logger(
+                subsystem: "com.myamaka.AmakaFlowCompanion",
+                category: "ActualsHistory"
+            ).error(
+                "Failed to persist Strava description for activity \(activityId, privacy: .public): \(error.localizedDescription, privacy: .public)"
+            )
+        }
     }
 
     /// Map → library pick: attach plan + fill-in session (same as Today).
@@ -241,12 +264,19 @@ private struct HistoryVerifiedRoute: Identifiable, Hashable {
     var id: String { "verified-\(cardID)" }
 }
 
+private struct HistoryCountedRoute: Identifiable, Hashable {
+    let cardID: String
+
+    var id: String { "counted-\(cardID)" }
+}
+
 // swiftlint:disable:next type_body_length
 struct ActualsHistoryView: View {
     @StateObject private var viewModel: ActualsHistoryViewModel
     @State private var mapRoute: HistoryMapRoute?
     @State private var fillInRoute: HistoryFillInRoute?
     @State private var verifiedRoute: HistoryVerifiedRoute?
+    @State private var countedRoute: HistoryCountedRoute?
     @State private var libraryCandidates: [ActualsPlanCandidate] = ActualsTodayDemoFeed.samplePlanCandidates
     @State private var libraryWorkoutsByID: [String: Workout] = [:]
     @State private var showLibraryMatchPicker = false
@@ -294,6 +324,9 @@ struct ActualsHistoryView: View {
         }
         .navigationDestination(item: $verifiedRoute) { route in
             verifiedDestination(for: route)
+        }
+        .navigationDestination(item: $countedRoute) { route in
+            countedDestination(for: route)
         }
         .sheet(isPresented: $showLibraryMatchPicker) {
             ActualsLibraryMatchPicker(
@@ -417,7 +450,7 @@ struct ActualsHistoryView: View {
         case .verified:
             verifiedRoute = HistoryVerifiedRoute(cardID: card.id)
         case .counted:
-            break
+            countedRoute = HistoryCountedRoute(cardID: card.id)
         }
     }
 
@@ -507,28 +540,76 @@ struct ActualsHistoryView: View {
         let session = card?.fillInSession
             ?? (try? ActualsRepository().fetchSession(id: route.cardID))
         if let session {
+            let detailSession = Self.enrichedVerifiedSession(
+                session,
+                cardID: route.cardID,
+                cachedDescription: card?.activity?.activityDescription
+            )
+            let onEditActuals = {
+                if card?.fillInSession == nil {
+                    _ = viewModel.applyLibraryMatch(
+                        planTitle: session.title,
+                        cardID: route.cardID
+                    )
+                }
+                verifiedRoute = nil
+                openFillIn(cardID: route.cardID)
+            }
+            let onUnverify = {
+                viewModel.applyUnverify(cardID: route.cardID, session: session)
+                verifiedRoute = nil
+            }
             ActualsVerifiedView(
-                session: session,
+                session: detailSession,
                 sourceName: ActualsCopy.sourceDisplayName(card?.sourceProvider ?? .strava),
                 decoration: card?.stravaDecoration ?? .none,
-                onEditActuals: {
-                    if card?.fillInSession == nil {
-                        _ = viewModel.applyLibraryMatch(
-                            planTitle: session.title,
-                            cardID: route.cardID
-                        )
-                    }
-                    verifiedRoute = nil
-                    openFillIn(cardID: route.cardID)
-                },
-                onUnverify: {
-                    viewModel.applyUnverify(cardID: route.cardID, session: session)
-                    verifiedRoute = nil
-                }
-            )
+                onEditActuals: onEditActuals,
+                onUnverify: onUnverify
+            ) { description in
+                viewModel.applyActivityDescription(cardID: route.cardID, description: description)
+            }
             .navigationBarBackButtonHidden(true)
         } else {
             Text("Couldn't open that verified session.")
+                .foregroundColor(DailyDriver.foregroundDim)
+                .padding()
+        }
+    }
+
+    /// AMA-2405: backfill activity id + cached description for lazy Strava text.
+    private static func enrichedVerifiedSession(
+        _ session: ActualsFillInSession,
+        cardID: String,
+        cachedDescription: String?
+    ) -> ActualsFillInSession {
+        var next = session
+        if next.stravaActivityId == nil {
+            next.stravaActivityId = ActualsTodayDemoFeed.stravaActivityId(fromCardID: cardID)
+        }
+        if (next.stravaCurrentDescription ?? "").isEmpty,
+           let cachedDescription, !cachedDescription.isEmpty {
+            next.stravaCurrentDescription = cachedDescription
+        }
+        return next
+    }
+
+    @ViewBuilder
+    private func countedDestination(for route: HistoryCountedRoute) -> some View {
+        if let card = viewModel.card(withID: route.cardID) {
+            let source = ActualsCopy.sourceDisplayName(card.sourceProvider ?? .strava).uppercased()
+            ActualsCountedDetailView(
+                title: card.title,
+                metaLine: "\(card.timeLabel) · \(card.sourceLabel.uppercased()) · FROM \(source)",
+                sourceName: ActualsCopy.sourceDisplayName(card.sourceProvider ?? .strava),
+                decoration: card.stravaDecoration,
+                stravaActivityId: ActualsTodayDemoFeed.stravaActivityId(fromCardID: card.id),
+                initialDescription: card.activity?.activityDescription ?? "",
+                backLabel: ActualsCopy.historyTitle
+            ) { description in
+                viewModel.applyActivityDescription(cardID: route.cardID, description: description)
+            }
+        } else {
+            Text("Couldn't open that counted session.")
                 .foregroundColor(DailyDriver.foregroundDim)
                 .padding()
         }

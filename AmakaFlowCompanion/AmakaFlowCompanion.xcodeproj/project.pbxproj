@@ -280,6 +280,7 @@
 		AMA2387GHOSTBLD /* ActualsGhostFeed.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2387GHOSTREF /* ActualsGhostFeed.swift */; };
 		AMA2387VERCBLD /* ActualsVerifiedCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2387VERCREF /* ActualsVerifiedCard.swift */; };
 		AMA2387VERVBLD /* ActualsVerifiedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2387VERVREF /* ActualsVerifiedView.swift */; };
+		AMA2405CNTVBLD /* ActualsCountedDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2405CNTVREF /* ActualsCountedDetailView.swift */; };
 		AMA2387VERGTBLD /* ActualsVerifiedGhostTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2387VERGTREF /* ActualsVerifiedGhostTests.swift */; };
 		AMA2387DOGFOODBLD /* ActualsDogfoodHubView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2387DOGFOODREF /* ActualsDogfoodHubView.swift */; };
 		AMA2387TODAYDEMBLD /* ActualsTodayDemoFeed.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2387TODAYDEMREF /* ActualsTodayDemoFeed.swift */; };
@@ -1039,6 +1040,7 @@
 		AMA2387GHOSTREF /* ActualsGhostFeed.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActualsGhostFeed.swift; path = ../AmakaFlow/Services/ActualsGhostFeed.swift; sourceTree = SOURCE_ROOT; };
 		AMA2387VERCREF /* ActualsVerifiedCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActualsVerifiedCard.swift; path = ../AmakaFlow/Views/Components/ActualsVerifiedCard.swift; sourceTree = SOURCE_ROOT; };
 		AMA2387VERVREF /* ActualsVerifiedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActualsVerifiedView.swift; path = ../AmakaFlow/Views/ActualsVerifiedView.swift; sourceTree = SOURCE_ROOT; };
+		AMA2405CNTVREF /* ActualsCountedDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActualsCountedDetailView.swift; path = ../AmakaFlow/Views/ActualsCountedDetailView.swift; sourceTree = SOURCE_ROOT; };
 		AMA2387VERGTREF /* ActualsVerifiedGhostTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActualsVerifiedGhostTests.swift; path = AmakaFlowCompanionTests/ActualsVerifiedGhostTests.swift; sourceTree = "<group>"; };
 		AMA2387DOGFOODREF /* ActualsDogfoodHubView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActualsDogfoodHubView.swift; path = ../AmakaFlow/Views/ActualsDogfoodHubView.swift; sourceTree = SOURCE_ROOT; };
 		AMA2387TODAYDEMREF /* ActualsTodayDemoFeed.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActualsTodayDemoFeed.swift; path = ../AmakaFlow/Services/ActualsTodayDemoFeed.swift; sourceTree = SOURCE_ROOT; };
@@ -1917,6 +1919,7 @@
 				AMA2387FILLVMREF /* ActualsFillInViewModel.swift */,
 				AMA2387VERCREF /* ActualsVerifiedCard.swift */,
 				AMA2387VERVREF /* ActualsVerifiedView.swift */,
+				AMA2405CNTVREF /* ActualsCountedDetailView.swift */,
 				AMA2387DOGFOODREF /* ActualsDogfoodHubView.swift */,
 				AMA2387MATCHSAVEREF /* ActualsMatchSaveView.swift */,
 				AMA2396SZBADGEREF /* SZStravaBadge.swift */,
@@ -3129,6 +3132,7 @@
 				AMA2387FILLVBLD /* ActualsFillInView.swift in Sources */,
 				AMA2387VERCBLD /* ActualsVerifiedCard.swift in Sources */,
 				AMA2387VERVBLD /* ActualsVerifiedView.swift in Sources */,
+				AMA2405CNTVBLD /* ActualsCountedDetailView.swift in Sources */,
 				AMA2387DOGFOODBLD /* ActualsDogfoodHubView.swift in Sources */,
 				AMA2396SZBADGEBLD /* SZStravaBadge.swift in Sources */,
 				AMA2396MAPCTABLD /* ActualsMapCTAState.swift in Sources */,

@@ -1507,6 +1507,160 @@ final class AMA2396SyncV2Tests: XCTestCase {
         }
     }
 
+    /// AMA-2405: GET activity detail returns Strava description omitted by list sync.
+    func testGetActivityDetailDecodesDescription() async throws {
+        MockURLProtocol.reset()
+        defer { MockURLProtocol.reset() }
+
+        var captured: URLRequest?
+        let body = Data("""
+        {
+          "strava_id": 555,
+          "name": "Bike ski row repeats",
+          "type": "Workout",
+          "distance_km": 0.0,
+          "duration_min": 42,
+          "start_date": "2026-08-10T01:00:00Z",
+          "start_date_local": "2026-08-09T20:00:00",
+          "description": "Assault bike · ski · row"
+        }
+        """.utf8)
+        MockURLProtocol.requestHandler = { request in
+            captured = request
+            let response = HTTPURLResponse(
+                url: request.url!,
+                statusCode: 200,
+                httpVersion: nil,
+                headerFields: ["Content-Type": "application/json"]
+            )!
+            return (response, body)
+        }
+
+        let client = BFFStravaClient(
+            baseURL: "https://mock.test/v1",
+            session: MockURLProtocol.mockSession(),
+            bearerTokenProvider: { "test-token" },
+            userIDProvider: { "user-1" }
+        )
+        let detail = try await client.getActivityDetail(activityId: "555")
+        XCTAssertEqual(detail.stravaId, 555)
+        XCTAssertEqual(detail.description, "Assault bike · ski · row")
+        XCTAssertEqual(detail.name, "Bike ski row repeats")
+        XCTAssertEqual(captured?.httpMethod, "GET")
+        XCTAssertEqual(captured?.url?.path, "/v1/strava/activities/555")
+        XCTAssertEqual(captured?.url?.query, "userId=user-1")
+    }
+
+    func testCountedCardCachesActivityDescription() {
+        let activity = ActualsUnmappedActivity(
+            title: "Bike ski row repeats",
+            provider: .strava,
+            startDate: Date(),
+            durationSeconds: 2520,
+            distanceMeters: nil,
+            calories: nil,
+            avgHR: nil,
+            type: .strength,
+            activityDescription: ""
+        )
+        let session = ActualsFillInSession(
+            id: "sess-555",
+            title: "Bike ski row repeats",
+            subtitle: "KEPT AS-IS",
+            exercises: [],
+            verified: false,
+            stravaActivityId: "555",
+            stravaCurrentDescription: nil
+        )
+        let card = ActualsTodayDemoCard(
+            id: "strava_555",
+            kind: .counted,
+            timeLabel: "20:14",
+            title: "Bike ski row repeats",
+            stats: [("clock", "42 min")],
+            sourceLabel: "Kept as-is",
+            sourceProvider: .strava,
+            session: nil,
+            activity: activity,
+            fillInSession: session,
+            stravaDecoration: .untouched
+        )
+        let updated = card.withActivityDescription("Assault bike · ski · row")
+        XCTAssertEqual(updated.activity?.activityDescription, "Assault bike · ski · row")
+        XCTAssertEqual(updated.fillInSession?.stravaCurrentDescription, "Assault bike · ski · row")
+    }
+
+    /// AMA-2405: counted cards with nil fillInSession still persist by activity id.
+    func testCountedCardWithoutSessionPersistsDescriptionByActivityId() throws {
+        try repo.upsertStravaActivityDescription(
+            activityId: "555",
+            description: "Assault bike · ski · row"
+        )
+        let cached = try repo.fetchCachedStravaDescriptions()
+        XCTAssertEqual(cached["555"], "Assault bike · ski · row")
+
+        let activity = ActualsUnmappedActivity(
+            title: "Bike ski row repeats",
+            provider: .strava,
+            startDate: Date(),
+            durationSeconds: 2520,
+            distanceMeters: nil,
+            calories: nil,
+            avgHR: nil,
+            type: .strength,
+            activityDescription: ""
+        )
+        let card = ActualsTodayDemoCard(
+            id: "strava_555",
+            kind: .counted,
+            timeLabel: "20:14",
+            title: "Bike ski row repeats",
+            stats: [("clock", "42 min")],
+            sourceLabel: "Kept as-is",
+            sourceProvider: .strava,
+            session: nil,
+            activity: activity,
+            fillInSession: nil,
+            stravaDecoration: .untouched
+        )
+        // Description-cache stubs must not promote counted → fill-in on overlay.
+        let overlaid = ActualsTodayDemoFeed.applyLocalOverlays(to: [card], repository: repo)
+        XCTAssertEqual(overlaid.first?.kind, .counted)
+        XCTAssertNil(overlaid.first?.fillInSession)
+        XCTAssertEqual(overlaid.first?.activity?.activityDescription, "Assault bike · ski · row")
+        // Match overlays still ignore description-only stubs.
+        let byStrava = try repo.fetchSessionsKeyedByStravaActivityId()
+        XCTAssertNil(byStrava["555"])
+    }
+
+    /// AMA-2405: once AmakaFlow wrote Strava, do not treat description as missing.
+    func testOursDecorationDoesNotNeedStravaDescriptionRefetch() {
+        XCTAssertFalse(
+            ActualsStravaDescriptionPolicy.showsDescriptionSection(
+                decoration: .ours,
+                stravaActivityId: "555",
+                cachedDescription: "prior"
+            )
+        )
+        XCTAssertFalse(ActualsStravaDescriptionPolicy.allowsRemoteFetch(decoration: .ours))
+        XCTAssertTrue(
+            ActualsStravaDescriptionPolicy.showsDescriptionSection(
+                decoration: .untouched,
+                stravaActivityId: "555",
+                cachedDescription: ""
+            )
+        )
+        XCTAssertTrue(ActualsStravaDescriptionPolicy.allowsRemoteFetch(decoration: .untouched))
+        // Non-Strava sources with no activity id/text must not show an empty Strava section.
+        XCTAssertFalse(
+            ActualsStravaDescriptionPolicy.showsDescriptionSection(
+                decoration: .none,
+                stravaActivityId: nil,
+                cachedDescription: ""
+            )
+        )
+    }
+
     /// URLSession often delivers POST bodies via `httpBodyStream` in URLProtocol.
     private static func httpBodyData(from request: URLRequest) -> Data? {
         if let body = request.httpBody { return body }

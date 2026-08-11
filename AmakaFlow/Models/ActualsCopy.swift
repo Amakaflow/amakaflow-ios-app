@@ -373,6 +373,22 @@ enum ActualsCopy {
     }
 }
 
+// MARK: - Counted / Strava description (AMA-2405)
+
+extension ActualsCopy {
+    static let countedHeadline = "Counted · kept as-is"
+    static let countedCalloutAccessibilityID = "af_actuals_counted_callout"
+    static let stravaDescriptionLabel = "STRAVA DESCRIPTION"
+    static let stravaDescriptionEmpty = "No description on this Strava activity."
+    static let stravaDescriptionLoading = "Loading Strava description…"
+    static let stravaDescriptionLoadFailed = "Couldn't load the Strava description."
+    static let countedDetailAccessibilityID = "af_actuals_counted_detail"
+
+    static func countedCalloutBody(sourceName: String) -> String {
+        "\(sourceName) metrics kept as-is — counted once in Progress."
+    }
+}
+
 struct ActualsOAuthScopeRow: Equatable {
     let granted: Bool
     let title: String
