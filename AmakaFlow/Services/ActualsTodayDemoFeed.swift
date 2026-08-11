@@ -433,10 +433,33 @@ final class ActualsTodayDemoFeed: ObservableObject {
         return String(cardID.dropFirst(prefix.count))
     }
 
-    /// AMA-2396: Keep as-is marks the session counted (Progress), clears fill-in debt.
+    /// AMA-2396 / AMA-2406: Keep as-is marks counted (Progress) and persists by Strava
+    /// activity id so refresh / History reload does not return the card to Fill in.
     func applyKeepAsIs(unmappedCardID: String) {
         guard let index = cards.firstIndex(where: { $0.id == unmappedCardID }) else { return }
-        cards[index] = cards[index].markingCounted()
+        let counted = cards[index].markingCounted()
+        cards[index] = counted
+        persistCountedKeepAsIs(card: counted)
+    }
+
+    private func persistCountedKeepAsIs(card: ActualsTodayDemoCard) {
+        guard let activityId = Self.stravaActivityId(fromCardID: card.id) else { return }
+        do {
+            try repository.upsertCountedKeepAsIs(
+                activityId: activityId,
+                title: card.title,
+                decoration: card.stravaDecoration,
+                activityDescription: card.activity?.activityDescription,
+                activityType: card.activity?.stravaTypeRaw,
+                recordingApp: card.activity?.recordingApp,
+                isRace: card.activity?.isRace ?? false
+            )
+            NotificationCenter.default.post(name: .actualsLocalSessionsDidChange, object: nil)
+        } catch {
+            actualsTodayDemoFeedLog.error(
+                "Failed to persist counted keep-as-is for activity \(activityId, privacy: .public): \(error.localizedDescription, privacy: .public)"
+            )
+        }
     }
 
     /// AMA-2405: persist a lazy-fetched Strava description onto the card (+ activity-id cache).
@@ -767,6 +790,13 @@ final class ActualsTodayDemoFeed: ObservableObject {
                     stravaDecoration: decoration
                 )
             }
+            if ActualsRepository.isCountedKeepAsIsSession(id: session.id) {
+                return countedOverlayCard(
+                    from: next,
+                    session: session,
+                    decoration: decoration
+                )
+            }
             let matched = makeMatchedCard(
                 request: MatchedCardRequest(
                     cardID: next.id,
@@ -793,6 +823,33 @@ final class ActualsTodayDemoFeed: ObservableObject {
                 stravaDecoration: decoration
             )
         }
+    }
+
+    /// AMA-2406: restore Keep as-is without promoting to fill-in debt.
+    private static func countedOverlayCard(
+        from card: ActualsTodayDemoCard,
+        session: ActualsFillInSession,
+        decoration: StravaDecorationState
+    ) -> ActualsTodayDemoCard {
+        var activity = card.activity
+        if let cached = session.stravaCurrentDescription,
+           !cached.isEmpty,
+           (activity?.activityDescription ?? "").isEmpty {
+            activity?.activityDescription = cached
+        }
+        return ActualsTodayDemoCard(
+            id: card.id,
+            kind: .counted,
+            timeLabel: card.timeLabel,
+            title: session.title.isEmpty ? card.title : session.title,
+            stats: card.stats,
+            sourceLabel: "Kept as-is",
+            sourceProvider: card.sourceProvider ?? card.activity?.provider ?? .strava,
+            session: card.session,
+            activity: activity,
+            fillInSession: nil,
+            stravaDecoration: decoration == .none ? card.stravaDecoration : decoration
+        )
     }
 
     private func upsertCard(

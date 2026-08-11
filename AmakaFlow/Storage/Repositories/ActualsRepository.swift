@@ -6,6 +6,8 @@
 //  airplane mode must not lose a verified save.
 //
 
+// swiftlint:disable file_length
+
 import Foundation
 import GRDB
 
@@ -54,6 +56,14 @@ final class ActualsRepository: @unchecked Sendable {
         }
 
         let timestamp = now()
+        // Overlay join key — backfill from `strava_<id>` session ids when callers omit it.
+        var resolvedActivityId = session.stravaActivityId
+        if resolvedActivityId?.isEmpty != false,
+           session.id.hasPrefix("strava_"),
+           !Self.isDescriptionCacheSession(id: session.id),
+           !Self.isCountedKeepAsIsSession(id: session.id) {
+            resolvedActivityId = String(session.id.dropFirst("strava_".count))
+        }
         try dbQueue.write { database in
             var header = LocalActualsSession(
                 id: session.id,
@@ -63,7 +73,7 @@ final class ActualsRepository: @unchecked Sendable {
                 verified: true,
                 savedAt: timestamp,
                 createdAt: timestamp,
-                stravaActivityId: session.stravaActivityId,
+                stravaActivityId: resolvedActivityId,
                 stravaActivityType: session.stravaActivityType,
                 stravaCurrentDescription: session.stravaCurrentDescription,
                 stravaRecordingApp: session.stravaRecordingApp,
@@ -74,6 +84,14 @@ final class ActualsRepository: @unchecked Sendable {
                 header.preserveWriteBack(from: existing)
             }
             try header.upsert(database)
+
+            // Verified supersedes a prior Keep as-is stub for the same activity.
+            if let activityId = header.stravaActivityId, !activityId.isEmpty {
+                _ = try LocalActualsSession.deleteOne(
+                    database,
+                    key: Self.countedKeepAsIsSessionID(for: activityId)
+                )
+            }
 
             try LocalActualsExerciseRow
                 .filter(LocalActualsExerciseRow.Columns.sessionId == session.id)
@@ -111,7 +129,7 @@ final class ActualsRepository: @unchecked Sendable {
         }
     }
 
-    /// AMA-2396: Match/verify overlays keyed by Strava activity id so History + Today
+    /// AMA-2396: Match/verify/counted overlays keyed by Strava activity id so History + Today
     /// survive sync reloads and tab changes.
     func fetchSessionsKeyedByStravaActivityId() throws -> [String: ActualsFillInSession] {
         try dbQueue.read { database in
@@ -125,14 +143,22 @@ final class ActualsRepository: @unchecked Sendable {
                       let session = try Self.session(id: header.id, database: database) else {
                     continue
                 }
-                // Prefer verified over draft when duplicates exist.
-                if let existing = result[activityId], existing.verified, !session.verified {
+                // Prefer verified > matched draft > counted keep-as-is when duplicates exist.
+                if let existing = result[activityId],
+                   Self.overlayRank(existing) >= Self.overlayRank(session) {
                     continue
                 }
                 result[activityId] = session
             }
             return result
         }
+    }
+
+    /// Higher wins when multiple local rows share one Strava activity id.
+    static func overlayRank(_ session: ActualsFillInSession) -> Int {
+        if session.verified { return 300 }
+        if isCountedKeepAsIsSession(id: session.id) { return 100 }
+        return 200 // matched draft / fill-in
     }
 
     /// Persist a Map match before RPE/Save so "matched" is not lost on History reload.
@@ -326,7 +352,7 @@ final class ActualsRepository: @unchecked Sendable {
     }
 }
 
-// MARK: - AMA-2405 Strava description cache (activity-id keyed)
+// MARK: - AMA-2405 / AMA-2406 Strava activity-id local rows
 
 extension ActualsRepository {
     static func descriptionCacheSessionID(for activityId: String) -> String {
@@ -337,6 +363,85 @@ extension ActualsRepository {
 
     static func isDescriptionCacheSession(id: String) -> Bool {
         id.hasPrefix("strava_desc_")
+    }
+
+    static func countedKeepAsIsSessionID(for activityId: String) -> String {
+        "strava_counted_\(activityId)"
+    }
+
+    static let countedKeepAsIsSubtitle = "__counted_keep_as_is__"
+
+    static func isCountedKeepAsIsSession(id: String) -> Bool {
+        id.hasPrefix("strava_counted_")
+    }
+
+    /// AMA-2406: persist Keep as-is so Counted ✓ survives Strava re-pull / History reload.
+    func upsertCountedKeepAsIs(
+        activityId: String,
+        title: String,
+        decoration: StravaDecorationState,
+        activityDescription: String? = nil,
+        activityType: String? = nil,
+        recordingApp: String? = nil,
+        isRace: Bool = false
+    ) throws {
+        guard !activityId.isEmpty else { return }
+        let timestamp = now()
+        let sessionID = Self.countedKeepAsIsSessionID(for: activityId)
+        let trimmedDescription = activityDescription?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        try dbQueue.write { database in
+            // Never demote a verified session to counted.
+            let headers = try LocalActualsSession
+                .filter(sql: "strava_activity_id = ?", arguments: [activityId])
+                .fetchAll(database)
+            if headers.contains(where: { $0.verified }) { return }
+
+            var stub = LocalActualsSession(
+                id: sessionID,
+                title: title,
+                subtitle: Self.countedKeepAsIsSubtitle,
+                verified: false,
+                savedAt: timestamp,
+                createdAt: timestamp,
+                stravaDecoration: decoration.persistedRawValue,
+                stravaActivityId: activityId,
+                isDraft: true,
+                stravaActivityType: activityType,
+                stravaCurrentDescription: (trimmedDescription?.isEmpty == false) ? trimmedDescription : nil,
+                stravaRecordingApp: recordingApp,
+                stravaIsRace: isRace
+            )
+            if let existing = try LocalActualsSession.fetchOne(database, key: sessionID) {
+                stub.createdAt = existing.createdAt
+                if stub.stravaCurrentDescription == nil {
+                    stub.stravaCurrentDescription = existing.stravaCurrentDescription
+                }
+                stub.preUpdateTitle = existing.preUpdateTitle
+                stub.preUpdateDescription = existing.preUpdateDescription
+            }
+            try stub.upsert(database)
+
+            // Fold description-only cache into the counted row so one activity id
+            // does not keep a second stub that never restores kind.
+            let descID = Self.descriptionCacheSessionID(for: activityId)
+            if let descRow = try LocalActualsSession.fetchOne(database, key: descID) {
+                if stub.stravaCurrentDescription == nil {
+                    stub.stravaCurrentDescription = descRow.stravaCurrentDescription
+                    try stub.update(database)
+                }
+                try descRow.delete(database)
+            }
+        }
+    }
+
+    /// Undo Keep as-is — return the activity to unmapped / Fill in on next overlay.
+    func clearCountedKeepAsIs(activityId: String) throws {
+        guard !activityId.isEmpty else { return }
+        let sessionID = Self.countedKeepAsIsSessionID(for: activityId)
+        try dbQueue.write { database in
+            _ = try LocalActualsSession.deleteOne(database, key: sessionID)
+        }
     }
 
     /// Persist by Strava activity id — counted / keep-as-is cards often have no

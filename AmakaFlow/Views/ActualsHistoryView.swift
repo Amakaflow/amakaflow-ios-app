@@ -67,6 +67,29 @@ final class ActualsHistoryViewModel: ObservableObject {
 
     func applyKeepAsIs(cardID: String) {
         mutateCard(id: cardID) { $0.markingCounted() }
+        guard let card = card(withID: cardID),
+              let activityId = ActualsTodayDemoFeed.stravaActivityId(fromCardID: cardID) else {
+            return
+        }
+        do {
+            try repository.upsertCountedKeepAsIs(
+                activityId: activityId,
+                title: card.title,
+                decoration: card.stravaDecoration,
+                activityDescription: card.activity?.activityDescription,
+                activityType: card.activity?.stravaTypeRaw,
+                recordingApp: card.activity?.recordingApp,
+                isRace: card.activity?.isRace ?? false
+            )
+            NotificationCenter.default.post(name: .actualsLocalSessionsDidChange, object: nil)
+        } catch {
+            Logger(
+                subsystem: "com.myamaka.AmakaFlowCompanion",
+                category: "ActualsHistory"
+            ).error(
+                "Failed to persist counted keep-as-is for activity \(activityId, privacy: .public): \(error.localizedDescription, privacy: .public)"
+            )
+        }
     }
 
     /// AMA-2405: cache Strava description after counted-detail lazy fetch.

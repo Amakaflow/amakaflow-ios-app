@@ -1633,6 +1633,75 @@ final class AMA2396SyncV2Tests: XCTestCase {
         XCTAssertNil(byStrava["555"])
     }
 
+    /// AMA-2406: Keep as-is must survive a Strava rebuild that emits `.unmapped` again.
+    func testKeepAsIsPersistsCountedAcrossLocalOverlayRebuild() throws {
+        let activity = ActualsUnmappedActivity(
+            title: "Bike ski row repeats",
+            provider: .strava,
+            startDate: Date(),
+            durationSeconds: 2520,
+            distanceMeters: nil,
+            calories: nil,
+            avgHR: nil,
+            type: .strength,
+            activityDescription: "Assault bike · ski · row"
+        )
+        let unmapped = ActualsTodayDemoCard(
+            id: "strava_555",
+            kind: .unmapped,
+            timeLabel: "20:14",
+            title: "Bike ski row repeats",
+            stats: [("clock", "42 min")],
+            sourceLabel: "Synced from Strava",
+            sourceProvider: .strava,
+            session: nil,
+            activity: activity,
+            fillInSession: nil,
+            stravaDecoration: .none
+        )
+        let counted = unmapped.markingCounted()
+        try repo.upsertCountedKeepAsIs(
+            activityId: "555",
+            title: counted.title,
+            decoration: counted.stravaDecoration,
+            activityDescription: activity.activityDescription,
+            activityType: activity.stravaTypeRaw,
+            recordingApp: activity.recordingApp,
+            isRace: activity.isRace
+        )
+
+        // Fresh pull looks like unmapped again — overlay must restore Counted ✓.
+        let rebuilt = ActualsTodayDemoCard(
+            id: "strava_555",
+            kind: .unmapped,
+            timeLabel: "20:14",
+            title: "Bike ski row repeats",
+            stats: [("clock", "42 min")],
+            sourceLabel: "Synced from Strava",
+            sourceProvider: .strava,
+            session: nil,
+            activity: ActualsUnmappedActivity(
+                title: "Bike ski row repeats",
+                provider: .strava,
+                startDate: Date(),
+                durationSeconds: 2520,
+                distanceMeters: nil,
+                calories: nil,
+                avgHR: nil,
+                type: .strength,
+                activityDescription: ""
+            ),
+            fillInSession: nil,
+            stravaDecoration: .none
+        )
+        let overlaid = ActualsTodayDemoFeed.applyLocalOverlays(to: [rebuilt], repository: repo)
+        XCTAssertEqual(overlaid.first?.kind, .counted)
+        XCTAssertEqual(overlaid.first?.sourceLabel, "Kept as-is")
+        XCTAssertEqual(overlaid.first?.stravaDecoration, .untouched)
+        XCTAssertEqual(overlaid.first?.activity?.activityDescription, "Assault bike · ski · row")
+        XCTAssertNil(overlaid.first?.fillInSession)
+    }
+
     /// AMA-2405: once AmakaFlow wrote Strava, do not treat description as missing.
     func testOursDecorationDoesNotNeedStravaDescriptionRefetch() {
         XCTAssertFalse(
