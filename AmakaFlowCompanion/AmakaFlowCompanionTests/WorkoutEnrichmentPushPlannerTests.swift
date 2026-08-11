@@ -760,9 +760,9 @@ final class WorkoutEnrichmentPushPlannerTests: XCTestCase {
         XCTAssertFalse(application.prefs.exerciseWarmupSets.excludeExerciseKeys.contains("Bench Press"))
     }
 
-    /// AMA-2408 — intensity notes must not ride the enrich wire (mapper prefers
-    /// note over reps → WorkoutKit coerce invents reps=1).
-    func testApplyStripsIntensityNotesFromPerExerciseRamps() throws {
+    /// AMA-2408 — intensity notes persist on application.prefs for reopen; the
+    /// enrich wire strips them (see EnrichRequest.jsonObject).
+    func testApplyKeepsIntensityNotesOnPersistedPerExerciseRamps() throws {
         let blocks = [
             SocialImportBlock(
                 label: "Main",
@@ -811,11 +811,36 @@ final class WorkoutEnrichmentPushPlannerTests: XCTestCase {
         for ramp in applied {
             XCTAssertTrue(ramp.enabled)
             XCTAssertEqual(ramp.sets.map(\.value), [11, 11])
-            XCTAssertTrue(ramp.sets.allSatisfy { $0.intensityNote == nil })
+            XCTAssertEqual(ramp.sets.map(\.intensityNote), ["LIGHT · ~40%", "MODERATE · ~60%"])
         }
         XCTAssertFalse(
             application.prefs.exerciseWarmupSets.excludeExerciseKeys.contains("machine lateral raises")
         )
+    }
+
+    /// EnrichRequest wire encoding must drop intensity notes even when prefs keep them.
+    func testEnrichRequestJSONStripsIntensityNotesFromPrefs() throws {
+        var prefs = WorkoutPreferences.defaults
+        prefs.exerciseWarmupSets.enabled = true
+        prefs.exerciseWarmupSets.perExercise = [
+            PerExerciseRamp(
+                exerciseRef: "Back Squat",
+                enabled: true,
+                sets: [
+                    try RampSet(kind: .reps, value: 10, intensityNote: "LIGHT · ~40%")
+                ]
+            )
+        ]
+        let request = EnrichRequest(blocksJSON: ["title": "t", "blocks": []], prefs: prefs)
+        let object = try request.jsonObject()
+        let wirePrefs = try XCTUnwrap(object["prefs"] as? [String: Any])
+        let warmup = try XCTUnwrap(wirePrefs["exercise_warmup_sets"] as? [String: Any])
+        let perExercise = try XCTUnwrap(warmup["per_exercise"] as? [[String: Any]])
+        XCTAssertEqual(perExercise.count, 1)
+        let sets = try XCTUnwrap(perExercise[0]["sets"] as? [[String: Any]])
+        XCTAssertEqual(sets.count, 1)
+        XCTAssertNil(sets[0]["intensity_note"])
+        XCTAssertEqual(sets[0]["value"] as? Int, 10)
     }
 
     /// A ramp the user explicitly turned off in the pick screen is excluded too

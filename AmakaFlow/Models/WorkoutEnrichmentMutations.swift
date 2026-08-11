@@ -282,12 +282,12 @@ enum WorkoutEnrichmentMutations {
 
     // MARK: - AMA-2378 Task 5 — per-exercise ramp pick/editor helpers
 
-    /// AMA-2408 dogfood — strip intensity notes before enrich so WorkoutKit
-    /// labels keep the reps digit (`Warm-up · Name · 11`). Backend
-    /// `warmup_set_display_name` prefers `intensity_note` over reps; when a
-    /// note is present the legacy coerce falls back to `reps=1` and the
-    /// Apple preview lies. Notes stay on the pick-screen seed for local
-    /// digest only — they must not ride the enrich wire.
+    /// AMA-2408 dogfood — strip intensity notes before they ride the enrich
+    /// wire so WorkoutKit labels keep the reps digit (`Warm-up · Name · 11`).
+    /// Backend `warmup_set_display_name` prefers `intensity_note` over reps;
+    /// when a note is present the legacy coerce falls back to `reps=1` and
+    /// the Apple preview lies. Call sites: `EnrichRequest.jsonObject()` only —
+    /// persisted prefs / reopen keep the notes intact.
     static func sanitizeRampSetsForEnrich(_ sets: [RampSet]) -> [RampSet] {
         sets.compactMap { set in
             try? RampSet(kind: set.kind, value: set.value, intensityNote: nil, id: set.id)

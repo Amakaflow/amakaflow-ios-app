@@ -374,4 +374,40 @@ final class WorkoutKitPlanStepSummarySectionsTests: XCTestCase {
         XCTAssertEqual(rampDetails, ["LIGHT · ~40%", "MODERATE · ~60%"])
         XCTAssertFalse(rampDetails.contains("1 REPS"))
     }
+
+    /// Multi-token exercise names must not leak into the intensity note suffix.
+    func testIntensityNoteDropsExerciseNameSegments() {
+        let json = plan("""
+        {
+          "kind": "repeat",
+          "reps": 1,
+          "intervals": [
+            {
+              "kind": "reps",
+              "reps": 1,
+              "name": "Warm-up · Dumbbell · Shoulder Press · LIGHT · ~40%"
+            }
+          ]
+        },
+        {
+          "kind": "repeat",
+          "reps": 3,
+          "intervals": [
+            { "kind": "reps", "reps": 12, "name": "Dumbbell · Shoulder Press" }
+          ]
+        }
+        """)
+        let sections = WorkoutKitPlanStepSummary.sections(from: json)
+        guard let band = sections.first(where: {
+            $0.accent == .work && $0.band.contains("Shoulder Press")
+        }) else {
+            return XCTFail("Expected Shoulder Press band")
+        }
+        let warmup = band.steps.first { $0.title == PreviewStep.warmupSetTitle }
+        XCTAssertEqual(warmup?.detail, "LIGHT · ~40%")
+        XCTAssertFalse(
+            (warmup?.detail ?? "").contains("Shoulder Press"),
+            "exercise-name tokens must not leak into intensity detail"
+        )
+    }
 }

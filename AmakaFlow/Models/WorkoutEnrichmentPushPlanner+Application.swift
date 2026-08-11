@@ -136,7 +136,9 @@ extension WorkoutEnrichmentPushPlanner {
         plan: Plan,
         into prefs: inout ExerciseWarmupSetsPrefs
     ) {
-        prefs.perExercise = WorkoutEnrichmentMutations.sanitizeRampsForEnrich(ramps)
+        // Keep intensity notes in persisted prefs (reopen honesty). Wire
+        // sanitization happens in EnrichRequest.jsonObject() only.
+        prefs.perExercise = ramps
 
         let configuredKeys = Set(ramps.map { ExerciseKeyNormalizer.normalize($0.exerciseRef) })
         let disabledKeys = ramps.filter { !$0.enabled }.map {

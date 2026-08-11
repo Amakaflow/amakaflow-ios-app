@@ -68,8 +68,8 @@ enum AppleWatchPreviewReveal {
         let detail = beat.detail?.isEmpty == true ? nil : beat.detail
         let usedNumbers = Set(alreadyShown.map(\.number))
         let unused = steps.filter { !usedNumbers.contains($0.number) }
-        return unused.first(where: {
+        return unused.first {
             $0.title == beat.name && $0.detail == detail
-        }) ?? unused.first(where: { $0.title == beat.name })
+        } ?? unused.first { $0.title == beat.name }
     }
 }

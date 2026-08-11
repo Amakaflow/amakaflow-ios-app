@@ -341,10 +341,12 @@ private enum PreviewSectionBuilder {
             .filter { !$0.isEmpty }
         guard parts.count >= 2 else { return nil }
         let detail = Array(parts.dropFirst())
-        guard detail.contains(where: isDetailSegment) else { return nil }
-        // Drop pure name tokens; keep intensity/detail segments.
-        let noteParts = detail.filter { isDetailSegment($0) || Int($0) == nil }
-        let note = noteParts.joined(separator: " · ")
+        // First intensity/detail segment and everything after — drop name tokens
+        // that sit between the exercise name and "LIGHT · ~40%".
+        guard let firstDetailIndex = detail.firstIndex(where: isDetailSegment) else {
+            return nil
+        }
+        let note = detail[firstDetailIndex...].joined(separator: " · ")
         return note.isEmpty ? nil : note
     }
 
