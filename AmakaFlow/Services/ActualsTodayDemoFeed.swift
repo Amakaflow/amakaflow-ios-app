@@ -88,7 +88,9 @@ struct ActualsTodayDemoCard: Identifiable, Equatable {
                 ?? activity?.provider
                 ?? session?.primaryRecording?.provider,
             session: session,
-            activity: nil,
+            // AMA-2409: keep activity so Today day-filter retains the real start date.
+            // Nilling it parked historical Verified+OURS cards on calendar-today.
+            activity: activity,
             fillInSession: saved,
             stravaDecoration: stravaDecoration
         )

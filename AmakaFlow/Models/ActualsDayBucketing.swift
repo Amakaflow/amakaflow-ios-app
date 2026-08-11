@@ -53,6 +53,33 @@ enum ActualsDayBucketing {
             .sorted(by: >)
     }
 
+    /// AMA-2409: whether a Today Actuals card belongs on `selectedDay`.
+    ///
+    /// Prefer `activity.startDate` / recording start. Live `strava_*` cards without a
+    /// start date must **not** fall through to the fixture “calendar-today” path —
+    /// that bug parked historical Verified+OURS sessions on Today after promote
+    /// cleared `activity`.
+    static func cardBelongsOnSelectedDay(
+        cardID: String,
+        activityStart: Date?,
+        recordingStart: Date?,
+        selectedDay: Date,
+        calendar: Calendar = .current,
+        now: Date = Date()
+    ) -> Bool {
+        if let start = activityStart {
+            return calendar.isDate(start, inSameDayAs: selectedDay)
+        }
+        if let start = recordingStart {
+            return calendar.isDate(start, inSameDayAs: selectedDay)
+        }
+        if cardID.hasPrefix("strava_") {
+            return false
+        }
+        // Fixture / undated demo cards only belong on calendar-today.
+        return calendar.isDate(selectedDay, inSameDayAs: now)
+    }
+
     // MARK: - Parsing
 
     static func parseISO8601(_ raw: String) -> Date? {

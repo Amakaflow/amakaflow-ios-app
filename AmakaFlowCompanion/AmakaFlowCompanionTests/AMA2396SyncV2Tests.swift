@@ -1290,6 +1290,89 @@ final class AMA2396SyncV2Tests: XCTestCase {
         XCTAssertTrue(try repo.isVerified(id: "strava_46"))
     }
 
+    /// AMA-2409: signature promote must keep `activity` so Today day-filter
+    /// does not park historical Verified+OURS cards on calendar-today.
+    func testSignedDescriptionPromoteKeepsActivityStartDate() throws {
+        let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: Date())!
+        let activity = ActualsUnmappedActivity(
+            title: "Bike ski row repeats",
+            provider: .strava,
+            startDate: yesterday,
+            durationSeconds: 2520,
+            distanceMeters: nil,
+            calories: nil,
+            avgHR: nil,
+            type: .strength,
+            activityDescription: ""
+        )
+        let card = ActualsTodayDemoCard(
+            id: "strava_2409",
+            kind: .unmapped,
+            timeLabel: "07:19",
+            title: activity.title,
+            stats: [("clock", "42 min")],
+            sourceLabel: "Synced from Strava",
+            sourceProvider: .strava,
+            session: nil,
+            activity: activity,
+            fillInSession: nil,
+            stravaDecoration: .none
+        )
+        let signed = """
+        🏆 Assault bike — 6 x 3:00
+        RPE 6 \(StravaWriteBackSignature.line)
+        """
+        let updated = ActualsTodayDemoFeed.applyingDescriptionAndSignedOwnership(
+            to: card,
+            description: signed,
+            repository: repo
+        )
+        XCTAssertEqual(updated.kind, .verified)
+        XCTAssertEqual(updated.stravaDecoration, .ours)
+        XCTAssertNotNil(updated.activity, "promote must keep activity for day bucketing")
+        XCTAssertEqual(
+            Calendar.current.startOfDay(for: updated.activity!.startDate),
+            Calendar.current.startOfDay(for: yesterday)
+        )
+        XCTAssertTrue(
+            ActualsDayBucketing.cardBelongsOnSelectedDay(
+                cardID: updated.id,
+                activityStart: updated.activity?.startDate,
+                recordingStart: nil,
+                selectedDay: yesterday
+            )
+        )
+        XCTAssertFalse(
+            ActualsDayBucketing.cardBelongsOnSelectedDay(
+                cardID: updated.id,
+                activityStart: updated.activity?.startDate,
+                recordingStart: nil,
+                selectedDay: Date()
+            ),
+            "yesterday's verified session must not appear on Today"
+        )
+    }
+
+    /// AMA-2409: undated live Strava cards must never use the fixture today fallback.
+    func testUndatedStravaCardDoesNotBelongOnTodayFixtureFallback() {
+        XCTAssertFalse(
+            ActualsDayBucketing.cardBelongsOnSelectedDay(
+                cardID: "strava_99",
+                activityStart: nil,
+                recordingStart: nil,
+                selectedDay: Date()
+            )
+        )
+        XCTAssertTrue(
+            ActualsDayBucketing.cardBelongsOnSelectedDay(
+                cardID: "demo_fixture",
+                activityStart: nil,
+                recordingStart: nil,
+                selectedDay: Date()
+            )
+        )
+    }
+
     /// Linked-but-unverified Strava ids are marked verified on our server.
     func testEnsureServerVerifiedPostsVerifyForSignedActivities() async throws {
         MockURLProtocol.reset()
