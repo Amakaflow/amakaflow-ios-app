@@ -150,7 +150,7 @@ struct StravaWriteBackRequest: Equatable, Sendable {
     var rules: StravaWriteBackRules
     var rpe: Int?
     /// AMA-2403: AmakaFlow fill-in session id stored on the verified-session row.
-    var amakaflowSessionId: String? = nil
+    var amakaflowSessionId: String?
 }
 
 enum StravaWriteBackDecorator {
