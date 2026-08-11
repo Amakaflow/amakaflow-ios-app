@@ -607,6 +607,31 @@ final class WorkoutScheduleViewModelTests: XCTestCase {
         await vm.delete(row: stale)
         XCTAssertTrue(mock.removeCallRows.isEmpty)
     }
+
+    // MARK: - Overview invalidation
+
+    func testDeletePostsAppleWatchScheduleDidChange() async {
+        let mock = MockWorkoutKitScheduler()
+        let a = row(id: "a", title: "A", minutesAgo: 1)
+        mock.rows = [a]
+        let vm = WorkoutScheduleViewModel(scheduler: mock)
+        await vm.refresh(mode: .manual)
+
+        let expectation = XCTNSNotificationExpectation(name: .appleWatchScheduleDidChange)
+        await vm.delete(row: a)
+        await fulfillment(of: [expectation], timeout: 1.0)
+    }
+
+    func testClearAllPostsAppleWatchScheduleDidChange() async {
+        let mock = MockWorkoutKitScheduler()
+        mock.rows = [row(id: "a", title: "A", minutesAgo: 1)]
+        let vm = WorkoutScheduleViewModel(scheduler: mock)
+        await vm.refresh(mode: .manual)
+
+        let expectation = XCTNSNotificationExpectation(name: .appleWatchScheduleDidChange)
+        await vm.clearAll()
+        await fulfillment(of: [expectation], timeout: 1.0)
+    }
 }
 
 /// Deterministic hold/release for concurrency-gate tests (no sleep timing).
