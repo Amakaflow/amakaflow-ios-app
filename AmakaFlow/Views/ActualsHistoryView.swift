@@ -533,24 +533,26 @@ struct ActualsHistoryView: View {
                 cardID: route.cardID,
                 cachedDescription: card?.activity?.activityDescription
             )
+            let onEditActuals = {
+                if card?.fillInSession == nil {
+                    _ = viewModel.applyLibraryMatch(
+                        planTitle: session.title,
+                        cardID: route.cardID
+                    )
+                }
+                verifiedRoute = nil
+                openFillIn(cardID: route.cardID)
+            }
+            let onUnverify = {
+                viewModel.applyUnverify(cardID: route.cardID, session: session)
+                verifiedRoute = nil
+            }
             ActualsVerifiedView(
                 session: detailSession,
                 sourceName: ActualsCopy.sourceDisplayName(card?.sourceProvider ?? .strava),
                 decoration: card?.stravaDecoration ?? .none,
-                onEditActuals: {
-                    if card?.fillInSession == nil {
-                        _ = viewModel.applyLibraryMatch(
-                            planTitle: session.title,
-                            cardID: route.cardID
-                        )
-                    }
-                    verifiedRoute = nil
-                    openFillIn(cardID: route.cardID)
-                },
-                onUnverify: {
-                    viewModel.applyUnverify(cardID: route.cardID, session: session)
-                    verifiedRoute = nil
-                }
+                onEditActuals: onEditActuals,
+                onUnverify: onUnverify
             ) { description in
                 viewModel.applyActivityDescription(cardID: route.cardID, description: description)
             }
@@ -590,7 +592,7 @@ struct ActualsHistoryView: View {
                 decoration: card.stravaDecoration,
                 stravaActivityId: ActualsTodayDemoFeed.stravaActivityId(fromCardID: card.id),
                 initialDescription: card.activity?.activityDescription ?? "",
-                backLabel: "History"
+                backLabel: ActualsCopy.historyTitle
             ) { description in
                 viewModel.applyActivityDescription(cardID: route.cardID, description: description)
             }
