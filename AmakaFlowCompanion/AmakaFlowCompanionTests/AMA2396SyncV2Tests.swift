@@ -2016,8 +2016,8 @@ final class AMA2396SyncV2Tests: XCTestCase {
         XCTAssertNil(byStrava["555"])
     }
 
-    /// AMA-2405/2407: `.ours` with a matched exercise list hides Strava text;
-    /// verify-as-is (no rows) still shows the cached description. Never re-fetch `.ours`.
+    /// AMA-2405/2407: `.ours` never mirrors Strava description in-app — that text
+    /// is for Strava after verify. In-app chrome is WHAT YOU DID · VS PLAN.
     func testOursDecorationDoesNotNeedStravaDescriptionRefetch() {
         XCTAssertFalse(
             ActualsStravaDescriptionPolicy.showsDescriptionSection(
@@ -2027,7 +2027,7 @@ final class AMA2396SyncV2Tests: XCTestCase {
                 hasExerciseRows: true
             )
         )
-        XCTAssertTrue(
+        XCTAssertFalse(
             ActualsStravaDescriptionPolicy.showsDescriptionSection(
                 decoration: .ours,
                 stravaActivityId: "555",
@@ -2050,6 +2050,66 @@ final class AMA2396SyncV2Tests: XCTestCase {
                 decoration: .none,
                 stravaActivityId: nil,
                 cachedDescription: ""
+            )
+        )
+    }
+
+    /// Signature hydrate must keep matched exercise rows (image 1), not replace
+    /// them with verify-as-is + a Strava trophy dump (image 2).
+    func testSignedDescriptionPromotePreservesMatchedExercises() throws {
+        var matched = ActualsFillInSession.lowerBodyPosteriorSample(id: "strava_47")
+        matched.stravaActivityId = "47"
+        matched.verified = true
+        matched.rpe = 8
+        for index in matched.exercises.indices {
+            matched.exercises[index].confirmation = .asPlanned
+        }
+        try repo.saveVerifiedSession(matched)
+        try repo.storeDecoration(.ours, forSessionID: matched.id)
+
+        let activity = ActualsUnmappedActivity(
+            title: matched.title,
+            provider: .strava,
+            startDate: Date(),
+            durationSeconds: 3_000,
+            distanceMeters: nil,
+            calories: nil,
+            avgHR: nil,
+            type: .strength,
+            activityDescription: ""
+        )
+        let asIsCard = ActualsTodayDemoCard(
+            id: "strava_47",
+            kind: .verified,
+            timeLabel: "17:20",
+            title: matched.title,
+            stats: [("clock", "52m")],
+            sourceLabel: "Verified · as-is",
+            sourceProvider: .strava,
+            session: nil,
+            activity: activity,
+            fillInSession: ActualsTodayDemoFeed.makeVerifiedAsIsSession(
+                cardID: "strava_47",
+                title: matched.title,
+                activity: activity
+            ),
+            stravaDecoration: .untouched
+        )
+        let signed = "🏆 Barbell Overhead Press — 2 x 4\nRPE 8 \(StravaWriteBackSignature.line)"
+        let updated = ActualsTodayDemoFeed.applyingDescriptionAndSignedOwnership(
+            to: asIsCard,
+            description: signed,
+            repository: repo
+        )
+        XCTAssertEqual(updated.stravaDecoration, .ours)
+        XCTAssertFalse(updated.fillInSession?.exercises.isEmpty ?? true)
+        XCTAssertEqual(updated.fillInSession?.exercises.count, matched.exercises.count)
+        XCTAssertFalse(
+            ActualsStravaDescriptionPolicy.showsDescriptionSection(
+                decoration: updated.stravaDecoration,
+                stravaActivityId: "47",
+                cachedDescription: signed,
+                hasExerciseRows: !(updated.fillInSession?.exercises.isEmpty ?? true)
             )
         )
     }

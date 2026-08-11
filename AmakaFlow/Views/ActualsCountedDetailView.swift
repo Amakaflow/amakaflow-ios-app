@@ -16,24 +16,26 @@ import SwiftUI
 
 /// AMA-2405: gate Strava description UI/fetch for counted + verified details.
 enum ActualsStravaDescriptionPolicy {
-    /// Matched verified sessions with exercise rows hide Strava text when `.ours`
-    /// (the plan list is the record). Verify-as-is (no exercise rows) still shows
-    /// the cached Strava description — that body is the only structure the athlete sees.
+    /// AmakaFlow verified UI uses the fill-in exercise list (WHAT YOU DID · VS PLAN).
+    /// The Strava description — including trophy lines + “tracked with AmakaFlow” —
+    /// is written *to Strava* after verify; it must not replace that in-app chrome
+    /// when decoration is `.ours`.
     static func showsDescriptionSection(
         decoration: StravaDecorationState,
         stravaActivityId: String?,
         cachedDescription: String,
         hasExerciseRows: Bool = false
     ) -> Bool {
+        // `hasExerciseRows` kept for call-site compatibility; `.ours` always hides.
+        _ = hasExerciseRows
+        guard decoration != .ours else { return false }
         let hasActivityId = !(stravaActivityId ?? "")
             .trimmingCharacters(in: .whitespacesAndNewlines)
             .isEmpty
         let hasCachedDescription = !cachedDescription
             .trimmingCharacters(in: .whitespacesAndNewlines)
             .isEmpty
-        guard hasActivityId || hasCachedDescription else { return false }
-        if decoration == .ours && hasExerciseRows { return false }
-        return true
+        return hasActivityId || hasCachedDescription
     }
 
     /// AmakaFlow already wrote Strava — do not re-pull description.

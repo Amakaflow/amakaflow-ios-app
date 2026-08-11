@@ -640,7 +640,9 @@ final class ActualsTodayDemoFeed: ObservableObject {
     }
 
     /// Cache description and, when it carries our AmakaFlow signature, flip the
-    /// card to Verified + `STRAVA ✓ OURS` (persist session + decoration).
+    /// card to Verified + `STRAVA ✓ OURS`. Prefer an existing fill-in / matched
+    /// session with exercise rows (image‑1 verified chrome) — never replace that
+    /// with verify-as-is + a Strava description dump.
     static func applyingDescriptionAndSignedOwnership(
         to card: ActualsTodayDemoCard,
         description: String,
@@ -652,22 +654,58 @@ final class ActualsTodayDemoFeed: ObservableObject {
               StravaWriteBackDecorator.containsOurSignature(description) else {
             return next
         }
-        var session = next.fillInSession
-            ?? makeVerifiedAsIsSession(
-                cardID: next.id,
-                title: next.title,
-                activity: next.activity
-            )
+        let activityId = next.fillInSession?.stravaActivityId
+            ?? stravaActivityId(fromCardID: next.id)
+        let persisted: ActualsFillInSession? = {
+            guard let repository, let activityId else { return nil }
+            return (try? repository.fetchSessionsKeyedByStravaActivityId())?[activityId]
+        }()
+        var session = richerFillInSession(
+            next.fillInSession,
+            persisted,
+            fallbackAsIsCardID: next.id,
+            title: next.title,
+            activity: next.activity
+        )
         session.verified = true
         session.stravaCurrentDescription = description
         if session.rpe == nil {
             session.rpe = StravaWriteBackDecorator.rpeFromSignedDescription(description)
         }
         if let repository {
+            // upsertVerifiedAsIs keeps existing exercise rows when `exercises` is
+            // empty, and rewrites them when present — never invents as-is over a
+            // richer matched session we already preferred above.
             try? repository.upsertVerifiedAsIs(session)
             try? repository.storeDecoration(.ours, forSessionID: session.id)
         }
-        return next.markingVerifiedAsIs(with: session, decoration: .ours)
+        if session.exercises.isEmpty {
+            return next.markingVerifiedAsIs(with: session, decoration: .ours)
+        }
+        // Image‑1 chrome: exercise deltas, not a Strava description dump.
+        return next.markingVerified(with: session).withDecoration(.ours)
+    }
+
+    /// Prefer the session that still has fill-in exercise rows (post-verify UI).
+    static func richerFillInSession(
+        _ primary: ActualsFillInSession?,
+        _ secondary: ActualsFillInSession?,
+        fallbackAsIsCardID: String,
+        title: String,
+        activity: ActualsUnmappedActivity?
+    ) -> ActualsFillInSession {
+        let candidates = [primary, secondary].compactMap { $0 }
+        if let best = candidates.max(by: { $0.exercises.count < $1.exercises.count }),
+           !best.exercises.isEmpty {
+            return best
+        }
+        return primary
+            ?? secondary
+            ?? makeVerifiedAsIsSession(
+                cardID: fallbackAsIsCardID,
+                title: title,
+                activity: activity
+            )
     }
 
     /// AMA-2396 A3: un-verify — actuals kept as draft, RPE cleared, badge cleared.
@@ -943,21 +981,23 @@ final class ActualsTodayDemoFeed: ObservableObject {
                     next = next.withActivityDescription(cached)
                 }
             }
-            // Signature in Strava text = already linked — Verified + OURS even with
-            // no local session row yet (e.g. phone/simulator after refresh).
+            // Signature in Strava text = already linked. Prefer merging a local
+            // matched session first — signature promote must not invent as-is
+            // over fill-in exercise rows (that path showed the Strava dump UI).
             let liveDescription = next.activity?.activityDescription
                 ?? next.fillInSession?.stravaCurrentDescription
                 ?? ""
-            if StravaWriteBackDecorator.containsOurSignature(liveDescription),
-               (next.sourceProvider ?? next.activity?.provider) == .strava {
-                next = applyingDescriptionAndSignedOwnership(
-                    to: next,
-                    description: liveDescription,
-                    repository: repository
-                )
-            }
+            let signed = StravaWriteBackDecorator.containsOurSignature(liveDescription)
+                && (next.sourceProvider ?? next.activity?.provider) == .strava
             guard let activityId = stravaActivityId(fromCardID: next.id),
                   var session = byStrava[activityId] else {
+                if signed {
+                    return applyingDescriptionAndSignedOwnership(
+                        to: next,
+                        description: liveDescription,
+                        repository: repository
+                    )
+                }
                 return next
             }
             // Cold-launch DB rows may predate V6 metadata — fill from the live Strava card.
@@ -985,14 +1025,27 @@ final class ActualsTodayDemoFeed: ObservableObject {
             }
             // AMA-2407: server flags win — a stale local draft must never downgrade
             // a card the sync already reports Verified back to fill-in debt.
-            if session.verified || next.kind == .verified {
-                var effectiveSession = session.verified ? session : (next.fillInSession ?? session)
+            // Prefer the richer exercise list (matched verify) over sync as-is.
+            if session.verified || next.kind == .verified || signed {
+                var effectiveSession = richerFillInSession(
+                    session,
+                    next.fillInSession,
+                    fallbackAsIsCardID: next.id,
+                    title: next.title,
+                    activity: next.activity
+                )
+                effectiveSession.verified = true
                 if effectiveSession.rpe == nil {
                     effectiveSession.rpe = StravaWriteBackDecorator.rpeFromSignedDescription(
                         descriptionForDecoration
                     )
                 }
-                let sourceLabel = effectiveSession.rpe.map { "Verified · RPE \($0)" } ?? "Verified · as-is"
+                if signed || decoration == .ours {
+                    decoration = .ours
+                    try? repository.storeDecoration(.ours, forSessionID: effectiveSession.id)
+                }
+                let sourceLabel = effectiveSession.rpe.map { "Verified · RPE \($0)" }
+                    ?? (effectiveSession.exercises.isEmpty ? "Verified · as-is" : "Verified")
                 return ActualsTodayDemoCard(
                     id: next.id,
                     kind: .verified,
