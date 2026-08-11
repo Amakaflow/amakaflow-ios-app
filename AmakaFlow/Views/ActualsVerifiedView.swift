@@ -15,12 +15,15 @@ struct ActualsVerifiedView: View {
     let rpe: Int
     let rows: [ActualsVerifiedDeltaRow]
     let decoration: StravaDecorationState
+    let stravaActivityId: String?
+    let stravaCurrentDescription: String
 
     var onEditActuals: (() -> Void)?
     var onWriteToStrava: (() -> Void)?
     var onRemoveFromStrava: (() -> Void)?
     var onUnverify: (() -> Void)?
     var onUnmatch: (() -> Void)?
+    var onStravaDescriptionLoaded: ((String) -> Void)?
 
     @Environment(\.dismiss) private var dismiss
     @State private var showMenu = false
@@ -34,18 +37,22 @@ struct ActualsVerifiedView: View {
         onWriteToStrava: (() -> Void)? = nil,
         onRemoveFromStrava: (() -> Void)? = nil,
         onUnverify: (() -> Void)? = nil,
-        onUnmatch: (() -> Void)? = nil
+        onUnmatch: (() -> Void)? = nil,
+        onStravaDescriptionLoaded: ((String) -> Void)? = nil
     ) {
         self.title = session.title
         self.sourceName = sourceName
         self.rpe = session.rpe ?? 0
         self.rows = ActualsVerifiedDeltas.rows(from: session.exercises)
         self.decoration = decoration
+        self.stravaActivityId = session.stravaActivityId
+        self.stravaCurrentDescription = session.stravaCurrentDescription ?? ""
         self.onEditActuals = onEditActuals
         self.onWriteToStrava = onWriteToStrava
         self.onRemoveFromStrava = onRemoveFromStrava
         self.onUnverify = onUnverify
         self.onUnmatch = onUnmatch
+        self.onStravaDescriptionLoaded = onStravaDescriptionLoaded
         if let metaLine {
             self.metaLine = metaLine
         } else {
@@ -132,6 +139,18 @@ struct ActualsVerifiedView: View {
                     rows: rows
                 )
                 .padding(.top, 12)
+
+                // AMA-2405: only for their Strava text. When `.ours`, AmakaFlow
+                // already wrote — don't re-fetch (keeps this screen stable).
+                if decoration != .ours {
+                    ActualsStravaDescriptionSection(
+                        stravaActivityId: stravaActivityId,
+                        initialDescription: stravaCurrentDescription,
+                        allowsRemoteFetch: true,
+                        onLoaded: onStravaDescriptionLoaded
+                    )
+                    .padding(.top, 12)
+                }
             }
             .padding(.horizontal, 18)
             .padding(.bottom, 96)

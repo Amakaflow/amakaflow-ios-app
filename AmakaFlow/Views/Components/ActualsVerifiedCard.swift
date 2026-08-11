@@ -228,32 +228,10 @@ struct ActualsVerifiedCard: View {
     }
 
     private var callout: some View {
-        VStack(alignment: .leading, spacing: 5) {
-            HStack(spacing: 8) {
-                Image(systemName: "checkmark")
-                    .font(.system(size: 12, weight: .bold))
-                    .foregroundColor(DailyDriver.lime)
-                Text(ActualsCopy.verifiedHeadline)
-                    .ddDisplayText(13, weight: .bold)
-                    .foregroundColor(DailyDriver.lime)
-                Spacer(minLength: 8)
-            }
-            Text(ActualsVerifiedDeltas.calloutBody(sourceName: sourceName, rpe: rpe))
-                .font(.system(size: 11))
-                .foregroundColor(DailyDriver.foregroundMuted)
-                .lineSpacing(2)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .padding(.horizontal, 13)
-        .padding(.vertical, 11)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(DailyDriver.lime.opacity(0.12))
-        .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(DailyDriver.lime.opacity(0.4), lineWidth: 1)
+        ActualsSessionStatusCallout(
+            headline: ActualsCopy.verifiedHeadline,
+            bodyText: ActualsVerifiedDeltas.calloutBody(sourceName: sourceName, rpe: rpe)
         )
-        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-        .accessibilityIdentifier(ActualsCopy.verifiedCalloutAccessibilityID)
     }
 
     private func deltaRow(_ row: ActualsVerifiedDeltaRow) -> some View {

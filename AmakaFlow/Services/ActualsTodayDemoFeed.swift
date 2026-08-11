@@ -125,6 +125,36 @@ struct ActualsTodayDemoCard: Identifiable, Equatable {
         )
     }
 
+    /// AMA-2405: cache Strava description after a lazy detail fetch.
+    func withActivityDescription(_ description: String) -> ActualsTodayDemoCard {
+        var nextActivity = activity
+        if nextActivity != nil {
+            nextActivity?.activityDescription = description
+        }
+        var nextSession = fillInSession
+        if nextSession != nil {
+            nextSession?.stravaCurrentDescription = description
+        }
+        guard nextActivity != nil || nextSession != nil else { return self }
+        return ActualsTodayDemoCard(
+            id: id,
+            kind: kind,
+            timeLabel: timeLabel,
+            title: title,
+            stats: stats,
+            sourceLabel: sourceLabel,
+            sourceProvider: sourceProvider,
+            session: session,
+            activity: nextActivity,
+            fillInSession: nextSession,
+            stravaDecoration: stravaDecoration
+        )
+    }
+
+    var statsSummary: String {
+        stats.map(\.value).joined(separator: " · ")
+    }
+
     /// Keep kind (fill-in debt) while refreshing in-progress actuals after Back.
     func withFillInSession(_ session: ActualsFillInSession) -> ActualsTodayDemoCard {
         ActualsTodayDemoCard(
@@ -401,6 +431,12 @@ final class ActualsTodayDemoFeed: ObservableObject {
     func applyKeepAsIs(unmappedCardID: String) {
         guard let index = cards.firstIndex(where: { $0.id == unmappedCardID }) else { return }
         cards[index] = cards[index].markingCounted()
+    }
+
+    /// AMA-2405: persist a lazy-fetched Strava description onto the card.
+    func applyActivityDescription(cardID: String, description: String) {
+        guard let index = cards.firstIndex(where: { $0.id == cardID }) else { return }
+        cards[index] = cards[index].withActivityDescription(description)
     }
 
     /// AMA-2396 A3: un-verify — actuals kept as draft, RPE cleared, badge cleared.
