@@ -839,8 +839,8 @@ final class WorkoutEnrichmentPushPlannerTests: XCTestCase {
         )
     }
 
-    /// An untouched sheet (no door edits — toggles/rest only) must produce
-    /// v1-equivalent prefs: no `per_exercise`, no new excludes.
+    /// AMA-2408 — untouched warm-up door (empty perExercise) is opt-in empty:
+    /// ZERO ramps, every candidate excluded. No v1 global auto-apply.
     func testApplyWithNoDoorEditsStaysV1Equivalent() throws {
         let plan = WorkoutEnrichmentPushPlanner.plan(
             blocks: [benchBlock()],
@@ -850,7 +850,8 @@ final class WorkoutEnrichmentPushPlannerTests: XCTestCase {
         let application = try WorkoutEnrichmentPushPlanner.application(
             plan: plan,
             decision: WorkoutEnrichmentPushPlanner.Decision(
-                checkedKinds: [.sessionWarmup, .betweenSetRest, .exerciseWarmupSets]
+                checkedKinds: [.sessionWarmup, .betweenSetRest, .exerciseWarmupSets],
+                perExerciseRamps: []
             ),
             prefs: .defaults,
             tombstones: []
@@ -860,14 +861,20 @@ final class WorkoutEnrichmentPushPlannerTests: XCTestCase {
             application.prefs.sessionWarmup.activities,
             WorkoutPreferences.defaults.sessionWarmup.activities
         )
-        XCTAssertNil(application.prefs.exerciseWarmupSets.perExercise)
-        XCTAssertEqual(
-            application.prefs.exerciseWarmupSets.excludeExerciseKeys,
-            WorkoutPreferences.defaults.exerciseWarmupSets.excludeExerciseKeys
+        XCTAssertEqual(application.prefs.exerciseWarmupSets.perExercise, [])
+        let candidates = plan.offer(.exerciseWarmupSets)?.candidateExerciseNames ?? []
+        for name in candidates {
+            XCTAssertTrue(
+                application.prefs.exerciseWarmupSets.excludeExerciseKeys
+                    .contains(ExerciseKeyNormalizer.normalize(name))
+            )
+        }
+        XCTAssertTrue(
+            LegacyOptInRampMigration.optInEffectiveRamps(
+                prefs: application.prefs.exerciseWarmupSets,
+                candidateNames: candidates
+            ).isEmpty
         )
-        let encoded = try WorkoutEnrichmentJSON.object(from: application.prefs)
-        let warmupSets = try XCTUnwrap(encoded["exercise_warmup_sets"] as? [String: Any])
-        XCTAssertNil(warmupSets["per_exercise"])
     }
 
     // MARK: - Coordinator apply (AMA-2346)

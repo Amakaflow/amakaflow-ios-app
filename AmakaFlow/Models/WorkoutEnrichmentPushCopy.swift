@@ -264,18 +264,17 @@ enum WorkoutEnrichmentPushCopy {
 
     // MARK: Sequence summaries (design §Surface 1 rows-as-doors, §Surfaces 2/5 headers)
 
-    /// `NAME GOAL → NAME GOAL · N STEPS[ · suffix]` — the enhance-sheet row
-    /// summary for mobility prep / cooldown. Pass `cooldownRowSummarySuffix`
-    /// for the cooldown row; mobility has no row-level suffix.
+    /// AMA-2408 — routes through `EnrichmentRowSummary`. Legacy callers that
+    /// ignored OFF still get a non-nil string; prefer `EnrichmentRowSummary.sequence`.
     static func sequenceSummary(_ activities: [EnrichmentActivity], suffix: String? = nil) -> String {
-        guard !activities.isEmpty else { return "NO STEPS ADDED" }
-        let steps = activities
-            .map { activitySummaryLabel(name: $0.name, goal: $0.goal, durationSec: $0.durationSec) }
-            .joined(separator: " → ")
-        let stepsLabel = "\(activities.count) STEP\(activities.count == 1 ? "" : "S")"
-        let base = "\(steps) · \(stepsLabel)"
-        guard let suffix else { return base }
-        return "\(base) · \(suffix)"
+        if let line = EnrichmentRowSummary.sequence(isOn: true, activities: activities) {
+            guard let suffix else { return line }
+            // Cooldown row suffix is dropped in the scaling ladder (panel 2/3);
+            // keep it only for the sequence-builder header path via sequenceHeaderMeta.
+            _ = suffix
+            return line
+        }
+        return "NO STEPS ADDED"
     }
 
     /// `N STEPS · ~X MIN · <suffix>` — the sequence builder screen's own header meta.
@@ -287,24 +286,24 @@ enum WorkoutEnrichmentPushCopy {
 
     // MARK: Warm-up sets summaries (design §Surface 1 row + §Surface 3 pick screen)
 
-    /// One exercise's warm-up tag for the enhance-sheet "Warm-up sets" row —
-    /// `NAME · CUSTOM RAMP`, `NAME · RAMP + OPEN` (any set in the ramp is
-    /// `.open`), or `NAME SKIPPED` (ramp disabled, absent, or has no sets).
+    /// AMA-2408 — positive digest for pick-screen a11y. Never emits "SKIPPED".
     static func warmupExerciseTag(name: String, ramp: PerExerciseRamp?) -> String {
-        let upperName = name.uppercased()
+        let upperName = EnrichmentRowSummary.warmupDisplayName(name)
         guard let ramp, ramp.enabled, !ramp.sets.isEmpty else {
-            return "\(upperName) SKIPPED"
+            return "\(upperName) · \(warmupOffCaption)"
         }
-        let hasOpenSet = ramp.sets.contains { $0.kind == .open }
-        return "\(upperName) · \(hasOpenSet ? "RAMP + OPEN" : "CUSTOM RAMP")"
+        return "\(upperName) · RAMP ×\(ramp.sets.count)"
     }
 
-    /// Enhance-sheet "Warm-up sets" row summary — joins each exercise's tag
-    /// with ` · `, e.g. `DEADLIFT · CUSTOM RAMP · OVERHEAD PRESS · RAMP + OPEN
-    /// · LEG PRESS SKIPPED`.
+    /// AMA-2408 — routes through `EnrichmentRowSummary` scaling ladder.
     static func warmupSetsSummaryV2(_ exercises: [(name: String, ramp: PerExerciseRamp?)]) -> String {
-        guard !exercises.isEmpty else { return "NO EXERCISES" }
-        return exercises.map { warmupExerciseTag(name: $0.name, ramp: $0.ramp) }.joined(separator: " · ")
+        let names = exercises.map(\.name)
+        let ramps = exercises.compactMap(\.ramp)
+        return EnrichmentRowSummary.warmups(
+            isOn: true,
+            candidateNames: names,
+            ramps: ramps
+        ) ?? EnrichmentRowSummary.noRampsYet
     }
 
     /// One ramp set's mono label for the per-exercise pick screen digest

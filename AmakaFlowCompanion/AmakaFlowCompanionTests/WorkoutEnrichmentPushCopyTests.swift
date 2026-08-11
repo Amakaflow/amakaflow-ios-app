@@ -201,7 +201,7 @@ final class WorkoutEnrichmentV2CopyTests: XCTestCase {
         )
     }
 
-    // MARK: Sequence summaries — locked example strings from the design
+    // MARK: Sequence summaries — AMA-2408 scaling ladder
 
     func testMobilitySequenceSummaryMatchesDesignExample() throws {
         let activities = [
@@ -210,7 +210,7 @@ final class WorkoutEnrichmentV2CopyTests: XCTestCase {
         ]
         XCTAssertEqual(
             WorkoutEnrichmentPushCopy.sequenceSummary(activities),
-            "SKI ERG 500 M → ASSAULT BIKE 2:00 · 2 STEPS"
+            "SKI ➜ BIKE · 2 STEPS"
         )
     }
 
@@ -224,7 +224,7 @@ final class WorkoutEnrichmentV2CopyTests: XCTestCase {
                 activities,
                 suffix: WorkoutEnrichmentPushCopy.cooldownRowSummarySuffix
             ),
-            "STRETCH FLOW 3:00 → TREADMILL OPEN · 2 STEPS · AFTER THE LAST SET"
+            "STRETCH ➜ TREADMILL · 2 STEPS"
         )
     }
 
@@ -232,7 +232,7 @@ final class WorkoutEnrichmentV2CopyTests: XCTestCase {
         XCTAssertEqual(WorkoutEnrichmentPushCopy.sequenceSummary([]), "NO STEPS ADDED")
     }
 
-    // MARK: Warm-up sets summaries — locked example string from the design
+    // MARK: Warm-up sets summaries — AMA-2408 scaling ladder
 
     func testWarmupSetsSummaryMatchesDesignExampleWithSkipAndOpen() throws {
         let deadliftRamp = PerExerciseRamp(
@@ -253,19 +253,18 @@ final class WorkoutEnrichmentV2CopyTests: XCTestCase {
             (name: "Leg Press", ramp: legPressRamp)
         ])
 
-        XCTAssertEqual(
-            summary,
-            "DEADLIFT · CUSTOM RAMP · OVERHEAD PRESS · RAMP + OPEN · LEG PRESS SKIPPED"
-        )
+        // Positive ladder — disabled Leg Press is not listed; N=2 of 3.
+        XCTAssertEqual(summary, "DEADLIFT + 1 MORE · 2 OF 3")
+        XCTAssertFalse(summary.contains("SKIPPED"))
     }
 
     func testWarmupExerciseTagSkippedWhenRampNilOrEmpty() {
-        XCTAssertEqual(WorkoutEnrichmentPushCopy.warmupExerciseTag(name: "Leg Press", ramp: nil), "LEG PRESS SKIPPED")
+        let nilTag = WorkoutEnrichmentPushCopy.warmupExerciseTag(name: "Leg Press", ramp: nil)
+        XCTAssertFalse(nilTag.contains("SKIPPED"))
+        XCTAssertTrue(nilTag.contains("STRAIGHT TO WORKING SETS"))
         let emptyRamp = PerExerciseRamp(exerciseRef: "leg press", enabled: true, sets: [])
-        XCTAssertEqual(
-            WorkoutEnrichmentPushCopy.warmupExerciseTag(name: "Leg Press", ramp: emptyRamp),
-            "LEG PRESS SKIPPED"
-        )
+        let emptyTag = WorkoutEnrichmentPushCopy.warmupExerciseTag(name: "Leg Press", ramp: emptyRamp)
+        XCTAssertFalse(emptyTag.contains("SKIPPED"))
     }
 
     func testPerExerciseRampDigestVariants() throws {

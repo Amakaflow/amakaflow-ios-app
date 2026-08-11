@@ -281,6 +281,11 @@ final class WatchItemViewModel: ObservableObject {
             updatedAt: Date()
         )
         readinessStore.saveDraft(workoutID: key, snapshot: snap)
+        // AMA-2408 — one store behind every door.
+        EnrichmentPrefsStore.shared.save(
+            workoutID: key,
+            prefs: EnrichmentState.Persisted.from(readiness: snap.readiness, config: snap.config)
+        )
         prefsPersister?.persist(snapshot: snap)
     }
 
@@ -295,47 +300,42 @@ final class WatchItemViewModel: ObservableObject {
         )
         readinessStore.saveDelivered(workoutID: key, snapshot: snap)
         readinessStore.saveDraft(workoutID: key, snapshot: snap)
+        EnrichmentPrefsStore.shared.save(
+            workoutID: key,
+            prefs: EnrichmentState.Persisted.from(readiness: snap.readiness, config: snap.config)
+        )
         prefsPersister?.persist(snapshot: snap)
     }
 
-    func summary(for row: WatchItemReadinessRow) -> String {
-        let isEnabled = tracker.draft.isEnabled(row)
-        guard isEnabled else { return "OFF" }
-        switch row {
-        case .mobility:
-            return WorkoutEnrichmentPushCopy.sequenceSummary(
-                mobilityActivities.map(EnrichmentActivity.init(pref:))
-            )
-        case .warmups:
-            if !isApple, title.uppercased().contains("EMOM") {
+    func summary(for row: WatchItemReadinessRow) -> String? {
+        // AMA-2408 — single call site into EnrichmentRowSummary via EnrichmentState.
+        // OFF rows return nil (title + toggle only). Garmin EMOM specials stay local.
+        if !isApple, title.uppercased().contains("EMOM") {
+            switch row {
+            case .warmups where tracker.draft.isEnabled(row):
                 return WatchItemCopy.garminWarmupsUnused
-            }
-            if perExerciseRamps.isEmpty {
-                return "NO EXERCISES"
-            }
-            let pairs: [(name: String, ramp: PerExerciseRamp?)] = warmupExerciseNames.map { name in
-                let key = ExerciseKeyNormalizer.normalize(name)
-                let ramp = perExerciseRamps.first {
-                    ExerciseKeyNormalizer.normalize($0.exerciseRef) == key
-                }
-                return (name: name, ramp: ramp)
-            }
-            return WorkoutEnrichmentPushCopy.warmupSetsSummaryV2(pairs)
-        case .rest:
-            if !isApple, title.uppercased().contains("EMOM") {
+            case .rest where tracker.draft.isEnabled(row):
                 return WatchItemCopy.garminRestLap
+            default:
+                break
             }
-            return WorkoutEnrichmentPushCopy.liveRestDetail(
-                restOpen: restOpen,
-                restSec: restSec,
-                target: enrichmentTarget
-            )
-        case .cooldown:
-            return WorkoutEnrichmentPushCopy.sequenceSummary(
-                cooldownActivities.map(EnrichmentActivity.init(pref:)),
-                suffix: WorkoutEnrichmentPushCopy.cooldownRowSummarySuffix
-            )
         }
+        let state = EnrichmentState(
+            checkedKinds: [
+                tracker.draft.mobilityEnabled ? EnrichmentKind.sessionWarmup : nil,
+                tracker.draft.warmupsEnabled ? EnrichmentKind.exerciseWarmupSets : nil,
+                tracker.draft.restEnabled ? EnrichmentKind.betweenSetRest : nil,
+                tracker.draft.cooldownEnabled ? EnrichmentKind.cooldown : nil
+            ].compactMap { $0 }.reduce(into: Set<EnrichmentKind>()) { $0.insert($1) },
+            mobilityActivities: mobilityActivities,
+            cooldownActivities: cooldownActivities,
+            perExerciseRamps: perExerciseRamps,
+            restOpen: restOpen,
+            restSec: restSec,
+            candidateExerciseNames: warmupExerciseNames,
+            target: enrichmentTarget
+        )
+        return state.summary(for: row)
     }
 }
 

@@ -168,11 +168,18 @@ struct WatchItemSheet: View {
                                     .accessibilityIdentifier("af_watchitem_row_\(row.rawValue)_edited")
                             }
                         }
-                        Text(viewModel.summary(for: row))
-                            .font(.system(size: 8.5, weight: .medium, design: .monospaced))
-                            .foregroundColor(edited ? DailyDriver.amber : DailyDriver.foregroundMuted)
-                            .multilineTextAlignment(.leading)
-                            .fixedSize(horizontal: false, vertical: true)
+                        if let summary = viewModel.summary(for: row) {
+                            Text(summary)
+                                .font(.system(size: 8.5, weight: .medium, design: .monospaced))
+                                .foregroundColor(
+                                    summary == EnrichmentRowSummary.noRampsYet
+                                        ? DailyDriver.amber
+                                        : (edited ? DailyDriver.amber : DailyDriver.foregroundMuted)
+                                )
+                                .lineLimit(1)
+                                .truncationMode(.tail)
+                                .multilineTextAlignment(.leading)
+                        }
                     }
                     Spacer(minLength: 0)
                 }
@@ -230,10 +237,14 @@ struct WatchItemSheet: View {
                                 .accessibilityIdentifier("af_watchitem_row_rest_edited")
                         }
                     }
-                    Text(viewModel.summary(for: .rest))
-                        .font(.system(size: 8.5, weight: .medium, design: .monospaced))
-                        .foregroundColor(edited ? DailyDriver.amber : DailyDriver.foregroundMuted)
-                        .fixedSize(horizontal: false, vertical: true)
+                    if let summary = viewModel.summary(for: .rest) {
+                        Text(summary)
+                            .font(.system(size: 8.5, weight: .medium, design: .monospaced))
+                            .foregroundColor(edited ? DailyDriver.amber : DailyDriver.foregroundMuted)
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
                 }
                 Spacer(minLength: 0)
                 Toggle("", isOn: Binding(
