@@ -1569,12 +1569,30 @@ final class AMA2396SyncV2Tests: XCTestCase {
 
     /// AMA-2405: once AmakaFlow wrote Strava, do not treat description as missing.
     func testOursDecorationDoesNotNeedStravaDescriptionRefetch() {
-        XCTAssertNotEqual(StravaDecorationState.ours, .untouched)
-        // Verified/counted detail gates the section on `decoration != .ours`.
-        let oursHidesDescription = StravaDecorationState.ours == .ours
-        let untouchedShowsDescription = StravaDecorationState.untouched != .ours
-        XCTAssertTrue(oursHidesDescription)
-        XCTAssertTrue(untouchedShowsDescription)
+        XCTAssertFalse(
+            ActualsStravaDescriptionPolicy.showsDescriptionSection(
+                decoration: .ours,
+                stravaActivityId: "555",
+                cachedDescription: "prior"
+            )
+        )
+        XCTAssertFalse(ActualsStravaDescriptionPolicy.allowsRemoteFetch(decoration: .ours))
+        XCTAssertTrue(
+            ActualsStravaDescriptionPolicy.showsDescriptionSection(
+                decoration: .untouched,
+                stravaActivityId: "555",
+                cachedDescription: ""
+            )
+        )
+        XCTAssertTrue(ActualsStravaDescriptionPolicy.allowsRemoteFetch(decoration: .untouched))
+        // Non-Strava sources with no activity id/text must not show an empty Strava section.
+        XCTAssertFalse(
+            ActualsStravaDescriptionPolicy.showsDescriptionSection(
+                decoration: .none,
+                stravaActivityId: nil,
+                cachedDescription: ""
+            )
+        )
     }
 
     /// URLSession often delivers POST bodies via `httpBodyStream` in URLProtocol.

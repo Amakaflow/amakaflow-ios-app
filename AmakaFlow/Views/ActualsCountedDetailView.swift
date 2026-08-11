@@ -9,6 +9,30 @@
 
 import SwiftUI
 
+/// AMA-2405: gate Strava description UI/fetch for counted + verified details.
+enum ActualsStravaDescriptionPolicy {
+    /// Hide the section for `.ours`, and for non-Strava cards with no activity id/text.
+    static func showsDescriptionSection(
+        decoration: StravaDecorationState,
+        stravaActivityId: String?,
+        cachedDescription: String
+    ) -> Bool {
+        guard decoration != .ours else { return false }
+        let hasActivityId = !(stravaActivityId ?? "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .isEmpty
+        let hasCachedDescription = !cachedDescription
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .isEmpty
+        return hasActivityId || hasCachedDescription
+    }
+
+    /// AmakaFlow already wrote Strava — do not re-pull description.
+    static func allowsRemoteFetch(decoration: StravaDecorationState) -> Bool {
+        decoration != .ours
+    }
+}
+
 /// Shared Strava description body — loads detail when the sync list omitted it.
 /// Skip remote fetch when AmakaFlow already owns the Strava text (`.ours`).
 struct ActualsStravaDescriptionSection: View {
@@ -139,17 +163,22 @@ struct ActualsCountedDetailView: View {
     let decoration: StravaDecorationState
     let stravaActivityId: String?
     let initialDescription: String
+    /// Presenting screen name for the custom back control (`Today` / `History`).
+    var backLabel: String = "Today"
     var onDescriptionLoaded: ((String) -> Void)?
 
     @Environment(\.dismiss) private var dismiss
 
-    /// AmakaFlow already wrote Strava — do not re-pull description (layout stays put).
     private var showsStravaDescription: Bool {
-        decoration != .ours
+        ActualsStravaDescriptionPolicy.showsDescriptionSection(
+            decoration: decoration,
+            stravaActivityId: stravaActivityId,
+            cachedDescription: initialDescription
+        )
     }
 
     private var allowsRemoteFetch: Bool {
-        decoration != .ours
+        ActualsStravaDescriptionPolicy.allowsRemoteFetch(decoration: decoration)
     }
 
     var body: some View {
@@ -196,7 +225,7 @@ struct ActualsCountedDetailView: View {
                 HStack(spacing: 4) {
                     Image(systemName: "chevron.left")
                         .font(.system(size: 13, weight: .semibold))
-                    Text("Today")
+                    Text(backLabel)
                         .font(.system(size: 13, weight: .semibold))
                 }
                 .foregroundColor(DailyDriver.foregroundMuted)

@@ -140,13 +140,19 @@ struct ActualsVerifiedView: View {
                 )
                 .padding(.top, 12)
 
-                // AMA-2405: only for their Strava text. When `.ours`, AmakaFlow
-                // already wrote — don't re-fetch (keeps this screen stable).
-                if decoration != .ours {
+                // AMA-2405: only when Strava metadata exists and AmakaFlow does
+                // not already own the description (`.ours` skips re-fetch).
+                if ActualsStravaDescriptionPolicy.showsDescriptionSection(
+                    decoration: decoration,
+                    stravaActivityId: stravaActivityId,
+                    cachedDescription: stravaCurrentDescription
+                ) {
                     ActualsStravaDescriptionSection(
                         stravaActivityId: stravaActivityId,
                         initialDescription: stravaCurrentDescription,
-                        allowsRemoteFetch: true,
+                        allowsRemoteFetch: ActualsStravaDescriptionPolicy.allowsRemoteFetch(
+                            decoration: decoration
+                        ),
                         onLoaded: onStravaDescriptionLoaded
                     )
                     .padding(.top, 12)

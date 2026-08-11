@@ -651,11 +651,10 @@ struct TodayDiaryView: View {
                 onWriteToStrava: onWriteToStrava,
                 onRemoveFromStrava: removeVerifiedFromStrava,
                 onUnverify: onUnverify,
-                onUnmatch: onUnmatch,
-                onStravaDescriptionLoaded: { description in
-                    actualsDemo.applyActivityDescription(cardID: cardID, description: description)
-                }
-            )
+                onUnmatch: onUnmatch
+            ) { description in
+                actualsDemo.applyActivityDescription(cardID: cardID, description: description)
+            }
             .navigationBarBackButtonHidden(true)
         } else {
             missingDestinationFallback("Couldn't open that verified session.")
@@ -672,11 +671,10 @@ struct TodayDiaryView: View {
                 sourceName: sourceDisplayName(for: card),
                 decoration: card.stravaDecoration,
                 stravaActivityId: ActualsTodayDemoFeed.stravaActivityId(fromCardID: card.id),
-                initialDescription: card.activity?.activityDescription ?? "",
-                onDescriptionLoaded: { description in
-                    actualsDemo.applyActivityDescription(cardID: cardID, description: description)
-                }
-            )
+                initialDescription: card.activity?.activityDescription ?? ""
+            ) { description in
+                actualsDemo.applyActivityDescription(cardID: cardID, description: description)
+            }
         } else {
             missingDestinationFallback("Couldn't open that counted session.")
         }

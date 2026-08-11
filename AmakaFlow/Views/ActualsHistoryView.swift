@@ -544,11 +544,10 @@ struct ActualsHistoryView: View {
                 onUnverify: {
                     viewModel.applyUnverify(cardID: route.cardID, session: session)
                     verifiedRoute = nil
-                },
-                onStravaDescriptionLoaded: { description in
-                    viewModel.applyActivityDescription(cardID: route.cardID, description: description)
                 }
-            )
+            ) { description in
+                viewModel.applyActivityDescription(cardID: route.cardID, description: description)
+            }
             .navigationBarBackButtonHidden(true)
         } else {
             Text("Couldn't open that verified session.")
@@ -585,10 +584,10 @@ struct ActualsHistoryView: View {
                 decoration: card.stravaDecoration,
                 stravaActivityId: ActualsTodayDemoFeed.stravaActivityId(fromCardID: card.id),
                 initialDescription: card.activity?.activityDescription ?? "",
-                onDescriptionLoaded: { description in
-                    viewModel.applyActivityDescription(cardID: route.cardID, description: description)
-                }
-            )
+                backLabel: "History"
+            ) { description in
+                viewModel.applyActivityDescription(cardID: route.cardID, description: description)
+            }
         } else {
             Text("Couldn't open that counted session.")
                 .foregroundColor(DailyDriver.foregroundDim)
