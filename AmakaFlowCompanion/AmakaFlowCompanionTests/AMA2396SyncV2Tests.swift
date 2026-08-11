@@ -1272,6 +1272,72 @@ final class AMA2396SyncV2Tests: XCTestCase {
         XCTAssertTrue(try repo.isVerified(id: "strava_46"))
     }
 
+    /// Linked-but-unverified Strava ids are marked verified on our server.
+    func testEnsureServerVerifiedPostsVerifyForSignedActivities() async throws {
+        MockURLProtocol.reset()
+        defer { MockURLProtocol.reset() }
+        var requestedPaths: [String] = []
+        MockURLProtocol.requestHandler = { request in
+            let path = request.url?.path ?? ""
+            requestedPaths.append(path)
+            let response = HTTPURLResponse(
+                url: request.url!,
+                statusCode: 200,
+                httpVersion: nil,
+                headerFields: ["Content-Type": "application/json"]
+            )!
+            let data = Data(
+                #"{"activity_id":88,"verified":true,"amakaflow_session_id":"strava_88"}"#.utf8
+            )
+            return (response, data)
+        }
+        let client = BFFStravaClient(
+            baseURL: "https://mock.test/v1",
+            session: MockURLProtocol.mockSession(),
+            bearerTokenProvider: { "test-token" },
+            userIDProvider: { "user-1" }
+        )
+        let feed = ActualsTodayDemoFeed(repository: repo)
+        let signed = "RPE 6 \(StravaWriteBackSignature.line)"
+        await feed.ensureServerVerifiedForLinkedActivities(
+            [
+                StravaCompletedActivityDTO(
+                    stravaId: 88,
+                    name: "Bike ski row repeats",
+                    type: "Workout",
+                    distanceKm: 0,
+                    durationMin: 42,
+                    startDate: "2026-08-09T12:00:00Z",
+                    startDateLocal: "2026-08-09T12:00:00",
+                    description: signed,
+                    amakaflowVerified: false,
+                    amakaflowWroteStrava: false
+                ),
+                StravaCompletedActivityDTO(
+                    stravaId: 89,
+                    name: "Already verified",
+                    type: "Run",
+                    distanceKm: 5,
+                    durationMin: 30,
+                    startDate: "2026-08-09T10:00:00Z",
+                    startDateLocal: "2026-08-09T10:00:00",
+                    description: signed,
+                    amakaflowVerified: true,
+                    amakaflowWroteStrava: true
+                )
+            ],
+            client: client
+        )
+        XCTAssertTrue(
+            requestedPaths.contains { $0.contains("/strava/activities/88/verify") },
+            "signed + unverified must POST verify — got \(requestedPaths)"
+        )
+        XCTAssertFalse(
+            requestedPaths.contains { $0.contains("/strava/activities/89/verify") },
+            "already verified must not re-POST"
+        )
+    }
+
     /// AMA-2407: full Verify as-is flow — sync an unmapped Strava activity, verify
     /// as-is, and confirm it persists locally (no RPE/exercises) and calls the
     /// server verify endpoint (no write-back).

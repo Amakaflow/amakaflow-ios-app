@@ -280,6 +280,9 @@ final class ActualsTodayDemoFeed: ObservableObject {
             }
             // Re-apply local match/verify so a Strava re-pull does not wipe Save state.
             cards = Self.applyLocalOverlays(to: windowCards, repository: repository)
+            // Signature / wrote-Strava without a server verified row yet — mark
+            // those Strava ids verified on our end so the next pull is durable.
+            await ensureServerVerifiedForLinkedActivities(activities, client: client)
         } catch is StravaLogicalSyncFailure {
             showMergeAsk = false
             cards = []
@@ -588,6 +591,50 @@ final class ActualsTodayDemoFeed: ObservableObject {
             // In-memory card already updated; do not roll back UI on persistence failure.
             actualsTodayDemoFeedLog.error(
                 "Failed to persist Strava description for activity \(activityId, privacy: .public): \(error.localizedDescription, privacy: .public)"
+            )
+        }
+        // Lazy detail is often the first place we see the signature (list sync
+        // omits descriptions) — mark that Strava id verified on our server.
+        if promoted, StravaWriteBackDecorator.containsOurSignature(description) {
+            let sessionId = updated.fillInSession?.id ?? cardID
+            Task { await self.markServerVerified(activityId: activityId, sessionId: sessionId) }
+        }
+    }
+
+    /// Best-effort POST `/verify` for activities AmakaFlow already linked
+    /// (signature or wrote-Strava) but that lack `amakaflow_verified` yet.
+    func ensureServerVerifiedForLinkedActivities(
+        _ activities: [StravaCompletedActivityDTO],
+        client: BFFStravaClient
+    ) async {
+        for activity in activities {
+            let signed = StravaWriteBackDecorator.containsOurSignature(activity.description)
+            guard signed || activity.amakaflowWroteStrava else { continue }
+            guard !activity.amakaflowVerified else { continue }
+            let activityId = String(activity.stravaId)
+            let sessionId = "strava_\(activity.stravaId)"
+            do {
+                _ = try await client.verifySession(
+                    activityId: activityId,
+                    amakaflowSessionId: sessionId
+                )
+            } catch {
+                actualsTodayDemoFeedLog.error(
+                    "Auto-verify failed for linked activity \(activityId, privacy: .public): \(error.localizedDescription, privacy: .public)"
+                )
+            }
+        }
+    }
+
+    private func markServerVerified(activityId: String, sessionId: String) async {
+        do {
+            _ = try await BFFStravaClient.live().verifySession(
+                activityId: activityId,
+                amakaflowSessionId: sessionId
+            )
+        } catch {
+            actualsTodayDemoFeedLog.error(
+                "Auto-verify failed for activity \(activityId, privacy: .public): \(error.localizedDescription, privacy: .public)"
             )
         }
     }

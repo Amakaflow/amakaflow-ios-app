@@ -119,6 +119,7 @@ final class ActualsHistoryViewModel: ObservableObject {
     /// AMA-2405: cache Strava description after counted-detail lazy fetch.
     /// AMA-2407: signature ⇒ Verified + STRAVA ✓ OURS (do not leave UNTOUCHED).
     func applyActivityDescription(cardID: String, description: String) {
+        let prior = card(withID: cardID)
         mutateCard(id: cardID) { card in
             ActualsTodayDemoFeed.applyingDescriptionAndSignedOwnership(
                 to: card,
@@ -126,7 +127,8 @@ final class ActualsHistoryViewModel: ObservableObject {
                 repository: repository
             )
         }
-        let activityId = card(withID: cardID)?.fillInSession?.stravaActivityId
+        let updated = card(withID: cardID)
+        let activityId = updated?.fillInSession?.stravaActivityId
             ?? ActualsTodayDemoFeed.stravaActivityId(fromCardID: cardID)
         guard let activityId, !activityId.isEmpty else { return }
         do {
@@ -142,6 +144,27 @@ final class ActualsHistoryViewModel: ObservableObject {
             ).error(
                 "Failed to persist Strava description for activity \(activityId, privacy: .public): \(error.localizedDescription, privacy: .public)"
             )
+        }
+        let promoted = updated?.kind == .verified
+            && (prior?.kind != .verified || prior?.stravaDecoration != .ours)
+            && StravaWriteBackDecorator.containsOurSignature(description)
+        if promoted {
+            let sessionId = updated?.fillInSession?.id ?? cardID
+            Task {
+                do {
+                    _ = try await client.verifySession(
+                        activityId: activityId,
+                        amakaflowSessionId: sessionId
+                    )
+                } catch {
+                    Logger(
+                        subsystem: "com.myamaka.AmakaFlowCompanion",
+                        category: "ActualsHistory"
+                    ).error(
+                        "Auto-verify failed for activity \(activityId, privacy: .public): \(error.localizedDescription, privacy: .public)"
+                    )
+                }
+            }
         }
     }
 
@@ -303,6 +326,9 @@ final class ActualsHistoryViewModel: ObservableObject {
                     )
                 )
             }
+            // Signature / wrote-Strava without server verified — persist those ids.
+            let feed = ActualsTodayDemoFeed(repository: repository)
+            await feed.ensureServerVerifiedForLinkedActivities(result.activities, client: client)
             return true
         } catch {
             // Never crash History on a missing/expired token — keep what we have.
