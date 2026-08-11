@@ -39,24 +39,69 @@ extension SocialImportDraft {
             for block in blocks {
                 let blockExercises = (block["exercises"] as? [[String: Any]]) ?? []
                 let mapped = blockExercises.compactMap { Self.parseExerciseItem($0) }
-                guard !mapped.isEmpty else { continue }
+                let nestedPairs = (block["supersets"] as? [[String: Any]]) ?? []
                 let blockType = (block["structure"] as? String) ?? (block["type"] as? String)
                 let structureSource = (block["structure_source"] as? String)
                     ?? (block["structureSource"] as? String)
+                let restSec = block["rest_between_rounds_sec"] as? Int
+                    ?? block["rest_sec"] as? Int
+                    ?? block["restSec"] as? Int
+                let enrichmentKind = (block["enrichment_kind"] as? String)
+                    ?? (block["enrichmentKind"] as? String)
+                let restOpen = (block["rest_open"] as? Bool) ?? (block["restOpen"] as? Bool)
+                let fieldProvenance = Self.parseFieldProvenance(from: block)
+                let baseLabel = block["label"] as? String
+                let rounds = block["rounds"] as? Int ?? 1
+
+                // AMA-2414: when ingest returns nested supersets[] with empty
+                // exercises[], expand each pair into its own draft block so
+                // READY preview keeps pair boundaries (and source order).
+                if mapped.isEmpty, !nestedPairs.isEmpty {
+                    for (index, pair) in nestedPairs.enumerated() {
+                        let pairExercises = (pair["exercises"] as? [[String: Any]]) ?? []
+                        let pairMapped = pairExercises.compactMap { Self.parseExerciseItem($0) }
+                        guard !pairMapped.isEmpty else { continue }
+                        let label: String? = {
+                            if nestedPairs.count == 1 { return baseLabel }
+                            if let baseLabel, !baseLabel.isEmpty {
+                                let lower = baseLabel.lowercased()
+                                if lower.hasPrefix("superset") {
+                                    return "Superset \(index + 1)"
+                                }
+                                return "\(baseLabel) \(index + 1)"
+                            }
+                            return "Superset \(index + 1)"
+                        }()
+                        parsedBlocks.append(
+                            SocialImportBlock(
+                                label: label,
+                                rounds: rounds,
+                                exercises: pairMapped,
+                                type: blockType ?? "superset",
+                                restSec: restSec,
+                                structureSource: structureSource,
+                                enrichmentKind: enrichmentKind,
+                                restOpen: restOpen,
+                                fieldProvenance: fieldProvenance
+                            )
+                        )
+                        exercises.append(contentsOf: pairMapped)
+                    }
+                    continue
+                }
+
+                guard !mapped.isEmpty else { continue }
                 parsedBlocks.append(
                     SocialImportBlock(
-                        label: block["label"] as? String,
-                        rounds: block["rounds"] as? Int ?? 1,
+                        label: baseLabel,
+                        rounds: rounds,
                         exercises: mapped,
                         type: blockType,
-                        restSec: block["rest_between_rounds_sec"] as? Int
-                            ?? block["rest_sec"] as? Int
-                            ?? block["restSec"] as? Int,
+                        restSec: restSec,
                         structureSource: structureSource,
-                        enrichmentKind: (block["enrichment_kind"] as? String)
-                            ?? (block["enrichmentKind"] as? String),
-                        restOpen: (block["rest_open"] as? Bool) ?? (block["restOpen"] as? Bool),
-                        fieldProvenance: Self.parseFieldProvenance(from: block)
+                        enrichmentKind: enrichmentKind,
+                        restOpen: restOpen,
+                        fieldProvenance: fieldProvenance
                     )
                 )
                 exercises.append(contentsOf: mapped)

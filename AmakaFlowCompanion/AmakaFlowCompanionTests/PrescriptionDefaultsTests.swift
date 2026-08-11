@@ -93,6 +93,20 @@ final class PrescriptionDefaultsTests: XCTestCase {
         XCTAssertNil(row.restSeconds)
     }
 
+    func testNoDefaultRepsInsideSupersetBlock() {
+        // AMA-2414: missing reps in a format group must stay nil (not invent 10).
+        var extension_ = SocialImportExercise(name: "Leg Extensions", sets: nil, reps: nil)
+        XCTAssertFalse(
+            PrescriptionDefaults.applyIfNeeded(
+                to: &extension_,
+                roundsOwnedByFormat: true,
+                recordAnalytics: false
+            )
+        )
+        XCTAssertNil(extension_.reps)
+        XCTAssertNil(extension_.sets)
+    }
+
     func testDefaultRepsWhenNoPrescriptionMetric() {
         var exercise = SocialImportExercise(name: "Pull Up", sets: 3, reps: nil)
         XCTAssertTrue(PrescriptionDefaults.applyIfNeeded(to: &exercise, roundsOwnedByFormat: false))

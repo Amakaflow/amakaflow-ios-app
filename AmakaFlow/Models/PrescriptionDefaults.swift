@@ -42,7 +42,9 @@ enum PrescriptionDefaults {
             applied = true
         }
 
-        if shouldDefaultReps(exercise) {
+        // AMA-2414: mirror backend — never invent reps inside format groups
+        // (superset/circuit/…), or READY preview shows fake "10 REPS".
+        if !roundsOwnedByFormat, shouldDefaultReps(exercise) {
             exercise.reps = defaultReps
             applied = true
         }
