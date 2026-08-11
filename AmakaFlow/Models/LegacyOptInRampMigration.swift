@@ -72,10 +72,13 @@ enum LegacyOptInRampMigration {
         candidateNames: [String],
         defaults: UserDefaults = .standard
     ) -> ExerciseWarmupSetsPrefs {
-        let flag = flagKeyPrefix + workoutID
         guard !workoutID.isEmpty else { return prefs }
+        let flag = flagKeyPrefix + workoutID
         guard !defaults.bool(forKey: flag) else { return prefs }
-        guard needsMigration(prefs), !candidateNames.isEmpty else {
+        // No candidates yet → plan has not loaded. Retry next call; do not
+        // consume the one-shot flag.
+        guard !candidateNames.isEmpty else { return prefs }
+        guard needsMigration(prefs) else {
             defaults.set(true, forKey: flag)
             return prefs
         }
@@ -126,8 +129,9 @@ enum LegacyOptInRampMigration {
         if defaults.isEmpty {
             return WorkoutEnrichmentMutations.defaultRampSets()
         }
-        return defaults.compactMap { row in
+        let converted = defaults.compactMap { row in
             try? RampSet(kind: .reps, value: row.reps)
         }
+        return converted.isEmpty ? WorkoutEnrichmentMutations.defaultRampSets() : converted
     }
 }

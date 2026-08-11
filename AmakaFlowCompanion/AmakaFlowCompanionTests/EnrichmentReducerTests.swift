@@ -12,21 +12,22 @@ import XCTest
 final class EnrichmentReducerTests: XCTestCase {
 
     private var defaults: UserDefaults!
+    private var defaultsSuiteName: String!
     private var readiness: WatchItemReadinessStore!
     private var store: EnrichmentPrefsStore!
 
     override func setUp() {
         super.setUp()
-        defaults = UserDefaults(suiteName: "ama2408.tests.\(UUID().uuidString)")!
+        defaultsSuiteName = "ama2408.tests.\(UUID().uuidString)"
+        defaults = UserDefaults(suiteName: defaultsSuiteName)!
         readiness = WatchItemReadinessStore(defaults: defaults)
         store = EnrichmentPrefsStore(defaults: defaults, readinessStore: readiness)
     }
 
     override func tearDown() {
-        if let suite = defaults.persistentDomain(forName: Bundle.main.bundleIdentifier ?? "") {
-            _ = suite
+        if let defaultsSuiteName {
+            defaults.removePersistentDomain(forName: defaultsSuiteName)
         }
-        defaults.removePersistentDomain(forName: defaults.description)
         super.tearDown()
     }
 

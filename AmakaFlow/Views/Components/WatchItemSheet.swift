@@ -172,7 +172,7 @@ struct WatchItemSheet: View {
                             Text(summary)
                                 .font(.system(size: 8.5, weight: .medium, design: .monospaced))
                                 .foregroundColor(
-                                    summary == EnrichmentRowSummary.noRampsYet
+                                    (row == .warmups && viewModel.needsWarmupPick)
                                         ? DailyDriver.amber
                                         : (edited ? DailyDriver.amber : DailyDriver.foregroundMuted)
                                 )

@@ -56,9 +56,8 @@ struct EnrichmentState: Equatable, Sendable {
             return EnrichmentState(
                 checkedKinds: saved.checkedKindSet,
                 mobilityActivities: saved.mobilityActivities,
-                cooldownActivities: saved.cooldownActivities.isEmpty
-                    ? WorkoutEnrichmentMutations.defaultCooldownActivities()
-                    : saved.cooldownActivities,
+                // Saved prefs win verbatim — empty cool-down is an explicit pick.
+                cooldownActivities: saved.cooldownActivities,
                 // Late-added exercises: absent from perExerciseRamps → unchecked.
                 perExerciseRamps: saved.perExerciseRamps,
                 restOpen: saved.restOpen,

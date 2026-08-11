@@ -36,7 +36,9 @@ enum EnrichmentRowSummary {
         guard isOn else { return nil }
         let enabled = enabledRamps(in: ramps, candidates: candidateNames)
         let n = enabled.count
-        let m = candidateNames.count
+        // No candidate list (Watch Item without exercise names): use enabled
+        // ramps as the denominator so a real summary still renders.
+        let m = candidateNames.isEmpty ? n : candidateNames.count
         guard n > 0 else { return noRampsYet }
         guard m > 0 else { return noRampsYet }
 

@@ -14,6 +14,7 @@ struct WorkoutEnrichmentPushSheet: View {
 
     @State private var state: EnrichmentState
     @State private var route: Route?
+    @State private var didRunLegacyMigration = false
     private let prefsStore: any EnrichmentPrefsStoring
 
     private var target: EnrichmentPushTarget { plan.target }
@@ -39,42 +40,57 @@ struct WorkoutEnrichmentPushSheet: View {
         self.onConfirm = onConfirm
         self.onSkip = onSkip
         self.onClose = onClose
+        // Side-effect free: seed from load only. Legacy migration persists in onAppear.
+        _state = State(initialValue: Self.seededState(
+            plan: plan,
+            prefs: prefs,
+            workoutId: workoutId,
+            prefsStore: prefsStore,
+            persistMigration: false
+        ))
+    }
 
+    /// Pure seed helper. When `persistMigration` is true, materializes + saves
+    /// legacy bridge drafts once (called from onAppear, not init).
+    private static func seededState(
+        plan: WorkoutEnrichmentPushPlanner.Plan,
+        prefs: WorkoutPreferences,
+        workoutId: String,
+        prefsStore: any EnrichmentPrefsStoring,
+        persistMigration: Bool
+    ) -> EnrichmentState {
         let candidates = plan.offer(.exerciseWarmupSets)?.candidateExerciseNames ?? []
-        // Dedicated key = post-AMA-2408 save (including intentional empty ramps).
-        // Bridge-only load = legacy Watch Item draft that may need materialization.
         let dedicated = prefsStore.loadDedicated(workoutID: workoutId)
         var saved = dedicated ?? prefsStore.load(workoutID: workoutId)
-        if dedicated == nil,
+        if persistMigration,
+           dedicated == nil,
            let existing = saved,
            existing.checkedKindSet.contains(.exerciseWarmupSets),
            existing.perExerciseRamps.isEmpty,
            !candidates.isEmpty {
-            saved = LegacyOptInRampMigration.materializePersisted(
+            let migrated = LegacyOptInRampMigration.materializePersisted(
                 existing,
                 candidateNames: candidates,
                 defaultSets: prefs.exerciseWarmupSets.defaultSets
             )
-            if let migrated = saved {
-                prefsStore.save(workoutID: workoutId, prefs: migrated)
-                _ = LegacyOptInRampMigration.migrateIfNeeded(
-                    workoutID: workoutId,
-                    prefs: ExerciseWarmupSetsPrefs(
-                        enabled: true,
-                        defaultSets: prefs.exerciseWarmupSets.defaultSets,
-                        excludeExerciseKeys: [],
-                        perExercise: migrated.perExerciseRamps
-                    ),
-                    candidateNames: candidates
-                )
-            }
+            prefsStore.save(workoutID: workoutId, prefs: migrated)
+            _ = LegacyOptInRampMigration.migrateIfNeeded(
+                workoutID: workoutId,
+                prefs: ExerciseWarmupSetsPrefs(
+                    enabled: true,
+                    defaultSets: prefs.exerciseWarmupSets.defaultSets,
+                    excludeExerciseKeys: [],
+                    perExercise: migrated.perExerciseRamps
+                ),
+                candidateNames: candidates
+            )
+            saved = migrated
         }
-
-        _state = State(initialValue: EnrichmentState.seed(
+        return EnrichmentState.seed(
             workoutPrefs: saved,
             globalDefaults: prefs,
             plan: plan
-        ))
+        )
     }
 
     var body: some View {
@@ -98,6 +114,17 @@ struct WorkoutEnrichmentPushSheet: View {
                 }
         }
         .preferredColorScheme(.dark)
+        .onAppear {
+            guard !didRunLegacyMigration else { return }
+            didRunLegacyMigration = true
+            state = Self.seededState(
+                plan: plan,
+                prefs: prefs,
+                workoutId: workoutId,
+                prefsStore: prefsStore,
+                persistMigration: true
+            )
+        }
     }
 }
 

@@ -36,6 +36,7 @@ final class WatchItemViewModel: ObservableObject {
     private let replacer: any WatchItemReplacing
     private let toast: DDToastCenter
     private let readinessStore: any WatchItemReadinessStoring
+    private let enrichmentPrefsStore: any EnrichmentPrefsStoring
     private let prefsPersister: WatchItemPrefsPersisting?
 
     var isApple: Bool { device.isApple }
@@ -96,6 +97,15 @@ final class WatchItemViewModel: ObservableObject {
         isApple ? .apple : .garmin
     }
 
+    /// Amber CTA when warm-ups are ON with zero opted-in ramps.
+    var needsWarmupPick: Bool {
+        warmupsEnabled
+            && EnrichmentRowSummary.enabledRamps(
+                in: perExerciseRamps,
+                candidates: warmupExerciseNames
+            ).isEmpty
+    }
+
     init(
         device: WatchItemDevice,
         workoutID: String,
@@ -116,6 +126,7 @@ final class WatchItemViewModel: ObservableObject {
         replacer: (any WatchItemReplacing)? = nil,
         toast: DDToastCenter? = nil,
         readinessStore: (any WatchItemReadinessStoring)? = nil,
+        enrichmentPrefsStore: (any EnrichmentPrefsStoring)? = nil,
         prefsPersister: WatchItemPrefsPersisting? = nil
     ) {
         self.device = device
@@ -143,6 +154,7 @@ final class WatchItemViewModel: ObservableObject {
         self.replacer = replacer ?? WatchItemReplaceCoordinator()
         self.toast = toast ?? DDToastCenter.shared
         self.readinessStore = readinessStore ?? WatchItemReadinessStore.shared
+        self.enrichmentPrefsStore = enrichmentPrefsStore ?? EnrichmentPrefsStore.shared
         self.prefsPersister = prefsPersister
     }
 
@@ -282,7 +294,7 @@ final class WatchItemViewModel: ObservableObject {
         )
         readinessStore.saveDraft(workoutID: key, snapshot: snap)
         // AMA-2408 — one store behind every door.
-        EnrichmentPrefsStore.shared.save(
+        enrichmentPrefsStore.save(
             workoutID: key,
             prefs: EnrichmentState.Persisted.from(readiness: snap.readiness, config: snap.config)
         )
@@ -300,7 +312,7 @@ final class WatchItemViewModel: ObservableObject {
         )
         readinessStore.saveDelivered(workoutID: key, snapshot: snap)
         readinessStore.saveDraft(workoutID: key, snapshot: snap)
-        EnrichmentPrefsStore.shared.save(
+        enrichmentPrefsStore.save(
             workoutID: key,
             prefs: EnrichmentState.Persisted.from(readiness: snap.readiness, config: snap.config)
         )

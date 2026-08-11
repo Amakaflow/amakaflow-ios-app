@@ -862,7 +862,8 @@ final class WorkoutEnrichmentPushPlannerTests: XCTestCase {
             WorkoutPreferences.defaults.sessionWarmup.activities
         )
         XCTAssertEqual(application.prefs.exerciseWarmupSets.perExercise, [])
-        let candidates = plan.offer(.exerciseWarmupSets)?.candidateExerciseNames ?? []
+        let offer = try XCTUnwrap(plan.offer(.exerciseWarmupSets))
+        let candidates = offer.candidateExerciseNames
         for name in candidates {
             XCTAssertTrue(
                 application.prefs.exerciseWarmupSets.excludeExerciseKeys
