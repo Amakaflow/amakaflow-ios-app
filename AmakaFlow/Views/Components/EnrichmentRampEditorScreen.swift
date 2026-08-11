@@ -322,7 +322,9 @@ private extension EnrichmentRampEditorScreen {
             guard let updated = try? RampSet(
                 kind: current.kind,
                 value: clamped,
-                intensityNote: current.intensityNote,
+                // AMA-2408 — value edits drop intensity notes so enrich labels
+                // carry the new reps (backend prefers note over reps).
+                intensityNote: nil,
                 id: current.id
             ) else {
                 return

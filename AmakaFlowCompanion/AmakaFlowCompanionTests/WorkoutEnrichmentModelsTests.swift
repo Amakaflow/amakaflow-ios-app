@@ -253,6 +253,36 @@ final class WorkoutEnrichmentModelsTests: XCTestCase {
         XCTAssertEqual(sets.last?.intensityNote, "MODERATE · ~60%")
     }
 
+    /// AMA-2408 — intensity notes ride the pick UI only. Enrich wire must drop
+    /// them so mapper labels keep `· <reps>` and legacy coerce does not invent
+    /// `reps=1` from an intensity-only display name.
+    func testSanitizeRampsForEnrichClearsIntensityNotesKeepsValues() throws {
+        let ramps = [
+            PerExerciseRamp(
+                exerciseRef: "Incline Smith Machine Press",
+                enabled: true,
+                sets: [
+                    try RampSet(kind: .reps, value: 11, intensityNote: "LIGHT · ~40%"),
+                    try RampSet(kind: .reps, value: 11, intensityNote: "MODERATE · ~60%")
+                ]
+            ),
+            PerExerciseRamp(
+                exerciseRef: "Machine Lateral Raises",
+                enabled: true,
+                sets: [
+                    try RampSet(kind: .reps, value: 11, intensityNote: "LIGHT · ~40%"),
+                    try RampSet(kind: .reps, value: 11, intensityNote: "MODERATE · ~60%")
+                ]
+            )
+        ]
+        let sanitized = WorkoutEnrichmentMutations.sanitizeRampsForEnrich(ramps)
+        XCTAssertEqual(sanitized.count, 2)
+        for ramp in sanitized {
+            XCTAssertEqual(ramp.sets.map(\.value), [11, 11])
+            XCTAssertTrue(ramp.sets.allSatisfy { $0.intensityNote == nil })
+        }
+    }
+
     /// Core isolation guarantee for "Apply this ramp to all selected": every
     /// enabled ramp receives its own copy of the source sets, disabled ramps
     /// are untouched, and mutating one exercise's sets afterward never

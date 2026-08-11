@@ -164,4 +164,92 @@ final class WorkoutKitPlanStepSummarySectionsTests: XCTestCase {
         XCTAssertEqual(mobilityBands.first?.steps.map(\.title), ["Jump Rope"])
         XCTAssertNotEqual(sections.last?.accent, .mobility, "mid-workout break must not be misread as the final band")
     }
+
+    // MARK: - AMA-2408 dogfood — intensity labels + multi-ramp blocks
+
+    /// Mapper packs N warm-up steps into one iterations=1 block. Preview must
+    /// fold them under the exercise band — not a orphan Circuit with
+    /// "NO WARM-UPS" on the working sets.
+    func testWarmupOnlyRepeatBandsUnderExerciseNotCircuit() {
+        let json = plan("""
+        {
+          "kind": "repeat",
+          "reps": 1,
+          "intervals": [
+            { "kind": "reps", "reps": 11, "name": "Warm-up · Incline Smith Machine Press" },
+            { "kind": "reps", "reps": 11, "name": "Warm-up · Incline Smith Machine Press" }
+          ]
+        },
+        {
+          "kind": "repeat",
+          "reps": 5,
+          "intervals": [
+            { "kind": "reps", "reps": 10, "name": "Incline Smith Machine Press" }
+          ]
+        }
+        """)
+        let sections = WorkoutKitPlanStepSummary.sections(from: json)
+
+        XCTAssertFalse(
+            sections.contains { $0.band == "Circuit" },
+            "warm-up-only blocks must not render as Circuit"
+        )
+        guard let incline = sections.first(where: {
+            $0.accent == .work && $0.band == "Incline Smith Machine Press"
+        }) else {
+            return XCTFail("Expected Incline Smith work band")
+        }
+        XCTAssertNil(incline.caption, "ramp rows under the band clear NO WARM-UPS")
+        XCTAssertEqual(
+            incline.steps.filter { $0.title == PreviewStep.warmupSetTitle }.count,
+            2
+        )
+        XCTAssertEqual(
+            incline.steps.filter { $0.title == PreviewStep.warmupSetTitle }.map(\.detail),
+            ["11 REPS", "11 REPS"]
+        )
+    }
+
+    /// Intensity-suffixed warm-up labels must still family-match the working sets,
+    /// and "1 REPS" from open-goal coerce must not win over a recoverable note.
+    func testIntensityLabeledWarmupsBandAndAvoidFakeOneRep() {
+        let json = plan("""
+        {
+          "kind": "repeat",
+          "reps": 1,
+          "intervals": [
+            {
+              "kind": "reps",
+              "reps": 1,
+              "name": "Warm-up · Machine Lateral Raises · LIGHT · ~40%"
+            },
+            {
+              "kind": "reps",
+              "reps": 1,
+              "name": "Warm-up · Machine Lateral Raises · MODERATE · ~60%"
+            }
+          ]
+        },
+        {
+          "kind": "repeat",
+          "reps": 3,
+          "intervals": [
+            { "kind": "reps", "reps": 12, "name": "Machine Lateral Raises" }
+          ]
+        }
+        """)
+        let sections = WorkoutKitPlanStepSummary.sections(from: json)
+
+        guard let mlr = sections.first(where: {
+            $0.accent == .work && $0.band == "Machine Lateral Raises"
+        }) else {
+            return XCTFail("Expected Machine Lateral Raises band with ramps attached")
+        }
+        XCTAssertNil(mlr.caption)
+        let rampDetails = mlr.steps
+            .filter { $0.title == PreviewStep.warmupSetTitle }
+            .map(\.detail)
+        XCTAssertEqual(rampDetails, ["LIGHT · ~40%", "MODERATE · ~60%"])
+        XCTAssertFalse(rampDetails.contains("1 REPS"))
+    }
 }

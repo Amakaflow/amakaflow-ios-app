@@ -136,7 +136,7 @@ extension WorkoutEnrichmentPushPlanner {
         plan: Plan,
         into prefs: inout ExerciseWarmupSetsPrefs
     ) {
-        prefs.perExercise = ramps
+        prefs.perExercise = WorkoutEnrichmentMutations.sanitizeRampsForEnrich(ramps)
 
         let configuredKeys = Set(ramps.map { ExerciseKeyNormalizer.normalize($0.exerciseRef) })
         let disabledKeys = ramps.filter { !$0.enabled }.map {

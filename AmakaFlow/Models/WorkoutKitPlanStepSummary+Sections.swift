@@ -98,6 +98,25 @@ private enum PreviewSectionBuilder {
             return out
         }
 
+        // Mapper emits per-exercise ramps as one non-repeating block of N warm-up
+        // work steps (`IntervalBlockDTO(iterations: 1, steps: wu_steps)`). Treating
+        // that as a Circuit orphans the ramps from the working-set band and falsely
+        // captions "NO WARM-UPS — YOUR CALL" (AMA-2408 dogfood). Walk the full
+        // step list so any between-ramp rests stay pinned in order.
+        if workSteps.allSatisfy({ isWarmupSetName(displayName(for: $0)) }) {
+            var out: [Atom] = []
+            for _ in 0..<max(reps, 1) {
+                for step in steps {
+                    if isRest(step) {
+                        out.append(.rest(chip: restChipLabel(for: step)))
+                        continue
+                    }
+                    out.append(contentsOf: flattenStep(step, repeatCount: 1))
+                }
+            }
+            return out
+        }
+
         let stations: [(exercise: String, detail: String?)] = workSteps.map { step in
             (displayName(for: step), workDetail(for: step))
         }
@@ -194,16 +213,48 @@ private enum PreviewSectionBuilder {
         return step.kind.isEmpty ? "Step" : step.kind.capitalized
     }
 
-    /// Strip warm-up prefixes so "WU · Barbell back squat" groups under the exercise band.
+    /// Strip warm-up prefixes so "WU · Barbell back squat" / "Warm-up · Name"
+    /// groups under the exercise band. Also strip trailing detail segments
+    /// (` · 11`, ` · LIGHT · ~40%`) so intensity-labeled warm-up steps land
+    /// under the same band as the working sets (AMA-2408 dogfood).
     private static func exerciseFamily(from name: String) -> String {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
         let lower = trimmed.lowercased()
-        guard let prefix = warmupPrefixes.first(where: { lower.hasPrefix($0) }) else {
-            return trimmed
+        let withoutPrefix: String
+        if let prefix = warmupPrefixes.first(where: { lower.hasPrefix($0) }) {
+            let stripped = String(trimmed.dropFirst(prefix.count))
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            withoutPrefix = stripped.isEmpty ? trimmed : stripped
+        } else {
+            withoutPrefix = trimmed
         }
-        let stripped = String(trimmed.dropFirst(prefix.count))
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-        return stripped.isEmpty ? name : stripped
+        return baseExerciseName(from: withoutPrefix)
+    }
+
+    /// `"Machine Lateral Raises · LIGHT · ~40%"` / `"Incline Smith · 11"` → base name.
+    static func baseExerciseName(from name: String) -> String {
+        let parts = name
+            .components(separatedBy: "·")
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+        guard parts.count > 1 else { return name }
+        // Keep leading name tokens until a detail segment (pure digits, or
+        // intensity / percent / "LIGHT|MODERATE|HEAVY" note).
+        var kept: [String] = []
+        for part in parts {
+            if isDetailSegment(part) { break }
+            kept.append(part)
+        }
+        return kept.isEmpty ? parts[0] : kept.joined(separator: " · ")
+    }
+
+    private static func isDetailSegment(_ part: String) -> Bool {
+        if Int(part) != nil { return true }
+        let upper = part.uppercased()
+        if upper.contains("%") { return true }
+        if upper.contains("~") { return true }
+        let intensityTokens = ["LIGHT", "MODERATE", "HEAVY", "EASY", "HARD"]
+        return intensityTokens.contains { upper == $0 || upper.hasPrefix($0 + " ") }
     }
 
     private static func isWarmupSetName(_ name: String) -> Bool {
@@ -242,13 +293,59 @@ private enum PreviewSectionBuilder {
     /// (AMA-2378 `ActivityGoal.kind == .open` / `RampSet.kind == .open`).
     /// Surfaces as `"Open"` (→ `OPEN` once uppercased) so the preview never
     /// silently drops the row's detail line.
+    ///
+    /// AMA-2408: when WorkoutKit coerce invents `reps=1` for an intensity-only
+    /// warm-up label (`Warm-up · Name · LIGHT · ~40%`), prefer recovering a
+    /// trailing digit from the name, else show the intensity note — never lie
+    /// with "1 REPS" when the user set 11.
     private static func workDetail(for step: WKPlanDTO.Interval.Step) -> String? {
-        if let reps = step.reps { return "\(reps) reps" }
+        if let reps = step.reps {
+            if reps == 1, let recovered = repsRecoveredFromWarmupLabel(step.name) {
+                return "\(recovered) reps"
+            }
+            if reps == 1, let note = intensityNoteFromWarmupLabel(step.name) {
+                return note
+            }
+            return "\(reps) reps"
+        }
         if let seconds = step.seconds { return durationLabel(seconds) }
         if let meters = step.meters, meters > 0 {
             return WorkoutHelpers.formatDistance(meters: Int(meters.rounded()))
         }
         return "Open"
+    }
+
+    /// `"Warm-up · Incline Smith · 11"` → 11. Intensity-only labels → nil.
+    static func repsRecoveredFromWarmupLabel(_ name: String?) -> Int? {
+        guard let name else { return nil }
+        let lower = name.lowercased()
+        guard warmupPrefixes.contains(where: { lower.hasPrefix($0) }) else { return nil }
+        let parts = name
+            .components(separatedBy: "·")
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+        guard let last = parts.last, let value = Int(last), value > 1 else { return nil }
+        return value
+    }
+
+    /// `"Warm-up · Name · LIGHT · ~40%"` → `"LIGHT · ~40%"`.
+    static func intensityNoteFromWarmupLabel(_ name: String?) -> String? {
+        guard let name else { return nil }
+        let lower = name.lowercased()
+        guard let prefix = warmupPrefixes.first(where: { lower.hasPrefix($0) }) else { return nil }
+        let withoutPrefix = String(name.dropFirst(prefix.count))
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let parts = withoutPrefix
+            .components(separatedBy: "·")
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+        guard parts.count >= 2 else { return nil }
+        let detail = Array(parts.dropFirst())
+        guard detail.contains(where: isDetailSegment) else { return nil }
+        // Drop pure name tokens; keep intensity/detail segments.
+        let noteParts = detail.filter { isDetailSegment($0) || Int($0) == nil }
+        let note = noteParts.joined(separator: " · ")
+        return note.isEmpty ? nil : note
     }
 
     /// The legacy singular warmup/cooldown fields encode an open goal as

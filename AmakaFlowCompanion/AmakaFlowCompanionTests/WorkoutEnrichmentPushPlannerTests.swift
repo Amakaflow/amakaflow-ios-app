@@ -760,6 +760,64 @@ final class WorkoutEnrichmentPushPlannerTests: XCTestCase {
         XCTAssertFalse(application.prefs.exerciseWarmupSets.excludeExerciseKeys.contains("Bench Press"))
     }
 
+    /// AMA-2408 — intensity notes must not ride the enrich wire (mapper prefers
+    /// note over reps → WorkoutKit coerce invents reps=1).
+    func testApplyStripsIntensityNotesFromPerExerciseRamps() throws {
+        let blocks = [
+            SocialImportBlock(
+                label: "Main",
+                rounds: 1,
+                exercises: [
+                    SocialImportExercise(name: "Incline Smith Machine Press", sets: 5, reps: 10),
+                    SocialImportExercise(name: "Machine Lateral Raises", sets: 3, reps: 12)
+                ],
+                type: "sets"
+            )
+        ]
+        let plan = WorkoutEnrichmentPushPlanner.plan(blocks: blocks, tombstones: [], prefs: .defaults)
+        let noted = [
+            PerExerciseRamp(
+                exerciseRef: "Incline Smith Machine Press",
+                enabled: true,
+                sets: [
+                    try RampSet(kind: .reps, value: 11, intensityNote: "LIGHT · ~40%"),
+                    try RampSet(kind: .reps, value: 11, intensityNote: "MODERATE · ~60%")
+                ]
+            ),
+            PerExerciseRamp(
+                exerciseRef: "Machine Lateral Raises",
+                enabled: true,
+                sets: [
+                    try RampSet(kind: .reps, value: 11, intensityNote: "LIGHT · ~40%"),
+                    try RampSet(kind: .reps, value: 11, intensityNote: "MODERATE · ~60%")
+                ]
+            )
+        ]
+        let application = try WorkoutEnrichmentPushPlanner.application(
+            plan: plan,
+            decision: WorkoutEnrichmentPushPlanner.Decision(
+                checkedKinds: [.exerciseWarmupSets],
+                perExerciseRamps: noted
+            ),
+            prefs: .defaults,
+            tombstones: []
+        )
+        let applied = try XCTUnwrap(application.prefs.exerciseWarmupSets.perExercise)
+        XCTAssertEqual(applied.count, 2)
+        XCTAssertEqual(Set(applied.map { ExerciseKeyNormalizer.normalize($0.exerciseRef) }), [
+            "incline smith machine press",
+            "machine lateral raises"
+        ])
+        for ramp in applied {
+            XCTAssertTrue(ramp.enabled)
+            XCTAssertEqual(ramp.sets.map(\.value), [11, 11])
+            XCTAssertTrue(ramp.sets.allSatisfy { $0.intensityNote == nil })
+        }
+        XCTAssertFalse(
+            application.prefs.exerciseWarmupSets.excludeExerciseKeys.contains("machine lateral raises")
+        )
+    }
+
     /// A ramp the user explicitly turned off in the pick screen is excluded too
     /// (an `enabled: false` entry means "no warm-up sets", not "use the default").
     func testApplyExcludesDisabledPerExerciseRamps() throws {
