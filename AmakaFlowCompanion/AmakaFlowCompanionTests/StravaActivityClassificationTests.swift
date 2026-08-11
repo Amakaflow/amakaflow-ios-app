@@ -8,6 +8,7 @@
 import XCTest
 @testable import AmakaFlowCompanion
 
+@MainActor
 final class StravaActivityClassificationTests: XCTestCase {
 
     func testSkiRowWorkoutIsNotStrength() {
