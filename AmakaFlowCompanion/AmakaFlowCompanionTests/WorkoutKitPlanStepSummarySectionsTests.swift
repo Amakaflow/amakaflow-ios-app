@@ -282,6 +282,58 @@ final class WorkoutKitPlanStepSummarySectionsTests: XCTestCase {
         XCTAssertEqual(Set(squat.steps.map(\.number)).count, squat.steps.count)
     }
 
+    /// Pure unit: identical title+detail must advance to the next unused step number.
+    func testNextUnusedStepDoesNotRebindFirstIdenticalWarmup() {
+        let steps = [
+            PreviewStep(number: 1, title: PreviewStep.warmupSetTitle, detail: "10 REPS", restChip: nil),
+            PreviewStep(number: 2, title: PreviewStep.warmupSetTitle, detail: "10 REPS", restChip: nil),
+            PreviewStep(number: 3, title: "Back Squat", detail: "8 REPS", restChip: nil),
+        ]
+        let beat = BuildBeat(kind: .row, name: PreviewStep.warmupSetTitle, detail: "10 REPS")
+
+        let first = AppleWatchPreviewReveal.nextUnusedStep(
+            in: steps, matching: beat, alreadyShown: []
+        )
+        XCTAssertEqual(first?.number, 1)
+
+        let second = AppleWatchPreviewReveal.nextUnusedStep(
+            in: steps, matching: beat, alreadyShown: [first!]
+        )
+        XCTAssertEqual(second?.number, 2, "second identical ramp must consume step #2, not rebind #1")
+
+        let third = AppleWatchPreviewReveal.nextUnusedStep(
+            in: steps, matching: beat, alreadyShown: [first!, second!]
+        )
+        XCTAssertNil(third, "no third identical warm-up left")
+    }
+
+    /// Reveal assembly with hand-built beats (no script dependency).
+    func testRevealSectionsConsumesIdenticalRowsInOrder() {
+        let section = PreviewSection(
+            accent: .work,
+            band: "Back Squat",
+            tag: "6 SETS",
+            steps: [
+                PreviewStep(number: 1, title: PreviewStep.warmupSetTitle, detail: "10 REPS", restChip: nil),
+                PreviewStep(number: 2, title: PreviewStep.warmupSetTitle, detail: "10 REPS", restChip: nil),
+                PreviewStep(number: 3, title: "Back Squat", detail: "8 REPS", restChip: nil),
+            ]
+        )
+        let beats: [BuildBeat] = [
+            BuildBeat(kind: .band, label: "Back Squat"),
+            BuildBeat(kind: .row, name: PreviewStep.warmupSetTitle, detail: "10 REPS"),
+            BuildBeat(kind: .row, name: PreviewStep.warmupSetTitle, detail: "10 REPS"),
+            BuildBeat(kind: .row, name: "Back Squat", detail: "8 REPS"),
+        ]
+        let revealed = AppleWatchPreviewReveal.sections(from: [section], shownBeats: beats)
+        XCTAssertEqual(revealed.count, 1)
+        XCTAssertEqual(revealed[0].steps.map(\.number), [1, 2, 3])
+        XCTAssertEqual(
+            revealed[0].steps.map(\.title),
+            [PreviewStep.warmupSetTitle, PreviewStep.warmupSetTitle, "Back Squat"]
+        )
+    }
+
     func testIntensityLabeledWarmupsBandAndAvoidFakeOneRep() {
         let json = plan("""
         {
