@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		AMA2408SECTSACCBLD /* WorkoutKitPlanStepSummary+SectionAccumulator.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2408SECTSACCREF /* WorkoutKitPlanStepSummary+SectionAccumulator.swift */; };
+		AMA2408PUSHPREVBLD /* WorkoutEnrichmentPushSheet+Previews.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2408PUSHPREVREF /* WorkoutEnrichmentPushSheet+Previews.swift */; };
 		AMA2408REVEALBLD /* AppleWatchPreviewReveal.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2408REVEALREF /* AppleWatchPreviewReveal.swift */; };
 		AMA2408FIXTENRBLD /* FixtureEnrichment.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2408FIXTENRREF /* FixtureEnrichment.swift */; };
 		AMA2408PLAINBLD /* ama2408_plain_four.json in Resources */ = {isa = PBXBuildFile; fileRef = AMA2408PLAINREF /* ama2408_plain_four.json */; };
@@ -802,6 +804,8 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		AMA2408SECTSACCREF /* WorkoutKitPlanStepSummary+SectionAccumulator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "WorkoutKitPlanStepSummary+SectionAccumulator.swift"; path = "../AmakaFlow/Models/WorkoutKitPlanStepSummary+SectionAccumulator.swift"; sourceTree = SOURCE_ROOT; };
+		AMA2408PUSHPREVREF /* WorkoutEnrichmentPushSheet+Previews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "WorkoutEnrichmentPushSheet+Previews.swift"; path = "../AmakaFlow/Views/Components/WorkoutEnrichmentPushSheet+Previews.swift"; sourceTree = SOURCE_ROOT; };
 		AMA2408REVEALREF /* AppleWatchPreviewReveal.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppleWatchPreviewReveal.swift; path = ../AmakaFlow/Views/AppleWatchPreviewReveal.swift; sourceTree = SOURCE_ROOT; };
 		AMA2408FIXTENRREF /* FixtureEnrichment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FixtureEnrichment.swift; path = ../AmakaFlow/DependencyInjection/FixtureEnrichment.swift; sourceTree = SOURCE_ROOT; };
 		AMA2408PLAINREF /* ama2408_plain_four.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = ama2408_plain_four.json; path = ../AmakaFlow/Resources/Fixtures/ama2408_plain_four.json; sourceTree = SOURCE_ROOT; };
@@ -1903,6 +1907,7 @@
 				3X3RC1S35W1FT000001 /* Exercise.swift */,
 				AMA2360STEPSREF01 /* WorkoutKitPlanStepSummary.swift */,
 				AMA2374SECTSREF01 /* WorkoutKitPlanStepSummary+Sections.swift */,
+				AMA2408SECTSACCREF /* WorkoutKitPlanStepSummary+SectionAccumulator.swift */,
 				AMA2351WKMETAREF /* WorkoutKitPlanMeta.swift */,
 				AMA2311PRESREF001 /* Prescription.swift */,
 				AMA2360PREFREF001 /* AppleWatchDeliveryPrefs.swift */,
@@ -1925,6 +1930,7 @@
 				AMA2336COORDREF001 /* WorkoutEnrichmentPushCoordinator.swift */,
 				AMA2336PREFVREF001 /* WorkoutEnrichmentPrefsSheet.swift */,
 				AMA2336PUSHVREF001 /* WorkoutEnrichmentPushSheet.swift */,
+				AMA2408PUSHPREVREF /* WorkoutEnrichmentPushSheet+Previews.swift */,
 				AMA2386SHEETREF /* WatchItemSheet.swift */,
 				AMA2388PRTREF /* WatchItemSheet+Parts.swift */,
 				AMA2388OVLREF /* WatchItemDeliveredStepsOverlay.swift */,
@@ -3112,6 +3118,7 @@
 				AMA2351MAPPERBLD /* MapperWorkoutKitPlanProvider.swift in Sources */,
 				AMA2360STEPSBLD01 /* WorkoutKitPlanStepSummary.swift in Sources */,
 				AMA2374SECTSBLD01 /* WorkoutKitPlanStepSummary+Sections.swift in Sources */,
+				AMA2408SECTSACCBLD /* WorkoutKitPlanStepSummary+SectionAccumulator.swift in Sources */,
 				AMA2374DDBANDBLD1 /* DailyDriverTheme+WatchBands.swift in Sources */,
 				AMA2387BRANDBLD1 /* DailyDriverTheme+BrandAccents.swift in Sources */,
 				AMA2389DOORBLD /* DailyDriverTheme+DoorRow.swift in Sources */,
@@ -3202,6 +3209,7 @@
 				AMA2336COORDBLD001 /* WorkoutEnrichmentPushCoordinator.swift in Sources */,
 				AMA2336PREFVBLD001 /* WorkoutEnrichmentPrefsSheet.swift in Sources */,
 				AMA2336PUSHVBLD001 /* WorkoutEnrichmentPushSheet.swift in Sources */,
+				AMA2408PUSHPREVBLD /* WorkoutEnrichmentPushSheet+Previews.swift in Sources */,
 				AMA2378SEQVBLD001 /* EnrichmentSequenceScreen.swift in Sources */,
 				AMA2378WPICKBLD001 /* EnrichmentWarmupPickScreen.swift in Sources */,
 				AMA2378RAMPVBLD001 /* EnrichmentRampEditorScreen.swift in Sources */,

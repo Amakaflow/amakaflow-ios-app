@@ -292,26 +292,27 @@ private func appendBlockIntervals(
         return
     }
 
-    let blockRestOpen = block["rest_open"] as? Bool ?? false
-    let blockRestSec = block["rest_between_sec"] as? Int
+    let rest = FixtureRestContext(
+        blockRestOpen: block["rest_open"] as? Bool ?? false,
+        blockRestSec: block["rest_between_sec"] as? Int,
+        restMode: restMode,
+        restInterval: restInterval
+    )
     for exercise in exercises {
-        appendExerciseIntervals(
-            from: exercise,
-            blockRestOpen: blockRestOpen,
-            blockRestSec: blockRestSec,
-            restMode: restMode,
-            restInterval: restInterval,
-            into: &intervals
-        )
+        appendExerciseIntervals(from: exercise, rest: rest, into: &intervals)
     }
+}
+
+private struct FixtureRestContext {
+    let blockRestOpen: Bool
+    let blockRestSec: Int?
+    let restMode: String
+    let restInterval: [String: Any]?
 }
 
 private func appendExerciseIntervals(
     from exercise: [String: Any],
-    blockRestOpen: Bool,
-    blockRestSec: Int?,
-    restMode: String,
-    restInterval: [String: Any]?,
+    rest: FixtureRestContext,
     into intervals: inout [[String: Any]]
 ) {
     let name = (exercise["name"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -321,14 +322,8 @@ private func appendExerciseIntervals(
         var warmupSteps: [[String: Any]] = []
         for warmup in warmupSets {
             warmupSteps.append(fixtureWarmupStep(name: name, warmup: warmup))
-            if let rest = fixtureRestChip(
-                exercise: exercise,
-                blockRestOpen: blockRestOpen,
-                blockRestSec: blockRestSec,
-                restMode: restMode,
-                restInterval: restInterval
-            ) {
-                warmupSteps.append(rest)
+            if let chip = fixtureRestChip(exercise: exercise, rest: rest) {
+                warmupSteps.append(chip)
             }
         }
         intervals.append([
@@ -343,14 +338,8 @@ private func appendExerciseIntervals(
     var workSteps: [[String: Any]] = [
         ["kind": "reps", "reps": reps, "name": name]
     ]
-    if let rest = fixtureRestChip(
-        exercise: exercise,
-        blockRestOpen: blockRestOpen,
-        blockRestSec: blockRestSec,
-        restMode: restMode,
-        restInterval: restInterval
-    ) {
-        workSteps.append(rest)
+    if let chip = fixtureRestChip(exercise: exercise, rest: rest) {
+        workSteps.append(chip)
     }
     intervals.append([
         "kind": "repeat",
@@ -395,23 +384,20 @@ private func fixtureWarmupStep(name: String, warmup: [String: Any]) -> [String: 
 
 private func fixtureRestChip(
     exercise: [String: Any],
-    blockRestOpen: Bool,
-    blockRestSec: Int?,
-    restMode: String,
-    restInterval: [String: Any]?
+    rest: FixtureRestContext
 ) -> [String: Any]? {
-    if restMode == "omit" { return nil }
+    if rest.restMode == "omit" { return nil }
     if let open = exercise["rest_open"] as? Bool, open {
         return ["kind": "rest"]
     }
     if let sec = exercise["rest_sec"] as? Int, sec > 0 {
         return ["kind": "rest", "seconds": sec]
     }
-    if blockRestOpen { return ["kind": "rest"] }
-    if let sec = blockRestSec, sec > 0 {
+    if rest.blockRestOpen { return ["kind": "rest"] }
+    if let sec = rest.blockRestSec, sec > 0 {
         return ["kind": "rest", "seconds": sec]
     }
-    return restInterval
+    return rest.restInterval
 }
 
 private func fixtureIntReps(from value: Any?) -> Int? {

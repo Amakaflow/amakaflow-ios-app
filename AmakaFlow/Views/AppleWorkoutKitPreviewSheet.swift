@@ -12,7 +12,6 @@
 import SwiftUI
 import UIKit
 
-// swiftlint:disable:next type_body_length
 struct AppleWorkoutKitPreviewSheet: View {
     let workoutName: String
     let meta: WorkoutKitPlanMeta
