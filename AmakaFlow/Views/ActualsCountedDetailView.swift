@@ -16,20 +16,24 @@ import SwiftUI
 
 /// AMA-2405: gate Strava description UI/fetch for counted + verified details.
 enum ActualsStravaDescriptionPolicy {
-    /// Hide the section for `.ours`, and for non-Strava cards with no activity id/text.
+    /// Matched verified sessions with exercise rows hide Strava text when `.ours`
+    /// (the plan list is the record). Verify-as-is (no exercise rows) still shows
+    /// the cached Strava description — that body is the only structure the athlete sees.
     static func showsDescriptionSection(
         decoration: StravaDecorationState,
         stravaActivityId: String?,
-        cachedDescription: String
+        cachedDescription: String,
+        hasExerciseRows: Bool = false
     ) -> Bool {
-        guard decoration != .ours else { return false }
         let hasActivityId = !(stravaActivityId ?? "")
             .trimmingCharacters(in: .whitespacesAndNewlines)
             .isEmpty
         let hasCachedDescription = !cachedDescription
             .trimmingCharacters(in: .whitespacesAndNewlines)
             .isEmpty
-        return hasActivityId || hasCachedDescription
+        guard hasActivityId || hasCachedDescription else { return false }
+        if decoration == .ours && hasExerciseRows { return false }
+        return true
     }
 
     /// AmakaFlow already wrote Strava — do not re-pull description.

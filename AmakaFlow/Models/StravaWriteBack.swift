@@ -214,7 +214,33 @@ enum StravaWriteBackDecorator {
     }
 
     static func containsOurSignature(_ description: String) -> Bool {
-        description.contains(StravaWriteBackSignature.line)
+        if description.contains(StravaWriteBackSignature.line) { return true }
+        // Tolerate older posts / ASCII hyphens / casing — "tracked with AmakaFlow"
+        // in the Strava body means we already linked this activity.
+        return description.range(
+            of: "tracked with amakaflow",
+            options: .caseInsensitive
+        ) != nil
+    }
+
+    /// Pull `RPE N` from a signed Strava footer (`RPE 6 — tracked with AmakaFlow`).
+    static func rpeFromSignedDescription(_ description: String) -> Int? {
+        guard containsOurSignature(description) else { return nil }
+        guard let regex = try? NSRegularExpression(
+            pattern: #"RPE\s*(\d{1,2})"#,
+            options: .caseInsensitive
+        ) else { return nil }
+        let ns = description as NSString
+        let matches = regex.matches(
+            in: description,
+            options: [],
+            range: NSRange(location: 0, length: ns.length)
+        )
+        guard let last = matches.last,
+              last.numberOfRanges >= 2 else { return nil }
+        let value = ns.substring(with: last.range(at: 1))
+        guard let rpe = Int(value), (1...10).contains(rpe) else { return nil }
+        return rpe
     }
 
     static func evaluate(_ input: StravaWriteBackEvaluateInput) -> StravaWriteBackDecision {

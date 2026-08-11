@@ -1185,6 +1185,7 @@ final class AMA2396SyncV2Tests: XCTestCase {
     }
 
     /// AMA-2407: Verify as-is decoration only ever promotes for Strava-sourced cards.
+    /// Signature in the Strava body ⇒ `.ours` (already linked), not UNTOUCHED.
     func testVerifyAsIsDecorationOnlyPromotesForStrava() {
         XCTAssertEqual(
             ActualsTodayDemoFeed.verifyAsIsDecoration(sourceProvider: .garmin),
@@ -1199,9 +1200,76 @@ final class AMA2396SyncV2Tests: XCTestCase {
             .untouched
         )
         XCTAssertEqual(
+            ActualsTodayDemoFeed.verifyAsIsDecoration(
+                sourceProvider: .strava,
+                description: "RPE 6 \(StravaWriteBackSignature.line)"
+            ),
+            .ours
+        )
+        XCTAssertEqual(
             ActualsTodayDemoFeed.verifyAsIsDecoration(sourceProvider: nil),
             .none
         )
+    }
+
+    /// Hard rule: "tracked with AmakaFlow" means already verified/linked — auto
+    /// hydrate Verified + STRAVA ✓ OURS without a server flag or user tap.
+    func testSyncActivityWithSignedDescriptionAloneHydratesVerifiedOurs() {
+        let signed = "CIRCUIT · 6 ROUNDS\nRPE 6 \(StravaWriteBackSignature.line)"
+        let activity = StravaCompletedActivityDTO(
+            stravaId: 45,
+            name: "Bike ski row repeats",
+            type: "Workout",
+            distanceKm: 0,
+            durationMin: 42,
+            startDate: "2026-08-09T12:00:00Z",
+            startDateLocal: "2026-08-09T12:00:00",
+            description: signed,
+            amakaflowVerified: false,
+            amakaflowWroteStrava: false
+        )
+        let cards = ActualsTodayDemoFeed.cards(from: [activity], now: Self.date("2026-08-09T18:00:00Z"))
+        let card = cards.first
+        XCTAssertEqual(card?.kind, .verified)
+        XCTAssertEqual(card?.stravaDecoration, .ours)
+        XCTAssertEqual(card?.fillInSession?.rpe, 6)
+    }
+
+    func testApplyActivityDescriptionWithSignaturePromotesUnmappedToVerifiedOurs() throws {
+        let activity = ActualsUnmappedActivity(
+            title: "Bike ski row repeats",
+            provider: .strava,
+            startDate: Date(),
+            durationSeconds: 2520,
+            distanceMeters: nil,
+            calories: nil,
+            avgHR: nil,
+            type: .strength,
+            activityDescription: ""
+        )
+        let card = ActualsTodayDemoCard(
+            id: "strava_46",
+            kind: .unmapped,
+            timeLabel: "20:14",
+            title: "Bike ski row repeats",
+            stats: [("clock", "42 min")],
+            sourceLabel: "Synced from Strava",
+            sourceProvider: .strava,
+            session: nil,
+            activity: activity,
+            fillInSession: nil,
+            stravaDecoration: .none
+        )
+        let signed = "RPE 6 \(StravaWriteBackSignature.line)"
+        let updated = ActualsTodayDemoFeed.applyingDescriptionAndSignedOwnership(
+            to: card,
+            description: signed,
+            repository: repo
+        )
+        XCTAssertEqual(updated.kind, .verified)
+        XCTAssertEqual(updated.stravaDecoration, .ours)
+        XCTAssertEqual(updated.fillInSession?.rpe, 6)
+        XCTAssertTrue(try repo.isVerified(id: "strava_46"))
     }
 
     /// AMA-2407: full Verify as-is flow — sync an unmapped Strava activity, verify
@@ -1855,13 +1923,23 @@ final class AMA2396SyncV2Tests: XCTestCase {
         XCTAssertNil(byStrava["555"])
     }
 
-    /// AMA-2405: once AmakaFlow wrote Strava, do not treat description as missing.
+    /// AMA-2405/2407: `.ours` with a matched exercise list hides Strava text;
+    /// verify-as-is (no rows) still shows the cached description. Never re-fetch `.ours`.
     func testOursDecorationDoesNotNeedStravaDescriptionRefetch() {
         XCTAssertFalse(
             ActualsStravaDescriptionPolicy.showsDescriptionSection(
                 decoration: .ours,
                 stravaActivityId: "555",
-                cachedDescription: "prior"
+                cachedDescription: "prior",
+                hasExerciseRows: true
+            )
+        )
+        XCTAssertTrue(
+            ActualsStravaDescriptionPolicy.showsDescriptionSection(
+                decoration: .ours,
+                stravaActivityId: "555",
+                cachedDescription: "prior",
+                hasExerciseRows: false
             )
         )
         XCTAssertFalse(ActualsStravaDescriptionPolicy.allowsRemoteFetch(decoration: .ours))
@@ -1881,6 +1959,16 @@ final class AMA2396SyncV2Tests: XCTestCase {
                 cachedDescription: ""
             )
         )
+    }
+
+    func testRpeFromSignedDescriptionReadsFooter() {
+        XCTAssertEqual(
+            StravaWriteBackDecorator.rpeFromSignedDescription(
+                "CIRCUIT\nRPE 6 \(StravaWriteBackSignature.line)"
+            ),
+            6
+        )
+        XCTAssertNil(StravaWriteBackDecorator.rpeFromSignedDescription("no signature"))
     }
 
     /// URLSession often delivers POST bodies via `httpBodyStream` in URLProtocol.

@@ -38,8 +38,11 @@ enum ActualsVerifiedDeltas {
         ActualsVerifiedDeltaSection.sections(from: rows)
     }
 
-    static func calloutBody(sourceName: String, rpe: Int) -> String {
-        "\(sourceName) metrics + your actuals + RPE \(rpe) — counted once in Progress."
+    static func calloutBody(sourceName: String, rpe: Int?) -> String {
+        if let rpe {
+            return "\(sourceName) metrics + your actuals + RPE \(rpe) — counted once in Progress."
+        }
+        return "\(sourceName) metrics + your actuals — counted once in Progress."
     }
 }
 
@@ -157,7 +160,7 @@ struct ActualsStructureBandHeader: View {
 
 struct ActualsVerifiedCard: View {
     let sourceName: String
-    let rpe: Int
+    let rpe: Int?
     let rows: [ActualsVerifiedDeltaRow]
     /// Optional payoff line under the list (JSX mentions next-editor ghosts).
     var footerNote: String? = ActualsCopy.verifiedGhostFooter

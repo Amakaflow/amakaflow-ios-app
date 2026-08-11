@@ -83,16 +83,29 @@ final class ActualsHistoryViewModel: ObservableObject {
                 "Failed to persist verify-as-is for \(card.id, privacy: .public): \(error.localizedDescription, privacy: .public)"
             )
         }
+        let description = card.activity?.activityDescription
+            ?? session.stravaCurrentDescription
+            ?? ""
+        var verifiedSession = session
+        if verifiedSession.rpe == nil {
+            verifiedSession.rpe = StravaWriteBackDecorator.rpeFromSignedDescription(description)
+        }
         let decoration = ActualsTodayDemoFeed.verifyAsIsDecoration(
-            sourceProvider: card.sourceProvider ?? card.activity?.provider
+            sourceProvider: card.sourceProvider ?? card.activity?.provider,
+            description: description
         )
-        try? repository.storeDecoration(decoration, forSessionID: session.id)
-        mutateCard(id: cardID) { $0.markingVerifiedAsIs(with: session, decoration: decoration) }
+        try? repository.storeDecoration(decoration, forSessionID: verifiedSession.id)
+        mutateCard(id: cardID) {
+            $0.markingVerifiedAsIs(with: verifiedSession, decoration: decoration)
+        }
         NotificationCenter.default.post(name: .actualsLocalSessionsDidChange, object: nil)
 
-        guard let activityId = session.stravaActivityId else { return }
+        guard let activityId = verifiedSession.stravaActivityId else { return }
         do {
-            _ = try await client.verifySession(activityId: activityId, amakaflowSessionId: session.id)
+            _ = try await client.verifySession(
+                activityId: activityId,
+                amakaflowSessionId: verifiedSession.id
+            )
         } catch {
             Logger(
                 subsystem: "com.myamaka.AmakaFlowCompanion",
@@ -104,8 +117,15 @@ final class ActualsHistoryViewModel: ObservableObject {
     }
 
     /// AMA-2405: cache Strava description after counted-detail lazy fetch.
+    /// AMA-2407: signature ⇒ Verified + STRAVA ✓ OURS (do not leave UNTOUCHED).
     func applyActivityDescription(cardID: String, description: String) {
-        mutateCard(id: cardID) { $0.withActivityDescription(description) }
+        mutateCard(id: cardID) { card in
+            ActualsTodayDemoFeed.applyingDescriptionAndSignedOwnership(
+                to: card,
+                description: description,
+                repository: repository
+            )
+        }
         let activityId = card(withID: cardID)?.fillInSession?.stravaActivityId
             ?? ActualsTodayDemoFeed.stravaActivityId(fromCardID: cardID)
         guard let activityId, !activityId.isEmpty else { return }

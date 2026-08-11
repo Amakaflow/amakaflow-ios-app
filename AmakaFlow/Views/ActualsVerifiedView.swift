@@ -12,7 +12,7 @@ struct ActualsVerifiedView: View {
     let title: String
     let metaLine: String
     let sourceName: String
-    let rpe: Int
+    let rpe: Int?
     let rows: [ActualsVerifiedDeltaRow]
     let decoration: StravaDecorationState
     let stravaActivityId: String?
@@ -42,11 +42,13 @@ struct ActualsVerifiedView: View {
     ) {
         self.title = session.title
         self.sourceName = sourceName
-        self.rpe = session.rpe ?? 0
+        let description = session.stravaCurrentDescription ?? ""
+        self.rpe = session.rpe
+            ?? StravaWriteBackDecorator.rpeFromSignedDescription(description)
         self.rows = ActualsVerifiedDeltas.rows(from: session.exercises)
         self.decoration = decoration
         self.stravaActivityId = session.stravaActivityId
-        self.stravaCurrentDescription = session.stravaCurrentDescription ?? ""
+        self.stravaCurrentDescription = description
         self.onEditActuals = onEditActuals
         self.onWriteToStrava = onWriteToStrava
         self.onRemoveFromStrava = onRemoveFromStrava
@@ -56,7 +58,9 @@ struct ActualsVerifiedView: View {
         if let metaLine {
             self.metaLine = metaLine
         } else {
-            let rpeText = session.rpe.map { " · RPE \($0)" } ?? ""
+            let resolvedRPE = session.rpe
+                ?? StravaWriteBackDecorator.rpeFromSignedDescription(description)
+            let rpeText = resolvedRPE.map { " · RPE \($0)" } ?? ""
             self.metaLine = "\(session.subtitle) · FROM \(sourceName.uppercased())\(rpeText)"
         }
     }
@@ -145,7 +149,8 @@ struct ActualsVerifiedView: View {
                 if ActualsStravaDescriptionPolicy.showsDescriptionSection(
                     decoration: decoration,
                     stravaActivityId: stravaActivityId,
-                    cachedDescription: stravaCurrentDescription
+                    cachedDescription: stravaCurrentDescription,
+                    hasExerciseRows: !rows.isEmpty
                 ) {
                     ActualsStravaDescriptionSection(
                         stravaActivityId: stravaActivityId,
