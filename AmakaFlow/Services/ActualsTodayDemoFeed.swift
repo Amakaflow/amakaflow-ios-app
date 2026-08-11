@@ -1015,122 +1015,166 @@ final class ActualsTodayDemoFeed: ObservableObject {
         let byStrava = ((try? repository.fetchSessionsKeyedByStravaActivityId()) ?? [:])
             .filter { !ActualsRepository.isDescriptionCacheSession(id: $0.value.id) }
         return cards.map { card in
-            var next = card
-            if let activityId = stravaActivityId(fromCardID: card.id),
-               let cached = cachedDescriptions[activityId],
-               !cached.isEmpty {
-                let existing = next.activity?.activityDescription
-                    ?? next.fillInSession?.stravaCurrentDescription
-                    ?? ""
-                if existing.isEmpty {
-                    next = next.withActivityDescription(cached)
-                }
-            }
-            // Signature in Strava text = already linked. Prefer merging a local
-            // matched session first — signature promote must not invent as-is
-            // over fill-in exercise rows (that path showed the Strava dump UI).
-            let liveDescription = next.activity?.activityDescription
-                ?? next.fillInSession?.stravaCurrentDescription
-                ?? ""
-            let signed = StravaWriteBackDecorator.containsOurSignature(liveDescription)
-                && (next.sourceProvider ?? next.activity?.provider) == .strava
-            guard let activityId = stravaActivityId(fromCardID: next.id),
-                  var session = byStrava[activityId] else {
-                if signed {
-                    return applyingDescriptionAndSignedOwnership(
-                        to: next,
-                        description: liveDescription,
-                        repository: repository
-                    )
-                }
-                return next
-            }
-            // Cold-launch DB rows may predate V6 metadata — fill from the live Strava card.
-            if let activity = next.activity {
-                if session.stravaActivityId == nil { session.stravaActivityId = activityId }
-                if session.stravaActivityType == nil {
-                    session.stravaActivityType = activity.stravaTypeRaw
-                }
-                if session.stravaCurrentDescription == nil {
-                    session.stravaCurrentDescription = activity.activityDescription
-                }
-                if session.stravaRecordingApp == nil {
-                    session.stravaRecordingApp = activity.recordingApp
-                }
-                session.stravaIsRace = activity.isRace
-            }
-            var decoration = (try? repository.fetchDecoration(forSessionID: session.id)) ?? next.stravaDecoration
-            let descriptionForDecoration = session.stravaCurrentDescription
-                ?? next.activity?.activityDescription
-                ?? liveDescription
-            if decoration != .ours,
-               StravaWriteBackDecorator.containsOurSignature(descriptionForDecoration) {
-                decoration = .ours
-                try? repository.storeDecoration(.ours, forSessionID: session.id)
-            }
-            // AMA-2407: server flags win — a stale local draft must never downgrade
-            // a card the sync already reports Verified back to fill-in debt.
-            // Prefer the richer exercise list (matched verify) over sync as-is.
-            if session.verified || next.kind == .verified || signed {
-                var effectiveSession = richerFillInSession(
-                    session,
-                    next.fillInSession,
-                    fallbackAsIsCardID: next.id,
-                    title: next.title,
-                    activity: next.activity
-                )
-                effectiveSession.verified = true
-                if effectiveSession.rpe == nil {
-                    effectiveSession.rpe = StravaWriteBackDecorator.rpeFromSignedDescription(
-                        descriptionForDecoration
-                    )
-                }
-                if signed || decoration == .ours {
-                    decoration = .ours
-                    try? repository.storeDecoration(.ours, forSessionID: effectiveSession.id)
-                }
-                let sourceLabel = effectiveSession.rpe.map { "Verified · RPE \($0)" }
-                    ?? (effectiveSession.exercises.isEmpty ? "Verified · as-is" : "Verified")
-                return ActualsTodayDemoCard(
-                    id: next.id,
-                    kind: .verified,
-                    timeLabel: next.timeLabel,
-                    title: effectiveSession.title,
-                    stats: next.stats,
-                    sourceLabel: sourceLabel,
-                    sourceProvider: next.sourceProvider ?? next.activity?.provider ?? .strava,
-                    session: next.session,
-                    activity: next.activity,
-                    fillInSession: effectiveSession,
-                    stravaDecoration: decoration
-                )
-            }
-            let matched = makeMatchedCard(
-                request: MatchedCardRequest(
-                    cardID: next.id,
-                    timeLabel: next.timeLabel,
-                    title: session.title,
-                    activity: next.activity,
-                    blockSummaries: session.exercises.map(\.name),
-                    sourceLabel: "Matched · \(ActualsCopy.sourceDisplayName(next.activity?.provider ?? .strava))",
-                    structureBody: session.structureBody,
-                    seedExercises: session.exercises
-                )
-            )
-            return ActualsTodayDemoCard(
-                id: matched.id,
-                kind: .fillInDebt,
-                timeLabel: matched.timeLabel,
-                title: session.title,
-                stats: matched.stats,
-                sourceLabel: matched.sourceLabel,
-                sourceProvider: matched.sourceProvider,
-                session: matched.session,
-                activity: matched.activity,
-                fillInSession: session,
-                stravaDecoration: decoration
+            overlayLocalSession(
+                on: applyCachedDescription(to: card, cached: cachedDescriptions),
+                byStrava: byStrava,
+                repository: repository
             )
         }
+    }
+
+    private static func applyCachedDescription(
+        to card: ActualsTodayDemoCard,
+        cached: [String: String]
+    ) -> ActualsTodayDemoCard {
+        guard let activityId = stravaActivityId(fromCardID: card.id),
+              let description = cached[activityId],
+              !description.isEmpty else {
+            return card
+        }
+        let existing = card.activity?.activityDescription
+            ?? card.fillInSession?.stravaCurrentDescription
+            ?? ""
+        guard existing.isEmpty else { return card }
+        return card.withActivityDescription(description)
+    }
+
+    private static func overlayLocalSession(
+        on card: ActualsTodayDemoCard,
+        byStrava: [String: ActualsFillInSession],
+        repository: ActualsRepository
+    ) -> ActualsTodayDemoCard {
+        let liveDescription = card.activity?.activityDescription
+            ?? card.fillInSession?.stravaCurrentDescription
+            ?? ""
+        let signed = StravaWriteBackDecorator.containsOurSignature(liveDescription)
+            && (card.sourceProvider ?? card.activity?.provider) == .strava
+        guard let activityId = stravaActivityId(fromCardID: card.id),
+              var session = byStrava[activityId] else {
+            guard signed else { return card }
+            return applyingDescriptionAndSignedOwnership(
+                to: card,
+                description: liveDescription,
+                repository: repository
+            )
+        }
+        hydrateSessionMetadata(&session, activityId: activityId, from: card.activity)
+        var decoration = (try? repository.fetchDecoration(forSessionID: session.id))
+            ?? card.stravaDecoration
+        let descriptionForDecoration = session.stravaCurrentDescription
+            ?? card.activity?.activityDescription
+            ?? liveDescription
+        if decoration != .ours,
+           StravaWriteBackDecorator.containsOurSignature(descriptionForDecoration) {
+            decoration = .ours
+            try? repository.storeDecoration(.ours, forSessionID: session.id)
+        }
+        // AMA-2407: server flags win — a stale local draft must never downgrade
+        // a card the sync already reports Verified back to fill-in debt.
+        if session.verified || card.kind == .verified || signed {
+            return verifiedOverlayCard(
+                VerifiedOverlayRequest(
+                    card: card,
+                    session: session,
+                    signed: signed,
+                    decoration: decoration,
+                    descriptionForDecoration: descriptionForDecoration
+                ),
+                repository: repository
+            )
+        }
+        let matched = makeMatchedCard(
+            request: MatchedCardRequest(
+                cardID: card.id,
+                timeLabel: card.timeLabel,
+                title: session.title,
+                activity: card.activity,
+                blockSummaries: session.exercises.map(\.name),
+                sourceLabel: "Matched · \(ActualsCopy.sourceDisplayName(card.activity?.provider ?? .strava))",
+                structureBody: session.structureBody,
+                seedExercises: session.exercises
+            )
+        )
+        return ActualsTodayDemoCard(
+            id: matched.id,
+            kind: .fillInDebt,
+            timeLabel: matched.timeLabel,
+            title: session.title,
+            stats: matched.stats,
+            sourceLabel: matched.sourceLabel,
+            sourceProvider: matched.sourceProvider,
+            session: matched.session,
+            activity: matched.activity,
+            fillInSession: session,
+            stravaDecoration: decoration
+        )
+    }
+
+    private static func hydrateSessionMetadata(
+        _ session: inout ActualsFillInSession,
+        activityId: String,
+        from activity: ActualsUnmappedActivity?
+    ) {
+        guard let activity else { return }
+        if session.stravaActivityId == nil { session.stravaActivityId = activityId }
+        if session.stravaActivityType == nil {
+            session.stravaActivityType = activity.stravaTypeRaw
+        }
+        if session.stravaCurrentDescription == nil {
+            session.stravaCurrentDescription = activity.activityDescription
+        }
+        if session.stravaRecordingApp == nil {
+            session.stravaRecordingApp = activity.recordingApp
+        }
+        session.stravaIsRace = activity.isRace
+    }
+
+    private struct VerifiedOverlayRequest {
+        let card: ActualsTodayDemoCard
+        let session: ActualsFillInSession
+        let signed: Bool
+        let decoration: StravaDecorationState
+        let descriptionForDecoration: String
+    }
+
+    private static func verifiedOverlayCard(
+        _ request: VerifiedOverlayRequest,
+        repository: ActualsRepository
+    ) -> ActualsTodayDemoCard {
+        let card = request.card
+        var effectiveSession = richerFillInSession(
+            request.session,
+            card.fillInSession,
+            fallbackAsIsCardID: card.id,
+            title: card.title,
+            activity: card.activity
+        )
+        effectiveSession.verified = true
+        if effectiveSession.rpe == nil {
+            effectiveSession.rpe = StravaWriteBackDecorator.rpeFromSignedDescription(
+                request.descriptionForDecoration
+            )
+        }
+        var nextDecoration = request.decoration
+        if request.signed || nextDecoration == .ours {
+            nextDecoration = .ours
+            try? repository.storeDecoration(.ours, forSessionID: effectiveSession.id)
+        }
+        let sourceLabel = effectiveSession.rpe.map { "Verified · RPE \($0)" }
+            ?? (effectiveSession.exercises.isEmpty ? "Verified · as-is" : "Verified")
+        return ActualsTodayDemoCard(
+            id: card.id,
+            kind: .verified,
+            timeLabel: card.timeLabel,
+            title: effectiveSession.title,
+            stats: card.stats,
+            sourceLabel: sourceLabel,
+            sourceProvider: card.sourceProvider ?? card.activity?.provider ?? .strava,
+            session: card.session,
+            activity: card.activity,
+            fillInSession: effectiveSession,
+            stravaDecoration: nextDecoration
+        )
     }
 
     private func upsertCard(

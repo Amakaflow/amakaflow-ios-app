@@ -4,10 +4,13 @@
 //
 //  AMA-2396: plain-text workout structure for Strava descriptions —
 //  rounds, every step, and equipment emoji decoration.
+//  AMA-2407: also recovers fill-in rows from signed Strava descriptions.
 //
 
 import Foundation
 
+// File hosts format + parse + signed-description recovery helpers.
+// swiftlint:disable file_length
 // swiftlint:disable:next type_body_length
 enum StravaWorkoutStructureText {
     /// Full Library workout → Strava structure body (no ownership signature).
@@ -511,3 +514,5 @@ enum StravaWorkoutStructureText {
         return raw.isEmpty ? "move" : raw
     }
 }
+
+// swiftlint:enable file_length
