@@ -417,7 +417,10 @@ final class ActualsTodayDemoFeed: ObservableObject {
     ) -> ActualsTodayDemoCard {
         let durationSeconds = TimeInterval(activity.durationMin * 60)
         let distanceMeters = activity.distanceKm > 0 ? activity.distanceKm * 1_000 : nil
-        let workoutType = workoutType(from: activity.type)
+        let workoutType = StravaActivityClassification.actualsWorkoutType(
+            sportType: activity.type,
+            title: activity.name
+        )
         let unmapped = ActualsUnmappedActivity(
             title: activity.name,
             provider: .strava,
@@ -575,21 +578,6 @@ final class ActualsTodayDemoFeed: ObservableObject {
             )
         }
         .sorted { $0.startedAt > $1.startedAt }
-    }
-
-    private static func workoutType(from raw: String) -> ActualsWorkoutType {
-        // Strava `sport_type` / legacy `type` (case-insensitive).
-        switch raw.lowercased() {
-        case "run", "virtualrun", "trailrun", "walk", "hike":
-            return .run
-        case "ride", "virtualride", "ebikeride", "gravelride", "mountainbikeride":
-            return .ride
-        case "weighttraining", "workout", "crossfit", "yoga",
-             "highintensityintervaltraining", "elliptical":
-            return .strength
-        default:
-            return .other
-        }
     }
 
     private static func parseStravaStartDate(_ raw: String) -> Date? {

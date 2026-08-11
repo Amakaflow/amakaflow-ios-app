@@ -72,18 +72,9 @@ struct StravaActivity: Codable, Identifiable, Equatable {
         return startDate
     }
 
-    /// SF Symbol name for the activity type
+    /// SF Symbol name for the activity type (AMA-2411: title-aware for generic Workout).
     var typeIcon: String {
-        switch type.lowercased() {
-        case "run": return "figure.run"
-        case "ride", "virtualride": return "bicycle"
-        case "swim": return "figure.pool.swim"
-        case "walk", "hike": return "figure.walk"
-        case "yoga": return "figure.mind.and.body"
-        case "weighttraining": return "dumbbell.fill"
-        case "workout": return "figure.strengthtraining.traditional"
-        default: return "figure.mixed.cardio"
-        }
+        StravaActivityClassification.typeIcon(sportType: type, title: name)
     }
 }
 
