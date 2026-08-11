@@ -396,6 +396,7 @@ final class AppleStartHandoffService { // swiftlint:disable:this type_body_lengt
                     excludedPlanIDs: preSaveIDs
                 )
             }
+            NotificationCenter.default.post(name: .appleWatchScheduleDidChange, object: nil)
             return AppleStartHandoffCopy.scheduledInWorkoutMessage(
                 workoutName: workoutName,
                 pairing: pairingReader.pairingReadForCopy(),

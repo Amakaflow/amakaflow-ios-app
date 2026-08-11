@@ -64,6 +64,11 @@ struct OnYourWatchesView: View {
             didLoad = true
             await viewModel.refresh()
         }
+        // Child Apple/Garmin screens stay pushed on top; this view stays alive, so
+        // re-run overview counts when WorkoutKit schedule mutations post.
+        .onReceive(NotificationCenter.default.publisher(for: .appleWatchScheduleDidChange)) { _ in
+            Task { await viewModel.refresh() }
+        }
     }
 
     private var header: some View {

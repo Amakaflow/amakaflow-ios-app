@@ -159,6 +159,7 @@ final class WorkoutScheduleViewModel: ObservableObject {
             await scheduler.remove(row: target)
         }
         _ = await performRefresh(mode: .afterMutation(attempted: attempted))
+        Self.postScheduleDidChange()
     }
 
     func clearAll() async {
@@ -166,7 +167,10 @@ final class WorkoutScheduleViewModel: ObservableObject {
         isMutating = true
         defer { isMutating = false }
         await scheduler.removeAll()
-        guard await performRefresh(mode: .manual) else { return }
+        let refreshed = await performRefresh(mode: .manual)
+        // Always notify overview — removeAll may have succeeded even if list refresh failed.
+        Self.postScheduleDidChange()
+        guard refreshed else { return }
         if showEmptyState {
             statusMessage = "Removed all AmakaFlow plans."
         } else if !incompleteRows.isEmpty || !completedRows.isEmpty {
@@ -191,11 +195,19 @@ final class WorkoutScheduleViewModel: ObservableObject {
             }
             statusMessage = "Moved \(row.title)."
             isEditing = true
+            Self.postScheduleDidChange()
             return true
         } catch {
             statusMessage = error.localizedDescription
             return false
         }
+    }
+
+    /// Notifies Library / On your watches so overview slot counts don't stay stale
+    /// until a manual pull-to-refresh (parent screens load once and stay alive under
+    /// NavigationStack).
+    private static func postScheduleDidChange() {
+        NotificationCenter.default.post(name: .appleWatchScheduleDidChange, object: nil)
     }
 
     var maxAllowedCount: Int { scheduler.maxAllowedCount }

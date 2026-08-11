@@ -168,6 +168,9 @@ struct LibraryView: View {
             if note.object as AnyObject? === viewModel { return }
             Task { await viewModel.load() }
         }
+        .onReceive(NotificationCenter.default.publisher(for: .appleWatchScheduleDidChange)) { _ in
+            Task { await refreshWatches(force: true) }
+        }
         .onReceive(NotificationCenter.default.publisher(for: .libraryOpenWorkout)) { note in
             guard let workoutId = note.userInfo?["workoutId"] as? String, !workoutId.isEmpty else {
                 return

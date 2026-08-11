@@ -34,6 +34,8 @@ extension Notification.Name {
     static let libraryContentDidChange = Notification.Name("libraryContentDidChange")
     /// AMA-2389: open an existing library workout after “Open yours” from a friend share.
     static let libraryOpenWorkout = Notification.Name("libraryOpenWorkout")
+    /// WorkoutKit schedule mutated (delete / clear / move / send) — refresh On your watches counts.
+    static let appleWatchScheduleDidChange = Notification.Name("appleWatchScheduleDidChange")
 }
 
 enum OpenCreateSheetKey: EnvironmentKey {
