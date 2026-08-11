@@ -382,6 +382,7 @@ struct ActualsFillInView: View {
             ?? ActualsTodayDemoFeed.stravaActivityId(fromCardID: session.id) {
             writeSession.stravaActivityId = activityId
         }
+        var writeBackFailure: String?
         if writeBackSettings.writeBackEnabled,
            writeSession.canEvaluateStravaWriteBack,
            let activityId = writeSession.stravaActivityId,
@@ -397,7 +398,8 @@ struct ActualsFillInView: View {
                     recordingApp: writeSession.stravaRecordingApp,
                     isRace: writeSession.stravaIsRace,
                     rules: writeBackSettings.rules,
-                    rpe: writeSession.rpe
+                    rpe: writeSession.rpe,
+                    amakaflowSessionId: writeSession.id
                 )
             )
             switch outcome {
@@ -414,14 +416,19 @@ struct ActualsFillInView: View {
             case .skipped(let state):
                 try? viewModel.persistWriteBackState(snapshot: nil, decoration: state)
                 onWriteBackDecoration?(state)
-            case .restored, .failed, .cancelled:
+            case .failed(let message):
+                // AMA-2403: don't swallow write-back failures as "no Strava".
+                writeBackFailure = message
+            case .restored, .cancelled:
                 break
             }
         }
         let toastText = claimedStravaUpdate
             ? ActualsCopy.verifiedToastWithStrava
             : ActualsCopy.verifiedToastNoStrava
-        DDToastCenter.shared.undo(toastText, sub: ActualsCopy.fillInSavedToastSub) {
+        let toastSub = writeBackFailure.map { "Strava write-back failed — \($0)" }
+            ?? ActualsCopy.fillInSavedToastSub
+        DDToastCenter.shared.undo(toastText, sub: toastSub) {
             Task { @MainActor in
                 await restoreStravaThenUnverify()
             }

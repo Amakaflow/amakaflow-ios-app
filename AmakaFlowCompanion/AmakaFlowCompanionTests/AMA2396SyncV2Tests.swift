@@ -1283,4 +1283,70 @@ final class AMA2396SyncV2Tests: XCTestCase {
         XCTAssertEqual(candidates[0].type, .other)
     }
 
+    // MARK: - AMA-2403 verify + 403 mapping
+
+    func testUnverifiedWriteBack403IsNotSignInAgain() {
+        XCTAssertEqual(
+            BFFStravaClientError.sessionNotVerified.errorDescription,
+            "Verify this session in AmakaFlow before writing to Strava."
+        )
+        XCTAssertNotEqual(
+            BFFStravaClientError.sessionNotVerified.errorDescription,
+            BFFStravaClientError.authenticationRequired.errorDescription
+        )
+    }
+
+    func testWriteBackProviderCallsVerifyBeforeApply() async throws {
+        MockURLProtocol.reset()
+        defer { MockURLProtocol.reset() }
+
+        var paths: [String] = []
+        MockURLProtocol.requestHandler = { request in
+            let path = request.url?.path ?? ""
+            paths.append(path)
+            let data: Data
+            if path.contains("/verify") {
+                data = Data(#"{"activity_id":42,"verified":true,"amakaflow_session_id":"sess-1"}"#.utf8)
+            } else {
+                data = Data(#"{"activity_id":42,"status":"written","written":true,"title":"Upper","description":"signed"}"#.utf8)
+            }
+            let response = HTTPURLResponse(
+                url: request.url!,
+                statusCode: 200,
+                httpVersion: nil,
+                headerFields: ["Content-Type": "application/json"]
+            )!
+            return (response, data)
+        }
+
+        let client = BFFStravaClient(
+            baseURL: "https://mock.test/v1",
+            session: MockURLProtocol.mockSession(),
+            bearerTokenProvider: { "test-token" },
+            userIDProvider: { "user-1" }
+        )
+        let provider = BFFStravaWriteBackProvider(client: client)
+        let outcome = await provider.writeBack(
+            StravaWriteBackRequest(
+                activityId: "42",
+                title: "Upper",
+                structureBody: "Press 3x5",
+                currentDescription: "",
+                activityType: "WeightTraining",
+                recordingApp: nil,
+                isRace: false,
+                rules: .default,
+                rpe: 8,
+                amakaflowSessionId: "sess-1"
+            )
+        )
+
+        guard case .updated = outcome else {
+            return XCTFail("expected updated, got \(outcome)")
+        }
+        XCTAssertEqual(paths.count, 2)
+        XCTAssertTrue(paths[0].contains("/verify"), paths[0])
+        XCTAssertTrue(paths[1].contains("/writeback"), paths[1])
+    }
+
 }

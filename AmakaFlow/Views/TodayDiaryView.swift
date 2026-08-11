@@ -687,7 +687,8 @@ struct TodayDiaryView: View {
                 recordingApp: payload.stravaRecordingApp,
                 isRace: payload.stravaIsRace,
                 rules: StravaWriteBackSettingsStore.shared.rules,
-                rpe: payload.rpe
+                rpe: payload.rpe,
+                amakaflowSessionId: payload.id
             )
         )
         switch outcome {
