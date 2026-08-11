@@ -9,6 +9,7 @@
 // swiftlint:disable file_length
 
 import Combine
+import OSLog
 import SwiftUI
 
 @MainActor
@@ -71,10 +72,21 @@ final class ActualsHistoryViewModel: ObservableObject {
     /// AMA-2405: cache Strava description after counted-detail lazy fetch.
     func applyActivityDescription(cardID: String, description: String) {
         mutateCard(id: cardID) { $0.withActivityDescription(description) }
-        if let session = card(withID: cardID)?.fillInSession {
-            try? repository.updateStravaCurrentDescription(
-                sessionID: session.id,
+        let activityId = card(withID: cardID)?.fillInSession?.stravaActivityId
+            ?? ActualsTodayDemoFeed.stravaActivityId(fromCardID: cardID)
+        guard let activityId, !activityId.isEmpty else { return }
+        do {
+            try repository.upsertStravaActivityDescription(
+                activityId: activityId,
                 description: description
+            )
+        } catch {
+            // In-memory card already updated; keep UI and log for diagnosis.
+            Logger(
+                subsystem: "com.myamaka.AmakaFlowCompanion",
+                category: "ActualsHistory"
+            ).error(
+                "Failed to persist Strava description for activity \(activityId, privacy: .public): \(error.localizedDescription, privacy: .public)"
             )
         }
     }

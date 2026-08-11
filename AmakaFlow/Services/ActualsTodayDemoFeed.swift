@@ -11,6 +11,12 @@
 
 import Combine
 import Foundation
+import OSLog
+
+private let actualsTodayDemoFeedLog = Logger(
+    subsystem: "com.myamaka.AmakaFlowCompanion",
+    category: "ActualsTodayDemoFeed"
+)
 
 /// One diary card driven by Actuals demo content (not WorkoutCompletion ingest yet).
 struct ActualsTodayDemoCard: Identifiable, Equatable {
@@ -433,15 +439,23 @@ final class ActualsTodayDemoFeed: ObservableObject {
         cards[index] = cards[index].markingCounted()
     }
 
-    /// AMA-2405: persist a lazy-fetched Strava description onto the card (+ session row).
+    /// AMA-2405: persist a lazy-fetched Strava description onto the card (+ activity-id cache).
     func applyActivityDescription(cardID: String, description: String) {
         guard let index = cards.firstIndex(where: { $0.id == cardID }) else { return }
         let updated = cards[index].withActivityDescription(description)
         cards[index] = updated
-        if let session = updated.fillInSession {
-            try? repository.updateStravaCurrentDescription(
-                sessionID: session.id,
+        let activityId = updated.fillInSession?.stravaActivityId
+            ?? Self.stravaActivityId(fromCardID: cardID)
+        guard let activityId, !activityId.isEmpty else { return }
+        do {
+            try repository.upsertStravaActivityDescription(
+                activityId: activityId,
                 description: description
+            )
+        } catch {
+            // In-memory card already updated; do not roll back UI on persistence failure.
+            actualsTodayDemoFeedLog.error(
+                "Failed to persist Strava description for activity \(activityId, privacy: .public): \(error.localizedDescription, privacy: .public)"
             )
         }
     }
@@ -704,15 +718,27 @@ final class ActualsTodayDemoFeed: ObservableObject {
         to cards: [ActualsTodayDemoCard],
         repository: ActualsRepository
     ) -> [ActualsTodayDemoCard] {
-        let byStrava = (try? repository.fetchSessionsKeyedByStravaActivityId()) ?? [:]
-        guard !byStrava.isEmpty else { return cards }
+        let cachedDescriptions = (try? repository.fetchCachedStravaDescriptions()) ?? [:]
+        let byStrava = ((try? repository.fetchSessionsKeyedByStravaActivityId()) ?? [:])
+            .filter { !ActualsRepository.isDescriptionCacheSession(id: $0.value.id) }
         return cards.map { card in
-            guard let activityId = stravaActivityId(fromCardID: card.id),
+            var next = card
+            if let activityId = stravaActivityId(fromCardID: card.id),
+               let cached = cachedDescriptions[activityId],
+               !cached.isEmpty {
+                let existing = next.activity?.activityDescription
+                    ?? next.fillInSession?.stravaCurrentDescription
+                    ?? ""
+                if existing.isEmpty {
+                    next = next.withActivityDescription(cached)
+                }
+            }
+            guard let activityId = stravaActivityId(fromCardID: next.id),
                   var session = byStrava[activityId] else {
-                return card
+                return next
             }
             // Cold-launch DB rows may predate V6 metadata — fill from the live Strava card.
-            if let activity = card.activity {
+            if let activity = next.activity {
                 if session.stravaActivityId == nil { session.stravaActivityId = activityId }
                 if session.stravaActivityType == nil {
                     session.stravaActivityType = activity.stravaTypeRaw
@@ -725,30 +751,30 @@ final class ActualsTodayDemoFeed: ObservableObject {
                 }
                 session.stravaIsRace = activity.isRace
             }
-            let decoration = (try? repository.fetchDecoration(forSessionID: session.id)) ?? card.stravaDecoration
+            let decoration = (try? repository.fetchDecoration(forSessionID: session.id)) ?? next.stravaDecoration
             if session.verified {
                 return ActualsTodayDemoCard(
-                    id: card.id,
+                    id: next.id,
                     kind: .verified,
-                    timeLabel: card.timeLabel,
+                    timeLabel: next.timeLabel,
                     title: session.title,
-                    stats: card.stats,
+                    stats: next.stats,
                     sourceLabel: "Verified · RPE \(session.rpe ?? 0)",
-                    sourceProvider: card.sourceProvider ?? card.activity?.provider ?? .strava,
-                    session: card.session,
-                    activity: card.activity,
+                    sourceProvider: next.sourceProvider ?? next.activity?.provider ?? .strava,
+                    session: next.session,
+                    activity: next.activity,
                     fillInSession: session,
                     stravaDecoration: decoration
                 )
             }
             let matched = makeMatchedCard(
                 request: MatchedCardRequest(
-                    cardID: card.id,
-                    timeLabel: card.timeLabel,
+                    cardID: next.id,
+                    timeLabel: next.timeLabel,
                     title: session.title,
-                    activity: card.activity,
+                    activity: next.activity,
                     blockSummaries: session.exercises.map(\.name),
-                    sourceLabel: "Matched · \(ActualsCopy.sourceDisplayName(card.activity?.provider ?? .strava))",
+                    sourceLabel: "Matched · \(ActualsCopy.sourceDisplayName(next.activity?.provider ?? .strava))",
                     structureBody: session.structureBody,
                     seedExercises: session.exercises
                 )

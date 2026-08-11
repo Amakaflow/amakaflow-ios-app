@@ -121,6 +121,7 @@ final class ActualsRepository: @unchecked Sendable {
             var result: [String: ActualsFillInSession] = [:]
             for header in headers {
                 guard let activityId = header.stravaActivityId,
+                      !Self.isDescriptionCacheSession(id: header.id),
                       let session = try Self.session(id: header.id, database: database) else {
                     continue
                 }
@@ -321,6 +322,74 @@ final class ActualsRepository: @unchecked Sendable {
             session.preUpdateTitle = nil
             session.preUpdateDescription = nil
             try session.update(database)
+        }
+    }
+}
+
+// MARK: - AMA-2405 Strava description cache (activity-id keyed)
+
+extension ActualsRepository {
+    static func descriptionCacheSessionID(for activityId: String) -> String {
+        "strava_desc_\(activityId)"
+    }
+
+    static let descriptionCacheSubtitle = "__strava_description_cache__"
+
+    static func isDescriptionCacheSession(id: String) -> Bool {
+        id.hasPrefix("strava_desc_")
+    }
+
+    /// Persist by Strava activity id — counted / keep-as-is cards often have no
+    /// `fillInSession` row, so session-id updates alone drop the text on re-sync.
+    func upsertStravaActivityDescription(activityId: String, description: String) throws {
+        let trimmed = description.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !activityId.isEmpty, !trimmed.isEmpty else { return }
+        let timestamp = now()
+        try dbQueue.write { database in
+            let existing = try LocalActualsSession
+                .filter(sql: "strava_activity_id = ?", arguments: [activityId])
+                .fetchAll(database)
+            if existing.isEmpty {
+                var stub = LocalActualsSession(
+                    id: Self.descriptionCacheSessionID(for: activityId),
+                    title: "",
+                    subtitle: Self.descriptionCacheSubtitle,
+                    verified: false,
+                    savedAt: timestamp,
+                    createdAt: timestamp,
+                    stravaActivityId: activityId,
+                    isDraft: true,
+                    stravaCurrentDescription: trimmed
+                )
+                try stub.upsert(database)
+                return
+            }
+            for var session in existing {
+                session.stravaCurrentDescription = trimmed
+                try session.update(database)
+            }
+        }
+    }
+
+    /// Activity-id → cached Strava description (session rows + desc-only stubs).
+    func fetchCachedStravaDescriptions() throws -> [String: String] {
+        try dbQueue.read { database in
+            let headers = try LocalActualsSession
+                .filter(sql: """
+                    strava_activity_id IS NOT NULL
+                    AND strava_current_description IS NOT NULL
+                    AND TRIM(strava_current_description) != ''
+                    """)
+                .fetchAll(database)
+            var result: [String: String] = [:]
+            for header in headers {
+                guard let activityId = header.stravaActivityId,
+                      let description = header.stravaCurrentDescription?
+                        .trimmingCharacters(in: .whitespacesAndNewlines),
+                      !description.isEmpty else { continue }
+                result[activityId] = description
+            }
+            return result
         }
     }
 }

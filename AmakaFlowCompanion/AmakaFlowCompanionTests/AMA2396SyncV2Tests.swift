@@ -1590,6 +1590,49 @@ final class AMA2396SyncV2Tests: XCTestCase {
         XCTAssertEqual(updated.fillInSession?.stravaCurrentDescription, "Assault bike · ski · row")
     }
 
+    /// AMA-2405: counted cards with nil fillInSession still persist by activity id.
+    func testCountedCardWithoutSessionPersistsDescriptionByActivityId() throws {
+        try repo.upsertStravaActivityDescription(
+            activityId: "555",
+            description: "Assault bike · ski · row"
+        )
+        let cached = try repo.fetchCachedStravaDescriptions()
+        XCTAssertEqual(cached["555"], "Assault bike · ski · row")
+
+        let activity = ActualsUnmappedActivity(
+            title: "Bike ski row repeats",
+            provider: .strava,
+            startDate: Date(),
+            durationSeconds: 2520,
+            distanceMeters: nil,
+            calories: nil,
+            avgHR: nil,
+            type: .strength,
+            activityDescription: ""
+        )
+        let card = ActualsTodayDemoCard(
+            id: "strava_555",
+            kind: .counted,
+            timeLabel: "20:14",
+            title: "Bike ski row repeats",
+            stats: [("clock", "42 min")],
+            sourceLabel: "Kept as-is",
+            sourceProvider: .strava,
+            session: nil,
+            activity: activity,
+            fillInSession: nil,
+            stravaDecoration: .untouched
+        )
+        // Description-cache stubs must not promote counted → fill-in on overlay.
+        let overlaid = ActualsTodayDemoFeed.applyLocalOverlays(to: [card], repository: repo)
+        XCTAssertEqual(overlaid.first?.kind, .counted)
+        XCTAssertNil(overlaid.first?.fillInSession)
+        XCTAssertEqual(overlaid.first?.activity?.activityDescription, "Assault bike · ski · row")
+        // Match overlays still ignore description-only stubs.
+        let byStrava = try repo.fetchSessionsKeyedByStravaActivityId()
+        XCTAssertNil(byStrava["555"])
+    }
+
     /// AMA-2405: once AmakaFlow wrote Strava, do not treat description as missing.
     func testOursDecorationDoesNotNeedStravaDescriptionRefetch() {
         XCTAssertFalse(
