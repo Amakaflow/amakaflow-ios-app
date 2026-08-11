@@ -230,15 +230,15 @@ enum StravaWriteBackDecorator {
             pattern: #"RPE\s*(\d{1,2})"#,
             options: .caseInsensitive
         ) else { return nil }
-        let ns = description as NSString
+        let nsDescription = description as NSString
         let matches = regex.matches(
             in: description,
             options: [],
-            range: NSRange(location: 0, length: ns.length)
+            range: NSRange(location: 0, length: nsDescription.length)
         )
         guard let last = matches.last,
               last.numberOfRanges >= 2 else { return nil }
-        let value = ns.substring(with: last.range(at: 1))
+        let value = nsDescription.substring(with: last.range(at: 1))
         guard let rpe = Int(value), (1...10).contains(rpe) else { return nil }
         return rpe
     }

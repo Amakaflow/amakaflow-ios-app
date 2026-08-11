@@ -1294,10 +1294,13 @@ final class AMA2396SyncV2Tests: XCTestCase {
     func testEnsureServerVerifiedPostsVerifyForSignedActivities() async throws {
         MockURLProtocol.reset()
         defer { MockURLProtocol.reset() }
+        let pathsLock = NSLock()
         var requestedPaths: [String] = []
         MockURLProtocol.requestHandler = { request in
             let path = request.url?.path ?? ""
+            pathsLock.lock()
             requestedPaths.append(path)
+            pathsLock.unlock()
             let response = HTTPURLResponse(
                 url: request.url!,
                 statusCode: 200,
@@ -1346,12 +1349,15 @@ final class AMA2396SyncV2Tests: XCTestCase {
             ],
             client: client
         )
+        pathsLock.lock()
+        let capturedPaths = requestedPaths
+        pathsLock.unlock()
         XCTAssertTrue(
-            requestedPaths.contains { $0.contains("/strava/activities/88/verify") },
-            "signed + unverified must POST verify — got \(requestedPaths)"
+            capturedPaths.contains { $0.contains("/strava/activities/88/verify") },
+            "signed + unverified must POST verify — got \(capturedPaths)"
         )
         XCTAssertFalse(
-            requestedPaths.contains { $0.contains("/strava/activities/89/verify") },
+            capturedPaths.contains { $0.contains("/strava/activities/89/verify") },
             "already verified must not re-POST"
         )
     }
@@ -1828,6 +1834,40 @@ final class AMA2396SyncV2Tests: XCTestCase {
         XCTAssertNil(session.rpe)
     }
 
+    /// AMA-2407: a stale local fill-in draft must never downgrade a server-verified card.
+    func testLocalUnverifiedDraftDoesNotDowngradeServerVerifiedCard() throws {
+        var draft = ActualsFillInSession.lowerBodyPosteriorSample(id: "strava_50")
+        draft.stravaActivityId = "50"
+        draft.verified = false
+        try repo.upsertMatchedDraft(draft)
+
+        let activity = StravaCompletedActivityDTO(
+            stravaId: 50,
+            name: draft.title,
+            type: "Workout",
+            distanceKm: 0,
+            durationMin: 42,
+            startDate: "2026-08-09T12:00:00Z",
+            startDateLocal: "2026-08-09T12:00:00",
+            description: "",
+            amakaflowVerified: true,
+            amakaflowWroteStrava: false
+        )
+        let synced = ActualsTodayDemoFeed.cards(
+            from: [activity],
+            now: Self.date("2026-08-09T18:00:00Z")
+        )
+        XCTAssertEqual(synced.first?.kind, .verified)
+        let overlaid = ActualsTodayDemoFeed.applyLocalOverlays(
+            to: synced,
+            repository: repo
+        )
+        let card = try XCTUnwrap(overlaid.first)
+        XCTAssertEqual(card.kind, .verified)
+        XCTAssertTrue(card.fillInSession?.verified ?? false)
+        XCTAssertFalse(card.fillInSession?.exercises.isEmpty ?? true)
+    }
+
     /// Hard rule 4: `amakaflow_wrote_strava` (or our signature in the description)
     /// decorates `.ours` + surfaces Undo, without a local write-back round trip.
     func testSyncActivityWroteStravaHydratesOursDecoration() {
@@ -2041,16 +2081,7 @@ final class AMA2396SyncV2Tests: XCTestCase {
             ActualsStravaDescriptionPolicy.showsDescriptionSection(
                 decoration: .ours,
                 stravaActivityId: "555",
-                cachedDescription: "prior",
-                hasExerciseRows: true
-            )
-        )
-        XCTAssertFalse(
-            ActualsStravaDescriptionPolicy.showsDescriptionSection(
-                decoration: .ours,
-                stravaActivityId: "555",
-                cachedDescription: "prior",
-                hasExerciseRows: false
+                cachedDescription: "prior"
             )
         )
         XCTAssertFalse(ActualsStravaDescriptionPolicy.allowsRemoteFetch(decoration: .ours))
@@ -2126,8 +2157,7 @@ final class AMA2396SyncV2Tests: XCTestCase {
             ActualsStravaDescriptionPolicy.showsDescriptionSection(
                 decoration: updated.stravaDecoration,
                 stravaActivityId: "47",
-                cachedDescription: signed,
-                hasExerciseRows: !(updated.fillInSession?.exercises.isEmpty ?? true)
+                cachedDescription: signed
             )
         )
     }

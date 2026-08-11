@@ -731,6 +731,21 @@ struct TodayDiaryView: View {
         let provider = StravaWriteBackFactory.makeDefault()
         let sessionID = session.id
         let cardID = verifiedCardID
+        // AMA-2407: DELETE server verify first. Restoring Strava before DELETE can
+        // leave Verified + unsigned text if DELETE then fails (CodeRabbit).
+        if let activityId = session.stravaActivityId {
+            do {
+                _ = try await BFFStravaClient.live().unverifySession(activityId: activityId)
+            } catch {
+                await MainActor.run {
+                    DDToastCenter.shared.error(
+                        "Couldn't un-verify on Strava",
+                        sub: error.localizedDescription
+                    )
+                }
+                return
+            }
+        }
         if let snapshot = try? repository.fetchPreUpdateSnapshot(forSessionID: sessionID) {
             let outcome = await provider.restore(
                 activityId: snapshot.activityId,
@@ -744,23 +759,6 @@ struct TodayDiaryView: View {
                         actualsDemo.applyDecoration(cardID: cardID, state: .untouched)
                     }
                 }
-            }
-        }
-        // AMA-2407: clear server verified state too — no durable Counted, un-verify
-        // must not leave the sync flag pointing back to Verified on next pull.
-        // Keep local Verified until DELETE succeeds so a failed call does not
-        // bounce the card back to Verified on the next sync with no toast.
-        if let activityId = session.stravaActivityId {
-            do {
-                _ = try await BFFStravaClient.live().unverifySession(activityId: activityId)
-            } catch {
-                await MainActor.run {
-                    DDToastCenter.shared.error(
-                        "Couldn't un-verify on Strava",
-                        sub: error.localizedDescription
-                    )
-                }
-                return
             }
         }
         await MainActor.run {

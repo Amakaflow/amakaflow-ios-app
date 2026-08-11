@@ -68,13 +68,19 @@ final class ActualsHistoryViewModel: ObservableObject {
     /// AMA-2407: Verify as-is — mark Verified in AmakaFlow, never touch Strava.
     func applyKeepAsIs(cardID: String) async {
         guard let card = card(withID: cardID) else { return }
-        let session = ActualsTodayDemoFeed.makeVerifiedAsIsSession(
+        var verifiedSession = ActualsTodayDemoFeed.makeVerifiedAsIsSession(
             cardID: card.id,
             title: card.title,
             activity: card.activity
         )
+        let description = card.activity?.activityDescription
+            ?? verifiedSession.stravaCurrentDescription
+            ?? ""
+        if verifiedSession.rpe == nil {
+            verifiedSession.rpe = StravaWriteBackDecorator.rpeFromSignedDescription(description)
+        }
         do {
-            try repository.upsertVerifiedAsIs(session)
+            try repository.upsertVerifiedAsIs(verifiedSession)
         } catch {
             Logger(
                 subsystem: "com.myamaka.AmakaFlowCompanion",
@@ -82,13 +88,6 @@ final class ActualsHistoryViewModel: ObservableObject {
             ).error(
                 "Failed to persist verify-as-is for \(card.id, privacy: .public): \(error.localizedDescription, privacy: .public)"
             )
-        }
-        let description = card.activity?.activityDescription
-            ?? session.stravaCurrentDescription
-            ?? ""
-        var verifiedSession = session
-        if verifiedSession.rpe == nil {
-            verifiedSession.rpe = StravaWriteBackDecorator.rpeFromSignedDescription(description)
         }
         let decoration = ActualsTodayDemoFeed.decorationForLocalVerifyAsIs(
             sourceProvider: card.sourceProvider ?? card.activity?.provider,

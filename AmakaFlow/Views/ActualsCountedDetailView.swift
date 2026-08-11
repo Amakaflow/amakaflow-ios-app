@@ -23,11 +23,8 @@ enum ActualsStravaDescriptionPolicy {
     static func showsDescriptionSection(
         decoration: StravaDecorationState,
         stravaActivityId: String?,
-        cachedDescription: String,
-        hasExerciseRows: Bool = false
+        cachedDescription: String
     ) -> Bool {
-        // `hasExerciseRows` kept for call-site compatibility; `.ours` always hides.
-        _ = hasExerciseRows
         guard decoration != .ours else { return false }
         let hasActivityId = !(stravaActivityId ?? "")
             .trimmingCharacters(in: .whitespacesAndNewlines)

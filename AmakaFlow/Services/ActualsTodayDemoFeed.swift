@@ -472,24 +472,25 @@ final class ActualsTodayDemoFeed: ObservableObject {
     /// 5) broadcast so Today/History re-apply overlays.
     func applyKeepAsIs(unmappedCardID: String, client: BFFStravaClient? = nil) async {
         guard let card = cards.first(where: { $0.id == unmappedCardID }) else { return }
-        let session = Self.makeVerifiedAsIsSession(
+        var verifiedSession = Self.makeVerifiedAsIsSession(
             cardID: card.id,
             title: card.title,
             activity: card.activity
         )
+        let description = card.activity?.activityDescription
+            ?? verifiedSession.stravaCurrentDescription
+            ?? ""
+        // Recover RPE from a signed Strava footer before persist — card label and
+        // GRDB must agree (CodeRabbit AMA-2407).
+        if verifiedSession.rpe == nil {
+            verifiedSession.rpe = StravaWriteBackDecorator.rpeFromSignedDescription(description)
+        }
         do {
-            try repository.upsertVerifiedAsIs(session)
+            try repository.upsertVerifiedAsIs(verifiedSession)
         } catch {
             actualsTodayDemoFeedLog.error(
                 "Failed to persist verify-as-is for \(card.id, privacy: .public): \(error.localizedDescription, privacy: .public)"
             )
-        }
-        let description = card.activity?.activityDescription
-            ?? session.stravaCurrentDescription
-            ?? ""
-        var verifiedSession = session
-        if verifiedSession.rpe == nil {
-            verifiedSession.rpe = StravaWriteBackDecorator.rpeFromSignedDescription(description)
         }
         let decoration = Self.decorationForLocalVerifyAsIs(
             sourceProvider: card.sourceProvider ?? card.activity?.provider,
@@ -566,7 +567,11 @@ final class ActualsTodayDemoFeed: ObservableObject {
     /// AMA-2405: persist a lazy-fetched Strava description onto the card (+ activity-id cache).
     /// AMA-2407: if the text includes our signature, promote to Verified + `.ours`
     /// so athletes never re-verify a session AmakaFlow already wrote.
-    func applyActivityDescription(cardID: String, description: String) {
+    func applyActivityDescription(
+        cardID: String,
+        description: String,
+        client: BFFStravaClient? = nil
+    ) {
         guard let index = cards.firstIndex(where: { $0.id == cardID }) else { return }
         let updated = Self.applyingDescriptionAndSignedOwnership(
             to: cards[index],
@@ -597,7 +602,13 @@ final class ActualsTodayDemoFeed: ObservableObject {
         // omits descriptions) — mark that Strava id verified on our server.
         if promoted, StravaWriteBackDecorator.containsOurSignature(description) {
             let sessionId = updated.fillInSession?.id ?? cardID
-            Task { await self.markServerVerified(activityId: activityId, sessionId: sessionId) }
+            Task {
+                await self.markServerVerified(
+                    activityId: activityId,
+                    sessionId: sessionId,
+                    client: client
+                )
+            }
         }
     }
 
@@ -626,9 +637,14 @@ final class ActualsTodayDemoFeed: ObservableObject {
         }
     }
 
-    private func markServerVerified(activityId: String, sessionId: String) async {
+    private func markServerVerified(
+        activityId: String,
+        sessionId: String,
+        client: BFFStravaClient? = nil
+    ) async {
+        let stravaClient = client ?? BFFStravaClient.live()
         do {
-            _ = try await BFFStravaClient.live().verifySession(
+            _ = try await stravaClient.verifySession(
                 activityId: activityId,
                 amakaflowSessionId: sessionId
             )

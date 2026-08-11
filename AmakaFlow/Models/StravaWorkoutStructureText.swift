@@ -33,7 +33,6 @@ enum StravaWorkoutStructureText {
         var rows: [ExerciseActual] = []
         var header: String?
         var blockIndex = 0
-        var seen = Set<String>()
         for line in body.components(separatedBy: .newlines) {
             let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !trimmed.isEmpty else { continue }
@@ -43,11 +42,7 @@ enum StravaWorkoutStructureText {
                 continue
             }
             guard let parsed = parseExerciseLine(trimmed) else { continue }
-            var key = "\(slug(parsed.name))_\(rows.count)"
-            if seen.contains(key) {
-                key = "\(key)_\(rows.count)"
-            }
-            seen.insert(key)
+            let key = "\(slug(parsed.name))_\(rows.count)"
             rows.append(
                 ExerciseActual(
                     id: key,
@@ -355,7 +350,8 @@ enum StravaWorkoutStructureText {
     private static func plannedFromPrescription(_ prescription: String) -> ExerciseActualPlanned {
         let normalized = prescription
             .replacingOccurrences(of: "×", with: "x")
-            .replacingOccurrences(of: "·", with: "·")
+            .replacingOccurrences(of: "•", with: "·")
+            .replacingOccurrences(of: "∙", with: "·")
         // `2 x 4` / `3 x 12 · 20 KG` / `6 x 3:00`
         if let match = normalized.range(
             of: #"^(\d+)\s*x\s*(.+)$"#,

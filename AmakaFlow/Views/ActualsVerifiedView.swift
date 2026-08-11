@@ -29,7 +29,8 @@ struct ActualsVerifiedView: View {
     @State private var showMenu = false
     /// Local copy so silent Strava recovery can rebuild WHAT YOU DID rows.
     @State private var liveRows: [ActualsVerifiedDeltaRow]
-    @State private var didAttemptExerciseRecovery = false
+    /// Activity id whose recovery attempt already ran — a new id must retry.
+    @State private var recoveryAttemptedForActivityID: String?
 
     // Custom memberwise init below sets `liveRows` from `rows`.
 
@@ -137,10 +138,10 @@ struct ActualsVerifiedView: View {
     /// signed Strava description we already wrote and rebuild WHAT YOU DID.
     @MainActor
     private func recoverExercisesFromStravaIfNeeded() async {
-        guard !didAttemptExerciseRecovery else { return }
         guard liveRows.isEmpty else { return }
         guard let activityId = stravaActivityId, !activityId.isEmpty else { return }
-        didAttemptExerciseRecovery = true
+        guard recoveryAttemptedForActivityID != activityId else { return }
+        recoveryAttemptedForActivityID = activityId
 
         var description = stravaCurrentDescription
             .trimmingCharacters(in: .whitespacesAndNewlines)
@@ -190,8 +191,7 @@ struct ActualsVerifiedView: View {
                 if ActualsStravaDescriptionPolicy.showsDescriptionSection(
                     decoration: decoration,
                     stravaActivityId: stravaActivityId,
-                    cachedDescription: stravaCurrentDescription,
-                    hasExerciseRows: !liveRows.isEmpty
+                    cachedDescription: stravaCurrentDescription
                 ) {
                     ActualsStravaDescriptionSection(
                         stravaActivityId: stravaActivityId,
