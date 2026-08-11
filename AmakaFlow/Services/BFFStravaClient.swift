@@ -52,6 +52,12 @@ struct StravaCompletedActivityDTO: Codable, Equatable, Sendable, Identifiable {
     /// athlete's local day (the 18:34 / 12:19 regression).
     let startDateLocal: String?
     let description: String
+    /// AMA-2407: server-side verified-in-AmakaFlow flag — hydrates `.verified`
+    /// cards from sync without waiting for a local GRDB row.
+    let amakaflowVerified: Bool
+    /// AMA-2407: true once AmakaFlow has written this activity's Strava text —
+    /// drives `.ours` decoration without re-detecting the signature client-side.
+    let amakaflowWroteStrava: Bool
 
     enum CodingKeys: String, CodingKey {
         case stravaId = "strava_id"
@@ -62,6 +68,8 @@ struct StravaCompletedActivityDTO: Codable, Equatable, Sendable, Identifiable {
         case startDate = "start_date"
         case startDateLocal = "start_date_local"
         case description
+        case amakaflowVerified = "amakaflow_verified"
+        case amakaflowWroteStrava = "amakaflow_wrote_strava"
     }
 
     init(
@@ -72,7 +80,9 @@ struct StravaCompletedActivityDTO: Codable, Equatable, Sendable, Identifiable {
         durationMin: Int,
         startDate: String,
         startDateLocal: String? = nil,
-        description: String
+        description: String,
+        amakaflowVerified: Bool = false,
+        amakaflowWroteStrava: Bool = false
     ) {
         self.stravaId = stravaId
         self.name = name
@@ -82,6 +92,24 @@ struct StravaCompletedActivityDTO: Codable, Equatable, Sendable, Identifiable {
         self.startDate = startDate
         self.startDateLocal = startDateLocal
         self.description = description
+        self.amakaflowVerified = amakaflowVerified
+        self.amakaflowWroteStrava = amakaflowWroteStrava
+    }
+
+    /// Backend contract lands `amakaflow_verified` / `amakaflow_wrote_strava` in
+    /// parallel — default to `false` so an older BFF response still decodes.
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        stravaId = try container.decode(Int.self, forKey: .stravaId)
+        name = try container.decode(String.self, forKey: .name)
+        type = try container.decode(String.self, forKey: .type)
+        distanceKm = try container.decode(Double.self, forKey: .distanceKm)
+        durationMin = try container.decode(Int.self, forKey: .durationMin)
+        startDate = try container.decode(String.self, forKey: .startDate)
+        startDateLocal = try container.decodeIfPresent(String.self, forKey: .startDateLocal)
+        description = try container.decode(String.self, forKey: .description)
+        amakaflowVerified = try container.decodeIfPresent(Bool.self, forKey: .amakaflowVerified) ?? false
+        amakaflowWroteStrava = try container.decodeIfPresent(Bool.self, forKey: .amakaflowWroteStrava) ?? false
     }
 }
 
@@ -305,6 +333,19 @@ nonisolated final class BFFStravaClient: @unchecked Sendable {
             path: "strava/activities/\(activityId)/verify",
             queryItems: [URLQueryItem(name: "userId", value: userId)],
             bodyData: bodyData
+        )
+    }
+
+    /// DELETE `/v1/strava/activities/{id}/verify?userId=` — AMA-2407 server-side
+    /// un-verify. Clears `amakaflow_verified` upstream so re-sync stops hydrating
+    /// this activity as Verified.
+    func unverifySession(activityId: String) async throws -> StravaVerifySessionResultDTO {
+        let userId = try await requireUserID()
+        return try await send(
+            method: "DELETE",
+            path: "strava/activities/\(activityId)/verify",
+            queryItems: [URLQueryItem(name: "userId", value: userId)],
+            bodyData: nil
         )
     }
 

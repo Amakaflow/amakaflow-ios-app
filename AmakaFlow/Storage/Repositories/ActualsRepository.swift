@@ -326,6 +326,68 @@ final class ActualsRepository: @unchecked Sendable {
     }
 }
 
+// MARK: - AMA-2407 Verify as-is (no durable "Counted" state)
+
+extension ActualsRepository {
+    /// Mark verified without RPE or confirmed exercise rows. Strava's own
+    /// metrics stand as the record; there is nothing to confirm per-exercise,
+    /// but the product rule is still "Verified or Fill in" — never a separate
+    /// durable "Counted" state.
+    func upsertVerifiedAsIs(_ session: ActualsFillInSession) throws {
+        let timestamp = now()
+        try dbQueue.write { database in
+            var header = LocalActualsSession(
+                id: session.id,
+                title: session.title,
+                subtitle: session.subtitle,
+                rpe: session.rpe,
+                verified: true,
+                savedAt: timestamp,
+                createdAt: timestamp,
+                stravaActivityId: session.stravaActivityId,
+                stravaActivityType: session.stravaActivityType,
+                stravaCurrentDescription: session.stravaCurrentDescription,
+                stravaRecordingApp: session.stravaRecordingApp,
+                stravaIsRace: session.stravaIsRace,
+                structureBody: session.structureBody
+            )
+            if let existing = try LocalActualsSession.fetchOne(database, key: session.id) {
+                header.preserveWriteBack(from: existing)
+            }
+            try header.upsert(database)
+
+            // Verify as-is carries no exercises — never delete actuals the athlete
+            // already filled in for this session id.
+            guard !session.exercises.isEmpty else { return }
+
+            try LocalActualsExerciseRow
+                .filter(LocalActualsExerciseRow.Columns.sessionId == session.id)
+                .deleteAll(database)
+
+            for (index, exercise) in session.exercises.enumerated() {
+                var row = LocalActualsExerciseRow(
+                    id: "\(session.id)_\(exercise.id)",
+                    sessionId: session.id,
+                    exerciseKey: exercise.id,
+                    name: exercise.name,
+                    plannedSets: exercise.planned.sets,
+                    plannedReps: exercise.planned.reps,
+                    plannedWeightKg: exercise.planned.weightKg,
+                    plannedNote: exercise.planned.note,
+                    confirmation: exercise.confirmation?.rawValue ?? "",
+                    actualSets: exercise.actualSets,
+                    actualReps: exercise.actualReps,
+                    actualWeightKg: exercise.actualWeightKg,
+                    position: index,
+                    structureHeader: exercise.structureHeader,
+                    structureBlockIndex: exercise.structureBlockIndex
+                )
+                try row.insert(database)
+            }
+        }
+    }
+}
+
 // MARK: - AMA-2405 Strava description cache (activity-id keyed)
 
 extension ActualsRepository {

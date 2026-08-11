@@ -12,7 +12,7 @@ struct ActualsVerifiedView: View {
     let title: String
     let metaLine: String
     let sourceName: String
-    let rpe: Int
+    let rpe: Int?
     let rows: [ActualsVerifiedDeltaRow]
     let decoration: StravaDecorationState
     let stravaActivityId: String?
@@ -27,6 +27,12 @@ struct ActualsVerifiedView: View {
 
     @Environment(\.dismiss) private var dismiss
     @State private var showMenu = false
+    /// Local copy so silent Strava recovery can rebuild WHAT YOU DID rows.
+    @State private var liveRows: [ActualsVerifiedDeltaRow]
+    /// Activity id whose recovery attempt already ran — a new id must retry.
+    @State private var recoveryAttemptedForActivityID: String?
+
+    // Custom memberwise init below sets `liveRows` from `rows`.
 
     init(
         session: ActualsFillInSession,
@@ -42,11 +48,15 @@ struct ActualsVerifiedView: View {
     ) {
         self.title = session.title
         self.sourceName = sourceName
-        self.rpe = session.rpe ?? 0
-        self.rows = ActualsVerifiedDeltas.rows(from: session.exercises)
+        let description = session.stravaCurrentDescription ?? ""
+        self.rpe = session.rpe
+            ?? StravaWriteBackDecorator.rpeFromSignedDescription(description)
+        let deltaRows = ActualsVerifiedDeltas.rows(from: session.exercises)
+        self.rows = deltaRows
+        self._liveRows = State(initialValue: deltaRows)
         self.decoration = decoration
         self.stravaActivityId = session.stravaActivityId
-        self.stravaCurrentDescription = session.stravaCurrentDescription ?? ""
+        self.stravaCurrentDescription = description
         self.onEditActuals = onEditActuals
         self.onWriteToStrava = onWriteToStrava
         self.onRemoveFromStrava = onRemoveFromStrava
@@ -56,7 +66,9 @@ struct ActualsVerifiedView: View {
         if let metaLine {
             self.metaLine = metaLine
         } else {
-            let rpeText = session.rpe.map { " · RPE \($0)" } ?? ""
+            let resolvedRPE = session.rpe
+                ?? StravaWriteBackDecorator.rpeFromSignedDescription(description)
+            let rpeText = resolvedRPE.map { " · RPE \($0)" } ?? ""
             self.metaLine = "\(session.subtitle) · FROM \(sourceName.uppercased())\(rpeText)"
         }
     }
@@ -122,6 +134,40 @@ struct ActualsVerifiedView: View {
         return rows
     }
 
+    /// When local GRDB has Verified + OURS but empty rows (fresh sim), pull the
+    /// signed Strava description we already wrote and rebuild WHAT YOU DID.
+    @MainActor
+    private func recoverExercisesFromStravaIfNeeded() async {
+        guard liveRows.isEmpty else { return }
+        guard let activityId = stravaActivityId, !activityId.isEmpty else { return }
+        guard recoveryAttemptedForActivityID != activityId else { return }
+        recoveryAttemptedForActivityID = activityId
+
+        var description = stravaCurrentDescription
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        if description.isEmpty || !StravaWriteBackDecorator.containsOurSignature(description) {
+            do {
+                let detail = try await BFFStravaClient.live().getActivityDetail(
+                    activityId: activityId
+                )
+                description = detail.description
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+            } catch {
+                return
+            }
+        }
+        guard StravaWriteBackDecorator.containsOurSignature(description) else { return }
+        let recovered = StravaWorkoutStructureText.fillInExercises(
+            fromSignedDescription: description
+        )
+        guard !recovered.isEmpty else {
+            onStravaDescriptionLoaded?(description)
+            return
+        }
+        liveRows = ActualsVerifiedDeltas.rows(from: recovered)
+        onStravaDescriptionLoaded?(description)
+    }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
@@ -136,7 +182,7 @@ struct ActualsVerifiedView: View {
                 ActualsVerifiedCard(
                     sourceName: sourceName,
                     rpe: rpe,
-                    rows: rows
+                    rows: liveRows
                 )
                 .padding(.top, 12)
 
@@ -164,6 +210,9 @@ struct ActualsVerifiedView: View {
         .background(DailyDriver.screenBackground.ignoresSafeArea())
         .preferredColorScheme(.dark)
         .ddSuppressFloatingChrome()
+        .task(id: stravaActivityId) {
+            await recoverExercisesFromStravaIfNeeded()
+        }
         .sheet(isPresented: $showMenu) {
             ActualsVerifiedMenuSheet(rows: menuRows) { row in
                 showMenu = false

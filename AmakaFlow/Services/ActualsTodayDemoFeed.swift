@@ -24,9 +24,10 @@ struct ActualsTodayDemoCard: Identifiable, Equatable {
         case merged
         case unmapped
         case fillInDebt
+        /// AMA-2407: durable end state — includes both fill-in verified sessions
+        /// and "Verify as-is" (no exercises, no RPE). There is no separate
+        /// durable "Counted" kind — product rule is Verified or Fill in, only.
         case verified
-        /// AMA-2396: keep-as-is — counts in Progress, no fill-in debt.
-        case counted
     }
 
     let id: String
@@ -93,25 +94,25 @@ struct ActualsTodayDemoCard: Identifiable, Equatable {
         )
     }
 
-    func markingCounted() -> ActualsTodayDemoCard {
-        let provider = sourceProvider ?? activity?.provider
-        // Strava decoration is a statement about Strava — never promote it on Garmin/AH cards.
-        let nextDecoration: StravaDecorationState = {
-            guard provider == .strava else { return stravaDecoration }
-            return stravaDecoration == .none ? .untouched : stravaDecoration
-        }()
-        return ActualsTodayDemoCard(
+    /// AMA-2407: Verify as-is — mark Verified in AmakaFlow only (no Strava write).
+    /// Replaces the AMA-2396/2405 "Keep as-is → Counted" path; there is no
+    /// durable Counted state, only Verified or Fill in.
+    func markingVerifiedAsIs(
+        with verifiedSession: ActualsFillInSession,
+        decoration: StravaDecorationState
+    ) -> ActualsTodayDemoCard {
+        ActualsTodayDemoCard(
             id: id,
-            kind: .counted,
+            kind: .verified,
             timeLabel: timeLabel,
-            title: title,
+            title: verifiedSession.title,
             stats: stats,
-            sourceLabel: "Kept as-is",
-            sourceProvider: provider,
+            sourceLabel: verifiedSession.rpe.map { "Verified · RPE \($0)" } ?? "Verified · as-is",
+            sourceProvider: sourceProvider ?? activity?.provider,
             session: session,
             activity: activity,
-            fillInSession: fillInSession,
-            stravaDecoration: nextDecoration
+            fillInSession: verifiedSession,
+            stravaDecoration: decoration
         )
     }
 
@@ -279,6 +280,9 @@ final class ActualsTodayDemoFeed: ObservableObject {
             }
             // Re-apply local match/verify so a Strava re-pull does not wipe Save state.
             cards = Self.applyLocalOverlays(to: windowCards, repository: repository)
+            // Signature / wrote-Strava without a server verified row yet — mark
+            // those Strava ids verified on our end so the next pull is durable.
+            await ensureServerVerifiedForLinkedActivities(activities, client: client)
         } catch is StravaLogicalSyncFailure {
             showMergeAsk = false
             cards = []
@@ -392,8 +396,37 @@ final class ActualsTodayDemoFeed: ObservableObject {
                 : String(format: "%.1f km", kilometers)
             stats.append(("figure.run", distanceText))
         }
+        let cardID = "strava_\(activity.stravaId)"
+        // AMA-2407: hydrate Verified from sync flags OR our ownership signature in
+        // the Strava description ("— tracked with AmakaFlow"). Signature means
+        // already linked — show STRAVA ✓ OURS, never ask to verify again.
+        let hasOurSignature = StravaWriteBackDecorator.containsOurSignature(activity.description)
+        if activity.amakaflowVerified || activity.amakaflowWroteStrava || hasOurSignature {
+            var session = makeVerifiedAsIsSession(cardID: cardID, title: activity.name, activity: unmapped)
+            if session.rpe == nil {
+                session.rpe = StravaWriteBackDecorator.rpeFromSignedDescription(activity.description)
+            }
+            let decoration = decorationFromSyncFlags(
+                wroteStrava: activity.amakaflowWroteStrava,
+                description: activity.description
+            )
+            let sourceLabel = session.rpe.map { "Verified · RPE \($0)" } ?? "Verified · as-is"
+            return ActualsTodayDemoCard(
+                id: cardID,
+                kind: .verified,
+                timeLabel: cardTimeFormatter.string(from: startDate),
+                title: activity.name,
+                stats: stats,
+                sourceLabel: sourceLabel,
+                sourceProvider: .strava,
+                session: nil,
+                activity: unmapped,
+                fillInSession: session,
+                stravaDecoration: decoration
+            )
+        }
         return ActualsTodayDemoCard(
-            id: "strava_\(activity.stravaId)",
+            id: cardID,
             kind: .unmapped,
             timeLabel: cardTimeFormatter.string(from: startDate),
             title: activity.name,
@@ -433,17 +466,124 @@ final class ActualsTodayDemoFeed: ObservableObject {
         return String(cardID.dropFirst(prefix.count))
     }
 
-    /// AMA-2396: Keep as-is marks the session counted (Progress), clears fill-in debt.
-    func applyKeepAsIs(unmappedCardID: String) {
-        guard let index = cards.firstIndex(where: { $0.id == unmappedCardID }) else { return }
-        cards[index] = cards[index].markingCounted()
+    /// AMA-2407: Verify as-is — mark Verified in AmakaFlow, never touch Strava.
+    /// 1) build a verified-as-is session, 2) persist locally, 3) call server
+    /// verify (no write-back), 4) flip the card to `.verified`/`.untouched`,
+    /// 5) broadcast so Today/History re-apply overlays.
+    func applyKeepAsIs(unmappedCardID: String, client: BFFStravaClient? = nil) async {
+        guard let card = cards.first(where: { $0.id == unmappedCardID }) else { return }
+        var verifiedSession = Self.makeVerifiedAsIsSession(
+            cardID: card.id,
+            title: card.title,
+            activity: card.activity
+        )
+        let description = card.activity?.activityDescription
+            ?? verifiedSession.stravaCurrentDescription
+            ?? ""
+        // Recover RPE from a signed Strava footer before persist — card label and
+        // GRDB must agree (CodeRabbit AMA-2407).
+        if verifiedSession.rpe == nil {
+            verifiedSession.rpe = StravaWriteBackDecorator.rpeFromSignedDescription(description)
+        }
+        do {
+            try repository.upsertVerifiedAsIs(verifiedSession)
+        } catch {
+            actualsTodayDemoFeedLog.error(
+                "Failed to persist verify-as-is for \(card.id, privacy: .public): \(error.localizedDescription, privacy: .public)"
+            )
+        }
+        let decoration = Self.decorationForLocalVerifyAsIs(
+            sourceProvider: card.sourceProvider ?? card.activity?.provider,
+            description: description
+        )
+        try? repository.storeDecoration(decoration, forSessionID: verifiedSession.id)
+        if let index = cards.firstIndex(where: { $0.id == unmappedCardID }) {
+            cards[index] = cards[index].markingVerifiedAsIs(
+                with: verifiedSession,
+                decoration: decoration
+            )
+        }
+        NotificationCenter.default.post(name: .actualsLocalSessionsDidChange, object: nil)
+
+        guard let activityId = verifiedSession.stravaActivityId else { return }
+        let verifyClient = client ?? BFFStravaClient.live()
+        do {
+            _ = try await verifyClient.verifySession(
+                activityId: activityId,
+                amakaflowSessionId: verifiedSession.id
+            )
+        } catch {
+            // Best-effort — local state already reads Verified; next sync pull
+            // reconciles the server flag if this call didn't land.
+            actualsTodayDemoFeedLog.error(
+                "Strava verify call failed for activity \(activityId, privacy: .public): \(error.localizedDescription, privacy: .public)"
+            )
+        }
+    }
+
+    /// Synthesize a verified-as-is fill-in session — no exercises/RPE required,
+    /// Strava's own metrics stand as the record (AMA-2407).
+    static func makeVerifiedAsIsSession(
+        cardID: String,
+        title: String,
+        activity: ActualsUnmappedActivity?
+    ) -> ActualsFillInSession {
+        ActualsFillInSession(
+            id: cardID,
+            title: title,
+            subtitle: "\(title.uppercased()) · VERIFIED AS-IS",
+            exercises: [],
+            rpe: nil,
+            verified: true,
+            stravaActivityId: stravaActivityId(fromCardID: cardID),
+            stravaActivityType: activity?.stravaTypeRaw,
+            stravaCurrentDescription: activity?.activityDescription,
+            stravaRecordingApp: activity?.recordingApp,
+            stravaIsRace: activity?.isRace ?? false,
+            structureBody: nil
+        )
+    }
+
+    /// `.ours` when AmakaFlow already wrote Strava (server flag or our own
+    /// signature in the description); `.untouched` for a plain verify-as-is.
+    static func decorationFromSyncFlags(wroteStrava: Bool, description: String) -> StravaDecorationState {
+        if wroteStrava || StravaWriteBackDecorator.containsOurSignature(description) {
+            return .ours
+        }
+        return .untouched
+    }
+
+    /// Strava decoration is a statement about Strava — never promote it on
+    /// Garmin/Apple Health cards. When the Strava body already carries our
+    /// ownership signature, treat as `.ours` (already linked) — not UNTOUCHED.
+    static func decorationForLocalVerifyAsIs(
+        sourceProvider: ActualsSourceProvider?,
+        description: String = ""
+    ) -> StravaDecorationState {
+        guard sourceProvider == .strava else { return .none }
+        return decorationFromSyncFlags(wroteStrava: false, description: description)
     }
 
     /// AMA-2405: persist a lazy-fetched Strava description onto the card (+ activity-id cache).
-    func applyActivityDescription(cardID: String, description: String) {
+    /// AMA-2407: if the text includes our signature, promote to Verified + `.ours`
+    /// so athletes never re-verify a session AmakaFlow already wrote.
+    func applyActivityDescription(
+        cardID: String,
+        description: String,
+        client: BFFStravaClient? = nil
+    ) {
         guard let index = cards.firstIndex(where: { $0.id == cardID }) else { return }
-        let updated = cards[index].withActivityDescription(description)
+        let updated = Self.applyingDescriptionAndSignedOwnership(
+            to: cards[index],
+            description: description,
+            repository: repository
+        )
+        let promoted = (updated.kind == .verified && cards[index].kind != .verified)
+            || (updated.stravaDecoration == .ours && cards[index].stravaDecoration != .ours)
         cards[index] = updated
+        if promoted {
+            NotificationCenter.default.post(name: .actualsLocalSessionsDidChange, object: nil)
+        }
         let activityId = updated.fillInSession?.stravaActivityId
             ?? Self.stravaActivityId(fromCardID: cardID)
         guard let activityId, !activityId.isEmpty else { return }
@@ -458,6 +598,159 @@ final class ActualsTodayDemoFeed: ObservableObject {
                 "Failed to persist Strava description for activity \(activityId, privacy: .public): \(error.localizedDescription, privacy: .public)"
             )
         }
+        // Lazy detail is often the first place we see the signature (list sync
+        // omits descriptions) — mark that Strava id verified on our server.
+        if promoted, StravaWriteBackDecorator.containsOurSignature(description) {
+            let sessionId = updated.fillInSession?.id ?? cardID
+            Task {
+                await self.markServerVerified(
+                    activityId: activityId,
+                    sessionId: sessionId,
+                    client: client
+                )
+            }
+        }
+    }
+
+    /// Best-effort POST `/verify` for activities AmakaFlow already linked
+    /// (signature or wrote-Strava) but that lack `amakaflow_verified` yet.
+    func ensureServerVerifiedForLinkedActivities(
+        _ activities: [StravaCompletedActivityDTO],
+        client: BFFStravaClient
+    ) async {
+        for activity in activities {
+            let signed = StravaWriteBackDecorator.containsOurSignature(activity.description)
+            guard signed || activity.amakaflowWroteStrava else { continue }
+            guard !activity.amakaflowVerified else { continue }
+            let activityId = String(activity.stravaId)
+            let sessionId = "strava_\(activity.stravaId)"
+            do {
+                _ = try await client.verifySession(
+                    activityId: activityId,
+                    amakaflowSessionId: sessionId
+                )
+            } catch {
+                actualsTodayDemoFeedLog.error(
+                    "Auto-verify failed for linked activity \(activityId, privacy: .public): \(error.localizedDescription, privacy: .public)"
+                )
+            }
+        }
+    }
+
+    private func markServerVerified(
+        activityId: String,
+        sessionId: String,
+        client: BFFStravaClient? = nil
+    ) async {
+        let stravaClient = client ?? BFFStravaClient.live()
+        do {
+            _ = try await stravaClient.verifySession(
+                activityId: activityId,
+                amakaflowSessionId: sessionId
+            )
+        } catch {
+            actualsTodayDemoFeedLog.error(
+                "Auto-verify failed for activity \(activityId, privacy: .public): \(error.localizedDescription, privacy: .public)"
+            )
+        }
+    }
+
+    /// Cache description and, when it carries our AmakaFlow signature, flip the
+    /// card to Verified + `STRAVA ✓ OURS`. Prefer an existing fill-in / matched
+    /// session with exercise rows (image‑1 verified chrome) — never replace that
+    /// with verify-as-is + a Strava description dump.
+    static func applyingDescriptionAndSignedOwnership(
+        to card: ActualsTodayDemoCard,
+        description: String,
+        repository: ActualsRepository?
+    ) -> ActualsTodayDemoCard {
+        var next = card.withActivityDescription(description)
+        let provider = next.sourceProvider ?? next.activity?.provider
+        guard provider == .strava,
+              StravaWriteBackDecorator.containsOurSignature(description) else {
+            return next
+        }
+        let activityId = next.fillInSession?.stravaActivityId
+            ?? stravaActivityId(fromCardID: next.id)
+        let persisted: ActualsFillInSession? = {
+            guard let repository, let activityId else { return nil }
+            return (try? repository.fetchSessionsKeyedByStravaActivityId())?[activityId]
+        }()
+        var session = richerFillInSession(
+            next.fillInSession,
+            persisted,
+            fallbackAsIsCardID: next.id,
+            title: next.title,
+            activity: next.activity
+        )
+        // Local GRDB may be empty on a fresh sim — recover rows from the
+        // signed Strava body we already wrote (same data image‑2 shows).
+        if session.exercises.isEmpty {
+            let recovered = StravaWorkoutStructureText.fillInExercises(
+                fromSignedDescription: description
+            )
+            if !recovered.isEmpty {
+                let rpe = session.rpe
+                    ?? StravaWriteBackDecorator.rpeFromSignedDescription(description)
+                session = ActualsFillInSession(
+                    id: session.id,
+                    title: session.title,
+                    subtitle: "\(session.title.uppercased()) · MATCHED",
+                    exercises: recovered,
+                    rpe: rpe,
+                    verified: true,
+                    stravaActivityId: session.stravaActivityId
+                        ?? stravaActivityId(fromCardID: next.id),
+                    stravaActivityType: session.stravaActivityType
+                        ?? next.activity?.stravaTypeRaw,
+                    stravaCurrentDescription: description,
+                    stravaRecordingApp: session.stravaRecordingApp
+                        ?? next.activity?.recordingApp,
+                    stravaIsRace: session.stravaIsRace,
+                    structureBody: StravaWorkoutStructureText
+                        .structureBodyStrippingOwnershipFooter(description)
+                )
+            }
+        }
+        session.verified = true
+        session.stravaCurrentDescription = description
+        if session.rpe == nil {
+            session.rpe = StravaWriteBackDecorator.rpeFromSignedDescription(description)
+        }
+        if let repository {
+            // upsertVerifiedAsIs keeps existing exercise rows when `exercises` is
+            // empty, and rewrites them when present — never invents as-is over a
+            // richer matched session we already preferred above.
+            try? repository.upsertVerifiedAsIs(session)
+            try? repository.storeDecoration(.ours, forSessionID: session.id)
+        }
+        if session.exercises.isEmpty {
+            return next.markingVerifiedAsIs(with: session, decoration: .ours)
+        }
+        // Image‑1 chrome: exercise deltas, not a Strava description dump.
+        return next.markingVerified(with: session).withDecoration(.ours)
+    }
+
+    /// Prefer the session that still has fill-in exercise rows (post-verify UI).
+    static func richerFillInSession(
+        _ primary: ActualsFillInSession?,
+        _ secondary: ActualsFillInSession?,
+        fallbackAsIsCardID: String,
+        title: String,
+        activity: ActualsUnmappedActivity?
+    ) -> ActualsFillInSession {
+        let candidates = [primary, secondary].compactMap { $0 }
+        if let best = candidates.max(by: { $0.exercises.count < $1.exercises.count }),
+           !best.exercises.isEmpty {
+            return best
+        }
+        return primary
+            ?? secondary
+            ?? makeVerifiedAsIsSession(
+                cardID: fallbackAsIsCardID,
+                title: title,
+                activity: activity
+            )
     }
 
     /// AMA-2396 A3: un-verify — actuals kept as draft, RPE cleared, badge cleared.
@@ -722,77 +1015,166 @@ final class ActualsTodayDemoFeed: ObservableObject {
         let byStrava = ((try? repository.fetchSessionsKeyedByStravaActivityId()) ?? [:])
             .filter { !ActualsRepository.isDescriptionCacheSession(id: $0.value.id) }
         return cards.map { card in
-            var next = card
-            if let activityId = stravaActivityId(fromCardID: card.id),
-               let cached = cachedDescriptions[activityId],
-               !cached.isEmpty {
-                let existing = next.activity?.activityDescription
-                    ?? next.fillInSession?.stravaCurrentDescription
-                    ?? ""
-                if existing.isEmpty {
-                    next = next.withActivityDescription(cached)
-                }
-            }
-            guard let activityId = stravaActivityId(fromCardID: next.id),
-                  var session = byStrava[activityId] else {
-                return next
-            }
-            // Cold-launch DB rows may predate V6 metadata — fill from the live Strava card.
-            if let activity = next.activity {
-                if session.stravaActivityId == nil { session.stravaActivityId = activityId }
-                if session.stravaActivityType == nil {
-                    session.stravaActivityType = activity.stravaTypeRaw
-                }
-                if session.stravaCurrentDescription == nil {
-                    session.stravaCurrentDescription = activity.activityDescription
-                }
-                if session.stravaRecordingApp == nil {
-                    session.stravaRecordingApp = activity.recordingApp
-                }
-                session.stravaIsRace = activity.isRace
-            }
-            let decoration = (try? repository.fetchDecoration(forSessionID: session.id)) ?? next.stravaDecoration
-            if session.verified {
-                return ActualsTodayDemoCard(
-                    id: next.id,
-                    kind: .verified,
-                    timeLabel: next.timeLabel,
-                    title: session.title,
-                    stats: next.stats,
-                    sourceLabel: "Verified · RPE \(session.rpe ?? 0)",
-                    sourceProvider: next.sourceProvider ?? next.activity?.provider ?? .strava,
-                    session: next.session,
-                    activity: next.activity,
-                    fillInSession: session,
-                    stravaDecoration: decoration
-                )
-            }
-            let matched = makeMatchedCard(
-                request: MatchedCardRequest(
-                    cardID: next.id,
-                    timeLabel: next.timeLabel,
-                    title: session.title,
-                    activity: next.activity,
-                    blockSummaries: session.exercises.map(\.name),
-                    sourceLabel: "Matched · \(ActualsCopy.sourceDisplayName(next.activity?.provider ?? .strava))",
-                    structureBody: session.structureBody,
-                    seedExercises: session.exercises
-                )
-            )
-            return ActualsTodayDemoCard(
-                id: matched.id,
-                kind: .fillInDebt,
-                timeLabel: matched.timeLabel,
-                title: session.title,
-                stats: matched.stats,
-                sourceLabel: matched.sourceLabel,
-                sourceProvider: matched.sourceProvider,
-                session: matched.session,
-                activity: matched.activity,
-                fillInSession: session,
-                stravaDecoration: decoration
+            overlayLocalSession(
+                on: applyCachedDescription(to: card, cached: cachedDescriptions),
+                byStrava: byStrava,
+                repository: repository
             )
         }
+    }
+
+    private static func applyCachedDescription(
+        to card: ActualsTodayDemoCard,
+        cached: [String: String]
+    ) -> ActualsTodayDemoCard {
+        guard let activityId = stravaActivityId(fromCardID: card.id),
+              let description = cached[activityId],
+              !description.isEmpty else {
+            return card
+        }
+        let existing = card.activity?.activityDescription
+            ?? card.fillInSession?.stravaCurrentDescription
+            ?? ""
+        guard existing.isEmpty else { return card }
+        return card.withActivityDescription(description)
+    }
+
+    private static func overlayLocalSession(
+        on card: ActualsTodayDemoCard,
+        byStrava: [String: ActualsFillInSession],
+        repository: ActualsRepository
+    ) -> ActualsTodayDemoCard {
+        let liveDescription = card.activity?.activityDescription
+            ?? card.fillInSession?.stravaCurrentDescription
+            ?? ""
+        let signed = StravaWriteBackDecorator.containsOurSignature(liveDescription)
+            && (card.sourceProvider ?? card.activity?.provider) == .strava
+        guard let activityId = stravaActivityId(fromCardID: card.id),
+              var session = byStrava[activityId] else {
+            guard signed else { return card }
+            return applyingDescriptionAndSignedOwnership(
+                to: card,
+                description: liveDescription,
+                repository: repository
+            )
+        }
+        hydrateSessionMetadata(&session, activityId: activityId, from: card.activity)
+        var decoration = (try? repository.fetchDecoration(forSessionID: session.id))
+            ?? card.stravaDecoration
+        let descriptionForDecoration = session.stravaCurrentDescription
+            ?? card.activity?.activityDescription
+            ?? liveDescription
+        if decoration != .ours,
+           StravaWriteBackDecorator.containsOurSignature(descriptionForDecoration) {
+            decoration = .ours
+            try? repository.storeDecoration(.ours, forSessionID: session.id)
+        }
+        // AMA-2407: server flags win — a stale local draft must never downgrade
+        // a card the sync already reports Verified back to fill-in debt.
+        if session.verified || card.kind == .verified || signed {
+            return verifiedOverlayCard(
+                VerifiedOverlayRequest(
+                    card: card,
+                    session: session,
+                    signed: signed,
+                    decoration: decoration,
+                    descriptionForDecoration: descriptionForDecoration
+                ),
+                repository: repository
+            )
+        }
+        let matched = makeMatchedCard(
+            request: MatchedCardRequest(
+                cardID: card.id,
+                timeLabel: card.timeLabel,
+                title: session.title,
+                activity: card.activity,
+                blockSummaries: session.exercises.map(\.name),
+                sourceLabel: "Matched · \(ActualsCopy.sourceDisplayName(card.activity?.provider ?? .strava))",
+                structureBody: session.structureBody,
+                seedExercises: session.exercises
+            )
+        )
+        return ActualsTodayDemoCard(
+            id: matched.id,
+            kind: .fillInDebt,
+            timeLabel: matched.timeLabel,
+            title: session.title,
+            stats: matched.stats,
+            sourceLabel: matched.sourceLabel,
+            sourceProvider: matched.sourceProvider,
+            session: matched.session,
+            activity: matched.activity,
+            fillInSession: session,
+            stravaDecoration: decoration
+        )
+    }
+
+    private static func hydrateSessionMetadata(
+        _ session: inout ActualsFillInSession,
+        activityId: String,
+        from activity: ActualsUnmappedActivity?
+    ) {
+        guard let activity else { return }
+        if session.stravaActivityId == nil { session.stravaActivityId = activityId }
+        if session.stravaActivityType == nil {
+            session.stravaActivityType = activity.stravaTypeRaw
+        }
+        if session.stravaCurrentDescription == nil {
+            session.stravaCurrentDescription = activity.activityDescription
+        }
+        if session.stravaRecordingApp == nil {
+            session.stravaRecordingApp = activity.recordingApp
+        }
+        session.stravaIsRace = activity.isRace
+    }
+
+    private struct VerifiedOverlayRequest {
+        let card: ActualsTodayDemoCard
+        let session: ActualsFillInSession
+        let signed: Bool
+        let decoration: StravaDecorationState
+        let descriptionForDecoration: String
+    }
+
+    private static func verifiedOverlayCard(
+        _ request: VerifiedOverlayRequest,
+        repository: ActualsRepository
+    ) -> ActualsTodayDemoCard {
+        let card = request.card
+        var effectiveSession = richerFillInSession(
+            request.session,
+            card.fillInSession,
+            fallbackAsIsCardID: card.id,
+            title: card.title,
+            activity: card.activity
+        )
+        effectiveSession.verified = true
+        if effectiveSession.rpe == nil {
+            effectiveSession.rpe = StravaWriteBackDecorator.rpeFromSignedDescription(
+                request.descriptionForDecoration
+            )
+        }
+        var nextDecoration = request.decoration
+        if request.signed || nextDecoration == .ours {
+            nextDecoration = .ours
+            try? repository.storeDecoration(.ours, forSessionID: effectiveSession.id)
+        }
+        let sourceLabel = effectiveSession.rpe.map { "Verified · RPE \($0)" }
+            ?? (effectiveSession.exercises.isEmpty ? "Verified · as-is" : "Verified")
+        return ActualsTodayDemoCard(
+            id: card.id,
+            kind: .verified,
+            timeLabel: card.timeLabel,
+            title: effectiveSession.title,
+            stats: card.stats,
+            sourceLabel: sourceLabel,
+            sourceProvider: card.sourceProvider ?? card.activity?.provider ?? .strava,
+            session: card.session,
+            activity: card.activity,
+            fillInSession: effectiveSession,
+            stravaDecoration: nextDecoration
+        )
     }
 
     private func upsertCard(

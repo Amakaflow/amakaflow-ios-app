@@ -113,7 +113,7 @@ enum ActualsCopy {
     static let mapOrMatchHeader = "OR MATCH A LIBRARY WORKOUT"
     static let mapBestMatchesHeader = "BEST MATCHES — SAME DAY, SAME SHAPE"
     static let mapSearchAllCTA = "Search all workouts"
-    static let mapKeepAsIsCTA = "It was just a run — keep as is"
+    static let mapKeepAsIsCTA = "It was just a run — verify as-is"
     static let mapKeepAsIsAccessibilityID = "af_actuals_map_keep_as_is"
     static let mapPinnedCTAAccessibilityID = "af_actuals_map_pinned_cta"
     static let mapCaptureBuildAccessibilityID = "af_actuals_map_capture_build"
@@ -124,12 +124,12 @@ enum ActualsCopy {
     }
 
     static func mapKeepAsNamedCTA(title: String) -> String {
-        "Keep as '\(title)' — no detail needed"
+        "Verify as-is “\(title)” — no detail needed"
     }
 
-    /// Map v3 pinned CTA — nothing selected.
+    /// Map v3 pinned CTA — nothing selected (AMA-2407: Verify as-is, not Keep as).
     static func mapKeepAsDoneCTA(title: String) -> String {
-        "Keep as “\(title)” — done"
+        "Verify “\(title)” as-is — done"
     }
 
     /// Map v3 pinned CTA — match selected.
@@ -151,7 +151,6 @@ enum ActualsCopy {
     static let connectSourcesProfileSub = "LINK STRAVA · WRITE-BACK TOGGLE"
     static let historyLoadMore = "Load 30 more days…"
     static let historyFillInCTA = "Fill in ›"
-    static let historyCountedCTA = "Counted ✓"
     static let historyLegend =
         "STRAVA ✓ OURS = WE WROTE IT (SIGNED “— TRACKED WITH AMAKAFLOW”, SAFE TO REFRESH) · SKIPPED = A RULE HELD US BACK · UNTOUCHED = THEIR WORDS, WE NEVER WRITE."
     static let historyBannerShow = "Show ›"
@@ -373,20 +372,13 @@ enum ActualsCopy {
     }
 }
 
-// MARK: - Counted / Strava description (AMA-2405)
+// MARK: - Strava description (AMA-2405)
 
 extension ActualsCopy {
-    static let countedHeadline = "Counted · kept as-is"
-    static let countedCalloutAccessibilityID = "af_actuals_counted_callout"
     static let stravaDescriptionLabel = "STRAVA DESCRIPTION"
     static let stravaDescriptionEmpty = "No description on this Strava activity."
     static let stravaDescriptionLoading = "Loading Strava description…"
     static let stravaDescriptionLoadFailed = "Couldn't load the Strava description."
-    static let countedDetailAccessibilityID = "af_actuals_counted_detail"
-
-    static func countedCalloutBody(sourceName: String) -> String {
-        "\(sourceName) metrics kept as-is — counted once in Progress."
-    }
 }
 
 struct ActualsOAuthScopeRow: Equatable {

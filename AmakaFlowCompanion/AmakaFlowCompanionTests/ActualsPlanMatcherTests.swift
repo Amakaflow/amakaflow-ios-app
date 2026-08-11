@@ -144,7 +144,7 @@ final class ActualsPlanMatcherTests: XCTestCase {
 
     func testKeepAsIsCopyAndAccessibilityIDs() {
         XCTAssertEqual(ActualsCopy.mapAskTitle, "Which workout was this?")
-        XCTAssertEqual(ActualsCopy.mapKeepAsIsCTA, "It was just a run — keep as is")
+        XCTAssertEqual(ActualsCopy.mapKeepAsIsCTA, "It was just a run — verify as-is")
         XCTAssertEqual(ActualsCopy.mapKeepAsIsAccessibilityID, "af_actuals_map_keep_as_is")
         XCTAssertEqual(ActualsCopy.mapCandidateAccessibilityID(1), "af_actuals_map_candidate_1")
         XCTAssertEqual(ActualsCopy.mapCandidateAccessibilityID(2), "af_actuals_map_candidate_2")

@@ -732,6 +732,24 @@ final class AMA2396SyncV2Tests: XCTestCase {
         XCTAssertTrue(body.contains("Cal row"))
     }
 
+    /// AMA-2407: recover WHAT YOU DID rows from the signed Strava body we wrote.
+    func testFillInExercisesFromSignedDescriptionRecoversTrophyLines() {
+        let signed = """
+        🏆 Barbell Overhead Press — 2 x 4
+        🏆 Wide Grip Pull-Up — 3 x 6
+        🏆 Close Grip Bench Press — 2 x 10
+        RPE 8 \(StravaWriteBackSignature.line)
+        """
+        let rows = StravaWorkoutStructureText.fillInExercises(fromSignedDescription: signed)
+        XCTAssertEqual(rows.count, 3)
+        XCTAssertEqual(rows[0].name, "Barbell Overhead Press")
+        XCTAssertEqual(rows[0].planned.sets, 2)
+        XCTAssertEqual(rows[0].planned.reps, 4)
+        XCTAssertEqual(rows[0].confirmation, .asPlanned)
+        XCTAssertEqual(rows[1].name, "Wide Grip Pull-Up")
+        XCTAssertEqual(rows[2].planned.reps, 10)
+    }
+
     /// For-time 60 min cap must not become "60 ROUNDS" / "60 × 3:00" after Strava match.
     func testForTimeCapDoesNotSeedAsCircuitRounds() throws {
         var session = EditorV2Session(title: "Ski Row Assault")
@@ -1184,36 +1202,246 @@ final class AMA2396SyncV2Tests: XCTestCase {
         XCTAssertNil(decision.decoratedDescription)
     }
 
-    func testMarkingCountedPromotesDecorationOnlyForStrava() {
-        let garmin = ActualsTodayDemoCard(
-            id: "garmin_1",
-            kind: .unmapped,
-            timeLabel: "12:00",
-            title: "Easy spin",
-            stats: [],
-            sourceLabel: "Garmin",
-            sourceProvider: .garmin,
-            session: nil,
-            activity: nil,
-            fillInSession: nil,
-            stravaDecoration: .none
-        ).markingCounted()
-        XCTAssertEqual(garmin.stravaDecoration, .none)
+    /// AMA-2407: Verify as-is decoration only ever promotes for Strava-sourced cards.
+    /// Signature in the Strava body ⇒ `.ours` (already linked), not UNTOUCHED.
+    func testVerifyAsIsDecorationOnlyPromotesForStrava() {
+        XCTAssertEqual(
+            ActualsTodayDemoFeed.decorationForLocalVerifyAsIs(sourceProvider: .garmin),
+            .none
+        )
+        XCTAssertEqual(
+            ActualsTodayDemoFeed.decorationForLocalVerifyAsIs(sourceProvider: .appleHealth),
+            .none
+        )
+        XCTAssertEqual(
+            ActualsTodayDemoFeed.decorationForLocalVerifyAsIs(sourceProvider: .strava),
+            .untouched
+        )
+        XCTAssertEqual(
+            ActualsTodayDemoFeed.decorationForLocalVerifyAsIs(
+                sourceProvider: .strava,
+                description: "RPE 6 \(StravaWriteBackSignature.line)"
+            ),
+            .ours
+        )
+        XCTAssertEqual(
+            ActualsTodayDemoFeed.decorationForLocalVerifyAsIs(sourceProvider: nil),
+            .none
+        )
+    }
 
-        let strava = ActualsTodayDemoCard(
-            id: "strava_1",
+    /// Hard rule: "tracked with AmakaFlow" means already verified/linked — auto
+    /// hydrate Verified + STRAVA ✓ OURS without a server flag or user tap.
+    func testSyncActivityWithSignedDescriptionAloneHydratesVerifiedOurs() {
+        let signed = "CIRCUIT · 6 ROUNDS\nRPE 6 \(StravaWriteBackSignature.line)"
+        let activity = StravaCompletedActivityDTO(
+            stravaId: 45,
+            name: "Bike ski row repeats",
+            type: "Workout",
+            distanceKm: 0,
+            durationMin: 42,
+            startDate: "2026-08-09T12:00:00Z",
+            startDateLocal: "2026-08-09T12:00:00",
+            description: signed,
+            amakaflowVerified: false,
+            amakaflowWroteStrava: false
+        )
+        let cards = ActualsTodayDemoFeed.cards(from: [activity], now: Self.date("2026-08-09T18:00:00Z"))
+        let card = cards.first
+        XCTAssertEqual(card?.kind, .verified)
+        XCTAssertEqual(card?.stravaDecoration, .ours)
+        XCTAssertEqual(card?.fillInSession?.rpe, 6)
+    }
+
+    func testApplyActivityDescriptionWithSignaturePromotesUnmappedToVerifiedOurs() throws {
+        let activity = ActualsUnmappedActivity(
+            title: "Bike ski row repeats",
+            provider: .strava,
+            startDate: Date(),
+            durationSeconds: 2520,
+            distanceMeters: nil,
+            calories: nil,
+            avgHR: nil,
+            type: .strength,
+            activityDescription: ""
+        )
+        let card = ActualsTodayDemoCard(
+            id: "strava_46",
             kind: .unmapped,
-            timeLabel: "12:00",
-            title: "Easy run",
-            stats: [],
-            sourceLabel: "Strava",
+            timeLabel: "20:14",
+            title: "Bike ski row repeats",
+            stats: [("clock", "42 min")],
+            sourceLabel: "Synced from Strava",
             sourceProvider: .strava,
             session: nil,
-            activity: nil,
+            activity: activity,
             fillInSession: nil,
             stravaDecoration: .none
-        ).markingCounted()
-        XCTAssertEqual(strava.stravaDecoration, .untouched)
+        )
+        let signed = "RPE 6 \(StravaWriteBackSignature.line)"
+        let updated = ActualsTodayDemoFeed.applyingDescriptionAndSignedOwnership(
+            to: card,
+            description: signed,
+            repository: repo
+        )
+        XCTAssertEqual(updated.kind, .verified)
+        XCTAssertEqual(updated.stravaDecoration, .ours)
+        XCTAssertEqual(updated.fillInSession?.rpe, 6)
+        XCTAssertTrue(try repo.isVerified(id: "strava_46"))
+    }
+
+    /// Linked-but-unverified Strava ids are marked verified on our server.
+    func testEnsureServerVerifiedPostsVerifyForSignedActivities() async throws {
+        MockURLProtocol.reset()
+        defer { MockURLProtocol.reset() }
+        let pathsLock = NSLock()
+        var requestedPaths: [String] = []
+        MockURLProtocol.requestHandler = { request in
+            let path = request.url?.path ?? ""
+            pathsLock.lock()
+            requestedPaths.append(path)
+            pathsLock.unlock()
+            let response = HTTPURLResponse(
+                url: request.url!,
+                statusCode: 200,
+                httpVersion: nil,
+                headerFields: ["Content-Type": "application/json"]
+            )!
+            let data = Data(
+                #"{"activity_id":88,"verified":true,"amakaflow_session_id":"strava_88"}"#.utf8
+            )
+            return (response, data)
+        }
+        let client = BFFStravaClient(
+            baseURL: "https://mock.test/v1",
+            session: MockURLProtocol.mockSession(),
+            bearerTokenProvider: { "test-token" },
+            userIDProvider: { "user-1" }
+        )
+        let feed = ActualsTodayDemoFeed(repository: repo)
+        let signed = "RPE 6 \(StravaWriteBackSignature.line)"
+        await feed.ensureServerVerifiedForLinkedActivities(
+            [
+                StravaCompletedActivityDTO(
+                    stravaId: 88,
+                    name: "Bike ski row repeats",
+                    type: "Workout",
+                    distanceKm: 0,
+                    durationMin: 42,
+                    startDate: "2026-08-09T12:00:00Z",
+                    startDateLocal: "2026-08-09T12:00:00",
+                    description: signed,
+                    amakaflowVerified: false,
+                    amakaflowWroteStrava: false
+                ),
+                StravaCompletedActivityDTO(
+                    stravaId: 89,
+                    name: "Already verified",
+                    type: "Run",
+                    distanceKm: 5,
+                    durationMin: 30,
+                    startDate: "2026-08-09T10:00:00Z",
+                    startDateLocal: "2026-08-09T10:00:00",
+                    description: signed,
+                    amakaflowVerified: true,
+                    amakaflowWroteStrava: true
+                )
+            ],
+            client: client
+        )
+        pathsLock.lock()
+        let capturedPaths = requestedPaths
+        pathsLock.unlock()
+        XCTAssertTrue(
+            capturedPaths.contains { $0.contains("/strava/activities/88/verify") },
+            "signed + unverified must POST verify — got \(capturedPaths)"
+        )
+        XCTAssertFalse(
+            capturedPaths.contains { $0.contains("/strava/activities/89/verify") },
+            "already verified must not re-POST"
+        )
+    }
+
+    /// AMA-2407: full Verify as-is flow — sync an unmapped Strava activity, verify
+    /// as-is, and confirm it persists locally (no RPE/exercises) and calls the
+    /// server verify endpoint (no write-back).
+    func testApplyKeepAsIsPersistsVerifiedLocallyAndCallsServerVerify() async throws {
+        MockURLProtocol.reset()
+        defer { MockURLProtocol.reset() }
+        let pathsLock = NSLock()
+        var requestedPaths: [String] = []
+        MockURLProtocol.requestHandler = { request in
+            let path = request.url?.path ?? ""
+            pathsLock.lock()
+            requestedPaths.append(path)
+            pathsLock.unlock()
+            let data: Data
+            if path.contains("/sync-completed") {
+                data = Data("""
+                {
+                  "success": true,
+                  "synced_count": 1,
+                  "activities": [
+                    {
+                      "strava_id": 777,
+                      "name": "Easy run",
+                      "type": "Run",
+                      "distance_km": 5.0,
+                      "duration_min": 30,
+                      "start_date": "2026-08-09T12:00:00Z",
+                      "start_date_local": "2026-08-09T12:00:00",
+                      "description": ""
+                    }
+                  ],
+                  "message": "ok"
+                }
+                """.utf8)
+            } else {
+                data = Data(#"{"activity_id":777,"verified":true,"amakaflow_session_id":"strava_777"}"#.utf8)
+            }
+            let response = HTTPURLResponse(
+                url: request.url!,
+                statusCode: 200,
+                httpVersion: nil,
+                headerFields: ["Content-Type": "application/json"]
+            )!
+            return (response, data)
+        }
+        let client = BFFStravaClient(
+            baseURL: "https://mock.test/v1",
+            session: MockURLProtocol.mockSession(),
+            bearerTokenProvider: { "test-token" },
+            userIDProvider: { "user-1" }
+        )
+
+        let feed = ActualsTodayDemoFeed(repository: repo)
+        await feed.activateFromStravaSync(sync: ActualsSyncProgressStore(), client: client)
+        let unmapped = try XCTUnwrap(feed.cards.first { $0.id == "strava_777" })
+        XCTAssertEqual(unmapped.kind, .unmapped)
+
+        await feed.applyKeepAsIs(unmappedCardID: "strava_777", client: client)
+
+        let verified = try XCTUnwrap(feed.cards.first { $0.id == "strava_777" })
+        XCTAssertEqual(verified.kind, .verified)
+        XCTAssertEqual(verified.stravaDecoration, .untouched)
+        let session = try XCTUnwrap(verified.fillInSession)
+        XCTAssertTrue(session.verified)
+        XCTAssertTrue(session.exercises.isEmpty)
+        XCTAssertNil(session.rpe)
+
+        let persisted = try XCTUnwrap(repo.fetchSession(id: "strava_777"))
+        XCTAssertTrue(persisted.verified)
+        XCTAssertNil(persisted.rpe)
+        XCTAssertTrue(persisted.exercises.isEmpty)
+
+        pathsLock.lock()
+        let capturedPaths = requestedPaths
+        pathsLock.unlock()
+        XCTAssertTrue(capturedPaths.contains { $0.contains("/sync-completed") })
+        XCTAssertTrue(
+            capturedPaths.contains { $0.contains("/strava/activities/777/verify") },
+            "Verify as-is must call server verify — got \(capturedPaths)"
+        )
     }
 
     func testFillInSessionRequiresWriteBackMetadata() {
@@ -1551,7 +1779,219 @@ final class AMA2396SyncV2Tests: XCTestCase {
         XCTAssertEqual(captured?.url?.query, "userId=user-1")
     }
 
-    func testCountedCardCachesActivityDescription() {
+    // MARK: - AMA-2407: verify as-is + hydrate verified from sync (no counted)
+
+    /// Backend contract: `amakaflow_verified` defaults false and decodes true when present.
+    func testCompletedActivityDTODecodesAmakaflowVerifiedAndWroteStravaFlags() throws {
+        let withoutFlags = try JSONDecoder().decode(
+            StravaCompletedActivityDTO.self,
+            from: Data("""
+            {
+              "strava_id": 1, "name": "Run", "type": "Run", "distance_km": 5.0,
+              "duration_min": 30, "start_date": "2026-08-09T12:00:00Z", "description": ""
+            }
+            """.utf8)
+        )
+        XCTAssertFalse(withoutFlags.amakaflowVerified)
+        XCTAssertFalse(withoutFlags.amakaflowWroteStrava)
+
+        let withFlags = try JSONDecoder().decode(
+            StravaCompletedActivityDTO.self,
+            from: Data("""
+            {
+              "strava_id": 2, "name": "Run", "type": "Run", "distance_km": 5.0,
+              "duration_min": 30, "start_date": "2026-08-09T12:00:00Z", "description": "",
+              "amakaflow_verified": true, "amakaflow_wrote_strava": true
+            }
+            """.utf8)
+        )
+        XCTAssertTrue(withFlags.amakaflowVerified)
+        XCTAssertTrue(withFlags.amakaflowWroteStrava)
+    }
+
+    /// Hard rule 3: once verified server-side, every device shows Verified on sync —
+    /// no durable Counted state, and no need to wait for a local GRDB row.
+    func testSyncActivityWithAmakaflowVerifiedHydratesVerifiedCard() throws {
+        let activity = StravaCompletedActivityDTO(
+            stravaId: 42,
+            name: "Bike ski row repeats",
+            type: "Workout",
+            distanceKm: 0,
+            durationMin: 42,
+            startDate: "2026-08-09T12:00:00Z",
+            startDateLocal: "2026-08-09T12:00:00",
+            description: "",
+            amakaflowVerified: true,
+            amakaflowWroteStrava: false
+        )
+        let cards = ActualsTodayDemoFeed.cards(from: [activity], now: Self.date("2026-08-09T18:00:00Z"))
+        let card = try XCTUnwrap(cards.first)
+        XCTAssertEqual(card.kind, .verified)
+        XCTAssertEqual(card.stravaDecoration, .untouched)
+        let session = try XCTUnwrap(card.fillInSession)
+        XCTAssertTrue(session.verified)
+        XCTAssertTrue(session.exercises.isEmpty)
+        XCTAssertNil(session.rpe)
+    }
+
+    /// AMA-2407: a stale local fill-in draft must never downgrade a server-verified card.
+    func testLocalUnverifiedDraftDoesNotDowngradeServerVerifiedCard() throws {
+        var draft = ActualsFillInSession.lowerBodyPosteriorSample(id: "strava_50")
+        draft.stravaActivityId = "50"
+        draft.verified = false
+        try repo.upsertMatchedDraft(draft)
+
+        let activity = StravaCompletedActivityDTO(
+            stravaId: 50,
+            name: draft.title,
+            type: "Workout",
+            distanceKm: 0,
+            durationMin: 42,
+            startDate: "2026-08-09T12:00:00Z",
+            startDateLocal: "2026-08-09T12:00:00",
+            description: "",
+            amakaflowVerified: true,
+            amakaflowWroteStrava: false
+        )
+        let synced = ActualsTodayDemoFeed.cards(
+            from: [activity],
+            now: Self.date("2026-08-09T18:00:00Z")
+        )
+        XCTAssertEqual(synced.first?.kind, .verified)
+        let overlaid = ActualsTodayDemoFeed.applyLocalOverlays(
+            to: synced,
+            repository: repo
+        )
+        let card = try XCTUnwrap(overlaid.first)
+        XCTAssertEqual(card.kind, .verified)
+        XCTAssertTrue(card.fillInSession?.verified ?? false)
+        XCTAssertFalse(card.fillInSession?.exercises.isEmpty ?? true)
+    }
+
+    /// Hard rule 4: `amakaflow_wrote_strava` (or our signature in the description)
+    /// decorates `.ours` + surfaces Undo, without a local write-back round trip.
+    func testSyncActivityWroteStravaHydratesOursDecoration() {
+        let activity = StravaCompletedActivityDTO(
+            stravaId: 43,
+            name: "Bike ski row repeats",
+            type: "Workout",
+            distanceKm: 0,
+            durationMin: 42,
+            startDate: "2026-08-09T12:00:00Z",
+            startDateLocal: "2026-08-09T12:00:00",
+            description: "",
+            amakaflowVerified: true,
+            amakaflowWroteStrava: true
+        )
+        let cards = ActualsTodayDemoFeed.cards(from: [activity], now: Self.date("2026-08-09T18:00:00Z"))
+        XCTAssertEqual(cards.first?.kind, .verified)
+        XCTAssertEqual(cards.first?.stravaDecoration, .ours)
+    }
+
+    /// Our signature in the description also counts as `.ours`, even when the
+    /// server hasn't (yet) set `amakaflow_wrote_strava` on an older sync response.
+    func testSyncActivityWithSignedDescriptionHydratesOursDecoration() {
+        let signed = "Assault bike · ski · row\n\n\(StravaWriteBackSignature.line)"
+        let activity = StravaCompletedActivityDTO(
+            stravaId: 44,
+            name: "Bike ski row repeats",
+            type: "Workout",
+            distanceKm: 0,
+            durationMin: 42,
+            startDate: "2026-08-09T12:00:00Z",
+            startDateLocal: "2026-08-09T12:00:00",
+            description: signed,
+            amakaflowVerified: true,
+            amakaflowWroteStrava: false
+        )
+        let cards = ActualsTodayDemoFeed.cards(from: [activity], now: Self.date("2026-08-09T18:00:00Z"))
+        XCTAssertEqual(cards.first?.stravaDecoration, .ours)
+    }
+
+    /// AMA-2407: `upsertVerifiedAsIs` allows verified without RPE or exercise rows —
+    /// the product rule is Verified or Fill in, never a separate Counted state.
+    func testUpsertVerifiedAsIsPersistsWithoutExercisesOrRPE() throws {
+        let session = ActualsTodayDemoFeed.makeVerifiedAsIsSession(
+            cardID: "strava_909",
+            title: "Bike ski row repeats",
+            activity: nil
+        )
+        try repo.upsertVerifiedAsIs(session)
+
+        let persisted = try XCTUnwrap(repo.fetchSession(id: "strava_909"))
+        XCTAssertTrue(persisted.verified)
+        XCTAssertNil(persisted.rpe)
+        XCTAssertTrue(persisted.exercises.isEmpty)
+        XCTAssertTrue(try repo.isVerified(id: "strava_909"))
+    }
+
+    /// AMA-2407: empty verify-as-is must not wipe fill-in rows already stored
+    /// for the same session id (Map unmatch → re-verify path).
+    func testUpsertVerifiedAsIsWithEmptyExercisesPreservesExistingRows() throws {
+        var draft = ActualsFillInSession.lowerBodyPosteriorSample(id: "strava_911")
+        draft.stravaActivityId = "911"
+        try repo.upsertMatchedDraft(draft)
+        XCTAssertEqual(try XCTUnwrap(repo.fetchSession(id: "strava_911")).exercises.count, 4)
+
+        let emptyVerify = ActualsTodayDemoFeed.makeVerifiedAsIsSession(
+            cardID: "strava_911",
+            title: "Lower body — posterior",
+            activity: nil
+        )
+        try repo.upsertVerifiedAsIs(emptyVerify)
+
+        let persisted = try XCTUnwrap(repo.fetchSession(id: "strava_911"))
+        XCTAssertTrue(persisted.verified)
+        XCTAssertEqual(persisted.exercises.count, 4)
+        XCTAssertEqual(persisted.exercises.first?.id, "back_squat")
+    }
+
+    /// AMA-2407: server-side un-verify — DELETE clears `amakaflow_verified` upstream.
+    func testUnverifySessionSendsDeleteRequestToVerifyEndpoint() async throws {
+        MockURLProtocol.reset()
+        defer { MockURLProtocol.reset() }
+        var captured: URLRequest?
+        MockURLProtocol.requestHandler = { request in
+            captured = request
+            let response = HTTPURLResponse(
+                url: request.url!,
+                statusCode: 200,
+                httpVersion: nil,
+                headerFields: ["Content-Type": "application/json"]
+            )!
+            return (response, Data(#"{"activity_id":909,"verified":false,"amakaflow_session_id":null}"#.utf8))
+        }
+        let client = BFFStravaClient(
+            baseURL: "https://mock.test/v1",
+            session: MockURLProtocol.mockSession(),
+            bearerTokenProvider: { "test-token" },
+            userIDProvider: { "user-1" }
+        )
+        let result = try await client.unverifySession(activityId: "909")
+        XCTAssertFalse(result.verified)
+        XCTAssertEqual(captured?.httpMethod, "DELETE")
+        XCTAssertEqual(captured?.url?.path, "/v1/strava/activities/909/verify")
+    }
+
+    /// AMA-2407: un-verify must clear the local verified row (Fill in is next, not Counted).
+    func testUnverifyAfterVerifiedAsIsClearsLocalVerifiedState() throws {
+        let session = ActualsTodayDemoFeed.makeVerifiedAsIsSession(
+            cardID: "strava_910",
+            title: "Bike ski row repeats",
+            activity: nil
+        )
+        try repo.upsertVerifiedAsIs(session)
+        XCTAssertTrue(try repo.isVerified(id: "strava_910"))
+
+        try repo.unverifySession(id: "strava_910")
+
+        XCTAssertFalse(try repo.isVerified(id: "strava_910"))
+        let reloaded = try XCTUnwrap(repo.fetchSession(id: "strava_910"))
+        XCTAssertNil(reloaded.rpe)
+    }
+
+    /// AMA-2407: verified-as-is cards (no durable Counted kind) cache activity descriptions.
+    func testVerifiedAsIsCardCachesActivityDescription() {
         let activity = ActualsUnmappedActivity(
             title: "Bike ski row repeats",
             provider: .strava,
@@ -1566,19 +2006,19 @@ final class AMA2396SyncV2Tests: XCTestCase {
         let session = ActualsFillInSession(
             id: "sess-555",
             title: "Bike ski row repeats",
-            subtitle: "KEPT AS-IS",
+            subtitle: "VERIFIED AS-IS",
             exercises: [],
-            verified: false,
+            verified: true,
             stravaActivityId: "555",
             stravaCurrentDescription: nil
         )
         let card = ActualsTodayDemoCard(
             id: "strava_555",
-            kind: .counted,
+            kind: .verified,
             timeLabel: "20:14",
             title: "Bike ski row repeats",
             stats: [("clock", "42 min")],
-            sourceLabel: "Kept as-is",
+            sourceLabel: "Verified · as-is",
             sourceProvider: .strava,
             session: nil,
             activity: activity,
@@ -1590,8 +2030,9 @@ final class AMA2396SyncV2Tests: XCTestCase {
         XCTAssertEqual(updated.fillInSession?.stravaCurrentDescription, "Assault bike · ski · row")
     }
 
-    /// AMA-2405: counted cards with nil fillInSession still persist by activity id.
-    func testCountedCardWithoutSessionPersistsDescriptionByActivityId() throws {
+    /// AMA-2405: a description-only cache stub must not fabricate a match/verify
+    /// overlay for a still-unmapped card (no durable Counted kind to fall back to).
+    func testUnmappedCardWithoutSessionPersistsDescriptionByActivityId() throws {
         try repo.upsertStravaActivityDescription(
             activityId: "555",
             description: "Assault bike · ski · row"
@@ -1612,20 +2053,20 @@ final class AMA2396SyncV2Tests: XCTestCase {
         )
         let card = ActualsTodayDemoCard(
             id: "strava_555",
-            kind: .counted,
+            kind: .unmapped,
             timeLabel: "20:14",
             title: "Bike ski row repeats",
             stats: [("clock", "42 min")],
-            sourceLabel: "Kept as-is",
+            sourceLabel: "Synced from Strava",
             sourceProvider: .strava,
             session: nil,
             activity: activity,
             fillInSession: nil,
-            stravaDecoration: .untouched
+            stravaDecoration: .none
         )
-        // Description-cache stubs must not promote counted → fill-in on overlay.
+        // Description-cache stubs must not promote unmapped → fill-in/verified on overlay.
         let overlaid = ActualsTodayDemoFeed.applyLocalOverlays(to: [card], repository: repo)
-        XCTAssertEqual(overlaid.first?.kind, .counted)
+        XCTAssertEqual(overlaid.first?.kind, .unmapped)
         XCTAssertNil(overlaid.first?.fillInSession)
         XCTAssertEqual(overlaid.first?.activity?.activityDescription, "Assault bike · ski · row")
         // Match overlays still ignore description-only stubs.
@@ -1633,7 +2074,8 @@ final class AMA2396SyncV2Tests: XCTestCase {
         XCTAssertNil(byStrava["555"])
     }
 
-    /// AMA-2405: once AmakaFlow wrote Strava, do not treat description as missing.
+    /// AMA-2405/2407: `.ours` never mirrors Strava description in-app — that text
+    /// is for Strava after verify. In-app chrome is WHAT YOU DID · VS PLAN.
     func testOursDecorationDoesNotNeedStravaDescriptionRefetch() {
         XCTAssertFalse(
             ActualsStravaDescriptionPolicy.showsDescriptionSection(
@@ -1659,6 +2101,75 @@ final class AMA2396SyncV2Tests: XCTestCase {
                 cachedDescription: ""
             )
         )
+    }
+
+    /// Signature hydrate must keep matched exercise rows (image 1), not replace
+    /// them with verify-as-is + a Strava trophy dump (image 2).
+    func testSignedDescriptionPromotePreservesMatchedExercises() throws {
+        var matched = ActualsFillInSession.lowerBodyPosteriorSample(id: "strava_47")
+        matched.stravaActivityId = "47"
+        matched.verified = true
+        matched.rpe = 8
+        for index in matched.exercises.indices {
+            matched.exercises[index].confirmation = .asPlanned
+        }
+        try repo.saveVerifiedSession(matched)
+        try repo.storeDecoration(.ours, forSessionID: matched.id)
+
+        let activity = ActualsUnmappedActivity(
+            title: matched.title,
+            provider: .strava,
+            startDate: Date(),
+            durationSeconds: 3_000,
+            distanceMeters: nil,
+            calories: nil,
+            avgHR: nil,
+            type: .strength,
+            activityDescription: ""
+        )
+        let asIsCard = ActualsTodayDemoCard(
+            id: "strava_47",
+            kind: .verified,
+            timeLabel: "17:20",
+            title: matched.title,
+            stats: [("clock", "52m")],
+            sourceLabel: "Verified · as-is",
+            sourceProvider: .strava,
+            session: nil,
+            activity: activity,
+            fillInSession: ActualsTodayDemoFeed.makeVerifiedAsIsSession(
+                cardID: "strava_47",
+                title: matched.title,
+                activity: activity
+            ),
+            stravaDecoration: .untouched
+        )
+        let signed = "🏆 Barbell Overhead Press — 2 x 4\nRPE 8 \(StravaWriteBackSignature.line)"
+        let updated = ActualsTodayDemoFeed.applyingDescriptionAndSignedOwnership(
+            to: asIsCard,
+            description: signed,
+            repository: repo
+        )
+        XCTAssertEqual(updated.stravaDecoration, .ours)
+        XCTAssertFalse(updated.fillInSession?.exercises.isEmpty ?? true)
+        XCTAssertEqual(updated.fillInSession?.exercises.count, matched.exercises.count)
+        XCTAssertFalse(
+            ActualsStravaDescriptionPolicy.showsDescriptionSection(
+                decoration: updated.stravaDecoration,
+                stravaActivityId: "47",
+                cachedDescription: signed
+            )
+        )
+    }
+
+    func testRpeFromSignedDescriptionReadsFooter() {
+        XCTAssertEqual(
+            StravaWriteBackDecorator.rpeFromSignedDescription(
+                "CIRCUIT\nRPE 6 \(StravaWriteBackSignature.line)"
+            ),
+            6
+        )
+        XCTAssertNil(StravaWriteBackDecorator.rpeFromSignedDescription("no signature"))
     }
 
     /// URLSession often delivers POST bodies via `httpBodyStream` in URLProtocol.

@@ -332,10 +332,6 @@ struct TodayDiaryView: View {
             Text(ActualsCopy.verifiedTimelineCTA)
                 .ddDisplayText(12, weight: .bold)
                 .foregroundColor(DailyDriver.lime)
-        case .counted:
-            Text(ActualsCopy.historyCountedCTA)
-                .ddDisplayText(12, weight: .bold)
-                .foregroundColor(DailyDriver.lime)
         }
     }
 
@@ -345,8 +341,9 @@ struct TodayDiaryView: View {
             return Self.symbolName(for: card.activity?.type)
         case .merged: return "applewatch"
         case .fillInDebt: return "figure.strengthtraining.traditional"
-        case .verified, .counted:
+        case .verified:
             if card.session != nil { return "applewatch" }
+            if let type = card.activity?.type { return Self.symbolName(for: type) }
             if card.title.localizedCaseInsensitiveContains("run") { return "figure.run" }
             return "figure.strengthtraining.traditional"
         }
@@ -360,7 +357,7 @@ struct TodayDiaryView: View {
                 : DailyDriver.card2
         case .merged: return DailyDriver.blue
         case .fillInDebt: return DailyDriver.lime
-        case .verified, .counted:
+        case .verified:
             return card.session != nil ? DailyDriver.blue : DailyDriver.lime
         }
     }
@@ -416,8 +413,6 @@ struct TodayDiaryView: View {
                 verifiedSession = loaded
             }
             actualsDestination = .verified(cardID: card.id)
-        case .counted:
-            actualsDestination = .counted(cardID: card.id)
         }
     }
 
@@ -435,8 +430,6 @@ struct TodayDiaryView: View {
             fillInDestinationView
         case .verified(let cardID):
             verifiedDestinationView(cardID: cardID)
-        case .counted(let cardID):
-            countedDestinationView(cardID: cardID)
         }
     }
 
@@ -483,7 +476,7 @@ struct TodayDiaryView: View {
                 Task { await applyLibraryMatchSelection(match.candidate, cardID: cardID) }
             },
             onKeepAsIs: {
-                actualsDemo.applyKeepAsIs(unmappedCardID: cardID)
+                Task { await actualsDemo.applyKeepAsIs(unmappedCardID: cardID) }
                 actualsDestination = nil
             },
             onSearchAll: {
@@ -661,25 +654,6 @@ struct TodayDiaryView: View {
         }
     }
 
-    @ViewBuilder
-    private func countedDestinationView(cardID: String) -> some View {
-        if let card = actualsDemo.cards.first(where: { $0.id == cardID }) {
-            let source = sourceDisplayName(for: card).uppercased()
-            ActualsCountedDetailView(
-                title: card.title,
-                metaLine: "\(card.timeLabel) · \(card.sourceLabel.uppercased()) · FROM \(source)",
-                sourceName: sourceDisplayName(for: card),
-                decoration: card.stravaDecoration,
-                stravaActivityId: ActualsTodayDemoFeed.stravaActivityId(fromCardID: card.id),
-                initialDescription: card.activity?.activityDescription ?? ""
-            ) { description in
-                actualsDemo.applyActivityDescription(cardID: cardID, description: description)
-            }
-        } else {
-            missingDestinationFallback("Couldn't open that counted session.")
-        }
-    }
-
     /// AMA-2405: backfill activity id + cached description for lazy Strava text.
     private static func enrichedVerifiedSession(
         _ session: ActualsFillInSession,
@@ -757,6 +731,21 @@ struct TodayDiaryView: View {
         let provider = StravaWriteBackFactory.makeDefault()
         let sessionID = session.id
         let cardID = verifiedCardID
+        // AMA-2407: DELETE server verify first. Restoring Strava before DELETE can
+        // leave Verified + unsigned text if DELETE then fails (CodeRabbit).
+        if let activityId = session.stravaActivityId {
+            do {
+                _ = try await BFFStravaClient.live().unverifySession(activityId: activityId)
+            } catch {
+                await MainActor.run {
+                    DDToastCenter.shared.error(
+                        "Couldn't un-verify on Strava",
+                        sub: error.localizedDescription
+                    )
+                }
+                return
+            }
+        }
         if let snapshot = try? repository.fetchPreUpdateSnapshot(forSessionID: sessionID) {
             let outcome = await provider.restore(
                 activityId: snapshot.activityId,
@@ -1077,8 +1066,6 @@ private enum ActualsTodayDestination: Hashable, Identifiable {
     case fillIn
     /// Card id only — session is resolved when the destination builds (avoids blank race).
     case verified(cardID: String)
-    /// AMA-2405: counted / kept-as-is read-only detail (Strava description).
-    case counted(cardID: String)
 
     var id: String {
         switch self {
@@ -1088,7 +1075,6 @@ private enum ActualsTodayDestination: Hashable, Identifiable {
         case .matchSave: return "matchSave"
         case .fillIn: return "fillIn"
         case .verified(let cardID): return "verified-\(cardID)"
-        case .counted(let cardID): return "counted-\(cardID)"
         }
     }
 }

@@ -78,6 +78,10 @@ final class ActualsVerifiedGhostTests: XCTestCase {
             ActualsVerifiedDeltas.calloutBody(sourceName: "Strava", rpe: 8),
             "Strava metrics + your actuals + RPE 8 — counted once in Progress."
         )
+        XCTAssertEqual(
+            ActualsVerifiedDeltas.calloutBody(sourceName: "Strava", rpe: nil),
+            "Strava metrics + your actuals — counted once in Progress."
+        )
         XCTAssertEqual(ActualsCopy.verifiedVsPlanHeader, "WHAT YOU DID · VS PLAN")
     }
 
