@@ -149,6 +149,8 @@ struct StravaWriteBackRequest: Equatable, Sendable {
     var isRace: Bool
     var rules: StravaWriteBackRules
     var rpe: Int?
+    /// AMA-2403: AmakaFlow fill-in session id stored on the verified-session row.
+    var amakaflowSessionId: String?
 }
 
 enum StravaWriteBackDecorator {
@@ -481,6 +483,23 @@ final class BFFStravaWriteBackProvider: StravaWriteBackProviding {
         let decorated = decision.decoratedDescription
             ?? StravaWriteBackDecorator.decorate(description: request.currentDescription)
         do {
+            // AMA-2403: mark verified before apply so the AMA-2402 gate passes.
+            // Best-effort: apply also marks when missing (TF ≤390 / older BFF).
+            // Auth failures still abort so we don't mask reconnect needs.
+            do {
+                let verification = try await client.verifySession(
+                    activityId: request.activityId,
+                    amakaflowSessionId: request.amakaflowSessionId
+                )
+                guard verification.verified else {
+                    return .failed(BFFStravaClientError.sessionNotVerified.localizedDescription)
+                }
+            } catch let error as BFFStravaClientError
+                where error == .authenticationRequired || error == .sessionNotVerified {
+                throw error
+            } catch {
+                // verify route lagging or transient — continue to apply
+            }
             let result = try await client.applyWriteBack(
                 activityId: request.activityId,
                 title: request.title,

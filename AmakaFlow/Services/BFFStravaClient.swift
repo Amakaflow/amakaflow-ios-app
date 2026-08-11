@@ -10,6 +10,8 @@ import Foundation
 nonisolated enum BFFStravaClientError: LocalizedError, Equatable, Sendable {
     case invalidURL
     case authenticationRequired
+    /// AMA-2403: write-back gated until the AmakaFlow↔Strava pair is marked verified.
+    case sessionNotVerified
     case invalidResponse
     case httpError(statusCode: Int, detail: String?)
     case decodingFailed(String)
@@ -20,6 +22,8 @@ nonisolated enum BFFStravaClientError: LocalizedError, Equatable, Sendable {
             return "The Strava service URL is invalid."
         case .authenticationRequired:
             return "Sign in again to connect Strava."
+        case .sessionNotVerified:
+            return "Verify this session in AmakaFlow before writing to Strava."
         case .invalidResponse:
             return "The Strava service returned an invalid response."
         case .httpError(let statusCode, let detail):
@@ -139,6 +143,26 @@ private struct BFFStravaWriteBackBody: Encodable {
     let description: String?
 }
 
+private struct BFFStravaVerifyBody: Encodable {
+    let amakaflowSessionId: String?
+
+    enum CodingKeys: String, CodingKey {
+        case amakaflowSessionId = "amakaflow_session_id"
+    }
+}
+
+struct StravaVerifySessionResultDTO: Codable, Equatable, Sendable {
+    let activityId: Int
+    let verified: Bool
+    let amakaflowSessionId: String?
+
+    enum CodingKeys: String, CodingKey {
+        case activityId = "activity_id"
+        case verified
+        case amakaflowSessionId = "amakaflow_session_id"
+    }
+}
+
 struct StravaRestoreAPIResultDTO: Codable, Equatable, Sendable {
     let activityId: Int
     let restored: Bool
@@ -256,6 +280,23 @@ nonisolated final class BFFStravaClient: @unchecked Sendable {
         )
     }
 
+    /// POST `/v1/strava/activities/{id}/verify?userId=` — AMA-2403 write-back gate.
+    func verifySession(
+        activityId: String,
+        amakaflowSessionId: String? = nil
+    ) async throws -> StravaVerifySessionResultDTO {
+        let userId = try await requireUserID()
+        let bodyData = try JSONEncoder().encode(
+            BFFStravaVerifyBody(amakaflowSessionId: amakaflowSessionId)
+        )
+        return try await send(
+            method: "POST",
+            path: "strava/activities/\(activityId)/verify",
+            queryItems: [URLQueryItem(name: "userId", value: userId)],
+            bodyData: bodyData
+        )
+    }
+
     /// POST `/v1/strava/activities/{id}/writeback?userId=` with AmakaFlow title + structure.
     func applyWriteBack(
         activityId: String,
@@ -293,6 +334,21 @@ nonisolated final class BFFStravaClient: @unchecked Sendable {
         return userId
     }
 
+    /// AMA-2402/2403: strava-sync returns `detail.code=strava_writeback_unverified`.
+    private static func isUnverifiedWriteBackError(_ data: Data) -> Bool {
+        guard
+            let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+        else { return false }
+        if let detail = root["detail"] as? [String: Any],
+           let code = detail["code"] as? String {
+            return code == "strava_writeback_unverified"
+        }
+        if let code = root["code"] as? String {
+            return code == "strava_writeback_unverified"
+        }
+        return false
+    }
+
     private func send<Response: Decodable>(
         method: String,
         path: String,
@@ -323,7 +379,13 @@ nonisolated final class BFFStravaClient: @unchecked Sendable {
             throw BFFStravaClientError.invalidResponse
         }
         guard (200...299).contains(http.statusCode) else {
-            if http.statusCode == 401 || http.statusCode == 403 {
+            if http.statusCode == 401 {
+                throw BFFStravaClientError.authenticationRequired
+            }
+            if http.statusCode == 403 {
+                if Self.isUnverifiedWriteBackError(data) {
+                    throw BFFStravaClientError.sessionNotVerified
+                }
                 throw BFFStravaClientError.authenticationRequired
             }
             let detail = String(data: data, encoding: .utf8)

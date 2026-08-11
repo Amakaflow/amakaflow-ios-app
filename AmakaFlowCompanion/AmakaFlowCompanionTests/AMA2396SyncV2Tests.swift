@@ -1283,4 +1283,244 @@ final class AMA2396SyncV2Tests: XCTestCase {
         XCTAssertEqual(candidates[0].type, .other)
     }
 
+    // MARK: - AMA-2403 verify + 403 mapping
+
+    func testUnverifiedWriteBack403IsNotSignInAgain() {
+        XCTAssertEqual(
+            BFFStravaClientError.sessionNotVerified.errorDescription,
+            "Verify this session in AmakaFlow before writing to Strava."
+        )
+        XCTAssertNotEqual(
+            BFFStravaClientError.sessionNotVerified.errorDescription,
+            BFFStravaClientError.authenticationRequired.errorDescription
+        )
+    }
+
+    func testWriteBackProviderCallsVerifyBeforeApply() async throws {
+        MockURLProtocol.reset()
+        defer { MockURLProtocol.reset() }
+
+        var paths: [String] = []
+        var verifyBody: [String: Any]?
+        MockURLProtocol.requestHandler = { request in
+            let path = request.url?.path ?? ""
+            paths.append(path)
+            let data: Data
+            if path.contains("/verify") {
+                if let body = Self.httpBodyData(from: request),
+                   let json = try? JSONSerialization.jsonObject(with: body) as? [String: Any] {
+                    verifyBody = json
+                }
+                data = Data(#"{"activity_id":42,"verified":true,"amakaflow_session_id":"sess-1"}"#.utf8)
+            } else {
+                data = Data(#"{"activity_id":42,"status":"written","written":true,"title":"Upper","description":"signed"}"#.utf8)
+            }
+            let response = HTTPURLResponse(
+                url: request.url!,
+                statusCode: 200,
+                httpVersion: nil,
+                headerFields: ["Content-Type": "application/json"]
+            )!
+            return (response, data)
+        }
+
+        let client = BFFStravaClient(
+            baseURL: "https://mock.test/v1",
+            session: MockURLProtocol.mockSession(),
+            bearerTokenProvider: { "test-token" },
+            userIDProvider: { "user-1" }
+        )
+        let provider = BFFStravaWriteBackProvider(client: client)
+        let outcome = await provider.writeBack(
+            StravaWriteBackRequest(
+                activityId: "42",
+                title: "Upper",
+                structureBody: "Press 3x5",
+                currentDescription: "",
+                activityType: "WeightTraining",
+                recordingApp: nil,
+                isRace: false,
+                rules: .default,
+                rpe: 8,
+                amakaflowSessionId: "sess-1"
+            )
+        )
+
+        guard case .updated = outcome else {
+            return XCTFail("expected updated, got \(outcome)")
+        }
+        XCTAssertEqual(paths.count, 2)
+        XCTAssertTrue(paths[0].contains("/verify"), paths[0])
+        XCTAssertTrue(paths[1].contains("/writeback"), paths[1])
+        XCTAssertEqual(verifyBody?["amakaflow_session_id"] as? String, "sess-1")
+    }
+
+    func testWriteBackProviderFailsWhenVerifyReturnsUnverified() async throws {
+        MockURLProtocol.reset()
+        defer { MockURLProtocol.reset() }
+
+        var paths: [String] = []
+        MockURLProtocol.requestHandler = { request in
+            let path = request.url?.path ?? ""
+            paths.append(path)
+            let data: Data
+            if path.contains("/verify") {
+                data = Data(#"{"activity_id":42,"verified":false,"amakaflow_session_id":"sess-1"}"#.utf8)
+            } else {
+                data = Data(#"{"activity_id":42,"status":"written","written":true,"title":"Upper","description":"signed"}"#.utf8)
+            }
+            let response = HTTPURLResponse(
+                url: request.url!,
+                statusCode: 200,
+                httpVersion: nil,
+                headerFields: ["Content-Type": "application/json"]
+            )!
+            return (response, data)
+        }
+
+        let client = BFFStravaClient(
+            baseURL: "https://mock.test/v1",
+            session: MockURLProtocol.mockSession(),
+            bearerTokenProvider: { "test-token" },
+            userIDProvider: { "user-1" }
+        )
+        let provider = BFFStravaWriteBackProvider(client: client)
+        let outcome = await provider.writeBack(
+            StravaWriteBackRequest(
+                activityId: "42",
+                title: "Upper",
+                structureBody: "Press 3x5",
+                currentDescription: "",
+                activityType: "WeightTraining",
+                recordingApp: nil,
+                isRace: false,
+                rules: .default,
+                rpe: 8,
+                amakaflowSessionId: "sess-1"
+            )
+        )
+
+        guard case .failed(let message) = outcome else {
+            return XCTFail("expected failed, got \(outcome)")
+        }
+        XCTAssertEqual(message, BFFStravaClientError.sessionNotVerified.localizedDescription)
+        XCTAssertEqual(paths.count, 1)
+        XCTAssertTrue(paths[0].contains("/verify"), paths[0])
+    }
+
+    func testWriteBackProviderFailsWhenVerifyThrowsSessionNotVerified() async throws {
+        MockURLProtocol.reset()
+        defer { MockURLProtocol.reset() }
+
+        var paths: [String] = []
+        MockURLProtocol.requestHandler = { request in
+            let path = request.url?.path ?? ""
+            paths.append(path)
+            let data: Data
+            if path.contains("/verify") {
+                data = Data(
+                    #"""
+                    {"detail":{"code":"strava_writeback_unverified","message":"not verified","activity_id":42}}
+                    """#.utf8
+                )
+            } else {
+                data = Data(#"{"activity_id":42,"status":"written","written":true,"title":"Upper","description":"signed"}"#.utf8)
+            }
+            let response = HTTPURLResponse(
+                url: request.url!,
+                statusCode: path.contains("/verify") ? 403 : 200,
+                httpVersion: nil,
+                headerFields: ["Content-Type": "application/json"]
+            )!
+            return (response, data)
+        }
+
+        let client = BFFStravaClient(
+            baseURL: "https://mock.test/v1",
+            session: MockURLProtocol.mockSession(),
+            bearerTokenProvider: { "test-token" },
+            userIDProvider: { "user-1" }
+        )
+        let provider = BFFStravaWriteBackProvider(client: client)
+        let outcome = await provider.writeBack(
+            StravaWriteBackRequest(
+                activityId: "42",
+                title: "Upper",
+                structureBody: "Press 3x5",
+                currentDescription: "",
+                activityType: "WeightTraining",
+                recordingApp: nil,
+                isRace: false,
+                rules: .default,
+                rpe: 8,
+                amakaflowSessionId: "sess-1"
+            )
+        )
+
+        guard case .failed(let message) = outcome else {
+            return XCTFail("expected failed, got \(outcome)")
+        }
+        XCTAssertEqual(message, BFFStravaClientError.sessionNotVerified.localizedDescription)
+        XCTAssertEqual(paths.count, 1, "must not continue to writeback after sessionNotVerified")
+        XCTAssertTrue(paths[0].contains("/verify"), paths[0])
+    }
+
+    func testNestedUnverified403MapsToSessionNotVerified() async {
+        await assertUnverified403MapsToSessionNotVerified(
+            body: Data(
+                #"""
+                {"detail":{"code":"strava_writeback_unverified","message":"not verified","activity_id":42}}
+                """#.utf8
+            )
+        )
+    }
+
+    func testTopLevelUnverified403MapsToSessionNotVerified() async {
+        await assertUnverified403MapsToSessionNotVerified(
+            body: Data(#"{"code":"strava_writeback_unverified","message":"not verified"}"#.utf8)
+        )
+    }
+
+    private func assertUnverified403MapsToSessionNotVerified(body: Data) async {
+        MockURLProtocol.reset()
+        defer { MockURLProtocol.reset() }
+        MockURLProtocol.setResponse(statusCode: 403, data: body)
+
+        let client = BFFStravaClient(
+            baseURL: "https://mock.test/v1",
+            session: MockURLProtocol.mockSession(),
+            bearerTokenProvider: { "test-token" },
+            userIDProvider: { "user-1" }
+        )
+
+        do {
+            _ = try await client.applyWriteBack(
+                activityId: "42",
+                title: "Upper",
+                description: "signed"
+            )
+            XCTFail("expected sessionNotVerified")
+        } catch let error as BFFStravaClientError {
+            XCTAssertEqual(error, .sessionNotVerified)
+        } catch {
+            XCTFail("unexpected error: \(error)")
+        }
+    }
+
+    /// URLSession often delivers POST bodies via `httpBodyStream` in URLProtocol.
+    private static func httpBodyData(from request: URLRequest) -> Data? {
+        if let body = request.httpBody { return body }
+        guard let stream = request.httpBodyStream else { return nil }
+        stream.open()
+        defer { stream.close() }
+        var data = Data()
+        var buffer = [UInt8](repeating: 0, count: 1024)
+        while stream.hasBytesAvailable {
+            let count = stream.read(&buffer, maxLength: buffer.count)
+            if count <= 0 { break }
+            data.append(buffer, count: count)
+        }
+        return data.isEmpty ? nil : data
+    }
+
 }

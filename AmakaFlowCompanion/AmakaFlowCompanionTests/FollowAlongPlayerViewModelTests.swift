@@ -197,7 +197,7 @@ final class FollowAlongPlayerViewModelTests: XCTestCase {
 
     // MARK: - AMA-1733 Interval Consumption
 
-    func testRepeatWithRepsAndRestExpandsToThreeRepSteps() {
+    func testRepeatWithRepsAndRestExpandsWorkAndRestPerRound() {
         let workout = TestFixtures.workout(
             intervals: [
                 .repeat(reps: 3, intervals: [
@@ -209,14 +209,16 @@ final class FollowAlongPlayerViewModelTests: XCTestCase {
 
         sut.loadWorkout(workout)
 
-        XCTAssertEqual(sut.steps.count, 3)
+        // AMA-2399: nested `.rest` is preserved through Workout(intervals:), so
+        // Follow Along expands work + rest for each round (3×2 = 6 steps).
+        XCTAssertEqual(sut.steps.count, 6)
         XCTAssertEqual(sut.steps.map(\.name), [
-            "Round 1/3 - Burpees",
-            "Round 2/3 - Burpees",
-            "Round 3/3 - Burpees",
+            "Round 1/3 - Burpees", "Rest",
+            "Round 2/3 - Burpees", "Rest",
+            "Round 3/3 - Burpees", "Rest",
         ])
-        XCTAssertEqual(sut.steps.map(\.reps), [8, 8, 8])
-        XCTAssertEqual(sut.steps.map(\.durationSeconds), [nil, nil, nil])
+        XCTAssertEqual(sut.steps.map(\.reps), [8, nil, 8, nil, 8, nil])
+        XCTAssertEqual(sut.steps.map(\.durationSeconds), [nil, 20, nil, 20, nil, 20])
     }
 
     func testRepeatExpansionKeepsNestedTimeAndDistanceNames() {

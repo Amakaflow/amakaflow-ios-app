@@ -244,11 +244,14 @@ final class WorkoutKitConverterTests: XCTestCase {
             return XCTFail("Expected repeatSet, got \(dto.intervals)")
         }
         XCTAssertEqual(iterations, 3)
-        // Nested sets:2 expands to two Curl steps per outer round (not dropped).
-        XCTAssertEqual(steps.count, 2)
+        // Nested sets:2 → two Curl steps; AMA-2399 restores inter-round rest as a
+        // third Rest step via restBetweenSeconds on the circuit block.
+        XCTAssertEqual(steps.count, 3)
         XCTAssertEqual(steps[0].name, "Curl")
         XCTAssertEqual(steps[0].reps, 10)
         XCTAssertEqual(steps[1].reps, 10)
+        XCTAssertEqual(steps[2].kind, "rest")
+        XCTAssertEqual(steps[2].seconds, 30)
     }
 
     func testZeroOuterRepeatClampsToOne() throws {
