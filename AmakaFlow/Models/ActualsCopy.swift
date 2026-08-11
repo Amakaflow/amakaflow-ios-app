@@ -124,7 +124,7 @@ enum ActualsCopy {
     }
 
     static func mapKeepAsNamedCTA(title: String) -> String {
-        "Verify as-is '\(title)' — no detail needed"
+        "Verify as-is “\(title)” — no detail needed"
     }
 
     /// Map v3 pinned CTA — nothing selected (AMA-2407: Verify as-is, not Keep as).

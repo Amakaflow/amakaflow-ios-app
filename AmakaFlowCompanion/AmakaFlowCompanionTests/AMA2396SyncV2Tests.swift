@@ -1188,26 +1188,26 @@ final class AMA2396SyncV2Tests: XCTestCase {
     /// Signature in the Strava body ⇒ `.ours` (already linked), not UNTOUCHED.
     func testVerifyAsIsDecorationOnlyPromotesForStrava() {
         XCTAssertEqual(
-            ActualsTodayDemoFeed.verifyAsIsDecoration(sourceProvider: .garmin),
+            ActualsTodayDemoFeed.decorationForLocalVerifyAsIs(sourceProvider: .garmin),
             .none
         )
         XCTAssertEqual(
-            ActualsTodayDemoFeed.verifyAsIsDecoration(sourceProvider: .appleHealth),
+            ActualsTodayDemoFeed.decorationForLocalVerifyAsIs(sourceProvider: .appleHealth),
             .none
         )
         XCTAssertEqual(
-            ActualsTodayDemoFeed.verifyAsIsDecoration(sourceProvider: .strava),
+            ActualsTodayDemoFeed.decorationForLocalVerifyAsIs(sourceProvider: .strava),
             .untouched
         )
         XCTAssertEqual(
-            ActualsTodayDemoFeed.verifyAsIsDecoration(
+            ActualsTodayDemoFeed.decorationForLocalVerifyAsIs(
                 sourceProvider: .strava,
                 description: "RPE 6 \(StravaWriteBackSignature.line)"
             ),
             .ours
         )
         XCTAssertEqual(
-            ActualsTodayDemoFeed.verifyAsIsDecoration(sourceProvider: nil),
+            ActualsTodayDemoFeed.decorationForLocalVerifyAsIs(sourceProvider: nil),
             .none
         )
     }
@@ -1278,10 +1278,13 @@ final class AMA2396SyncV2Tests: XCTestCase {
     func testApplyKeepAsIsPersistsVerifiedLocallyAndCallsServerVerify() async throws {
         MockURLProtocol.reset()
         defer { MockURLProtocol.reset() }
+        let pathsLock = NSLock()
         var requestedPaths: [String] = []
         MockURLProtocol.requestHandler = { request in
             let path = request.url?.path ?? ""
+            pathsLock.lock()
             requestedPaths.append(path)
+            pathsLock.unlock()
             let data: Data
             if path.contains("/sync-completed") {
                 data = Data("""
@@ -1341,10 +1344,13 @@ final class AMA2396SyncV2Tests: XCTestCase {
         XCTAssertNil(persisted.rpe)
         XCTAssertTrue(persisted.exercises.isEmpty)
 
-        XCTAssertTrue(requestedPaths.contains { $0.contains("/sync-completed") })
+        pathsLock.lock()
+        let capturedPaths = requestedPaths
+        pathsLock.unlock()
+        XCTAssertTrue(capturedPaths.contains { $0.contains("/sync-completed") })
         XCTAssertTrue(
-            requestedPaths.contains { $0.contains("/strava/activities/777/verify") },
-            "Verify as-is must call server verify — got \(requestedPaths)"
+            capturedPaths.contains { $0.contains("/strava/activities/777/verify") },
+            "Verify as-is must call server verify — got \(capturedPaths)"
         )
     }
 
@@ -1793,6 +1799,27 @@ final class AMA2396SyncV2Tests: XCTestCase {
         XCTAssertNil(persisted.rpe)
         XCTAssertTrue(persisted.exercises.isEmpty)
         XCTAssertTrue(try repo.isVerified(id: "strava_909"))
+    }
+
+    /// AMA-2407: empty verify-as-is must not wipe fill-in rows already stored
+    /// for the same session id (Map unmatch → re-verify path).
+    func testUpsertVerifiedAsIsWithEmptyExercisesPreservesExistingRows() throws {
+        var draft = ActualsFillInSession.lowerBodyPosteriorSample(id: "strava_911")
+        draft.stravaActivityId = "911"
+        try repo.upsertMatchedDraft(draft)
+        XCTAssertEqual(try XCTUnwrap(repo.fetchSession(id: "strava_911")).exercises.count, 4)
+
+        let emptyVerify = ActualsTodayDemoFeed.makeVerifiedAsIsSession(
+            cardID: "strava_911",
+            title: "Lower body — posterior",
+            activity: nil
+        )
+        try repo.upsertVerifiedAsIs(emptyVerify)
+
+        let persisted = try XCTUnwrap(repo.fetchSession(id: "strava_911"))
+        XCTAssertTrue(persisted.verified)
+        XCTAssertEqual(persisted.exercises.count, 4)
+        XCTAssertEqual(persisted.exercises.first?.id, "back_squat")
     }
 
     /// AMA-2407: server-side un-verify — DELETE clears `amakaflow_verified` upstream.

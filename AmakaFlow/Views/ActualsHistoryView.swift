@@ -90,7 +90,7 @@ final class ActualsHistoryViewModel: ObservableObject {
         if verifiedSession.rpe == nil {
             verifiedSession.rpe = StravaWriteBackDecorator.rpeFromSignedDescription(description)
         }
-        let decoration = ActualsTodayDemoFeed.verifyAsIsDecoration(
+        let decoration = ActualsTodayDemoFeed.decorationForLocalVerifyAsIs(
             sourceProvider: card.sourceProvider ?? card.activity?.provider,
             description: description
         )
@@ -207,7 +207,27 @@ final class ActualsHistoryViewModel: ObservableObject {
     }
 
     /// AMA-2407: un-verify clears local + server verified state (DELETE verify).
+    /// Local mutation runs only after a successful DELETE (or when there is no
+    /// Strava activity id) so a failed call leaves Verified intact.
     func applyUnverify(cardID: String, session: ActualsFillInSession) async {
+        if let activityId = session.stravaActivityId {
+            do {
+                _ = try await client.unverifySession(activityId: activityId)
+            } catch {
+                Logger(
+                    subsystem: "com.myamaka.AmakaFlowCompanion",
+                    category: "ActualsHistory"
+                ).error(
+                    "Strava un-verify call failed for activity \(activityId, privacy: .public): \(error.localizedDescription, privacy: .public)"
+                )
+                DDToastCenter.shared.error(
+                    "Couldn't un-verify on Strava",
+                    sub: error.localizedDescription
+                )
+                return
+            }
+        }
+
         try? repository.unverifySession(id: session.id)
         var draft = session
         draft.verified = false
@@ -228,18 +248,6 @@ final class ActualsHistoryViewModel: ObservableObject {
             )
         }
         NotificationCenter.default.post(name: .actualsLocalSessionsDidChange, object: nil)
-
-        guard let activityId = session.stravaActivityId else { return }
-        do {
-            _ = try await client.unverifySession(activityId: activityId)
-        } catch {
-            Logger(
-                subsystem: "com.myamaka.AmakaFlowCompanion",
-                category: "ActualsHistory"
-            ).error(
-                "Strava un-verify call failed for activity \(activityId, privacy: .public): \(error.localizedDescription, privacy: .public)"
-            )
-        }
     }
 
     /// Mid-edit Back — keep confirms / RPE on the History card + GRDB draft.

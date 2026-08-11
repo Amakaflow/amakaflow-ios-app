@@ -356,6 +356,10 @@ extension ActualsRepository {
             }
             try header.upsert(database)
 
+            // Verify as-is carries no exercises — never delete actuals the athlete
+            // already filled in for this session id.
+            guard !session.exercises.isEmpty else { return }
+
             try LocalActualsExerciseRow
                 .filter(LocalActualsExerciseRow.Columns.sessionId == session.id)
                 .deleteAll(database)

@@ -343,6 +343,7 @@ struct TodayDiaryView: View {
         case .fillInDebt: return "figure.strengthtraining.traditional"
         case .verified:
             if card.session != nil { return "applewatch" }
+            if let type = card.activity?.type { return Self.symbolName(for: type) }
             if card.title.localizedCaseInsensitiveContains("run") { return "figure.run" }
             return "figure.strengthtraining.traditional"
         }
@@ -747,8 +748,20 @@ struct TodayDiaryView: View {
         }
         // AMA-2407: clear server verified state too — no durable Counted, un-verify
         // must not leave the sync flag pointing back to Verified on next pull.
+        // Keep local Verified until DELETE succeeds so a failed call does not
+        // bounce the card back to Verified on the next sync with no toast.
         if let activityId = session.stravaActivityId {
-            _ = try? await BFFStravaClient.live().unverifySession(activityId: activityId)
+            do {
+                _ = try await BFFStravaClient.live().unverifySession(activityId: activityId)
+            } catch {
+                await MainActor.run {
+                    DDToastCenter.shared.error(
+                        "Couldn't un-verify on Strava",
+                        sub: error.localizedDescription
+                    )
+                }
+                return
+            }
         }
         await MainActor.run {
             actualsDemo.applyUnverify(sessionID: sessionID)

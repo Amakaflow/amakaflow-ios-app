@@ -403,7 +403,7 @@ final class ActualsTodayDemoFeed: ObservableObject {
             if session.rpe == nil {
                 session.rpe = StravaWriteBackDecorator.rpeFromSignedDescription(activity.description)
             }
-            let decoration = verifiedAsIsDecoration(
+            let decoration = decorationFromSyncFlags(
                 wroteStrava: activity.amakaflowWroteStrava,
                 description: activity.description
             )
@@ -488,7 +488,7 @@ final class ActualsTodayDemoFeed: ObservableObject {
         if verifiedSession.rpe == nil {
             verifiedSession.rpe = StravaWriteBackDecorator.rpeFromSignedDescription(description)
         }
-        let decoration = Self.verifyAsIsDecoration(
+        let decoration = Self.decorationForLocalVerifyAsIs(
             sourceProvider: card.sourceProvider ?? card.activity?.provider,
             description: description
         )
@@ -542,7 +542,7 @@ final class ActualsTodayDemoFeed: ObservableObject {
 
     /// `.ours` when AmakaFlow already wrote Strava (server flag or our own
     /// signature in the description); `.untouched` for a plain verify-as-is.
-    static func verifiedAsIsDecoration(wroteStrava: Bool, description: String) -> StravaDecorationState {
+    static func decorationFromSyncFlags(wroteStrava: Bool, description: String) -> StravaDecorationState {
         if wroteStrava || StravaWriteBackDecorator.containsOurSignature(description) {
             return .ours
         }
@@ -552,12 +552,12 @@ final class ActualsTodayDemoFeed: ObservableObject {
     /// Strava decoration is a statement about Strava — never promote it on
     /// Garmin/Apple Health cards. When the Strava body already carries our
     /// ownership signature, treat as `.ours` (already linked) — not UNTOUCHED.
-    static func verifyAsIsDecoration(
+    static func decorationForLocalVerifyAsIs(
         sourceProvider: ActualsSourceProvider?,
         description: String = ""
     ) -> StravaDecorationState {
         guard sourceProvider == .strava else { return .none }
-        return verifiedAsIsDecoration(wroteStrava: false, description: description)
+        return decorationFromSyncFlags(wroteStrava: false, description: description)
     }
 
     /// AMA-2405: persist a lazy-fetched Strava description onto the card (+ activity-id cache).
