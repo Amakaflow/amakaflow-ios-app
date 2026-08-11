@@ -135,19 +135,35 @@ extension FixtureAPIService {
         return prefs
     }
 
-    /// Echoes `blocks_json` back with a complete applied summary so Apple Start
-    /// handoff is not blocked by AMA-2363 incomplete-enrich checks (AMA-2374).
+    /// AMA-2408 dogfood — apply per-exercise ramps into `blocks_json` locally so
+    /// fixture mode can exercise the enhance → Apple preview path without mapper.
     func enrichWorkout(_ enrich: EnrichRequest) async throws -> EnrichResponse {
-        print("[FixtureAPIService] Stub: enrichWorkout(mode=\(enrich.mode.rawValue)) -> echo + satisfied summary")
+        print("[FixtureAPIService] Stub: enrichWorkout(mode=\(enrich.mode.rawValue)) -> apply ramps locally")
+        var blocksJSON = enrich.blocksJSON
         var added: [String] = []
         if let prefs = enrich.prefs {
-            if prefs.sessionWarmup.enabled { added.append("session_warmup") }
-            if prefs.cooldown.enabled { added.append("cooldown") }
-            if prefs.betweenSetRest.enabled { added.append("between_set_rest") }
-            if prefs.exerciseWarmupSets.enabled { added.append("exercise_warmup_sets") }
+            if prefs.sessionWarmup.enabled {
+                blocksJSON = FixtureEnrichment.applySessionWarmup(into: blocksJSON, prefs: prefs.sessionWarmup)
+                added.append("session_warmup")
+            }
+            if prefs.cooldown.enabled {
+                blocksJSON = FixtureEnrichment.applyCooldown(into: blocksJSON, prefs: prefs.cooldown)
+                added.append("cooldown")
+            }
+            if prefs.betweenSetRest.enabled {
+                blocksJSON = FixtureEnrichment.applyBetweenSetRest(into: blocksJSON, prefs: prefs.betweenSetRest)
+                added.append("between_set_rest")
+            }
+            if prefs.exerciseWarmupSets.enabled {
+                blocksJSON = FixtureEnrichment.applyExerciseWarmupSets(
+                    into: blocksJSON,
+                    prefs: prefs.exerciseWarmupSets
+                )
+                added.append("exercise_warmup_sets")
+            }
         }
         return EnrichResponse(
-            blocksJSON: enrich.blocksJSON,
+            blocksJSON: blocksJSON,
             enrichmentApplied: EnrichmentAppliedSummary(
                 prefsSource: "fixture",
                 added: added
@@ -159,6 +175,9 @@ extension FixtureAPIService {
         if let stored = fixtureWorkoutBlocksJSON[workoutId] {
             return stored
         }
+        if let workout = (try? loadedFixtureWorkouts())?.first(where: { $0.id == workoutId }) {
+            return FixtureEnrichment.blocksJSON(from: workout)
+        }
         // Seed non-empty blocks so Apple Watch compose (MapperWorkoutKitPlanProvider)
         // is not blocked by emptyBlocks before the fixture mapToWorkoutKit stub runs.
         return [
@@ -166,6 +185,7 @@ extension FixtureAPIService {
             "blocks": [
                 [
                     "name": "Main",
+                    "type": "sets",
                     "exercises": [
                         ["name": "Barbell back squat", "reps": 10, "sets": 3]
                     ]

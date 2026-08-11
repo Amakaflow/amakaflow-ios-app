@@ -7,6 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		AMA2408REVEALBLD /* AppleWatchPreviewReveal.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2408REVEALREF /* AppleWatchPreviewReveal.swift */; };
+		AMA2408FIXTENRBLD /* FixtureEnrichment.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2408FIXTENRREF /* FixtureEnrichment.swift */; };
+		AMA2408PLAINBLD /* ama2408_plain_four.json in Resources */ = {isa = PBXBuildFile; fileRef = AMA2408PLAINREF /* ama2408_plain_four.json */; };
 		AMA2396V8BLD /* V8_actuals_exercise_structure.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2396V8REF /* V8_actuals_exercise_structure.swift */; };
 		AMA2396RESOLVERBLD /* ActualsLibraryWorkoutResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2396RESOLVERREF /* ActualsLibraryWorkoutResolver.swift */; };
 		AMA2393HONBLD /* WorkoutSportHonesty.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2393HONREF /* WorkoutSportHonesty.swift */; };
@@ -799,6 +802,9 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		AMA2408REVEALREF /* AppleWatchPreviewReveal.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppleWatchPreviewReveal.swift; path = ../AmakaFlow/Views/AppleWatchPreviewReveal.swift; sourceTree = SOURCE_ROOT; };
+		AMA2408FIXTENRREF /* FixtureEnrichment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FixtureEnrichment.swift; path = ../AmakaFlow/DependencyInjection/FixtureEnrichment.swift; sourceTree = SOURCE_ROOT; };
+		AMA2408PLAINREF /* ama2408_plain_four.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = ama2408_plain_four.json; path = ../AmakaFlow/Resources/Fixtures/ama2408_plain_four.json; sourceTree = SOURCE_ROOT; };
 		AMA2396V8REF /* V8_actuals_exercise_structure.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = V8_actuals_exercise_structure.swift; path = ../AmakaFlow/Storage/Migrations/V8_actuals_exercise_structure.swift; sourceTree = SOURCE_ROOT; };
 		AMA2396RESOLVERREF /* ActualsLibraryWorkoutResolver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActualsLibraryWorkoutResolver.swift; path = ../AmakaFlow/Services/ActualsLibraryWorkoutResolver.swift; sourceTree = SOURCE_ROOT; };
 		AMA2393HONREF /* WorkoutSportHonesty.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutSportHonesty.swift; path = ../AmakaFlow/Models/WorkoutSportHonesty.swift; sourceTree = SOURCE_ROOT; };
@@ -2178,6 +2184,8 @@
 				AMA2289FIXCMPREF /* FixtureAPIService+Completions.swift */,
 				F1XWRITE01REF /* FixtureAPIService+Writes.swift */,
 				F1XDEVLIB01REF /* FixtureAPIService+DevicesLibrary.swift */,
+				AMA2408FIXTENRREF /* FixtureEnrichment.swift */,
+				AMA2408REVEALREF /* AppleWatchPreviewReveal.swift */,
 				F1XPROD01REF /* FixtureAPIService+ProductStubs.swift */,
 				F1XWSAVE01REF /* FixtureAPIService+WorkoutSave.swift */,
 				F1XCKNOW01REF /* FixtureAPIService+CoachKnowledge.swift */,
@@ -2189,6 +2197,7 @@
 				F1XTUR3JS0N00000005 /* running_long.json */,
 				F1XTUR3JS0N00000006 /* hiit_follow_along.json */,
 				F1XTUR3JS0N00000007 /* jeff_nippard_upper_body.json */,
+				AMA2408PLAINREF /* ama2408_plain_four.json */,
 				F1XTUR3JS0N00000008 /* bike_ski_row_circuit.json */,
 				8B1F098698F14683BCACADE0 /* WorkoutCompletionService.swift */,
 				AMA12820001A /* PRDetectionService.swift */,
@@ -2679,6 +2688,7 @@
 				F1XTUR3JS0N01000005 /* running_long.json in Resources */,
 				F1XTUR3JS0N01000006 /* hiit_follow_along.json in Resources */,
 				F1XTUR3JS0N01000007 /* jeff_nippard_upper_body.json in Resources */,
+				AMA2408PLAINBLD /* ama2408_plain_four.json in Resources */,
 				F1XTUR3JS0N01000008 /* bike_ski_row_circuit.json in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -3067,6 +3077,8 @@
 				AMA2289FIXCMPBLD /* FixtureAPIService+Completions.swift in Sources */,
 				F1XWRITE01BLD /* FixtureAPIService+Writes.swift in Sources */,
 				F1XDEVLIB01BLD /* FixtureAPIService+DevicesLibrary.swift in Sources */,
+				AMA2408FIXTENRBLD /* FixtureEnrichment.swift in Sources */,
+				AMA2408REVEALBLD /* AppleWatchPreviewReveal.swift in Sources */,
 				F1XPROD01BLD /* FixtureAPIService+ProductStubs.swift in Sources */,
 				F1XWSAVE01BLD /* FixtureAPIService+WorkoutSave.swift in Sources */,
 				F1XCKNOW01BLD /* FixtureAPIService+CoachKnowledge.swift in Sources */,

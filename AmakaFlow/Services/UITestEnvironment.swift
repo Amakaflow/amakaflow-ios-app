@@ -16,9 +16,13 @@ class UITestEnvironment {
     /// XCTest injects `UITEST_*` via `launchEnvironment`; Maestro 2.x passes
     /// `launchApp.arguments`, which iOS surfaces as UserDefaults keys and/or
     /// raw `ProcessInfo.arguments` entries (`-Key`, `value`).
+    ///
+    /// Prefer explicit launch arguments / app defaults over the simulator's
+    /// process environment — stale `simctl`/scheme env (e.g.
+    /// `UITEST_USE_FIXTURES=false`) otherwise shadows intentional dogfood launches.
     static func value(for key: String) -> String? {
-        if let env = ProcessInfo.processInfo.environment[key], !env.isEmpty {
-            return env
+        if let fromArgs = argumentValue(for: key) {
+            return fromArgs
         }
         if let stored = UserDefaults.standard.string(forKey: key), !stored.isEmpty {
             return stored
@@ -26,21 +30,32 @@ class UITestEnvironment {
         if let stored = UserDefaults.standard.string(forKey: "-\(key)"), !stored.isEmpty {
             return stored
         }
+        if let env = ProcessInfo.processInfo.environment[key], !env.isEmpty {
+            return env
+        }
+        return nil
+    }
+
+    /// `simctl launch … -FLAG true` sometimes drops the value token; a bare
+    /// `-FLAG` followed by another `-Next` still means the flag was requested.
+    private static func argumentValue(for key: String) -> String? {
         let args = ProcessInfo.processInfo.arguments
         for index in args.indices {
             let token = args[index]
-            if token == key || token == "-\(key)" {
-                let next = index + 1
-                if next < args.count, !args[next].hasPrefix("-") {
-                    return args[next]
-                }
+            guard token == key || token == "-\(key)" else { continue }
+            let next = index + 1
+            if next < args.count, !args[next].hasPrefix("-") {
+                return args[next]
             }
+            // Present as a bare flag → treat as enabled.
+            return "true"
         }
         return nil
     }
 
     static func isTruthy(_ key: String) -> Bool {
-        value(for: key)?.lowercased() == "true"
+        guard let raw = value(for: key)?.lowercased() else { return false }
+        return raw == "true" || raw == "1" || raw == "yes"
     }
     
     // MARK: - Environment Variable Access
@@ -78,8 +93,20 @@ class UITestEnvironment {
     }
 
     /// Special fixture state: empty, error, etc.
+    /// Ignore stale simulator env `empty` when launch args/defaults name fixtures —
+    /// otherwise dogfood launches load zero workouts while Library still looks "live".
     var fixtureState: String? {
-        let state = Self.value(for: "UITEST_FIXTURE_STATE")
+        if Self.argumentValue(for: "UITEST_FIXTURE_STATE") != nil {
+            let state = Self.argumentValue(for: "UITEST_FIXTURE_STATE")
+            return state?.isEmpty == false ? state : nil
+        }
+        if let stored = UserDefaults.standard.string(forKey: "UITEST_FIXTURE_STATE"), !stored.isEmpty {
+            return stored
+        }
+        if fixtureNames != nil {
+            return nil
+        }
+        let state = ProcessInfo.processInfo.environment["UITEST_FIXTURE_STATE"]
         return state?.isEmpty == false ? state : nil
     }
 
