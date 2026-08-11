@@ -732,6 +732,24 @@ final class AMA2396SyncV2Tests: XCTestCase {
         XCTAssertTrue(body.contains("Cal row"))
     }
 
+    /// AMA-2407: recover WHAT YOU DID rows from the signed Strava body we wrote.
+    func testFillInExercisesFromSignedDescriptionRecoversTrophyLines() {
+        let signed = """
+        🏆 Barbell Overhead Press — 2 x 4
+        🏆 Wide Grip Pull-Up — 3 x 6
+        🏆 Close Grip Bench Press — 2 x 10
+        RPE 8 \(StravaWriteBackSignature.line)
+        """
+        let rows = StravaWorkoutStructureText.fillInExercises(fromSignedDescription: signed)
+        XCTAssertEqual(rows.count, 3)
+        XCTAssertEqual(rows[0].name, "Barbell Overhead Press")
+        XCTAssertEqual(rows[0].planned.sets, 2)
+        XCTAssertEqual(rows[0].planned.reps, 4)
+        XCTAssertEqual(rows[0].confirmation, .asPlanned)
+        XCTAssertEqual(rows[1].name, "Wide Grip Pull-Up")
+        XCTAssertEqual(rows[2].planned.reps, 10)
+    }
+
     /// For-time 60 min cap must not become "60 ROUNDS" / "60 × 3:00" after Strava match.
     func testForTimeCapDoesNotSeedAsCircuitRounds() throws {
         var session = EditorV2Session(title: "Ski Row Assault")

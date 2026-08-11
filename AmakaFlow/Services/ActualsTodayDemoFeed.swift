@@ -667,6 +667,35 @@ final class ActualsTodayDemoFeed: ObservableObject {
             title: next.title,
             activity: next.activity
         )
+        // Local GRDB may be empty on a fresh sim — recover rows from the
+        // signed Strava body we already wrote (same data image‑2 shows).
+        if session.exercises.isEmpty {
+            let recovered = StravaWorkoutStructureText.fillInExercises(
+                fromSignedDescription: description
+            )
+            if !recovered.isEmpty {
+                let rpe = session.rpe
+                    ?? StravaWriteBackDecorator.rpeFromSignedDescription(description)
+                session = ActualsFillInSession(
+                    id: session.id,
+                    title: session.title,
+                    subtitle: "\(session.title.uppercased()) · MATCHED",
+                    exercises: recovered,
+                    rpe: rpe,
+                    verified: true,
+                    stravaActivityId: session.stravaActivityId
+                        ?? stravaActivityId(fromCardID: next.id),
+                    stravaActivityType: session.stravaActivityType
+                        ?? next.activity?.stravaTypeRaw,
+                    stravaCurrentDescription: description,
+                    stravaRecordingApp: session.stravaRecordingApp
+                        ?? next.activity?.recordingApp,
+                    stravaIsRace: session.stravaIsRace,
+                    structureBody: StravaWorkoutStructureText
+                        .structureBodyStrippingOwnershipFooter(description)
+                )
+            }
+        }
         session.verified = true
         session.stravaCurrentDescription = description
         if session.rpe == nil {

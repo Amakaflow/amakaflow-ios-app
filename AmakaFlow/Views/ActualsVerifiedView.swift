@@ -27,6 +27,11 @@ struct ActualsVerifiedView: View {
 
     @Environment(\.dismiss) private var dismiss
     @State private var showMenu = false
+    /// Local copy so silent Strava recovery can rebuild WHAT YOU DID rows.
+    @State private var liveRows: [ActualsVerifiedDeltaRow]
+    @State private var didAttemptExerciseRecovery = false
+
+    // Custom memberwise init below sets `liveRows` from `rows`.
 
     init(
         session: ActualsFillInSession,
@@ -45,7 +50,9 @@ struct ActualsVerifiedView: View {
         let description = session.stravaCurrentDescription ?? ""
         self.rpe = session.rpe
             ?? StravaWriteBackDecorator.rpeFromSignedDescription(description)
-        self.rows = ActualsVerifiedDeltas.rows(from: session.exercises)
+        let deltaRows = ActualsVerifiedDeltas.rows(from: session.exercises)
+        self.rows = deltaRows
+        self._liveRows = State(initialValue: deltaRows)
         self.decoration = decoration
         self.stravaActivityId = session.stravaActivityId
         self.stravaCurrentDescription = description
@@ -126,6 +133,40 @@ struct ActualsVerifiedView: View {
         return rows
     }
 
+    /// When local GRDB has Verified + OURS but empty rows (fresh sim), pull the
+    /// signed Strava description we already wrote and rebuild WHAT YOU DID.
+    @MainActor
+    private func recoverExercisesFromStravaIfNeeded() async {
+        guard !didAttemptExerciseRecovery else { return }
+        guard liveRows.isEmpty else { return }
+        guard let activityId = stravaActivityId, !activityId.isEmpty else { return }
+        didAttemptExerciseRecovery = true
+
+        var description = stravaCurrentDescription
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        if description.isEmpty || !StravaWriteBackDecorator.containsOurSignature(description) {
+            do {
+                let detail = try await BFFStravaClient.live().getActivityDetail(
+                    activityId: activityId
+                )
+                description = detail.description
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+            } catch {
+                return
+            }
+        }
+        guard StravaWriteBackDecorator.containsOurSignature(description) else { return }
+        let recovered = StravaWorkoutStructureText.fillInExercises(
+            fromSignedDescription: description
+        )
+        guard !recovered.isEmpty else {
+            onStravaDescriptionLoaded?(description)
+            return
+        }
+        liveRows = ActualsVerifiedDeltas.rows(from: recovered)
+        onStravaDescriptionLoaded?(description)
+    }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
@@ -140,7 +181,7 @@ struct ActualsVerifiedView: View {
                 ActualsVerifiedCard(
                     sourceName: sourceName,
                     rpe: rpe,
-                    rows: rows
+                    rows: liveRows
                 )
                 .padding(.top, 12)
 
@@ -150,7 +191,7 @@ struct ActualsVerifiedView: View {
                     decoration: decoration,
                     stravaActivityId: stravaActivityId,
                     cachedDescription: stravaCurrentDescription,
-                    hasExerciseRows: !rows.isEmpty
+                    hasExerciseRows: !liveRows.isEmpty
                 ) {
                     ActualsStravaDescriptionSection(
                         stravaActivityId: stravaActivityId,
@@ -169,6 +210,9 @@ struct ActualsVerifiedView: View {
         .background(DailyDriver.screenBackground.ignoresSafeArea())
         .preferredColorScheme(.dark)
         .ddSuppressFloatingChrome()
+        .task(id: stravaActivityId) {
+            await recoverExercisesFromStravaIfNeeded()
+        }
         .sheet(isPresented: $showMenu) {
             ActualsVerifiedMenuSheet(rows: menuRows) { row in
                 showMenu = false

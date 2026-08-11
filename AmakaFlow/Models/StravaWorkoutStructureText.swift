@@ -24,6 +24,63 @@ enum StravaWorkoutStructureText {
         return blocks.joined(separator: "\n\n")
     }
 
+    /// Recover fill-in rows from a signed Strava description we previously wrote
+    /// (`emoji Name — 2 × 4` … + `RPE N — tracked with AmakaFlow`).
+    /// Used when local GRDB lost the matched actuals but Strava still has them.
+    static func fillInExercises(fromSignedDescription description: String) -> [ExerciseActual] {
+        let body = structureBodyStrippingOwnershipFooter(description)
+        guard !body.isEmpty else { return [] }
+        var rows: [ExerciseActual] = []
+        var header: String?
+        var blockIndex = 0
+        var seen = Set<String>()
+        for line in body.components(separatedBy: .newlines) {
+            let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty else { continue }
+            if looksLikeStructureHeader(trimmed) {
+                header = trimmed
+                blockIndex += 1
+                continue
+            }
+            guard let parsed = parseExerciseLine(trimmed) else { continue }
+            var key = "\(slug(parsed.name))_\(rows.count)"
+            if seen.contains(key) {
+                key = "\(key)_\(rows.count)"
+            }
+            seen.insert(key)
+            rows.append(
+                ExerciseActual(
+                    id: key,
+                    name: parsed.name,
+                    planned: parsed.planned,
+                    confirmation: .asPlanned,
+                    structureHeader: header,
+                    structureBlockIndex: header == nil ? nil : max(0, blockIndex - 1)
+                )
+            )
+        }
+        return Array(rows.prefix(24))
+    }
+
+    /// Drop our ownership footer / trailing RPE line so only structure remains.
+    static func structureBodyStrippingOwnershipFooter(_ description: String) -> String {
+        var lines = description
+            .components(separatedBy: .newlines)
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+        while let last = lines.last {
+            let lower = last.lowercased()
+            if lower.contains("tracked with amakaflow")
+                || lower.hasPrefix("rpe ")
+                || last.isEmpty {
+                lines.removeLast()
+                continue
+            }
+            break
+        }
+        return lines.joined(separator: "\n")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
     /// Seed fill-in rows from the matched Library workout (timed steps keep M:SS notes).
     /// Multi-round circuits/EMOM/etc. seed `planned.sets` from `block.rounds` so
     /// verified “WHAT YOU DID” shows `6 × 3:00`, not `1 × 1 · 3:00`.
@@ -272,6 +329,81 @@ enum StravaWorkoutStructureText {
             break
         }
         return String(String.UnicodeScalarView(scalars))
+    }
+
+    private static func parseExerciseLine(
+        _ line: String
+    ) -> (name: String, planned: ExerciseActualPlanned)? {
+        let stripped = stripLeadingEmoji(line)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !stripped.isEmpty else { return nil }
+        let separators = [" — ", " – ", " - "]
+        var name = ""
+        var prescription = ""
+        for separator in separators {
+            guard let range = stripped.range(of: separator) else { continue }
+            name = String(stripped[..<range.lowerBound])
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            prescription = String(stripped[range.upperBound...])
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            break
+        }
+        guard !name.isEmpty, !prescription.isEmpty else { return nil }
+        return (name, plannedFromPrescription(prescription))
+    }
+
+    private static func plannedFromPrescription(_ prescription: String) -> ExerciseActualPlanned {
+        let normalized = prescription
+            .replacingOccurrences(of: "×", with: "x")
+            .replacingOccurrences(of: "·", with: "·")
+        // `2 x 4` / `3 x 12 · 20 KG` / `6 x 3:00`
+        if let match = normalized.range(
+            of: #"^(\d+)\s*x\s*(.+)$"#,
+            options: .regularExpression
+        ) {
+            let body = String(normalized[match])
+            let parts = body.split(separator: "x", maxSplits: 1, omittingEmptySubsequences: true)
+                .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            if parts.count == 2, let sets = Int(parts[0]), sets > 0 {
+                let rhs = parts[1]
+                if let clock = rhs.range(of: #"^\d+:\d{2}$"#, options: .regularExpression) {
+                    return ExerciseActualPlanned(
+                        sets: sets,
+                        reps: 1,
+                        note: String(rhs[clock])
+                    )
+                }
+                let rhsParts = rhs
+                    .components(separatedBy: "·")
+                    .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                    .filter { !$0.isEmpty }
+                if let reps = Int(rhsParts.first ?? ""), reps > 0 {
+                    if rhsParts.count >= 2 {
+                        let note = rhsParts.dropFirst().joined(separator: " · ")
+                        if let kilograms = kilograms(from: note) {
+                            return ExerciseActualPlanned(
+                                sets: sets,
+                                reps: reps,
+                                weightKg: kilograms
+                            )
+                        }
+                        return ExerciseActualPlanned(sets: sets, reps: reps, note: note)
+                    }
+                    return ExerciseActualPlanned(sets: sets, reps: reps)
+                }
+                return ExerciseActualPlanned(sets: sets, reps: 1, note: rhs)
+            }
+        }
+        return ExerciseActualPlanned(sets: 1, reps: 1, note: prescription)
+    }
+
+    private static func kilograms(from note: String) -> Double? {
+        let upper = note.uppercased()
+        guard upper.contains("KG") else { return nil }
+        let digits = upper
+            .replacingOccurrences(of: "KG", with: "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        return Double(digits)
     }
 
     private static func blockHeader(_ block: Block) -> String {
