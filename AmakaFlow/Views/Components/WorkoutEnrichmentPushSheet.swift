@@ -1,23 +1,22 @@
-// AMA-2336/2362/2371/2378 — watch-ready enrichment offers before push.
+// AMA-2336/2362/2371/2378/2408 — watch-ready enrichment offers before push.
 // AMA-2385 — pin Confirm/Skip outside ScrollView so Rest expand keeps CTA visible.
+// AMA-2408 — sheet is a dumb renderer of EnrichmentState + action dispatcher.
 
 import SwiftUI
 
 struct WorkoutEnrichmentPushSheet: View {
     let plan: WorkoutEnrichmentPushPlanner.Plan
     let prefs: WorkoutPreferences
+    let workoutId: String
     let onConfirm: (WorkoutEnrichmentPushPlanner.Decision) -> Void
     let onSkip: () -> Void
     let onClose: () -> Void
 
-    @State private var checkedKinds: Set<EnrichmentKind>
-    @State private var restSec: Int
-    @State private var restOpen: Bool
-    /// v2 door state — seeded from prefs; retained while toggle is off.
-    @State private var mobilityActivities: [EnrichmentActivityPref]
-    @State private var cooldownActivities: [EnrichmentActivityPref]
-    @State private var perExerciseRamps: [PerExerciseRamp]
+    @State private var state: EnrichmentState
     @State private var route: Route?
+    @State private var didRunLegacyMigration = false
+    private let prefsStore: any EnrichmentPrefsStoring
+    private let readinessStore: any WatchItemReadinessStoring
 
     private var target: EnrichmentPushTarget { plan.target }
 
@@ -29,31 +28,63 @@ struct WorkoutEnrichmentPushSheet: View {
     init(
         plan: WorkoutEnrichmentPushPlanner.Plan,
         prefs: WorkoutPreferences,
+        workoutId: String = "",
+        prefsStore: any EnrichmentPrefsStoring = EnrichmentPrefsStore.shared,
+        readinessStore: any WatchItemReadinessStoring = WatchItemReadinessStore.shared,
         onConfirm: @escaping (WorkoutEnrichmentPushPlanner.Decision) -> Void,
         onSkip: @escaping () -> Void,
         onClose: @escaping () -> Void
     ) {
         self.plan = plan
         self.prefs = prefs
+        self.workoutId = workoutId
+        self.prefsStore = prefsStore
+        self.readinessStore = readinessStore
         self.onConfirm = onConfirm
         self.onSkip = onSkip
         self.onClose = onClose
-        _checkedKinds = State(initialValue: plan.defaultCheckedKinds)
-        _restSec = State(initialValue: WorkoutEnrichmentPushCopy.normalizedRestSec(prefs.betweenSetRest.restSec))
-        _restOpen = State(
-            initialValue: WorkoutEnrichmentPushCopy.initialRestOpen(
-                standing: prefs.betweenSetRest,
-                target: plan.target
+        // Side-effect free: seed from load only. Legacy migration persists in onAppear.
+        _state = State(initialValue: Self.seededState(
+            plan: plan,
+            prefs: prefs,
+            workoutId: workoutId,
+            prefsStore: prefsStore,
+            persistMigration: false
+        ))
+    }
+
+    /// Pure seed helper. When `persistMigration` is true, materializes + saves
+    /// legacy bridge drafts once (called from onAppear, not init).
+    private static func seededState(
+        plan: WorkoutEnrichmentPushPlanner.Plan,
+        prefs: WorkoutPreferences,
+        workoutId: String,
+        prefsStore: any EnrichmentPrefsStoring,
+        persistMigration: Bool
+    ) -> EnrichmentState {
+        let candidates = plan.offer(.exerciseWarmupSets)?.candidateExerciseNames ?? []
+        let dedicated = prefsStore.loadDedicated(workoutID: workoutId)
+        var saved = dedicated ?? prefsStore.load(workoutID: workoutId)
+        if persistMigration,
+           dedicated == nil,
+           let existing = saved,
+           existing.checkedKindSet.contains(.exerciseWarmupSets),
+           existing.perExerciseRamps.isEmpty,
+           !candidates.isEmpty {
+            let migrated = LegacyOptInRampMigration.materializePersisted(
+                existing,
+                candidateNames: candidates,
+                defaultSets: prefs.exerciseWarmupSets.defaultSets
             )
+            prefsStore.save(workoutID: workoutId, prefs: migrated)
+            LegacyOptInRampMigration.markMigrated(workoutID: workoutId)
+            saved = migrated
+        }
+        return EnrichmentState.seed(
+            workoutPrefs: saved,
+            globalDefaults: prefs,
+            plan: plan
         )
-        _mobilityActivities = State(initialValue: prefs.sessionWarmup.activities)
-        // Empty standing cooldown seeds Stretch flow → Treadmill (unchecked).
-        _cooldownActivities = State(
-            initialValue: prefs.cooldown.activities.isEmpty
-                ? WorkoutEnrichmentMutations.defaultCooldownActivities()
-                : prefs.cooldown.activities
-        )
-        _perExerciseRamps = State(initialValue: prefs.exerciseWarmupSets.perExercise ?? [])
     }
 
     var body: some View {
@@ -63,19 +94,31 @@ struct WorkoutEnrichmentPushSheet: View {
                     switch route {
                     case .sequence(let kind):
                         EnrichmentSequenceScreen(
-                            activities: kind == .mobility ? $mobilityActivities : $cooldownActivities,
+                            activities: sequenceBinding(kind),
                             kind: kind
                         )
                     case .warmupPick:
                         EnrichmentWarmupPickScreen(
-                            ramps: $perExerciseRamps,
-                            exercises: warmupCandidateNames,
+                            ramps: rampsBinding,
+                            exercises: state.candidateExerciseNames,
                             workingSetCounts: plan.offer(.exerciseWarmupSets)?.candidateWorkingSetCounts ?? []
                         )
+                        .onDisappear { persistConfiguratorSave() }
                     }
                 }
         }
         .preferredColorScheme(.dark)
+        .onAppear {
+            guard !didRunLegacyMigration else { return }
+            didRunLegacyMigration = true
+            state = Self.seededState(
+                plan: plan,
+                prefs: prefs,
+                workoutId: workoutId,
+                prefsStore: prefsStore,
+                persistMigration: true
+            )
+        }
     }
 }
 
@@ -128,14 +171,19 @@ extension WorkoutEnrichmentPushSheet {
 
             VStack(spacing: 10) {
                 Button {
-                    onConfirm(decision)
+                    dispatch(.confirm)
+                    persistConfiguratorSave()
+                    onConfirm(state.decision)
                 } label: {
-                    Text(WorkoutEnrichmentPushCopy.primaryCTA(checkedCount: checkedKinds.count))
+                    Text(WorkoutEnrichmentPushCopy.primaryCTA(checkedCount: state.checkedKinds.count))
                 }
                 .buttonStyle(AFPrimaryButtonStyle(size: .lg))
                 .accessibilityIdentifier("af_enrichment_push_confirm")
 
-                Button(action: onSkip) {
+                Button {
+                    dispatch(.skip)
+                    onSkip()
+                } label: {
                     Text(WorkoutEnrichmentPushCopy.sendAsIsCTA)
                         .font(.system(size: 11, weight: .medium))
                         .foregroundColor(DailyDriver.foregroundDim)
@@ -153,17 +201,24 @@ extension WorkoutEnrichmentPushSheet {
         .accessibilityIdentifier("af_enrichment_push_sheet")
     }
 
-    /// AMA-2378 Task 6 — door-screen edits only ride along when their kind is
-    /// checked (an unchecked kind's local state stays retained but unsent,
-    /// same pattern as the rest override above).
-    private var decision: WorkoutEnrichmentPushPlanner.Decision {
-        WorkoutEnrichmentPushPlanner.Decision(
-            checkedKinds: checkedKinds,
-            restSecOverride: checkedKinds.contains(.betweenSetRest) && !restOpen ? restSec : nil,
-            restOpenOverride: checkedKinds.contains(.betweenSetRest) ? restOpen : nil,
-            sessionWarmupActivities: checkedKinds.contains(.sessionWarmup) ? mobilityActivities : nil,
-            cooldownActivities: checkedKinds.contains(.cooldown) ? cooldownActivities : nil,
-            perExerciseRamps: checkedKinds.contains(.exerciseWarmupSets) ? perExerciseRamps : nil
+    private func dispatch(_ action: EnrichmentAction) {
+        state = EnrichmentReducer.reduce(state, action)
+    }
+
+    /// Persist full decision on confirm AND configurator save (F3).
+    private func persistConfiguratorSave() {
+        guard !workoutId.isEmpty else { return }
+        let persisted = state.persisted()
+        prefsStore.save(workoutID: workoutId, prefs: persisted)
+        // Keep Watch Item draft in lockstep (one store, every door).
+        readinessStore.saveDraft(
+            workoutID: workoutId,
+            snapshot: WatchItemReadinessSnapshot(
+                readiness: persisted.asReadiness(),
+                config: persisted.asConfig(),
+                snapshotPills: readinessStore.loadDraft(workoutID: workoutId)?.snapshotPills ?? [],
+                updatedAt: Date()
+            )
         )
     }
 
@@ -176,21 +231,23 @@ extension WorkoutEnrichmentPushSheet {
         }
     }
 
-    // MARK: - v1 inline rest row (unchanged anatomy — design §Surface 1 exception)
+    // MARK: - v1 inline rest row
 
     private func restRow(_ offer: WorkoutEnrichmentPushPlanner.Offer) -> some View {
-        let isChecked = checkedKinds.contains(offer.kind)
+        let isChecked = state.checkedKinds.contains(offer.kind)
         return VStack(alignment: .leading, spacing: 8) {
             Toggle(isOn: checkedBinding(for: offer.kind)) {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(offer.title)
                         .ddDisplayText(14, weight: .bold)
                         .foregroundColor(DailyDriver.foreground)
-                    Text(detail(for: offer))
-                        .font(.system(size: 10.5))
-                        .foregroundColor(DailyDriver.foregroundMuted)
-                        .monospacedDigit()
-                        .multilineTextAlignment(.leading)
+                    if let detail = liveSummary(for: offer.kind) ?? optionalOfferDetail(offer) {
+                        Text(detail)
+                            .font(.system(size: 10.5))
+                            .foregroundColor(DailyDriver.foregroundMuted)
+                            .monospacedDigit()
+                            .multilineTextAlignment(.leading)
+                    }
                     if offer.wasTombstoned, !offer.isChecked {
                         Text("You removed this before — tick to add it back.")
                             .font(.system(size: 10))
@@ -228,9 +285,9 @@ extension WorkoutEnrichmentPushSheet {
             .tint(DailyDriver.lime)
             .accessibilityIdentifier("af_enrichment_push_rest_open")
 
-            if !restOpen {
+            if !state.restOpen {
                 Stepper(
-                    "\(restSec)s",
+                    "\(state.restSec)s",
                     value: restSecBinding,
                     in: WorkoutEnrichmentPushCopy.restSecRange,
                     step: 15
@@ -244,19 +301,16 @@ extension WorkoutEnrichmentPushSheet {
         .padding(.leading, 28)
     }
 
-    /// Rest-row live override only — other kinds use `liveSummary(for:)`.
-    private func detail(for offer: WorkoutEnrichmentPushPlanner.Offer) -> String {
-        guard offer.kind == .betweenSetRest,
-              checkedKinds.contains(.betweenSetRest) else { return offer.detail }
-        return WorkoutEnrichmentPushCopy.liveRestDetail(
-            restOpen: restOpen, restSec: restSec, target: target
-        )
+    private func optionalOfferDetail(_ offer: WorkoutEnrichmentPushPlanner.Offer) -> String? {
+        offer.kind == .betweenSetRest ? offer.detail : nil
     }
 
-    // MARK: - v2 door rows (mobility / cooldown / warm-up sets)
+    // MARK: - v2 door rows
 
     private func doorRow(_ offer: WorkoutEnrichmentPushPlanner.Offer) -> some View {
-        let isChecked = checkedKinds.contains(offer.kind)
+        let isChecked = state.checkedKinds.contains(offer.kind)
+        let summary = liveSummary(for: offer.kind)
+        let isAmberWarmupCTA = offer.kind == .exerciseWarmupSets && state.needsWarmupPick
         return HStack(spacing: 12) {
             Button {
                 route = doorRoute(for: offer.kind)
@@ -266,11 +320,14 @@ extension WorkoutEnrichmentPushSheet {
                         Text(offer.title)
                             .ddDisplayText(14, weight: .bold)
                             .foregroundColor(DailyDriver.foreground)
-                        Text(liveSummary(for: offer.kind))
+                        // Always reserve one summary line so OFF rows keep constant height.
+                        Text(summary ?? " ")
                             .font(Theme.Typography.mono)
-                            .foregroundColor(DailyDriver.foregroundMuted)
+                            .foregroundColor(isAmberWarmupCTA ? DailyDriver.amber : DailyDriver.foregroundMuted)
+                            .lineLimit(1)
+                            .truncationMode(.tail)
                             .multilineTextAlignment(.leading)
-                            .fixedSize(horizontal: false, vertical: true)
+                            .accessibilityHidden(summary == nil)
                         if offer.wasTombstoned, !isChecked {
                             Text("You removed this before — tick to add it back.")
                                 .font(.system(size: 10))
@@ -324,167 +381,71 @@ extension WorkoutEnrichmentPushSheet {
         }
     }
 
-    /// Live mono caps summary for a door row — reflects local edit state, not
-    /// the plan snapshot from when the sheet opened (design §Surface 1).
-    private func liveSummary(for kind: EnrichmentKind) -> String {
-        switch kind {
-        case .sessionWarmup:
-            return WorkoutEnrichmentPushCopy.sequenceSummary(
-                mobilityActivities.map(EnrichmentActivity.init(pref:))
-            )
-        case .cooldown:
-            return WorkoutEnrichmentPushCopy.sequenceSummary(
-                cooldownActivities.map(EnrichmentActivity.init(pref:)),
-                suffix: WorkoutEnrichmentPushCopy.cooldownRowSummarySuffix
-            )
-        case .exerciseWarmupSets:
-            // Untouched door (no pick edits) still applies v1 global 8·5 —
-            // don't render every candidate as SKIPPED.
-            guard !perExerciseRamps.isEmpty else {
-                return offer(for: .exerciseWarmupSets)?.detail ?? "NO EXERCISES"
-            }
-            return WorkoutEnrichmentPushCopy.warmupSetsSummaryV2(warmupExercisesForSummary)
-        case .betweenSetRest:
-            return offer(for: kind)?.detail ?? ""
-        }
-    }
-
-    private func offer(for kind: EnrichmentKind) -> WorkoutEnrichmentPushPlanner.Offer? {
-        plan.offer(kind)
-    }
-
-    private var warmupCandidateNames: [String] {
-        plan.offer(.exerciseWarmupSets)?.candidateExerciseNames ?? []
-    }
-
-    /// Pairs every warm-up candidate's name with its local ramp (matched by
-    /// normalized name — see `PerExerciseRamp.exerciseRef` doc). Missing ramps
-    /// render as "SKIPPED" via `warmupExerciseTag`, matching the design.
-    private var warmupExercisesForSummary: [(name: String, ramp: PerExerciseRamp?)] {
-        warmupCandidateNames.map { name in
-            let key = ExerciseKeyNormalizer.normalize(name)
-            let ramp = perExerciseRamps.first { ExerciseKeyNormalizer.normalize($0.exerciseRef) == key }
-            return (name: name, ramp: ramp)
-        }
+    /// AMA-2408 — single summary home. OFF → nil (title + toggle only).
+    private func liveSummary(for kind: EnrichmentKind) -> String? {
+        state.summary(for: kind)
     }
 
     // MARK: - Bindings
 
     private var restOpenBinding: Binding<Bool> {
         Binding(
-            get: { restOpen },
-            set: { restOpen = $0 }
+            get: { state.restOpen },
+            set: { dispatch(.setRest(open: $0, sec: state.restSec)) }
         )
     }
 
     private var restSecBinding: Binding<Int> {
         Binding(
-            get: { restSec },
-            // Defensive: Stepper keeps its own increments in-range, but clamp
-            // here too so nothing else can push `restSec` out of the
-            // supported grid before it reaches `decision`.
-            set: { restSec = WorkoutEnrichmentPushCopy.normalizedRestSec($0) }
+            get: { state.restSec },
+            set: {
+                dispatch(.setRest(
+                    open: state.restOpen,
+                    sec: WorkoutEnrichmentPushCopy.normalizedRestSec($0)
+                ))
+            }
+        )
+    }
+
+    private var rampsBinding: Binding<[PerExerciseRamp]> {
+        Binding(
+            get: { state.perExerciseRamps },
+            set: {
+                dispatch(.replaceRamps($0))
+                persistConfiguratorSave()
+            }
+        )
+    }
+
+    private func sequenceBinding(_ kind: EnrichmentSequenceKind) -> Binding<[EnrichmentActivityPref]> {
+        Binding(
+            get: {
+                switch kind {
+                case .mobility: return state.mobilityActivities
+                case .cooldown: return state.cooldownActivities
+                }
+            },
+            set: {
+                dispatch(.setSequence(kind, $0))
+                persistConfiguratorSave()
+            }
         )
     }
 
     private func checkedBinding(for kind: EnrichmentKind) -> Binding<Bool> {
         Binding(
-            get: { checkedKinds.contains(kind) },
+            get: { state.checkedKinds.contains(kind) },
             set: { isOn in
-                // Toggling off never clears `mobilityActivities` /
-                // `cooldownActivities` / `perExerciseRamps` — only membership
-                // in `checkedKinds` changes, so re-enabling restores exactly
-                // what was there before (design §Surface 1 "retained config").
-                if isOn {
-                    checkedKinds.insert(kind)
-                } else {
-                    checkedKinds.remove(kind)
+                let currentlyOn = state.checkedKinds.contains(kind)
+                if isOn != currentlyOn {
+                    dispatch(.toggleRow(kind))
+                }
+                persistConfiguratorSave()
+                // F2: first toggle of Warm-up ROW ON with empty picks → open pick screen.
+                if isOn, kind == .exerciseWarmupSets, state.needsWarmupPick {
+                    route = .warmupPick
                 }
             }
         )
     }
 }
-
-#if DEBUG
-#Preview("Garmin") {
-    WorkoutEnrichmentPushSheet(
-        plan: WorkoutEnrichmentPushPlanner.Plan(
-            offers: [
-                WorkoutEnrichmentPushPlanner.Offer(
-                    kind: .sessionWarmup,
-                    isChecked: true,
-                    wasTombstoned: false,
-                    detail: "Jump Rope · until Lap",
-                    target: .garmin
-                ),
-                WorkoutEnrichmentPushPlanner.Offer(
-                    kind: .betweenSetRest,
-                    isChecked: true,
-                    wasTombstoned: false,
-                    detail: "60s between sets",
-                    target: .garmin
-                ),
-                WorkoutEnrichmentPushPlanner.Offer(
-                    kind: .exerciseWarmupSets,
-                    isChecked: false,
-                    wasTombstoned: true,
-                    detail: "2 warm-up sets (8 · 5 reps) on 3 exercises",
-                    candidateExerciseIds: [],
-                    candidateExerciseNames: ["Deadlift", "Overhead Press", "Leg Press"],
-                    target: .garmin
-                )
-            ],
-            target: .garmin
-        ),
-        prefs: .defaults,
-        onConfirm: { _ in },
-        onSkip: {},
-        onClose: {}
-    )
-    .presentationDetents([.large])
-}
-
-#Preview("Apple") {
-    WorkoutEnrichmentPushSheet(
-        plan: WorkoutEnrichmentPushPlanner.Plan(
-            offers: [
-                WorkoutEnrichmentPushPlanner.Offer(
-                    kind: .sessionWarmup,
-                    isChecked: true,
-                    wasTombstoned: false,
-                    detail: "Jump Rope · until tap",
-                    target: .apple
-                ),
-                WorkoutEnrichmentPushPlanner.Offer(
-                    kind: .exerciseWarmupSets,
-                    isChecked: true,
-                    wasTombstoned: false,
-                    detail: "2 warm-up sets (8 · 5 reps) on 2 exercises",
-                    candidateExerciseNames: ["Deadlift", "Overhead Press"],
-                    target: .apple
-                ),
-                WorkoutEnrichmentPushPlanner.Offer(
-                    kind: .betweenSetRest,
-                    isChecked: true,
-                    wasTombstoned: false,
-                    detail: "Open rest between sets",
-                    target: .apple
-                ),
-                WorkoutEnrichmentPushPlanner.Offer(
-                    kind: .cooldown,
-                    isChecked: false,
-                    wasTombstoned: false,
-                    detail: "Stretch flow · 3:00 → Treadmill · open",
-                    target: .apple
-                )
-            ],
-            target: .apple
-        ),
-        prefs: .defaults,
-        onConfirm: { _ in },
-        onSkip: {},
-        onClose: {}
-    )
-    .presentationDetents([.large])
-}
-#endif

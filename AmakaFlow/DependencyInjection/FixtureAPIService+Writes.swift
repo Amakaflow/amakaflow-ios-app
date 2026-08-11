@@ -24,52 +24,9 @@ extension FixtureAPIService {
         blocksJSON: [String: Any],
         deliveryPrefs: [String: Any]?
     ) async throws -> Data {
-        _ = blocksJSON
         let restMode = deliveryPrefs?["rest_mode"] as? String ?? "tap"
-        let restJSON: String
-        switch restMode {
-        case "timed":
-            restJSON = #"{ "kind": "rest", "seconds": 60 }"#
-        case "omit":
-            restJSON = ""
-        default:
-            restJSON = #"{ "kind": "rest" }"#
-        }
-        print("[FixtureAPIService] Stub: mapToWorkoutKit (AMA-2374 enriched preview shape, rest_mode=\(restMode))")
-
-        func withRest(_ workJSON: String) -> String {
-            guard !restJSON.isEmpty else { return workJSON }
-            return "\(workJSON),\n                \(restJSON)"
-        }
-
-        // Shape mirrors the AMA-2369 redesign dogfood (Jump rope + warm-up sets +
-        // working sets) so Watch preview visual tests can assert exercise-named bands.
-        let intervals = """
-                { "kind": "work", "name": "Jump Rope", "seconds": 120 },
-                \(withRest(#"{ "kind": "work", "name": "WU · Barbell back squat", "reps": 8 }"#)),
-                \(withRest(#"{ "kind": "work", "name": "WU · Barbell back squat", "reps": 5 }"#)),
-                {
-                  "kind": "repeat",
-                  "reps": 3,
-                  "intervals": [
-                    \(withRest(#"{ "kind": "work", "name": "Barbell back squat", "reps": 10 }"#))
-                  ]
-                }
-        """
-        return Data(
-            """
-            {
-              "title": "Fixture",
-              "sportType": "traditionalStrengthTraining",
-              "composition": "custom",
-              "composition_effective": "custom",
-              "routing_reason": "strength_sets",
-              "intervals": [
-            \(intervals)
-              ]
-            }
-            """.utf8
-        )
+        print("[FixtureAPIService] Stub: mapToWorkoutKit from blocks (rest_mode=\(restMode))")
+        return FixtureEnrichment.workoutKitPlanJSON(from: blocksJSON, restMode: restMode)
     }
 
     func mintTelegramLinkToken() async throws -> TelegramLinkTokenResponse {

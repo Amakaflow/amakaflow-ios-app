@@ -1,0 +1,22 @@
+{
+  "id": "fixture-ama2408-plain-four",
+  "name": "AMA-2408 Plain Four",
+  "sport": "strength",
+  "duration": 40,
+  "description": "Clean 4-exercise strength workout with NO warm-ups — use Make it watch-ready? to add ramps.",
+  "source": "manual",
+  "blocks": [
+    {
+      "label": "Main",
+      "structure": "straight",
+      "type": "sets",
+      "rounds": 1,
+      "exercises": [
+        { "name": "Back Squat", "sets": 4, "reps": 8 },
+        { "name": "Bench Press", "sets": 4, "reps": 8 },
+        { "name": "Barbell Row", "sets": 3, "reps": 10 },
+        { "name": "Romanian Deadlift", "sets": 3, "reps": 10 }
+      ]
+    }
+  ]
+}

@@ -16,21 +16,6 @@ extension WorkoutKitPlanStepSummary {
     }
 }
 
-/// Preview content before numbering — shared by flatten + grouping passes.
-private struct PreviewRow {
-    let title: String
-    let detail: String?
-    var rest: String?
-    let setCount: Int
-
-    init(title: String, detail: String?, rest: String? = nil, setCount: Int = 1) {
-        self.title = title
-        self.detail = detail
-        self.rest = rest
-        self.setCount = setCount
-    }
-}
-
 /// Private builder so `WorkoutKitPlanStepSummary` stays under type_body_length.
 private enum PreviewSectionBuilder {
     private enum Atom {
@@ -94,6 +79,25 @@ private enum PreviewSectionBuilder {
                     continue
                 }
                 out.append(contentsOf: flattenStep(step, repeatCount: reps))
+            }
+            return out
+        }
+
+        // Mapper emits per-exercise ramps as one non-repeating block of N warm-up
+        // work steps (`IntervalBlockDTO(iterations: 1, steps: wu_steps)`). Treating
+        // that as a Circuit orphans the ramps from the working-set band and falsely
+        // captions "NO WARM-UPS — YOUR CALL" (AMA-2408 dogfood). Walk the full
+        // step list so any between-ramp rests stay pinned in order.
+        if workSteps.allSatisfy({ isWarmupSetName(displayName(for: $0)) }) {
+            var out: [Atom] = []
+            for _ in 0..<max(reps, 1) {
+                for step in steps {
+                    if isRest(step) {
+                        out.append(.rest(chip: restChipLabel(for: step)))
+                        continue
+                    }
+                    out.append(contentsOf: flattenStep(step, repeatCount: 1))
+                }
             }
             return out
         }
@@ -194,16 +198,48 @@ private enum PreviewSectionBuilder {
         return step.kind.isEmpty ? "Step" : step.kind.capitalized
     }
 
-    /// Strip warm-up prefixes so "WU · Barbell back squat" groups under the exercise band.
+    /// Strip warm-up prefixes so "WU · Barbell back squat" / "Warm-up · Name"
+    /// groups under the exercise band. Also strip trailing detail segments
+    /// (` · 11`, ` · LIGHT · ~40%`) so intensity-labeled warm-up steps land
+    /// under the same band as the working sets (AMA-2408 dogfood).
     private static func exerciseFamily(from name: String) -> String {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
         let lower = trimmed.lowercased()
-        guard let prefix = warmupPrefixes.first(where: { lower.hasPrefix($0) }) else {
-            return trimmed
+        let withoutPrefix: String
+        if let prefix = warmupPrefixes.first(where: { lower.hasPrefix($0) }) {
+            let stripped = String(trimmed.dropFirst(prefix.count))
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            withoutPrefix = stripped.isEmpty ? trimmed : stripped
+        } else {
+            withoutPrefix = trimmed
         }
-        let stripped = String(trimmed.dropFirst(prefix.count))
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-        return stripped.isEmpty ? name : stripped
+        return baseExerciseName(from: withoutPrefix)
+    }
+
+    /// `"Machine Lateral Raises · LIGHT · ~40%"` / `"Incline Smith · 11"` → base name.
+    static func baseExerciseName(from name: String) -> String {
+        let parts = name
+            .components(separatedBy: "·")
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+        guard parts.count > 1 else { return name }
+        // Keep leading name tokens until a detail segment (pure digits, or
+        // intensity / percent / "LIGHT|MODERATE|HEAVY" note).
+        var kept: [String] = []
+        for part in parts {
+            if isDetailSegment(part) { break }
+            kept.append(part)
+        }
+        return kept.isEmpty ? parts[0] : kept.joined(separator: " · ")
+    }
+
+    private static func isDetailSegment(_ part: String) -> Bool {
+        if Int(part) != nil { return true }
+        let upper = part.uppercased()
+        if upper.contains("%") { return true }
+        if upper.contains("~") { return true }
+        let intensityTokens = ["LIGHT", "MODERATE", "HEAVY", "EASY", "HARD"]
+        return intensityTokens.contains { upper == $0 || upper.hasPrefix($0 + " ") }
     }
 
     private static func isWarmupSetName(_ name: String) -> Bool {
@@ -242,13 +278,61 @@ private enum PreviewSectionBuilder {
     /// (AMA-2378 `ActivityGoal.kind == .open` / `RampSet.kind == .open`).
     /// Surfaces as `"Open"` (→ `OPEN` once uppercased) so the preview never
     /// silently drops the row's detail line.
+    ///
+    /// AMA-2408: when WorkoutKit coerce invents `reps=1` for an intensity-only
+    /// warm-up label (`Warm-up · Name · LIGHT · ~40%`), prefer recovering a
+    /// trailing digit from the name, else show the intensity note — never lie
+    /// with "1 REPS" when the user set 11.
     private static func workDetail(for step: WKPlanDTO.Interval.Step) -> String? {
-        if let reps = step.reps { return "\(reps) reps" }
+        if let reps = step.reps {
+            if reps == 1, let recovered = repsRecoveredFromWarmupLabel(step.name) {
+                return "\(recovered) reps"
+            }
+            if reps == 1, let note = intensityNoteFromWarmupLabel(step.name) {
+                return note
+            }
+            return "\(reps) reps"
+        }
         if let seconds = step.seconds { return durationLabel(seconds) }
         if let meters = step.meters, meters > 0 {
             return WorkoutHelpers.formatDistance(meters: Int(meters.rounded()))
         }
         return "Open"
+    }
+
+    /// `"Warm-up · Incline Smith · 11"` → 11. Intensity-only labels → nil.
+    static func repsRecoveredFromWarmupLabel(_ name: String?) -> Int? {
+        guard let name else { return nil }
+        let lower = name.lowercased()
+        guard warmupPrefixes.contains(where: { lower.hasPrefix($0) }) else { return nil }
+        let parts = name
+            .components(separatedBy: "·")
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+        guard let last = parts.last, let value = Int(last), value > 1 else { return nil }
+        return value
+    }
+
+    /// `"Warm-up · Name · LIGHT · ~40%"` → `"LIGHT · ~40%"`.
+    static func intensityNoteFromWarmupLabel(_ name: String?) -> String? {
+        guard let name else { return nil }
+        let lower = name.lowercased()
+        guard let prefix = warmupPrefixes.first(where: { lower.hasPrefix($0) }) else { return nil }
+        let withoutPrefix = String(name.dropFirst(prefix.count))
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let parts = withoutPrefix
+            .components(separatedBy: "·")
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+        guard parts.count >= 2 else { return nil }
+        let detail = Array(parts.dropFirst())
+        // First intensity/detail segment and everything after — drop name tokens
+        // that sit between the exercise name and "LIGHT · ~40%".
+        guard let firstDetailIndex = detail.firstIndex(where: isDetailSegment) else {
+            return nil
+        }
+        let note = detail[firstDetailIndex...].joined(separator: " · ")
+        return note.isEmpty ? nil : note
     }
 
     /// The legacy singular warmup/cooldown fields encode an open goal as
@@ -261,213 +345,5 @@ private enum PreviewSectionBuilder {
             return "\(minutes) min"
         }
         return "\(seconds)s"
-    }
-}
-
-/// AMA-2378 grouping: soft-activity before first work → mobility; after last
-/// work → cooldown. Value type (not MainActor class) for XCTest deinit safety.
-private struct SectionAccumulator {
-    private var sections: [PreviewSection] = []
-    private var number = 1
-    private var pendingRest: String?
-    private var mobilityRows: [PreviewRow] = []
-    private var exerciseName: String?
-    private var exerciseRows: [PreviewRow] = []
-    private var cooldownRows: [PreviewRow] = []
-    private var hasWorked = false
-
-    mutating func setPendingRest(_ chip: String) {
-        pendingRest = chip
-    }
-
-    mutating func appendMobility(title: String, detail: String?) {
-        flushExercise()
-        if hasWorked {
-            var rows = cooldownRows
-            attachPendingRest(to: &rows)
-            rows.append(PreviewRow(title: title, detail: detail))
-            cooldownRows = rows
-        } else {
-            var rows = mobilityRows
-            attachPendingRest(to: &rows)
-            rows.append(PreviewRow(title: title, detail: detail))
-            mobilityRows = rows
-        }
-    }
-
-    mutating func appendWarmupSet(exercise: String, detail: String?) {
-        beginExercise(exercise)
-        exerciseRows.append(PreviewRow(title: PreviewStep.warmupSetTitle, detail: detail, setCount: 1))
-    }
-
-    mutating func appendWork(exercise: String, detail: String?, repeatCount: Int, timed: Bool) {
-        beginExercise(exercise)
-        let noun = timed ? "Work interval" : "Working set"
-        let title = repeatCount > 1 ? "\(noun)s ×\(repeatCount)" : noun
-        exerciseRows.append(PreviewRow(title: title, detail: detail, setCount: max(repeatCount, 1)))
-    }
-
-    /// Circuit band: stations once, outer iterations as ROUNDS (Library parity).
-    mutating func appendCircuit(reps: Int, stations: [(exercise: String, detail: String?)]) {
-        flushMobility()
-        flushExercise()
-        flushCooldownAsInterstitial()
-        hasWorked = true
-        // Drop rest that arrived *before* the circuit (nothing earlier to pin to).
-        // Rest *after* the circuit is attached in `finish()` via pendingRest.
-        pendingRest = nil
-        let rows = stations.map { PreviewRow(title: $0.exercise, detail: $0.detail, setCount: 1) }
-        let tag = reps == 1 ? "1 ROUND" : "\(reps) ROUNDS"
-        sections.append(PreviewSection(
-            accent: .work,
-            band: "Circuit",
-            tag: tag,
-            steps: makeSteps(from: rows),
-            caption: nil
-        ))
-    }
-
-    /// Legacy single-activity `.cooldown` atom — always merges into
-    /// `cooldownRows` alongside any soft-activity rows already pending.
-    mutating func appendCooldownAtom(detail: String) {
-        flushMobility()
-        flushExercise()
-        pendingRest = nil
-        cooldownRows.append(PreviewRow(title: "Cool-down", detail: detail))
-    }
-
-    /// Trailing rest pins to the last work band (circuit rounds / last station).
-    /// Rest with no prior work is dropped (nothing to pin the chip to).
-    mutating func finish() -> [PreviewSection] {
-        flushMobility()
-        flushExercise()
-        flushCooldown()
-        attachTrailingRestToLastWorkSection()
-        return sections
-    }
-
-    /// Circuit/repeat rest arrives after `appendCircuit` cleared pendingRest —
-    /// pin that chip onto the last station so preview matches Apple Workout.
-    private mutating func attachTrailingRestToLastWorkSection() {
-        guard let chip = pendingRest else { return }
-        pendingRest = nil
-        guard let index = sections.lastIndex(where: { $0.accent == .work }),
-              !sections[index].steps.isEmpty else { return }
-        let prior = sections[index]
-        var steps = prior.steps
-        let last = steps[steps.count - 1]
-        steps[steps.count - 1] = PreviewStep(
-            number: last.number,
-            title: last.title,
-            detail: last.detail,
-            restChip: chip
-        )
-        sections[index] = PreviewSection(
-            accent: prior.accent,
-            band: prior.band,
-            tag: prior.tag,
-            steps: steps,
-            caption: prior.caption
-        )
-    }
-
-    private mutating func beginExercise(_ exercise: String) {
-        flushMobility()
-        flushCooldownAsInterstitial()
-        hasWorked = true
-        if exerciseName != exercise {
-            flushExercise()
-            exerciseName = exercise
-        }
-        var rows = exerciseRows
-        attachPendingRest(to: &rows)
-        exerciseRows = rows
-    }
-
-    private mutating func makeSteps(from rows: [PreviewRow]) -> [PreviewStep] {
-        rows.map { row in
-            defer { number += 1 }
-            return PreviewStep(
-                number: number,
-                title: row.title,
-                detail: uppercaseDetail(row.detail),
-                restChip: row.rest
-            )
-        }
-    }
-
-    private mutating func flushMobility() {
-        guard !mobilityRows.isEmpty else { return }
-        var rows = mobilityRows
-        attachPendingRest(to: &rows)
-        mobilityRows = []
-        sections.append(PreviewSection(
-            accent: .mobility,
-            band: "Mobility prep",
-            tag: bandDurationTag(from: rows.map(\.detail)),
-            steps: makeSteps(from: rows)
-        ))
-    }
-
-    private mutating func flushExercise() {
-        guard let name = exerciseName, !exerciseRows.isEmpty else {
-            exerciseName = nil
-            exerciseRows = []
-            return
-        }
-        var rows = exerciseRows
-        attachPendingRest(to: &rows)
-        let setCount = rows.reduce(0) { $0 + $1.setCount }
-        let hasRamp = rows.contains { $0.title == PreviewStep.warmupSetTitle }
-        exerciseName = nil
-        exerciseRows = []
-        sections.append(PreviewSection(
-            accent: .work,
-            band: name,
-            tag: setCount == 1 ? "1 SET" : "\(setCount) SETS",
-            steps: makeSteps(from: rows),
-            caption: hasRamp ? nil : WorkoutEnrichmentPushCopy.noWarmupsYourCall
-        ))
-    }
-
-    /// Flushes rows that looked like a trailing cooldown but turned out to be
-    /// a mid-workout break — more work followed, so relabel as an
-    /// interstitial mobility band instead of dropping them.
-    private mutating func flushCooldownAsInterstitial() {
-        guard !cooldownRows.isEmpty else { return }
-        var rows = cooldownRows
-        attachPendingRest(to: &rows)
-        cooldownRows = []
-        sections.append(PreviewSection(
-            accent: .mobility,
-            band: "Mobility prep",
-            tag: bandDurationTag(from: rows.map(\.detail)),
-            steps: makeSteps(from: rows)
-        ))
-    }
-
-    /// Real, final cooldown flush — always the last section appended because
-    /// it only ever runs at atom-stream end or on the dedicated `.cooldown`
-    /// atom (itself guaranteed last by the mapper). Trailing rest after the
-    /// cool-down band has nothing to pin to — drop it (AMA-2371 contract).
-    private mutating func flushCooldown() {
-        guard !cooldownRows.isEmpty else { return }
-        pendingRest = nil
-        let rows = cooldownRows
-        cooldownRows = []
-        sections.append(PreviewSection(
-            accent: .cooldown,
-            band: "Cool-down",
-            tag: bandDurationTag(from: rows.map(\.detail)),
-            steps: makeSteps(from: rows)
-        ))
-    }
-
-    /// `rows` must be a local copy — never `&self.mobilityRows` etc.
-    private mutating func attachPendingRest(to rows: inout [PreviewRow]) {
-        let chip = pendingRest
-        pendingRest = nil
-        guard let chip, !rows.isEmpty else { return }
-        rows[rows.count - 1].rest = chip
     }
 }

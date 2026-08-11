@@ -99,7 +99,14 @@ struct EnrichRequest: Equatable {
             "mode": mode.rawValue
         ]
         if let prefs {
-            root["prefs"] = try WorkoutEnrichmentJSON.object(from: prefs)
+            // Strip intensity notes on the enrich wire only — persisted prefs
+            // keep them so reopen still shows LIGHT/MODERATE (AMA-2408).
+            var wirePrefs = prefs
+            if let ramps = wirePrefs.exerciseWarmupSets.perExercise {
+                wirePrefs.exerciseWarmupSets.perExercise =
+                    WorkoutEnrichmentMutations.sanitizeRampsForEnrich(ramps)
+            }
+            root["prefs"] = try WorkoutEnrichmentJSON.object(from: wirePrefs)
         }
         if let tombstones {
             root["tombstones"] = try tombstones.map { try WorkoutEnrichmentJSON.object(from: $0) }

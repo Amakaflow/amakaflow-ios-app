@@ -36,6 +36,7 @@ final class WatchItemViewModel: ObservableObject {
     private let replacer: any WatchItemReplacing
     private let toast: DDToastCenter
     private let readinessStore: any WatchItemReadinessStoring
+    private let enrichmentPrefsStore: any EnrichmentPrefsStoring
     private let prefsPersister: WatchItemPrefsPersisting?
 
     var isApple: Bool { device.isApple }
@@ -96,6 +97,30 @@ final class WatchItemViewModel: ObservableObject {
         isApple ? .apple : .garmin
     }
 
+    /// Amber CTA when warm-ups are ON with zero opted-in ramps.
+    var needsWarmupPick: Bool {
+        enrichmentDecisionState.needsWarmupPick
+    }
+
+    /// Shared EnrichmentState projection for summaries + warm-up CTA.
+    private var enrichmentDecisionState: EnrichmentState {
+        EnrichmentState(
+            checkedKinds: Set([
+                tracker.draft.mobilityEnabled ? EnrichmentKind.sessionWarmup : nil,
+                tracker.draft.warmupsEnabled ? EnrichmentKind.exerciseWarmupSets : nil,
+                tracker.draft.restEnabled ? EnrichmentKind.betweenSetRest : nil,
+                tracker.draft.cooldownEnabled ? EnrichmentKind.cooldown : nil
+            ].compactMap { $0 }),
+            mobilityActivities: mobilityActivities,
+            cooldownActivities: cooldownActivities,
+            perExerciseRamps: perExerciseRamps,
+            restOpen: restOpen,
+            restSec: restSec,
+            candidateExerciseNames: warmupExerciseNames,
+            target: enrichmentTarget
+        )
+    }
+
     init(
         device: WatchItemDevice,
         workoutID: String,
@@ -116,6 +141,7 @@ final class WatchItemViewModel: ObservableObject {
         replacer: (any WatchItemReplacing)? = nil,
         toast: DDToastCenter? = nil,
         readinessStore: (any WatchItemReadinessStoring)? = nil,
+        enrichmentPrefsStore: (any EnrichmentPrefsStoring)? = nil,
         prefsPersister: WatchItemPrefsPersisting? = nil
     ) {
         self.device = device
@@ -143,6 +169,7 @@ final class WatchItemViewModel: ObservableObject {
         self.replacer = replacer ?? WatchItemReplaceCoordinator()
         self.toast = toast ?? DDToastCenter.shared
         self.readinessStore = readinessStore ?? WatchItemReadinessStore.shared
+        self.enrichmentPrefsStore = enrichmentPrefsStore ?? EnrichmentPrefsStore.shared
         self.prefsPersister = prefsPersister
     }
 
@@ -281,6 +308,11 @@ final class WatchItemViewModel: ObservableObject {
             updatedAt: Date()
         )
         readinessStore.saveDraft(workoutID: key, snapshot: snap)
+        // AMA-2408 — one store behind every door.
+        enrichmentPrefsStore.save(
+            workoutID: key,
+            prefs: EnrichmentState.Persisted.from(readiness: snap.readiness, config: snap.config)
+        )
         prefsPersister?.persist(snapshot: snap)
     }
 
@@ -295,47 +327,27 @@ final class WatchItemViewModel: ObservableObject {
         )
         readinessStore.saveDelivered(workoutID: key, snapshot: snap)
         readinessStore.saveDraft(workoutID: key, snapshot: snap)
+        enrichmentPrefsStore.save(
+            workoutID: key,
+            prefs: EnrichmentState.Persisted.from(readiness: snap.readiness, config: snap.config)
+        )
         prefsPersister?.persist(snapshot: snap)
     }
 
-    func summary(for row: WatchItemReadinessRow) -> String {
-        let isEnabled = tracker.draft.isEnabled(row)
-        guard isEnabled else { return "OFF" }
-        switch row {
-        case .mobility:
-            return WorkoutEnrichmentPushCopy.sequenceSummary(
-                mobilityActivities.map(EnrichmentActivity.init(pref:))
-            )
-        case .warmups:
-            if !isApple, title.uppercased().contains("EMOM") {
+    func summary(for row: WatchItemReadinessRow) -> String? {
+        // AMA-2408 — single call site into EnrichmentRowSummary via EnrichmentState.
+        // OFF rows return nil (title + toggle only). Garmin EMOM specials stay local.
+        if !isApple, title.uppercased().contains("EMOM") {
+            switch row {
+            case .warmups where tracker.draft.isEnabled(row):
                 return WatchItemCopy.garminWarmupsUnused
-            }
-            if perExerciseRamps.isEmpty {
-                return "NO EXERCISES"
-            }
-            let pairs: [(name: String, ramp: PerExerciseRamp?)] = warmupExerciseNames.map { name in
-                let key = ExerciseKeyNormalizer.normalize(name)
-                let ramp = perExerciseRamps.first {
-                    ExerciseKeyNormalizer.normalize($0.exerciseRef) == key
-                }
-                return (name: name, ramp: ramp)
-            }
-            return WorkoutEnrichmentPushCopy.warmupSetsSummaryV2(pairs)
-        case .rest:
-            if !isApple, title.uppercased().contains("EMOM") {
+            case .rest where tracker.draft.isEnabled(row):
                 return WatchItemCopy.garminRestLap
+            default:
+                break
             }
-            return WorkoutEnrichmentPushCopy.liveRestDetail(
-                restOpen: restOpen,
-                restSec: restSec,
-                target: enrichmentTarget
-            )
-        case .cooldown:
-            return WorkoutEnrichmentPushCopy.sequenceSummary(
-                cooldownActivities.map(EnrichmentActivity.init(pref:)),
-                suffix: WorkoutEnrichmentPushCopy.cooldownRowSummarySuffix
-            )
         }
+        return enrichmentDecisionState.summary(for: row)
     }
 }
 

@@ -760,6 +760,89 @@ final class WorkoutEnrichmentPushPlannerTests: XCTestCase {
         XCTAssertFalse(application.prefs.exerciseWarmupSets.excludeExerciseKeys.contains("Bench Press"))
     }
 
+    /// AMA-2408 — intensity notes persist on application.prefs for reopen; the
+    /// enrich wire strips them (see EnrichRequest.jsonObject).
+    func testApplyKeepsIntensityNotesOnPersistedPerExerciseRamps() throws {
+        let blocks = [
+            SocialImportBlock(
+                label: "Main",
+                rounds: 1,
+                exercises: [
+                    SocialImportExercise(name: "Incline Smith Machine Press", sets: 5, reps: 10),
+                    SocialImportExercise(name: "Machine Lateral Raises", sets: 3, reps: 12)
+                ],
+                type: "sets"
+            )
+        ]
+        let plan = WorkoutEnrichmentPushPlanner.plan(blocks: blocks, tombstones: [], prefs: .defaults)
+        let noted = [
+            PerExerciseRamp(
+                exerciseRef: "Incline Smith Machine Press",
+                enabled: true,
+                sets: [
+                    try RampSet(kind: .reps, value: 11, intensityNote: "LIGHT · ~40%"),
+                    try RampSet(kind: .reps, value: 11, intensityNote: "MODERATE · ~60%")
+                ]
+            ),
+            PerExerciseRamp(
+                exerciseRef: "Machine Lateral Raises",
+                enabled: true,
+                sets: [
+                    try RampSet(kind: .reps, value: 11, intensityNote: "LIGHT · ~40%"),
+                    try RampSet(kind: .reps, value: 11, intensityNote: "MODERATE · ~60%")
+                ]
+            )
+        ]
+        let application = try WorkoutEnrichmentPushPlanner.application(
+            plan: plan,
+            decision: WorkoutEnrichmentPushPlanner.Decision(
+                checkedKinds: [.exerciseWarmupSets],
+                perExerciseRamps: noted
+            ),
+            prefs: .defaults,
+            tombstones: []
+        )
+        let applied = try XCTUnwrap(application.prefs.exerciseWarmupSets.perExercise)
+        XCTAssertEqual(applied.count, 2)
+        XCTAssertEqual(Set(applied.map { ExerciseKeyNormalizer.normalize($0.exerciseRef) }), [
+            "incline smith machine press",
+            "machine lateral raises"
+        ])
+        for ramp in applied {
+            XCTAssertTrue(ramp.enabled)
+            XCTAssertEqual(ramp.sets.map(\.value), [11, 11])
+            XCTAssertEqual(ramp.sets.map(\.intensityNote), ["LIGHT · ~40%", "MODERATE · ~60%"])
+        }
+        XCTAssertFalse(
+            application.prefs.exerciseWarmupSets.excludeExerciseKeys.contains("machine lateral raises")
+        )
+    }
+
+    /// EnrichRequest wire encoding must drop intensity notes even when prefs keep them.
+    func testEnrichRequestJSONStripsIntensityNotesFromPrefs() throws {
+        var prefs = WorkoutPreferences.defaults
+        prefs.exerciseWarmupSets.enabled = true
+        prefs.exerciseWarmupSets.perExercise = [
+            PerExerciseRamp(
+                exerciseRef: "Back Squat",
+                enabled: true,
+                sets: [
+                    try RampSet(kind: .reps, value: 10, intensityNote: "LIGHT · ~40%")
+                ]
+            )
+        ]
+        let request = EnrichRequest(blocksJSON: ["title": "t", "blocks": []], prefs: prefs)
+        let object = try request.jsonObject()
+        let wirePrefs = try XCTUnwrap(object["prefs"] as? [String: Any])
+        let warmup = try XCTUnwrap(wirePrefs["exercise_warmup_sets"] as? [String: Any])
+        let perExercise = try XCTUnwrap(warmup["per_exercise"] as? [[String: Any]])
+        XCTAssertEqual(perExercise.count, 1)
+        let sets = try XCTUnwrap(perExercise[0]["sets"] as? [[String: Any]])
+        XCTAssertEqual(sets.count, 1)
+        XCTAssertNil(sets[0]["intensity_note"])
+        XCTAssertEqual(sets[0]["value"] as? Int, 10)
+    }
+
     /// A ramp the user explicitly turned off in the pick screen is excluded too
     /// (an `enabled: false` entry means "no warm-up sets", not "use the default").
     func testApplyExcludesDisabledPerExerciseRamps() throws {
@@ -839,9 +922,9 @@ final class WorkoutEnrichmentPushPlannerTests: XCTestCase {
         )
     }
 
-    /// An untouched sheet (no door edits — toggles/rest only) must produce
-    /// v1-equivalent prefs: no `per_exercise`, no new excludes.
-    func testApplyWithNoDoorEditsStaysV1Equivalent() throws {
+    /// AMA-2408 — untouched warm-up door (empty perExercise) is opt-in empty:
+    /// ZERO ramps, every candidate excluded. No v1 global auto-apply.
+    func testUntouchedWarmupDoorAppliesZeroRampsAndExcludesAllCandidates() throws {
         let plan = WorkoutEnrichmentPushPlanner.plan(
             blocks: [benchBlock()],
             tombstones: [],
@@ -850,7 +933,8 @@ final class WorkoutEnrichmentPushPlannerTests: XCTestCase {
         let application = try WorkoutEnrichmentPushPlanner.application(
             plan: plan,
             decision: WorkoutEnrichmentPushPlanner.Decision(
-                checkedKinds: [.sessionWarmup, .betweenSetRest, .exerciseWarmupSets]
+                checkedKinds: [.sessionWarmup, .betweenSetRest, .exerciseWarmupSets],
+                perExerciseRamps: []
             ),
             prefs: .defaults,
             tombstones: []
@@ -860,14 +944,56 @@ final class WorkoutEnrichmentPushPlannerTests: XCTestCase {
             application.prefs.sessionWarmup.activities,
             WorkoutPreferences.defaults.sessionWarmup.activities
         )
-        XCTAssertNil(application.prefs.exerciseWarmupSets.perExercise)
-        XCTAssertEqual(
-            application.prefs.exerciseWarmupSets.excludeExerciseKeys,
-            WorkoutPreferences.defaults.exerciseWarmupSets.excludeExerciseKeys
+        XCTAssertEqual(application.prefs.exerciseWarmupSets.perExercise, [])
+        let offer = try XCTUnwrap(plan.offer(.exerciseWarmupSets))
+        let candidates = offer.candidateExerciseNames
+        for name in candidates {
+            XCTAssertTrue(
+                application.prefs.exerciseWarmupSets.excludeExerciseKeys
+                    .contains(ExerciseKeyNormalizer.normalize(name))
+            )
+        }
+        XCTAssertTrue(
+            LegacyOptInRampMigration.optInEffectiveRamps(
+                prefs: application.prefs.exerciseWarmupSets,
+                candidateNames: candidates
+            ).isEmpty
         )
-        let encoded = try WorkoutEnrichmentJSON.object(from: application.prefs)
-        let warmupSets = try XCTUnwrap(encoded["exercise_warmup_sets"] as? [String: Any])
-        XCTAssertNil(warmupSets["per_exercise"])
+    }
+
+    /// Production `decision.perExerciseRamps == nil` must match the empty-array opt-in path.
+    func testNilPerExerciseRampsMatchesEmptyArrayExclusions() throws {
+        let plan = WorkoutEnrichmentPushPlanner.plan(
+            blocks: [benchBlock()],
+            tombstones: [],
+            prefs: .defaults
+        )
+        let emptyApplication = try WorkoutEnrichmentPushPlanner.application(
+            plan: plan,
+            decision: WorkoutEnrichmentPushPlanner.Decision(
+                checkedKinds: [.exerciseWarmupSets],
+                perExerciseRamps: []
+            ),
+            prefs: .defaults,
+            tombstones: []
+        )
+        let nilApplication = try WorkoutEnrichmentPushPlanner.application(
+            plan: plan,
+            decision: WorkoutEnrichmentPushPlanner.Decision(
+                checkedKinds: [.exerciseWarmupSets],
+                perExerciseRamps: nil
+            ),
+            prefs: .defaults,
+            tombstones: []
+        )
+        XCTAssertEqual(
+            emptyApplication.prefs.exerciseWarmupSets.perExercise,
+            nilApplication.prefs.exerciseWarmupSets.perExercise
+        )
+        XCTAssertEqual(
+            Set(emptyApplication.prefs.exerciseWarmupSets.excludeExerciseKeys),
+            Set(nilApplication.prefs.exerciseWarmupSets.excludeExerciseKeys)
+        )
     }
 
     // MARK: - Coordinator apply (AMA-2346)

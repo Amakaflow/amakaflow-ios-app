@@ -98,7 +98,11 @@ extension WorkoutEnrichmentPushPlanner {
             try overridden.betweenSetRest.setRest(restSec: restSec, restOpen: restOpen)
         }
 
-        if checked.contains(.exerciseWarmupSets), let ramps = decision.perExerciseRamps, !ramps.isEmpty {
+        // AMA-2408 F2 — opt-in ramps. Empty/nil `perExercise` no longer falls
+        // through to global `default_sets` on every candidate. Row ON + empty
+        // means ZERO ramps (every candidate excluded).
+        if checked.contains(.exerciseWarmupSets) {
+            let ramps = decision.perExerciseRamps ?? []
             applyPerExerciseRamps(ramps, plan: plan, into: &overridden.exerciseWarmupSets)
         }
 
@@ -122,18 +126,18 @@ extension WorkoutEnrichmentPushPlanner {
         )
     }
 
-    /// AMA-2378 Task 6 — full `per_exercise` list wins over the v1 global
-    /// `default_sets` + `exclude_exercise_keys` scheme (backend "prefer
-    /// per_exercise when non-empty"). Candidates the user left disabled, or
-    /// never touched in the warm-up pick screen at all ("skipped"), are also
-    /// folded into `excludeExerciseKeys` so they never fall back to the
-    /// global default — an absent/disabled `per_exercise` entry means "no
-    /// warm-up sets for this exercise", not "use the global default".
+    /// AMA-2408 F2 — opt-in only. An exercise gets warm-up sets ONLY when it
+    /// has an enabled `PerExerciseRamp` the user created. Empty `ramps` + row
+    /// ON → `perExercise = []` and every candidate lands in `excludeExerciseKeys`
+    /// so the backend cannot revive the v1 global `default_sets` path.
+    /// Disabled / never-touched candidates are excluded the same way.
     private static func applyPerExerciseRamps(
         _ ramps: [PerExerciseRamp],
         plan: Plan,
         into prefs: inout ExerciseWarmupSetsPrefs
     ) {
+        // Keep intensity notes in persisted prefs (reopen honesty). Wire
+        // sanitization happens in EnrichRequest.jsonObject() only.
         prefs.perExercise = ramps
 
         let configuredKeys = Set(ramps.map { ExerciseKeyNormalizer.normalize($0.exerciseRef) })
@@ -148,6 +152,16 @@ extension WorkoutEnrichmentPushPlanner {
         var excludeKeys = Set(prefs.excludeExerciseKeys.map(ExerciseKeyNormalizer.normalize))
         excludeKeys.formUnion(disabledKeys)
         excludeKeys.formUnion(skippedKeys)
+        // Empty opt-in list: exclude every candidate so default_sets cannot apply.
+        if ramps.isEmpty {
+            excludeKeys.formUnion(candidateNames.map(ExerciseKeyNormalizer.normalize))
+        }
+        // Re-enabled ramps must leave exclusions; otherwise confirm/reopen shows
+        // an enabled exercise that still receives no warm-up after optInEffectiveRamps.
+        let enabledKeys = ramps
+            .filter(\.enabled)
+            .map { ExerciseKeyNormalizer.normalize($0.exerciseRef) }
+        excludeKeys.subtract(enabledKeys)
         prefs.excludeExerciseKeys = excludeKeys.sorted()
     }
 

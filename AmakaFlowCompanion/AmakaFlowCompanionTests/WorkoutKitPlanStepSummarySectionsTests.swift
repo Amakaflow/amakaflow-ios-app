@@ -164,4 +164,250 @@ final class WorkoutKitPlanStepSummarySectionsTests: XCTestCase {
         XCTAssertEqual(mobilityBands.first?.steps.map(\.title), ["Jump Rope"])
         XCTAssertNotEqual(sections.last?.accent, .mobility, "mid-workout break must not be misread as the final band")
     }
+
+    // MARK: - AMA-2408 dogfood — intensity labels + multi-ramp blocks
+
+    /// Mapper packs N warm-up steps into one iterations=1 block. Preview must
+    /// fold them under the exercise band — not a orphan Circuit with
+    /// "NO WARM-UPS" on the working sets.
+    func testWarmupOnlyRepeatBandsUnderExerciseNotCircuit() {
+        let json = plan("""
+        {
+          "kind": "repeat",
+          "reps": 1,
+          "intervals": [
+            { "kind": "reps", "reps": 11, "name": "Warm-up · Incline Smith Machine Press" },
+            { "kind": "reps", "reps": 11, "name": "Warm-up · Incline Smith Machine Press" }
+          ]
+        },
+        {
+          "kind": "repeat",
+          "reps": 5,
+          "intervals": [
+            { "kind": "reps", "reps": 10, "name": "Incline Smith Machine Press" }
+          ]
+        }
+        """)
+        let sections = WorkoutKitPlanStepSummary.sections(from: json)
+
+        XCTAssertFalse(
+            sections.contains { $0.band == "Circuit" },
+            "warm-up-only blocks must not render as Circuit"
+        )
+        guard let incline = sections.first(where: {
+            $0.accent == .work && $0.band == "Incline Smith Machine Press"
+        }) else {
+            return XCTFail("Expected Incline Smith work band")
+        }
+        XCTAssertNil(incline.caption, "ramp rows under the band clear NO WARM-UPS")
+        XCTAssertEqual(
+            incline.steps.filter { $0.title == PreviewStep.warmupSetTitle }.count,
+            2
+        )
+        XCTAssertEqual(
+            incline.steps.filter { $0.title == PreviewStep.warmupSetTitle }.map(\.detail),
+            ["11 REPS", "11 REPS"]
+        )
+    }
+
+    /// Intensity-suffixed warm-up labels must still family-match the working sets,
+    /// and "1 REPS" from open-goal coerce must not win over a recoverable note.
+
+    /// Two same-reps ramp rows must both render — identical detail must not
+    /// collapse to a single Warm-up set (AMA-2408 dogfood).
+    func testTwoIdenticalWarmupRampsBothAppearUnderExercise() {
+        let json = plan("""
+        {
+          "kind": "repeat",
+          "reps": 1,
+          "intervals": [
+            { "kind": "reps", "reps": 10, "name": "Warm-up · Back Squat · 10" },
+            { "kind": "rest" },
+            { "kind": "reps", "reps": 10, "name": "Warm-up · Back Squat · 10" },
+            { "kind": "rest" }
+          ]
+        },
+        {
+          "kind": "repeat",
+          "reps": 4,
+          "intervals": [
+            { "kind": "reps", "reps": 8, "name": "Back Squat" },
+            { "kind": "rest" }
+          ]
+        }
+        """)
+        let sections = WorkoutKitPlanStepSummary.sections(from: json)
+        guard let squat = sections.first(where: {
+            $0.accent == .work && $0.band == "Back Squat"
+        }) else {
+            return XCTFail("Expected Back Squat band")
+        }
+        let warmups = squat.steps.filter { $0.title == PreviewStep.warmupSetTitle }
+        XCTAssertEqual(warmups.count, 2, "both ramp sets must appear; got \(squat.steps.map { "\($0.number):\($0.title)" })")
+        XCTAssertEqual(warmups.map(\.detail), ["10 REPS", "10 REPS"])
+        XCTAssertEqual(squat.tag, "6 SETS")
+    }
+
+    /// Build-reveal must not collapse two identical warm-up beats onto step #1.
+    func testRevealKeepsBothIdenticalWarmupRows() {
+        let json = plan("""
+        {
+          "kind": "repeat",
+          "reps": 1,
+          "intervals": [
+            { "kind": "reps", "reps": 10, "name": "Warm-up · Back Squat · 10" },
+            { "kind": "reps", "reps": 10, "name": "Warm-up · Back Squat · 10" }
+          ]
+        },
+        {
+          "kind": "repeat",
+          "reps": 4,
+          "intervals": [
+            { "kind": "reps", "reps": 8, "name": "Back Squat" }
+          ]
+        }
+        """)
+        let sections = WorkoutKitPlanStepSummary.sections(from: json)
+        let beats = BuildRevealScripts.watchPreview(sections: sections).beats
+        let revealed = AppleWatchPreviewReveal.sections(from: sections, shownBeats: beats)
+        guard let squat = revealed.first(where: { $0.band == "Back Squat" }) else {
+            return XCTFail("Expected revealed Back Squat band")
+        }
+        XCTAssertEqual(
+            squat.steps.filter { $0.title == PreviewStep.warmupSetTitle }.count,
+            2,
+            "reveal must keep both identical warm-up ramps"
+        )
+        XCTAssertEqual(squat.steps.map(\.number).sorted(), squat.steps.map(\.number))
+        XCTAssertEqual(Set(squat.steps.map(\.number)).count, squat.steps.count)
+    }
+
+    /// Pure unit: identical title+detail must advance to the next unused step number.
+    func testNextUnusedStepDoesNotRebindFirstIdenticalWarmup() {
+        let steps = [
+            PreviewStep(number: 1, title: PreviewStep.warmupSetTitle, detail: "10 REPS", restChip: nil),
+            PreviewStep(number: 2, title: PreviewStep.warmupSetTitle, detail: "10 REPS", restChip: nil),
+            PreviewStep(number: 3, title: "Back Squat", detail: "8 REPS", restChip: nil),
+        ]
+        let beat = BuildBeat(kind: .row, name: PreviewStep.warmupSetTitle, detail: "10 REPS")
+
+        let first = AppleWatchPreviewReveal.nextUnusedStep(
+            in: steps, matching: beat, alreadyShown: []
+        )
+        XCTAssertEqual(first?.number, 1)
+
+        let second = AppleWatchPreviewReveal.nextUnusedStep(
+            in: steps, matching: beat, alreadyShown: [first!]
+        )
+        XCTAssertEqual(second?.number, 2, "second identical ramp must consume step #2, not rebind #1")
+
+        let third = AppleWatchPreviewReveal.nextUnusedStep(
+            in: steps, matching: beat, alreadyShown: [first!, second!]
+        )
+        XCTAssertNil(third, "no third identical warm-up left")
+    }
+
+    /// Reveal assembly with hand-built beats (no script dependency).
+    func testRevealSectionsConsumesIdenticalRowsInOrder() {
+        let section = PreviewSection(
+            accent: .work,
+            band: "Back Squat",
+            tag: "6 SETS",
+            steps: [
+                PreviewStep(number: 1, title: PreviewStep.warmupSetTitle, detail: "10 REPS", restChip: nil),
+                PreviewStep(number: 2, title: PreviewStep.warmupSetTitle, detail: "10 REPS", restChip: nil),
+                PreviewStep(number: 3, title: "Back Squat", detail: "8 REPS", restChip: nil),
+            ]
+        )
+        let beats: [BuildBeat] = [
+            BuildBeat(kind: .band, label: "Back Squat"),
+            BuildBeat(kind: .row, name: PreviewStep.warmupSetTitle, detail: "10 REPS"),
+            BuildBeat(kind: .row, name: PreviewStep.warmupSetTitle, detail: "10 REPS"),
+            BuildBeat(kind: .row, name: "Back Squat", detail: "8 REPS"),
+        ]
+        let revealed = AppleWatchPreviewReveal.sections(from: [section], shownBeats: beats)
+        XCTAssertEqual(revealed.count, 1)
+        XCTAssertEqual(revealed[0].steps.map(\.number), [1, 2, 3])
+        XCTAssertEqual(
+            revealed[0].steps.map(\.title),
+            [PreviewStep.warmupSetTitle, PreviewStep.warmupSetTitle, "Back Squat"]
+        )
+    }
+
+    func testIntensityLabeledWarmupsBandAndAvoidFakeOneRep() {
+        let json = plan("""
+        {
+          "kind": "repeat",
+          "reps": 1,
+          "intervals": [
+            {
+              "kind": "reps",
+              "reps": 1,
+              "name": "Warm-up · Machine Lateral Raises · LIGHT · ~40%"
+            },
+            {
+              "kind": "reps",
+              "reps": 1,
+              "name": "Warm-up · Machine Lateral Raises · MODERATE · ~60%"
+            }
+          ]
+        },
+        {
+          "kind": "repeat",
+          "reps": 3,
+          "intervals": [
+            { "kind": "reps", "reps": 12, "name": "Machine Lateral Raises" }
+          ]
+        }
+        """)
+        let sections = WorkoutKitPlanStepSummary.sections(from: json)
+
+        guard let mlr = sections.first(where: {
+            $0.accent == .work && $0.band == "Machine Lateral Raises"
+        }) else {
+            return XCTFail("Expected Machine Lateral Raises band with ramps attached")
+        }
+        XCTAssertNil(mlr.caption)
+        let rampDetails = mlr.steps
+            .filter { $0.title == PreviewStep.warmupSetTitle }
+            .map(\.detail)
+        XCTAssertEqual(rampDetails, ["LIGHT · ~40%", "MODERATE · ~60%"])
+        XCTAssertFalse(rampDetails.contains("1 REPS"))
+    }
+
+    /// Multi-token exercise names must not leak into the intensity note suffix.
+    func testIntensityNoteDropsExerciseNameSegments() {
+        let json = plan("""
+        {
+          "kind": "repeat",
+          "reps": 1,
+          "intervals": [
+            {
+              "kind": "reps",
+              "reps": 1,
+              "name": "Warm-up · Dumbbell · Shoulder Press · LIGHT · ~40%"
+            }
+          ]
+        },
+        {
+          "kind": "repeat",
+          "reps": 3,
+          "intervals": [
+            { "kind": "reps", "reps": 12, "name": "Dumbbell · Shoulder Press" }
+          ]
+        }
+        """)
+        let sections = WorkoutKitPlanStepSummary.sections(from: json)
+        guard let band = sections.first(where: {
+            $0.accent == .work && $0.band.contains("Shoulder Press")
+        }) else {
+            return XCTFail("Expected Shoulder Press band")
+        }
+        let warmup = band.steps.first { $0.title == PreviewStep.warmupSetTitle }
+        XCTAssertEqual(warmup?.detail, "LIGHT · ~40%")
+        XCTAssertFalse(
+            (warmup?.detail ?? "").contains("Shoulder Press"),
+            "exercise-name tokens must not leak into intensity detail"
+        )
+    }
 }

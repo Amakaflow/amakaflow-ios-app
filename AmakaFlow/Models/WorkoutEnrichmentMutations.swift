@@ -282,11 +282,30 @@ enum WorkoutEnrichmentMutations {
 
     // MARK: - AMA-2378 Task 5 — per-exercise ramp pick/editor helpers
 
+    /// AMA-2408 dogfood — strip intensity notes before they ride the enrich
+    /// wire so WorkoutKit labels keep the reps digit (`Warm-up · Name · 11`).
+    /// Backend `warmup_set_display_name` prefers `intensity_note` over reps;
+    /// when a note is present the legacy coerce falls back to `reps=1` and
+    /// the Apple preview lies. Call sites: `EnrichRequest.jsonObject()` only —
+    /// persisted prefs / reopen keep the notes intact.
+    static func sanitizeRampSetsForEnrich(_ sets: [RampSet]) -> [RampSet] {
+        sets.compactMap { set in
+            try? RampSet(kind: set.kind, value: set.value, intensityNote: nil, id: set.id)
+        }
+    }
+
+    static func sanitizeRampsForEnrich(_ ramps: [PerExerciseRamp]) -> [PerExerciseRamp] {
+        ramps.map { ramp in
+            var copy = ramp
+            copy.sets = sanitizeRampSetsForEnrich(ramp.sets)
+            return copy
+        }
+    }
+
     /// Seed sets for an exercise that has no declared ramp yet, minted the
     /// moment its pick-screen toggle flips ON. Mirrors the global v1 default
-    /// (backend `ExerciseWarmupSetsPrefs.defaults` — 8·5 reps) plus intensity
-    /// notes matching the design spec example (`LIGHT · ~40%` / `MODERATE · ~60%`)
-    /// so a freshly-seeded ramp reads the same as the backend's own sample.
+    /// (backend `ExerciseWarmupSetsPrefs.defaults` — 8·5 reps). Intensity notes
+    /// are pick-UI only and cleared before enrich (see `sanitizeRampSetsForEnrich`).
     static func defaultRampSets() -> [RampSet] {
         [
             try? RampSet(kind: .reps, value: 8, intensityNote: "LIGHT · ~40%"),

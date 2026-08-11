@@ -7,6 +7,11 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		AMA2408SECTSACCBLD /* WorkoutKitPlanStepSummary+SectionAccumulator.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2408SECTSACCREF /* WorkoutKitPlanStepSummary+SectionAccumulator.swift */; };
+		AMA2408PUSHPREVBLD /* WorkoutEnrichmentPushSheet+Previews.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2408PUSHPREVREF /* WorkoutEnrichmentPushSheet+Previews.swift */; };
+		AMA2408REVEALBLD /* AppleWatchPreviewReveal.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2408REVEALREF /* AppleWatchPreviewReveal.swift */; };
+		AMA2408FIXTENRBLD /* FixtureEnrichment.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2408FIXTENRREF /* FixtureEnrichment.swift */; };
+		AMA2408PLAINBLD /* ama2408_plain_four.json in Resources */ = {isa = PBXBuildFile; fileRef = AMA2408PLAINREF /* ama2408_plain_four.json */; };
 		AMA2396V8BLD /* V8_actuals_exercise_structure.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2396V8REF /* V8_actuals_exercise_structure.swift */; };
 		AMA2396RESOLVERBLD /* ActualsLibraryWorkoutResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2396RESOLVERREF /* ActualsLibraryWorkoutResolver.swift */; };
 		AMA2393HONBLD /* WorkoutSportHonesty.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2393HONREF /* WorkoutSportHonesty.swift */; };
@@ -210,6 +215,11 @@
 		AMA2336APIBLD001 /* WorkoutEnrichmentAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2336APIREF001 /* WorkoutEnrichmentAPI.swift */; };
 		AMA2336TESTBLD /* WorkoutEnrichmentModelsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2336TESTREF /* WorkoutEnrichmentModelsTests.swift */; };
 		AMA2362COPYBLD001 /* WorkoutEnrichmentPushCopy.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2362COPYREF001 /* WorkoutEnrichmentPushCopy.swift */; };
+		AMA2408SUMBLD /* EnrichmentRowSummary.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2408SUMREF /* EnrichmentRowSummary.swift */; };
+		AMA2408STBLD /* EnrichmentState.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2408STREF /* EnrichmentState.swift */; };
+		AMA2408REDBLD /* EnrichmentReducer.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2408REDREF /* EnrichmentReducer.swift */; };
+		AMA2408MIGBLD /* LegacyOptInRampMigration.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2408MIGREF /* LegacyOptInRampMigration.swift */; };
+		AMA2408STRBLD /* EnrichmentPrefsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2408STRREF /* EnrichmentPrefsStore.swift */; };
 		AMA2371GENCOPYBLD1 /* SuggestWorkoutGeneratingCopy.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2371GENCOPYREF1 /* SuggestWorkoutGeneratingCopy.swift */; };
 		AMA2336PLANBLD001 /* WorkoutEnrichmentPushPlanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2336PLANREF001 /* WorkoutEnrichmentPushPlanner.swift */; };
 		AMA2336SVCBLD001 /* APIService+WorkoutEnrichment.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2336SVCREF001 /* APIService+WorkoutEnrichment.swift */; };
@@ -794,6 +804,11 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		AMA2408SECTSACCREF /* WorkoutKitPlanStepSummary+SectionAccumulator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "WorkoutKitPlanStepSummary+SectionAccumulator.swift"; path = "../AmakaFlow/Models/WorkoutKitPlanStepSummary+SectionAccumulator.swift"; sourceTree = SOURCE_ROOT; };
+		AMA2408PUSHPREVREF /* WorkoutEnrichmentPushSheet+Previews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "WorkoutEnrichmentPushSheet+Previews.swift"; path = "../AmakaFlow/Views/Components/WorkoutEnrichmentPushSheet+Previews.swift"; sourceTree = SOURCE_ROOT; };
+		AMA2408REVEALREF /* AppleWatchPreviewReveal.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppleWatchPreviewReveal.swift; path = ../AmakaFlow/Views/AppleWatchPreviewReveal.swift; sourceTree = SOURCE_ROOT; };
+		AMA2408FIXTENRREF /* FixtureEnrichment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FixtureEnrichment.swift; path = ../AmakaFlow/DependencyInjection/FixtureEnrichment.swift; sourceTree = SOURCE_ROOT; };
+		AMA2408PLAINREF /* ama2408_plain_four.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = ama2408_plain_four.json; path = ../AmakaFlow/Resources/Fixtures/ama2408_plain_four.json; sourceTree = SOURCE_ROOT; };
 		AMA2396V8REF /* V8_actuals_exercise_structure.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = V8_actuals_exercise_structure.swift; path = ../AmakaFlow/Storage/Migrations/V8_actuals_exercise_structure.swift; sourceTree = SOURCE_ROOT; };
 		AMA2396RESOLVERREF /* ActualsLibraryWorkoutResolver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActualsLibraryWorkoutResolver.swift; path = ../AmakaFlow/Services/ActualsLibraryWorkoutResolver.swift; sourceTree = SOURCE_ROOT; };
 		AMA2393HONREF /* WorkoutSportHonesty.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutSportHonesty.swift; path = ../AmakaFlow/Models/WorkoutSportHonesty.swift; sourceTree = SOURCE_ROOT; };
@@ -1064,6 +1079,7 @@
 		AMA2375QSTRREF /* GarminWatchQueueStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = GarminWatchQueueStore.swift; path = ../AmakaFlow/Services/GarminWatchQueueStore.swift; sourceTree = SOURCE_ROOT; };
 		AMA2388LNKREF /* AppleScheduledWorkoutLinkStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppleScheduledWorkoutLinkStore.swift; path = ../AmakaFlow/Services/AppleScheduledWorkoutLinkStore.swift; sourceTree = SOURCE_ROOT; };
 		AMA2388RDYREF /* WatchItemReadinessStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WatchItemReadinessStore.swift; path = ../AmakaFlow/Services/WatchItemReadinessStore.swift; sourceTree = SOURCE_ROOT; };
+		AMA2408STRREF /* EnrichmentPrefsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = EnrichmentPrefsStore.swift; path = ../AmakaFlow/Services/EnrichmentPrefsStore.swift; sourceTree = SOURCE_ROOT; };
 		AMA2388OVLREF /* WatchItemDeliveredStepsOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WatchItemDeliveredStepsOverlay.swift; path = ../AmakaFlow/Views/Components/WatchItemDeliveredStepsOverlay.swift; sourceTree = SOURCE_ROOT; };
 		AMA2388LNKTREF /* AppleScheduledWorkoutLinkStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppleScheduledWorkoutLinkStoreTests.swift; path = AmakaFlowCompanionTests/AppleScheduledWorkoutLinkStoreTests.swift; sourceTree = "<group>"; };
 		AMA2388RDYTREF /* WatchItemReadinessStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WatchItemReadinessStoreTests.swift; path = AmakaFlowCompanionTests/WatchItemReadinessStoreTests.swift; sourceTree = "<group>"; };
@@ -1088,6 +1104,10 @@
 		AMA2363MUTREF001 /* WorkoutEnrichmentMutations.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutEnrichmentMutations.swift; path = ../AmakaFlow/Models/WorkoutEnrichmentMutations.swift; sourceTree = SOURCE_ROOT; };
 		AMA2336APIREF001 /* WorkoutEnrichmentAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutEnrichmentAPI.swift; path = ../AmakaFlow/Models/WorkoutEnrichmentAPI.swift; sourceTree = SOURCE_ROOT; };
 		AMA2362COPYREF001 /* WorkoutEnrichmentPushCopy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutEnrichmentPushCopy.swift; path = ../AmakaFlow/Models/WorkoutEnrichmentPushCopy.swift; sourceTree = SOURCE_ROOT; };
+		AMA2408SUMREF /* EnrichmentRowSummary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = EnrichmentRowSummary.swift; path = ../AmakaFlow/Models/EnrichmentRowSummary.swift; sourceTree = SOURCE_ROOT; };
+		AMA2408STREF /* EnrichmentState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = EnrichmentState.swift; path = ../AmakaFlow/Models/EnrichmentState.swift; sourceTree = SOURCE_ROOT; };
+		AMA2408REDREF /* EnrichmentReducer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = EnrichmentReducer.swift; path = ../AmakaFlow/Models/EnrichmentReducer.swift; sourceTree = SOURCE_ROOT; };
+		AMA2408MIGREF /* LegacyOptInRampMigration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LegacyOptInRampMigration.swift; path = ../AmakaFlow/Models/LegacyOptInRampMigration.swift; sourceTree = SOURCE_ROOT; };
 		AMA2371GENCOPYREF1 /* SuggestWorkoutGeneratingCopy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SuggestWorkoutGeneratingCopy.swift; path = ../AmakaFlow/Models/SuggestWorkoutGeneratingCopy.swift; sourceTree = SOURCE_ROOT; };
 		AMA2336PLANREF001 /* WorkoutEnrichmentPushPlanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutEnrichmentPushPlanner.swift; path = ../AmakaFlow/Models/WorkoutEnrichmentPushPlanner.swift; sourceTree = SOURCE_ROOT; };
 		AMA2336SVCREF001 /* APIService+WorkoutEnrichment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "APIService+WorkoutEnrichment.swift"; path = "../AmakaFlow/Services/APIService+WorkoutEnrichment.swift"; sourceTree = SOURCE_ROOT; };
@@ -1688,6 +1708,7 @@
 				AMA2375QSTRREF /* GarminWatchQueueStore.swift */,
 				AMA2388LNKREF /* AppleScheduledWorkoutLinkStore.swift */,
 				AMA2388RDYREF /* WatchItemReadinessStore.swift */,
+				AMA2408STRREF /* EnrichmentPrefsStore.swift */,
 				AMA2388PRFREF /* WatchItemPrefsPersister.swift */,
 				AMA2375DEMOREF /* OnYourWatchesDemoSupport.swift */,
 				AMA2386REPLREF /* WatchItemReplaceCoordinator.swift */,
@@ -1886,6 +1907,7 @@
 				3X3RC1S35W1FT000001 /* Exercise.swift */,
 				AMA2360STEPSREF01 /* WorkoutKitPlanStepSummary.swift */,
 				AMA2374SECTSREF01 /* WorkoutKitPlanStepSummary+Sections.swift */,
+				AMA2408SECTSACCREF /* WorkoutKitPlanStepSummary+SectionAccumulator.swift */,
 				AMA2351WKMETAREF /* WorkoutKitPlanMeta.swift */,
 				AMA2311PRESREF001 /* Prescription.swift */,
 				AMA2360PREFREF001 /* AppleWatchDeliveryPrefs.swift */,
@@ -1896,6 +1918,10 @@
 				AMA2363MUTREF001 /* WorkoutEnrichmentMutations.swift */,
 				AMA2336APIREF001 /* WorkoutEnrichmentAPI.swift */,
 				AMA2362COPYREF001 /* WorkoutEnrichmentPushCopy.swift */,
+				AMA2408SUMREF /* EnrichmentRowSummary.swift */,
+				AMA2408STREF /* EnrichmentState.swift */,
+				AMA2408REDREF /* EnrichmentReducer.swift */,
+				AMA2408MIGREF /* LegacyOptInRampMigration.swift */,
 				AMA2371GENCOPYREF1 /* SuggestWorkoutGeneratingCopy.swift */,
 				AMA2336PLANREF001 /* WorkoutEnrichmentPushPlanner.swift */,
 				AMA2336SVCREF001 /* APIService+WorkoutEnrichment.swift */,
@@ -1904,6 +1930,7 @@
 				AMA2336COORDREF001 /* WorkoutEnrichmentPushCoordinator.swift */,
 				AMA2336PREFVREF001 /* WorkoutEnrichmentPrefsSheet.swift */,
 				AMA2336PUSHVREF001 /* WorkoutEnrichmentPushSheet.swift */,
+				AMA2408PUSHPREVREF /* WorkoutEnrichmentPushSheet+Previews.swift */,
 				AMA2386SHEETREF /* WatchItemSheet.swift */,
 				AMA2388PRTREF /* WatchItemSheet+Parts.swift */,
 				AMA2388OVLREF /* WatchItemDeliveredStepsOverlay.swift */,
@@ -2163,6 +2190,8 @@
 				AMA2289FIXCMPREF /* FixtureAPIService+Completions.swift */,
 				F1XWRITE01REF /* FixtureAPIService+Writes.swift */,
 				F1XDEVLIB01REF /* FixtureAPIService+DevicesLibrary.swift */,
+				AMA2408FIXTENRREF /* FixtureEnrichment.swift */,
+				AMA2408REVEALREF /* AppleWatchPreviewReveal.swift */,
 				F1XPROD01REF /* FixtureAPIService+ProductStubs.swift */,
 				F1XWSAVE01REF /* FixtureAPIService+WorkoutSave.swift */,
 				F1XCKNOW01REF /* FixtureAPIService+CoachKnowledge.swift */,
@@ -2174,6 +2203,7 @@
 				F1XTUR3JS0N00000005 /* running_long.json */,
 				F1XTUR3JS0N00000006 /* hiit_follow_along.json */,
 				F1XTUR3JS0N00000007 /* jeff_nippard_upper_body.json */,
+				AMA2408PLAINREF /* ama2408_plain_four.json */,
 				F1XTUR3JS0N00000008 /* bike_ski_row_circuit.json */,
 				8B1F098698F14683BCACADE0 /* WorkoutCompletionService.swift */,
 				AMA12820001A /* PRDetectionService.swift */,
@@ -2664,6 +2694,7 @@
 				F1XTUR3JS0N01000005 /* running_long.json in Resources */,
 				F1XTUR3JS0N01000006 /* hiit_follow_along.json in Resources */,
 				F1XTUR3JS0N01000007 /* jeff_nippard_upper_body.json in Resources */,
+				AMA2408PLAINBLD /* ama2408_plain_four.json in Resources */,
 				F1XTUR3JS0N01000008 /* bike_ski_row_circuit.json in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -3052,6 +3083,8 @@
 				AMA2289FIXCMPBLD /* FixtureAPIService+Completions.swift in Sources */,
 				F1XWRITE01BLD /* FixtureAPIService+Writes.swift in Sources */,
 				F1XDEVLIB01BLD /* FixtureAPIService+DevicesLibrary.swift in Sources */,
+				AMA2408FIXTENRBLD /* FixtureEnrichment.swift in Sources */,
+				AMA2408REVEALBLD /* AppleWatchPreviewReveal.swift in Sources */,
 				F1XPROD01BLD /* FixtureAPIService+ProductStubs.swift in Sources */,
 				F1XWSAVE01BLD /* FixtureAPIService+WorkoutSave.swift in Sources */,
 				F1XCKNOW01BLD /* FixtureAPIService+CoachKnowledge.swift in Sources */,
@@ -3074,6 +3107,10 @@
 				AMA2363MUTBLD001 /* WorkoutEnrichmentMutations.swift in Sources */,
 				AMA2336APIBLD001 /* WorkoutEnrichmentAPI.swift in Sources */,
 				AMA2362COPYBLD001 /* WorkoutEnrichmentPushCopy.swift in Sources */,
+				AMA2408SUMBLD /* EnrichmentRowSummary.swift in Sources */,
+				AMA2408STBLD /* EnrichmentState.swift in Sources */,
+				AMA2408REDBLD /* EnrichmentReducer.swift in Sources */,
+				AMA2408MIGBLD /* LegacyOptInRampMigration.swift in Sources */,
 				AMA2371GENCOPYBLD1 /* SuggestWorkoutGeneratingCopy.swift in Sources */,
 				AMA2336PLANBLD001 /* WorkoutEnrichmentPushPlanner.swift in Sources */,
 				AMA2336SVCBLD001 /* APIService+WorkoutEnrichment.swift in Sources */,
@@ -3081,6 +3118,7 @@
 				AMA2351MAPPERBLD /* MapperWorkoutKitPlanProvider.swift in Sources */,
 				AMA2360STEPSBLD01 /* WorkoutKitPlanStepSummary.swift in Sources */,
 				AMA2374SECTSBLD01 /* WorkoutKitPlanStepSummary+Sections.swift in Sources */,
+				AMA2408SECTSACCBLD /* WorkoutKitPlanStepSummary+SectionAccumulator.swift in Sources */,
 				AMA2374DDBANDBLD1 /* DailyDriverTheme+WatchBands.swift in Sources */,
 				AMA2387BRANDBLD1 /* DailyDriverTheme+BrandAccents.swift in Sources */,
 				AMA2389DOORBLD /* DailyDriverTheme+DoorRow.swift in Sources */,
@@ -3153,6 +3191,7 @@
 				AMA2375QSTRBLD /* GarminWatchQueueStore.swift in Sources */,
 				AMA2388LNKBLD /* AppleScheduledWorkoutLinkStore.swift in Sources */,
 				AMA2388RDYBLD /* WatchItemReadinessStore.swift in Sources */,
+				AMA2408STRBLD /* EnrichmentPrefsStore.swift in Sources */,
 				AMA2388OVLBLD /* WatchItemDeliveredStepsOverlay.swift in Sources */,
 				AMA2388PRFBLD /* WatchItemPrefsPersister.swift in Sources */,
 				AMA2388DEMOBLD /* WatchItemViewModel+Demo.swift in Sources */,
@@ -3170,6 +3209,7 @@
 				AMA2336COORDBLD001 /* WorkoutEnrichmentPushCoordinator.swift in Sources */,
 				AMA2336PREFVBLD001 /* WorkoutEnrichmentPrefsSheet.swift in Sources */,
 				AMA2336PUSHVBLD001 /* WorkoutEnrichmentPushSheet.swift in Sources */,
+				AMA2408PUSHPREVBLD /* WorkoutEnrichmentPushSheet+Previews.swift in Sources */,
 				AMA2378SEQVBLD001 /* EnrichmentSequenceScreen.swift in Sources */,
 				AMA2378WPICKBLD001 /* EnrichmentWarmupPickScreen.swift in Sources */,
 				AMA2378RAMPVBLD001 /* EnrichmentRampEditorScreen.swift in Sources */,

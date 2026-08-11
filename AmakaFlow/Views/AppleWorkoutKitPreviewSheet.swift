@@ -12,7 +12,6 @@
 import SwiftUI
 import UIKit
 
-// swiftlint:disable:next type_body_length
 struct AppleWorkoutKitPreviewSheet: View {
     let workoutName: String
     let meta: WorkoutKitPlanMeta
@@ -130,50 +129,10 @@ struct AppleWorkoutKitPreviewSheet: View {
 
     /// Sections clipped to beats the controller has revealed so far.
     private var revealedSections: [PreviewSection] {
-        let shown = reveal.shownBeats
-        var out: [PreviewSection] = []
-        var currentBand: PreviewSection?
-        var currentSteps: [PreviewStep] = []
-
-        func flush() {
-            guard let band = currentBand else { return }
-            out.append(
-                PreviewSection(
-                    accent: band.accent,
-                    band: band.band,
-                    tag: band.tag,
-                    steps: currentSteps,
-                    caption: band.caption
-                )
-            )
-            currentBand = nil
-            currentSteps = []
-        }
-
-        for beat in shown {
-            switch beat.kind {
-            case .band:
-                flush()
-                if let match = sections.first(where: { $0.band == beat.label }) {
-                    currentBand = match
-                    currentSteps = []
-                }
-            case .row:
-                if let band = currentBand,
-                   let step = band.steps.first(where: {
-                       $0.title == beat.name && $0.detail == (beat.detail?.isEmpty == true ? nil : beat.detail)
-                   }) ?? band.steps.first(where: { $0.title == beat.name }) {
-                    // Avoid duplicating the same step if detail matching is fuzzy.
-                    if !currentSteps.contains(where: { $0.number == step.number }) {
-                        currentSteps.append(step)
-                    }
-                }
-            default:
-                break
-            }
-        }
-        flush()
-        return out
+        AppleWatchPreviewReveal.sections(
+            from: sections,
+            shownBeats: reveal.shownBeats
+        )
     }
 
     private var buildStatus: some View {

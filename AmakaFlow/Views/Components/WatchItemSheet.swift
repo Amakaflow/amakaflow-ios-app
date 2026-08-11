@@ -168,11 +168,19 @@ struct WatchItemSheet: View {
                                     .accessibilityIdentifier("af_watchitem_row_\(row.rawValue)_edited")
                             }
                         }
-                        Text(viewModel.summary(for: row))
+                        // Always reserve one summary line so OFF rows keep constant height.
+                        let summary = viewModel.summary(for: row)
+                        Text(summary ?? " ")
                             .font(.system(size: 8.5, weight: .medium, design: .monospaced))
-                            .foregroundColor(edited ? DailyDriver.amber : DailyDriver.foregroundMuted)
+                            .foregroundColor(
+                                (row == .warmups && viewModel.needsWarmupPick)
+                                    ? DailyDriver.amber
+                                    : (edited ? DailyDriver.amber : DailyDriver.foregroundMuted)
+                            )
+                            .lineLimit(1)
+                            .truncationMode(.tail)
                             .multilineTextAlignment(.leading)
-                            .fixedSize(horizontal: false, vertical: true)
+                            .accessibilityHidden(summary == nil)
                     }
                     Spacer(minLength: 0)
                 }
@@ -230,10 +238,14 @@ struct WatchItemSheet: View {
                                 .accessibilityIdentifier("af_watchitem_row_rest_edited")
                         }
                     }
-                    Text(viewModel.summary(for: .rest))
+                    // Always reserve one summary line so OFF rows keep constant height.
+                    let summary = viewModel.summary(for: .rest)
+                    Text(summary ?? " ")
                         .font(.system(size: 8.5, weight: .medium, design: .monospaced))
                         .foregroundColor(edited ? DailyDriver.amber : DailyDriver.foregroundMuted)
-                        .fixedSize(horizontal: false, vertical: true)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                        .accessibilityHidden(summary == nil)
                 }
                 Spacer(minLength: 0)
                 Toggle("", isOn: Binding(

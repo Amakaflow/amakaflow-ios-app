@@ -369,8 +369,10 @@ struct ExerciseWarmupSetsPrefs: Equatable, Codable, Sendable {
     var defaultSets: [WarmupSetDefault]
     /// Normalized name keys — matching runs server-side at enrich time.
     var excludeExerciseKeys: [String]
-    /// AMA-2378 — per-exercise ramp overrides (`exercise_ref` → sets). `nil`/empty
-    /// keeps the v1 global `default_sets` + `exclude_exercise_keys` path unchanged.
+    /// AMA-2378 / AMA-2408 — per-exercise ramp overrides (`exercise_ref` → sets).
+    /// Opt-in only: `nil`/empty means ZERO ramps (never the v1 global
+    /// `default_sets` auto-apply). `default_sets` remains the seed for a newly
+    /// enabled exercise's ramp (8/5), not a silent apply-to-all.
     var perExercise: [PerExerciseRamp]?
 
     enum CodingKeys: String, CodingKey {
