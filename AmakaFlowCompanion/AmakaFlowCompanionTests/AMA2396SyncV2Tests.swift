@@ -1355,12 +1355,14 @@ final class AMA2396SyncV2Tests: XCTestCase {
 
     /// AMA-2409: undated live Strava cards must never use the fixture today fallback.
     func testUndatedStravaCardDoesNotBelongOnTodayFixtureFallback() {
+        let now = Date()
         XCTAssertFalse(
             ActualsDayBucketing.cardBelongsOnSelectedDay(
                 cardID: "strava_99",
                 activityStart: nil,
                 recordingStart: nil,
-                selectedDay: Date()
+                selectedDay: now,
+                now: now
             )
         )
         XCTAssertTrue(
@@ -1368,7 +1370,8 @@ final class AMA2396SyncV2Tests: XCTestCase {
                 cardID: "demo_fixture",
                 activityStart: nil,
                 recordingStart: nil,
-                selectedDay: Date()
+                selectedDay: now,
+                now: now
             )
         )
     }
