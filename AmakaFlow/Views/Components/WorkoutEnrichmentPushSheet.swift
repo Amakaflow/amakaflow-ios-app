@@ -16,6 +16,7 @@ struct WorkoutEnrichmentPushSheet: View {
     @State private var route: Route?
     @State private var didRunLegacyMigration = false
     private let prefsStore: any EnrichmentPrefsStoring
+    private let readinessStore: any WatchItemReadinessStoring
 
     private var target: EnrichmentPushTarget { plan.target }
 
@@ -29,6 +30,7 @@ struct WorkoutEnrichmentPushSheet: View {
         prefs: WorkoutPreferences,
         workoutId: String = "",
         prefsStore: any EnrichmentPrefsStoring = EnrichmentPrefsStore.shared,
+        readinessStore: any WatchItemReadinessStoring = WatchItemReadinessStore.shared,
         onConfirm: @escaping (WorkoutEnrichmentPushPlanner.Decision) -> Void,
         onSkip: @escaping () -> Void,
         onClose: @escaping () -> Void
@@ -37,6 +39,7 @@ struct WorkoutEnrichmentPushSheet: View {
         self.prefs = prefs
         self.workoutId = workoutId
         self.prefsStore = prefsStore
+        self.readinessStore = readinessStore
         self.onConfirm = onConfirm
         self.onSkip = onSkip
         self.onClose = onClose
@@ -74,16 +77,7 @@ struct WorkoutEnrichmentPushSheet: View {
                 defaultSets: prefs.exerciseWarmupSets.defaultSets
             )
             prefsStore.save(workoutID: workoutId, prefs: migrated)
-            _ = LegacyOptInRampMigration.migrateIfNeeded(
-                workoutID: workoutId,
-                prefs: ExerciseWarmupSetsPrefs(
-                    enabled: true,
-                    defaultSets: prefs.exerciseWarmupSets.defaultSets,
-                    excludeExerciseKeys: [],
-                    perExercise: migrated.perExerciseRamps
-                ),
-                candidateNames: candidates
-            )
+            LegacyOptInRampMigration.markMigrated(workoutID: workoutId)
             saved = migrated
         }
         return EnrichmentState.seed(
@@ -217,12 +211,12 @@ extension WorkoutEnrichmentPushSheet {
         let persisted = state.persisted()
         prefsStore.save(workoutID: workoutId, prefs: persisted)
         // Keep Watch Item draft in lockstep (one store, every door).
-        WatchItemReadinessStore.shared.saveDraft(
+        readinessStore.saveDraft(
             workoutID: workoutId,
             snapshot: WatchItemReadinessSnapshot(
                 readiness: persisted.asReadiness(),
                 config: persisted.asConfig(),
-                snapshotPills: WatchItemReadinessStore.shared.loadDraft(workoutID: workoutId)?.snapshotPills ?? [],
+                snapshotPills: readinessStore.loadDraft(workoutID: workoutId)?.snapshotPills ?? [],
                 updatedAt: Date()
             )
         )
@@ -316,8 +310,7 @@ extension WorkoutEnrichmentPushSheet {
     private func doorRow(_ offer: WorkoutEnrichmentPushPlanner.Offer) -> some View {
         let isChecked = state.checkedKinds.contains(offer.kind)
         let summary = liveSummary(for: offer.kind)
-        let isAmberWarmupCTA = offer.kind == .exerciseWarmupSets
-            && summary == EnrichmentRowSummary.noRampsYet
+        let isAmberWarmupCTA = offer.kind == .exerciseWarmupSets && state.needsWarmupPick
         return HStack(spacing: 12) {
             Button {
                 route = doorRoute(for: offer.kind)
@@ -327,14 +320,14 @@ extension WorkoutEnrichmentPushSheet {
                         Text(offer.title)
                             .ddDisplayText(14, weight: .bold)
                             .foregroundColor(DailyDriver.foreground)
-                        if let summary {
-                            Text(summary)
-                                .font(Theme.Typography.mono)
-                                .foregroundColor(isAmberWarmupCTA ? DailyDriver.amber : DailyDriver.foregroundMuted)
-                                .lineLimit(1)
-                                .truncationMode(.tail)
-                                .multilineTextAlignment(.leading)
-                        }
+                        // Always reserve one summary line so OFF rows keep constant height.
+                        Text(summary ?? " ")
+                            .font(Theme.Typography.mono)
+                            .foregroundColor(isAmberWarmupCTA ? DailyDriver.amber : DailyDriver.foregroundMuted)
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                            .multilineTextAlignment(.leading)
+                            .accessibilityHidden(summary == nil)
                         if offer.wasTombstoned, !isChecked {
                             Text("You removed this before — tick to add it back.")
                                 .font(.system(size: 10))
@@ -447,6 +440,7 @@ extension WorkoutEnrichmentPushSheet {
                 if isOn != currentlyOn {
                     dispatch(.toggleRow(kind))
                 }
+                persistConfiguratorSave()
                 // F2: first toggle of Warm-up ROW ON with empty picks → open pick screen.
                 if isOn, kind == .exerciseWarmupSets, state.needsWarmupPick {
                     route = .warmupPick

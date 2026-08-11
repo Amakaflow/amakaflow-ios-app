@@ -87,6 +87,13 @@ enum LegacyOptInRampMigration {
         return migrated
     }
 
+    /// Explicit one-shot marker write for callers that already persisted migrated
+    /// prefs and only need to consume the retry flag (no synthetic prefs).
+    static func markMigrated(workoutID: String, defaults: UserDefaults = .standard) {
+        guard !workoutID.isEmpty else { return }
+        defaults.set(true, forKey: flagKeyPrefix + workoutID)
+    }
+
     /// Effective ramp map under the OLD v1 interpretation (global default_sets
     /// on every non-excluded candidate). Used by the byte-identical migration test.
     static func legacyEffectiveRamps(

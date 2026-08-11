@@ -99,11 +99,26 @@ final class WatchItemViewModel: ObservableObject {
 
     /// Amber CTA when warm-ups are ON with zero opted-in ramps.
     var needsWarmupPick: Bool {
-        warmupsEnabled
-            && EnrichmentRowSummary.enabledRamps(
-                in: perExerciseRamps,
-                candidates: warmupExerciseNames
-            ).isEmpty
+        enrichmentDecisionState.needsWarmupPick
+    }
+
+    /// Shared EnrichmentState projection for summaries + warm-up CTA.
+    private var enrichmentDecisionState: EnrichmentState {
+        EnrichmentState(
+            checkedKinds: Set([
+                tracker.draft.mobilityEnabled ? EnrichmentKind.sessionWarmup : nil,
+                tracker.draft.warmupsEnabled ? EnrichmentKind.exerciseWarmupSets : nil,
+                tracker.draft.restEnabled ? EnrichmentKind.betweenSetRest : nil,
+                tracker.draft.cooldownEnabled ? EnrichmentKind.cooldown : nil
+            ].compactMap { $0 }),
+            mobilityActivities: mobilityActivities,
+            cooldownActivities: cooldownActivities,
+            perExerciseRamps: perExerciseRamps,
+            restOpen: restOpen,
+            restSec: restSec,
+            candidateExerciseNames: warmupExerciseNames,
+            target: enrichmentTarget
+        )
     }
 
     init(
@@ -332,22 +347,7 @@ final class WatchItemViewModel: ObservableObject {
                 break
             }
         }
-        let state = EnrichmentState(
-            checkedKinds: [
-                tracker.draft.mobilityEnabled ? EnrichmentKind.sessionWarmup : nil,
-                tracker.draft.warmupsEnabled ? EnrichmentKind.exerciseWarmupSets : nil,
-                tracker.draft.restEnabled ? EnrichmentKind.betweenSetRest : nil,
-                tracker.draft.cooldownEnabled ? EnrichmentKind.cooldown : nil
-            ].compactMap { $0 }.reduce(into: Set<EnrichmentKind>()) { $0.insert($1) },
-            mobilityActivities: mobilityActivities,
-            cooldownActivities: cooldownActivities,
-            perExerciseRamps: perExerciseRamps,
-            restOpen: restOpen,
-            restSec: restSec,
-            candidateExerciseNames: warmupExerciseNames,
-            target: enrichmentTarget
-        )
-        return state.summary(for: row)
+        return enrichmentDecisionState.summary(for: row)
     }
 }
 

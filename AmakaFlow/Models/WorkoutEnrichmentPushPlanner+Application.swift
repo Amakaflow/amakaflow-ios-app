@@ -154,6 +154,12 @@ extension WorkoutEnrichmentPushPlanner {
         if ramps.isEmpty {
             excludeKeys.formUnion(candidateNames.map(ExerciseKeyNormalizer.normalize))
         }
+        // Re-enabled ramps must leave exclusions; otherwise confirm/reopen shows
+        // an enabled exercise that still receives no warm-up after optInEffectiveRamps.
+        let enabledKeys = ramps
+            .filter(\.enabled)
+            .map { ExerciseKeyNormalizer.normalize($0.exerciseRef) }
+        excludeKeys.subtract(enabledKeys)
         prefs.excludeExerciseKeys = excludeKeys.sorted()
     }
 

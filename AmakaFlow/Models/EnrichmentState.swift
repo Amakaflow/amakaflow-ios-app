@@ -30,6 +30,8 @@ struct EnrichmentState: Equatable, Sendable {
         var restOpen: Bool
         var restSec: Int
 
+        // Nested CodingKeys trips SwiftLint `nesting` at the default type_level.
+        // swiftlint:disable:next nesting
         enum CodingKeys: String, CodingKey {
             case checkedKinds = "checked_kinds"
             case mobilityActivities = "mobility_activities"
@@ -40,6 +42,54 @@ struct EnrichmentState: Equatable, Sendable {
         }
 
         var checkedKindSet: Set<EnrichmentKind> { Set(checkedKinds) }
+
+        init(
+            checkedKinds: [EnrichmentKind],
+            mobilityActivities: [EnrichmentActivityPref],
+            cooldownActivities: [EnrichmentActivityPref],
+            perExerciseRamps: [PerExerciseRamp],
+            restOpen: Bool,
+            restSec: Int
+        ) {
+            self.checkedKinds = checkedKinds
+            self.mobilityActivities = mobilityActivities
+            self.cooldownActivities = cooldownActivities
+            self.perExerciseRamps = perExerciseRamps
+            self.restOpen = restOpen
+            self.restSec = restSec
+        }
+
+        /// Lenient `checked_kinds`: unknown raw values drop that entry only so a
+        /// newer build's kind cannot wipe the whole workout preference payload.
+        init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            let rawKinds = try container.decode([String].self, forKey: .checkedKinds)
+            checkedKinds = rawKinds.compactMap(EnrichmentKind.init(rawValue:))
+            mobilityActivities = try container.decode(
+                [EnrichmentActivityPref].self,
+                forKey: .mobilityActivities
+            )
+            cooldownActivities = try container.decode(
+                [EnrichmentActivityPref].self,
+                forKey: .cooldownActivities
+            )
+            perExerciseRamps = try container.decode(
+                [PerExerciseRamp].self,
+                forKey: .perExerciseRamps
+            )
+            restOpen = try container.decode(Bool.self, forKey: .restOpen)
+            restSec = try container.decode(Int.self, forKey: .restSec)
+        }
+
+        func encode(to encoder: Encoder) throws {
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            try container.encode(checkedKinds.map(\.rawValue), forKey: .checkedKinds)
+            try container.encode(mobilityActivities, forKey: .mobilityActivities)
+            try container.encode(cooldownActivities, forKey: .cooldownActivities)
+            try container.encode(perExerciseRamps, forKey: .perExerciseRamps)
+            try container.encode(restOpen, forKey: .restOpen)
+            try container.encode(restSec, forKey: .restSec)
+        }
     }
 
     // MARK: - Seed (ONLY load-order home)
@@ -90,13 +140,21 @@ struct EnrichmentState: Equatable, Sendable {
     }
 
     /// Convenience: seed from a push plan + standing globals + optional save.
+    /// Saved checked kinds are intersected with `plan.offers` so a stale kind
+    /// cannot enable application for an offer the plan does not present.
     static func seed(
         workoutPrefs: Persisted?,
         globalDefaults: WorkoutPreferences,
         plan: WorkoutEnrichmentPushPlanner.Plan
     ) -> EnrichmentState {
-        seed(
-            workoutPrefs: workoutPrefs,
+        let offeredKinds = Set(plan.offers.map(\.kind))
+        let filteredPrefs = workoutPrefs.map { saved -> Persisted in
+            var next = saved
+            next.checkedKinds = saved.checkedKinds.filter { offeredKinds.contains($0) }
+            return next
+        }
+        return seed(
+            workoutPrefs: filteredPrefs,
             globalDefaults: globalDefaults,
             defaultCheckedKinds: plan.defaultCheckedKinds,
             candidateExerciseNames: plan.offer(.exerciseWarmupSets)?.candidateExerciseNames ?? [],

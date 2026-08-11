@@ -111,6 +111,70 @@ final class EnrichmentReducerTests: XCTestCase {
         XCTAssertTrue(application.prefs.exerciseWarmupSets.excludeExerciseKeys.contains("curl"))
     }
 
+    /// Disable → persist exclusions → re-enable must clear that key so confirm/reopen apply the ramp.
+    func testReEnableClearsPersistedExclusion() throws {
+        let blocks = [
+            SocialImportBlock(
+                label: "Main",
+                rounds: 1,
+                exercises: [
+                    SocialImportExercise(name: "Bench Press", sets: 4, reps: 8),
+                    SocialImportExercise(name: "Row", sets: 3, reps: 8)
+                ],
+                type: "sets"
+            )
+        ]
+        let plan = WorkoutEnrichmentPushPlanner.plan(blocks: blocks, tombstones: [], prefs: .defaults)
+        let disabled = PerExerciseRamp(exerciseRef: "Bench Press", enabled: false, sets: [])
+        let afterDisable = try WorkoutEnrichmentPushPlanner.application(
+            plan: plan,
+            decision: WorkoutEnrichmentPushPlanner.Decision(
+                checkedKinds: [.exerciseWarmupSets],
+                perExerciseRamps: [disabled]
+            ),
+            prefs: .defaults,
+            tombstones: []
+        )
+        XCTAssertTrue(afterDisable.prefs.exerciseWarmupSets.excludeExerciseKeys.contains("bench press"))
+
+        let reenabled = PerExerciseRamp(
+            exerciseRef: "Bench Press",
+            enabled: true,
+            sets: [try RampSet(kind: .reps, value: 8), try RampSet(kind: .reps, value: 5)]
+        )
+        let afterReenable = try WorkoutEnrichmentPushPlanner.application(
+            plan: plan,
+            decision: WorkoutEnrichmentPushPlanner.Decision(
+                checkedKinds: [.exerciseWarmupSets],
+                perExerciseRamps: [reenabled]
+            ),
+            prefs: afterDisable.prefs,
+            tombstones: []
+        )
+        XCTAssertFalse(afterReenable.prefs.exerciseWarmupSets.excludeExerciseKeys.contains("bench press"))
+        let effective = LegacyOptInRampMigration.optInEffectiveRamps(
+            prefs: afterReenable.prefs.exerciseWarmupSets,
+            candidateNames: ["Bench Press", "Row"]
+        )
+        XCTAssertEqual(Set(effective.keys), ["bench press"])
+    }
+
+    func testPersistedDropsUnknownCheckedKindsWithoutLosingPayload() throws {
+        let json = """
+        {
+          "checked_kinds": ["exercise_warmup_sets", "future_kind_v9"],
+          "mobility_activities": [],
+          "cooldown_activities": [],
+          "per_exercise_ramps": [],
+          "rest_open": false,
+          "rest_sec": 60
+        }
+        """.data(using: .utf8)!
+        let decoded = try JSONDecoder().decode(EnrichmentState.Persisted.self, from: json)
+        XCTAssertEqual(decoded.checkedKinds, [.exerciseWarmupSets])
+        XCTAssertEqual(decoded.restSec, 60)
+    }
+
     func testMigrationByteIdenticalEffectiveRamps() {
         let candidates = ["Incline Smith", "Row", "Curl", "Press"]
         let legacy = ExerciseWarmupSetsPrefs(

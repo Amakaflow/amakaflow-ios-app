@@ -148,6 +148,19 @@ final class EnrichmentRowSummaryTests: XCTestCase {
         XCTAssertNil(EnrichmentRowSummary.sequence(isOn: false, activities: activities))
     }
 
+    func testSequenceEnabledEmptyReturnsNoStepsAdded() {
+        XCTAssertEqual(
+            EnrichmentRowSummary.sequence(isOn: true, activities: []),
+            "NO STEPS ADDED"
+        )
+    }
+
+    func testWarmupDisplayNameKeepsTwoWordNames() {
+        XCTAssertEqual(EnrichmentRowSummary.warmupDisplayName("Leg Press"), "LEG PRESS")
+        XCTAssertEqual(EnrichmentRowSummary.warmupDisplayName("Triceps Extension"), "TRICEPS EXTENSION")
+        XCTAssertEqual(EnrichmentRowSummary.warmupDisplayName("Incline Smith Press"), "INCLINE SMITH")
+    }
+
     func testSequenceN1() throws {
         let activities = [
             EnrichmentActivity(name: "Jump Rope", goal: try ActivityGoal(kind: .open, value: nil))

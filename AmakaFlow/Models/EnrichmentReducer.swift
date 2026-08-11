@@ -24,70 +24,113 @@ enum EnrichmentReducer {
     /// Pure reduce. `confirm` / `skip` are no-ops on state (persistence is the
     /// caller's job) so round-trip tests can `reduce → persist → seed` freely.
     static func reduce(_ state: EnrichmentState, _ action: EnrichmentAction) -> EnrichmentState {
-        var next = state
         switch action {
         case .toggleRow(let kind):
-            if next.checkedKinds.contains(kind) {
-                next.checkedKinds.remove(kind)
-            } else {
-                next.checkedKinds.insert(kind)
-            }
-
+            return toggleRow(state, kind: kind)
         case .setRamp(let exercise, let ramp):
-            let key = ExerciseKeyNormalizer.normalize(exercise)
-            if let index = next.perExerciseRamps.firstIndex(where: {
-                ExerciseKeyNormalizer.normalize($0.exerciseRef) == key
-            }) {
-                next.perExerciseRamps[index] = ramp
-            } else {
-                next.perExerciseRamps.append(ramp)
-            }
-
+            return setRamp(state, exercise: exercise, ramp: ramp)
         case .toggleExercise(let name):
-            let key = ExerciseKeyNormalizer.normalize(name)
-            if let index = next.perExerciseRamps.firstIndex(where: {
-                ExerciseKeyNormalizer.normalize($0.exerciseRef) == key
-            }) {
-                next.perExerciseRamps[index].enabled.toggle()
-                if next.perExerciseRamps[index].enabled,
-                   next.perExerciseRamps[index].sets.isEmpty {
-                    next.perExerciseRamps[index].sets = WorkoutEnrichmentMutations.defaultRampSets()
-                }
-            } else {
-                // First enable — seed 8/5 (opt-in). Untouched stays absent.
-                next.perExerciseRamps.append(PerExerciseRamp(
-                    exerciseRef: name,
-                    enabled: true,
-                    sets: WorkoutEnrichmentMutations.defaultRampSets()
-                ))
-            }
-
+            return toggleExercise(state, name: name)
         case .setSequence(let kind, let steps):
-            switch kind {
-            case .mobility: next.mobilityActivities = steps
-            case .cooldown: next.cooldownActivities = steps
-            }
-
+            return setSequence(state, kind: kind, steps: steps)
         case .setRest(let open, let sec):
-            next.restOpen = open
-            next.restSec = WorkoutEnrichmentPushCopy.normalizedRestSec(sec)
-
+            return setRest(state, open: open, sec: sec)
         case .applyRampToAll(let sets):
-            next.perExerciseRamps = WorkoutEnrichmentMutations.applyRampSets(
-                sets,
-                toEnabledRampsIn: next.perExerciseRamps
-            )
-
+            return applyRampToAll(state, sets: sets)
         case .replaceRamps(let ramps):
-            next.perExerciseRamps = ramps
-
+            return replaceRamps(state, ramps: ramps)
         case .confirm, .skip:
-            break
+            return state
         }
-        return next
     }
 
     static func reduce(_ state: EnrichmentState, actions: [EnrichmentAction]) -> EnrichmentState {
         actions.reduce(state, reduce)
+    }
+
+    // MARK: - Action helpers (keep `reduce` a thin dispatcher)
+
+    private static func toggleRow(_ state: EnrichmentState, kind: EnrichmentKind) -> EnrichmentState {
+        var next = state
+        if next.checkedKinds.contains(kind) {
+            next.checkedKinds.remove(kind)
+        } else {
+            next.checkedKinds.insert(kind)
+        }
+        return next
+    }
+
+    private static func setRamp(
+        _ state: EnrichmentState,
+        exercise: String,
+        ramp: PerExerciseRamp
+    ) -> EnrichmentState {
+        var next = state
+        let key = ExerciseKeyNormalizer.normalize(exercise)
+        if let index = next.perExerciseRamps.firstIndex(where: {
+            ExerciseKeyNormalizer.normalize($0.exerciseRef) == key
+        }) {
+            next.perExerciseRamps[index] = ramp
+        } else {
+            next.perExerciseRamps.append(ramp)
+        }
+        return next
+    }
+
+    private static func toggleExercise(_ state: EnrichmentState, name: String) -> EnrichmentState {
+        var next = state
+        let key = ExerciseKeyNormalizer.normalize(name)
+        if let index = next.perExerciseRamps.firstIndex(where: {
+            ExerciseKeyNormalizer.normalize($0.exerciseRef) == key
+        }) {
+            next.perExerciseRamps[index].enabled.toggle()
+            if next.perExerciseRamps[index].enabled,
+               next.perExerciseRamps[index].sets.isEmpty {
+                next.perExerciseRamps[index].sets = WorkoutEnrichmentMutations.defaultRampSets()
+            }
+        } else {
+            // First enable — seed 8/5 (opt-in). Untouched stays absent.
+            next.perExerciseRamps.append(PerExerciseRamp(
+                exerciseRef: name,
+                enabled: true,
+                sets: WorkoutEnrichmentMutations.defaultRampSets()
+            ))
+        }
+        return next
+    }
+
+    private static func setSequence(
+        _ state: EnrichmentState,
+        kind: EnrichmentSequenceKind,
+        steps: [EnrichmentActivityPref]
+    ) -> EnrichmentState {
+        var next = state
+        switch kind {
+        case .mobility: next.mobilityActivities = steps
+        case .cooldown: next.cooldownActivities = steps
+        }
+        return next
+    }
+
+    private static func setRest(_ state: EnrichmentState, open: Bool, sec: Int) -> EnrichmentState {
+        var next = state
+        next.restOpen = open
+        next.restSec = WorkoutEnrichmentPushCopy.normalizedRestSec(sec)
+        return next
+    }
+
+    private static func applyRampToAll(_ state: EnrichmentState, sets: [RampSet]) -> EnrichmentState {
+        var next = state
+        next.perExerciseRamps = WorkoutEnrichmentMutations.applyRampSets(
+            sets,
+            toEnabledRampsIn: next.perExerciseRamps
+        )
+        return next
+    }
+
+    private static func replaceRamps(_ state: EnrichmentState, ramps: [PerExerciseRamp]) -> EnrichmentState {
+        var next = state
+        next.perExerciseRamps = ramps
+        return next
     }
 }

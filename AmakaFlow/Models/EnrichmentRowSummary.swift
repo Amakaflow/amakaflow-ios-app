@@ -35,56 +35,58 @@ enum EnrichmentRowSummary {
     ) -> String? {
         guard isOn else { return nil }
         let enabled = enabledRamps(in: ramps, candidates: candidateNames)
-        let n = enabled.count
+        let enabledCount = enabled.count
         // No candidate list (Watch Item without exercise names): use enabled
         // ramps as the denominator so a real summary still renders.
-        let m = candidateNames.isEmpty ? n : candidateNames.count
-        guard n > 0 else { return noRampsYet }
-        guard m > 0 else { return noRampsYet }
+        let candidateCount = candidateNames.isEmpty ? enabledCount : candidateNames.count
+        guard enabledCount > 0 else { return noRampsYet }
+        guard candidateCount > 0 else { return noRampsYet }
 
         let text: String
-        if n == m {
-            text = "CUSTOM RAMPS · ALL \(m)"
-        } else if n >= 4 {
-            text = "CUSTOM RAMPS · \(n) OF \(m)"
-        } else if n == 1, let first = enabled.first {
+        if enabledCount == candidateCount {
+            text = "CUSTOM RAMPS · ALL \(candidateCount)"
+        } else if enabledCount >= 4 {
+            text = "CUSTOM RAMPS · \(enabledCount) OF \(candidateCount)"
+        } else if enabledCount == 1, let first = enabled.first {
             let name = warmupDisplayName(first.exerciseRef)
             let setCount = max(first.sets.count, 1)
-            text = "\(name) · RAMP ×\(setCount) · 1 OF \(m)"
+            text = "\(name) · RAMP ×\(setCount) · 1 OF \(candidateCount)"
         } else {
             // N = 2…3
             let firstName = warmupDisplayName(enabled[0].exerciseRef)
-            let more = n - 1
-            text = "\(firstName) + \(more) MORE · \(n) OF \(m)"
+            let more = enabledCount - 1
+            text = "\(firstName) + \(more) MORE · \(enabledCount) OF \(candidateCount)"
         }
         return capped(text, preferringPrefix: true)
     }
 
     /// Mobility / cool-down sequence ladder. `nil` when the row is off.
+    /// Enabled + empty activities still returns a line (`NO STEPS ADDED`) so
+    /// OFF is the only case that collapses the summary slot.
     static func sequence(
         isOn: Bool,
         activities: [EnrichmentActivity],
         estimatedMinutes: Int? = nil
     ) -> String? {
         guard isOn else { return nil }
-        let n = activities.count
-        guard n > 0 else { return nil }
+        let stepCount = activities.count
+        guard stepCount > 0 else { return "NO STEPS ADDED" }
 
         let text: String
-        if n == 1, let only = activities.first {
+        if stepCount == 1, let only = activities.first {
             let label = WorkoutEnrichmentPushCopy.activitySummaryLabel(
                 name: only.name,
                 goal: only.goal,
                 durationSec: only.durationSec
             )
             text = "\(label) · 1 STEP"
-        } else if n <= 3 {
+        } else if stepCount <= 3 {
             let tokens = activities.map { sequenceShortToken($0.name) }.joined(separator: " ➜ ")
-            text = "\(tokens) · \(n) STEPS"
+            text = "\(tokens) · \(stepCount) STEPS"
         } else {
             let minutes = estimatedMinutes
                 ?? WorkoutEnrichmentPushCopy.sequenceDurationEstimateMinutes(activities)
-            text = "\(n) STEPS · ≈\(minutes) MIN"
+            text = "\(stepCount) STEPS · ≈\(minutes) MIN"
         }
         return capped(text, preferringPrefix: true)
     }
@@ -132,12 +134,13 @@ enum EnrichmentRowSummary {
     static func warmupDisplayName(_ name: String) -> String {
         var words = name
             .uppercased()
-            .split(whereSeparator: { $0.isWhitespace || $0 == "-" })
+            .split { $0.isWhitespace || $0 == "-" }
             .map(String.init)
         let droppable: Set<String> = [
             "PRESS", "MACHINE", "RAISE", "RAISES", "CURL", "EXTENSION", "EXTENSIONS"
         ]
-        while words.count > 1, let last = words.last, droppable.contains(last) {
+        // Keep two-word names intact (`LEG PRESS`, `TRICEPS EXTENSION`).
+        while words.count > 2, let last = words.last, droppable.contains(last) {
             words.removeLast()
         }
         return words.joined(separator: " ")
@@ -147,7 +150,7 @@ enum EnrichmentRowSummary {
     static func sequenceShortToken(_ name: String) -> String {
         let words = name
             .uppercased()
-            .split(whereSeparator: { $0.isWhitespace || $0 == "-" })
+            .split { $0.isWhitespace || $0 == "-" }
             .map(String.init)
         guard !words.isEmpty else { return "" }
         if words.count == 1 { return words[0] }

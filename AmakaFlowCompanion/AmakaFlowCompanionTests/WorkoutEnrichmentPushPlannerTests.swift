@@ -841,7 +841,7 @@ final class WorkoutEnrichmentPushPlannerTests: XCTestCase {
 
     /// AMA-2408 — untouched warm-up door (empty perExercise) is opt-in empty:
     /// ZERO ramps, every candidate excluded. No v1 global auto-apply.
-    func testApplyWithNoDoorEditsStaysV1Equivalent() throws {
+    func testUntouchedWarmupDoorAppliesZeroRampsAndExcludesAllCandidates() throws {
         let plan = WorkoutEnrichmentPushPlanner.plan(
             blocks: [benchBlock()],
             tombstones: [],
@@ -875,6 +875,41 @@ final class WorkoutEnrichmentPushPlannerTests: XCTestCase {
                 prefs: application.prefs.exerciseWarmupSets,
                 candidateNames: candidates
             ).isEmpty
+        )
+    }
+
+    /// Production `decision.perExerciseRamps == nil` must match the empty-array opt-in path.
+    func testNilPerExerciseRampsMatchesEmptyArrayExclusions() throws {
+        let plan = WorkoutEnrichmentPushPlanner.plan(
+            blocks: [benchBlock()],
+            tombstones: [],
+            prefs: .defaults
+        )
+        let emptyApplication = try WorkoutEnrichmentPushPlanner.application(
+            plan: plan,
+            decision: WorkoutEnrichmentPushPlanner.Decision(
+                checkedKinds: [.exerciseWarmupSets],
+                perExerciseRamps: []
+            ),
+            prefs: .defaults,
+            tombstones: []
+        )
+        let nilApplication = try WorkoutEnrichmentPushPlanner.application(
+            plan: plan,
+            decision: WorkoutEnrichmentPushPlanner.Decision(
+                checkedKinds: [.exerciseWarmupSets],
+                perExerciseRamps: nil
+            ),
+            prefs: .defaults,
+            tombstones: []
+        )
+        XCTAssertEqual(
+            emptyApplication.prefs.exerciseWarmupSets.perExercise,
+            nilApplication.prefs.exerciseWarmupSets.perExercise
+        )
+        XCTAssertEqual(
+            Set(emptyApplication.prefs.exerciseWarmupSets.excludeExerciseKeys),
+            Set(nilApplication.prefs.exerciseWarmupSets.excludeExerciseKeys)
         )
     }
 
