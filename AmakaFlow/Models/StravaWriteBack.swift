@@ -494,7 +494,8 @@ final class BFFStravaWriteBackProvider: StravaWriteBackProviding {
                 guard verification.verified else {
                     return .failed(BFFStravaClientError.sessionNotVerified.localizedDescription)
                 }
-            } catch let error as BFFStravaClientError where error == .authenticationRequired {
+            } catch let error as BFFStravaClientError
+                where error == .authenticationRequired || error == .sessionNotVerified {
                 throw error
             } catch {
                 // verify route lagging or transient — continue to apply
