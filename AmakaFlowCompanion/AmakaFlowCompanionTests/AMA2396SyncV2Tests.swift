@@ -1512,6 +1512,7 @@ final class AMA2396SyncV2Tests: XCTestCase {
         MockURLProtocol.reset()
         defer { MockURLProtocol.reset() }
 
+        var captured: URLRequest?
         let body = Data("""
         {
           "strava_id": 555,
@@ -1524,7 +1525,16 @@ final class AMA2396SyncV2Tests: XCTestCase {
           "description": "Assault bike · ski · row"
         }
         """.utf8)
-        MockURLProtocol.setResponse(statusCode: 200, data: body)
+        MockURLProtocol.requestHandler = { request in
+            captured = request
+            let response = HTTPURLResponse(
+                url: request.url!,
+                statusCode: 200,
+                httpVersion: nil,
+                headerFields: ["Content-Type": "application/json"]
+            )!
+            return (response, body)
+        }
 
         let client = BFFStravaClient(
             baseURL: "https://mock.test/v1",
@@ -1536,6 +1546,9 @@ final class AMA2396SyncV2Tests: XCTestCase {
         XCTAssertEqual(detail.stravaId, 555)
         XCTAssertEqual(detail.description, "Assault bike · ski · row")
         XCTAssertEqual(detail.name, "Bike ski row repeats")
+        XCTAssertEqual(captured?.httpMethod, "GET")
+        XCTAssertEqual(captured?.url?.path, "/v1/strava/activities/555")
+        XCTAssertEqual(captured?.url?.query, "userId=user-1")
     }
 
     func testCountedCardCachesActivityDescription() {
@@ -1550,6 +1563,15 @@ final class AMA2396SyncV2Tests: XCTestCase {
             type: .strength,
             activityDescription: ""
         )
+        let session = ActualsFillInSession(
+            id: "sess-555",
+            title: "Bike ski row repeats",
+            subtitle: "KEPT AS-IS",
+            exercises: [],
+            verified: false,
+            stravaActivityId: "555",
+            stravaCurrentDescription: nil
+        )
         let card = ActualsTodayDemoCard(
             id: "strava_555",
             kind: .counted,
@@ -1560,11 +1582,12 @@ final class AMA2396SyncV2Tests: XCTestCase {
             sourceProvider: .strava,
             session: nil,
             activity: activity,
-            fillInSession: nil,
+            fillInSession: session,
             stravaDecoration: .untouched
         )
         let updated = card.withActivityDescription("Assault bike · ski · row")
         XCTAssertEqual(updated.activity?.activityDescription, "Assault bike · ski · row")
+        XCTAssertEqual(updated.fillInSession?.stravaCurrentDescription, "Assault bike · ski · row")
     }
 
     /// AMA-2405: once AmakaFlow wrote Strava, do not treat description as missing.
