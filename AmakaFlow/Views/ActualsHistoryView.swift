@@ -65,8 +65,42 @@ final class ActualsHistoryViewModel: ObservableObject {
         }
     }
 
-    func applyKeepAsIs(cardID: String) {
-        mutateCard(id: cardID) { $0.markingCounted() }
+    /// AMA-2407: Verify as-is — mark Verified in AmakaFlow, never touch Strava.
+    func applyKeepAsIs(cardID: String) async {
+        guard let card = card(withID: cardID) else { return }
+        let session = ActualsTodayDemoFeed.makeVerifiedAsIsSession(
+            cardID: card.id,
+            title: card.title,
+            activity: card.activity
+        )
+        do {
+            try repository.upsertVerifiedAsIs(session)
+        } catch {
+            Logger(
+                subsystem: "com.myamaka.AmakaFlowCompanion",
+                category: "ActualsHistory"
+            ).error(
+                "Failed to persist verify-as-is for \(card.id, privacy: .public): \(error.localizedDescription, privacy: .public)"
+            )
+        }
+        let decoration = ActualsTodayDemoFeed.verifyAsIsDecoration(
+            sourceProvider: card.sourceProvider ?? card.activity?.provider
+        )
+        try? repository.storeDecoration(decoration, forSessionID: session.id)
+        mutateCard(id: cardID) { $0.markingVerifiedAsIs(with: session, decoration: decoration) }
+        NotificationCenter.default.post(name: .actualsLocalSessionsDidChange, object: nil)
+
+        guard let activityId = session.stravaActivityId else { return }
+        do {
+            _ = try await client.verifySession(activityId: activityId, amakaflowSessionId: session.id)
+        } catch {
+            Logger(
+                subsystem: "com.myamaka.AmakaFlowCompanion",
+                category: "ActualsHistory"
+            ).error(
+                "Strava verify call failed for activity \(activityId, privacy: .public): \(error.localizedDescription, privacy: .public)"
+            )
+        }
     }
 
     /// AMA-2405: cache Strava description after counted-detail lazy fetch.
@@ -152,7 +186,8 @@ final class ActualsHistoryViewModel: ObservableObject {
         NotificationCenter.default.post(name: .actualsLocalSessionsDidChange, object: nil)
     }
 
-    func applyUnverify(cardID: String, session: ActualsFillInSession) {
+    /// AMA-2407: un-verify clears local + server verified state (DELETE verify).
+    func applyUnverify(cardID: String, session: ActualsFillInSession) async {
         try? repository.unverifySession(id: session.id)
         var draft = session
         draft.verified = false
@@ -173,6 +208,18 @@ final class ActualsHistoryViewModel: ObservableObject {
             )
         }
         NotificationCenter.default.post(name: .actualsLocalSessionsDidChange, object: nil)
+
+        guard let activityId = session.stravaActivityId else { return }
+        do {
+            _ = try await client.unverifySession(activityId: activityId)
+        } catch {
+            Logger(
+                subsystem: "com.myamaka.AmakaFlowCompanion",
+                category: "ActualsHistory"
+            ).error(
+                "Strava un-verify call failed for activity \(activityId, privacy: .public): \(error.localizedDescription, privacy: .public)"
+            )
+        }
     }
 
     /// Mid-edit Back — keep confirms / RPE on the History card + GRDB draft.
@@ -264,19 +311,12 @@ private struct HistoryVerifiedRoute: Identifiable, Hashable {
     var id: String { "verified-\(cardID)" }
 }
 
-private struct HistoryCountedRoute: Identifiable, Hashable {
-    let cardID: String
-
-    var id: String { "counted-\(cardID)" }
-}
-
 // swiftlint:disable:next type_body_length
 struct ActualsHistoryView: View {
     @StateObject private var viewModel: ActualsHistoryViewModel
     @State private var mapRoute: HistoryMapRoute?
     @State private var fillInRoute: HistoryFillInRoute?
     @State private var verifiedRoute: HistoryVerifiedRoute?
-    @State private var countedRoute: HistoryCountedRoute?
     @State private var libraryCandidates: [ActualsPlanCandidate] = ActualsTodayDemoFeed.samplePlanCandidates
     @State private var libraryWorkoutsByID: [String: Workout] = [:]
     @State private var showLibraryMatchPicker = false
@@ -324,9 +364,6 @@ struct ActualsHistoryView: View {
         }
         .navigationDestination(item: $verifiedRoute) { route in
             verifiedDestination(for: route)
-        }
-        .navigationDestination(item: $countedRoute) { route in
-            countedDestination(for: route)
         }
         .sheet(isPresented: $showLibraryMatchPicker) {
             ActualsLibraryMatchPicker(
@@ -449,8 +486,6 @@ struct ActualsHistoryView: View {
             openFillIn(cardID: card.id)
         case .verified:
             verifiedRoute = HistoryVerifiedRoute(cardID: card.id)
-        case .counted:
-            countedRoute = HistoryCountedRoute(cardID: card.id)
         }
     }
 
@@ -475,7 +510,7 @@ struct ActualsHistoryView: View {
                 }
             },
             onKeepAsIs: {
-                viewModel.applyKeepAsIs(cardID: route.cardID)
+                Task { await viewModel.applyKeepAsIs(cardID: route.cardID) }
                 mapRoute = nil
             },
             onSearchAll: {
@@ -556,7 +591,7 @@ struct ActualsHistoryView: View {
                 openFillIn(cardID: route.cardID)
             }
             let onUnverify = {
-                viewModel.applyUnverify(cardID: route.cardID, session: session)
+                Task { await viewModel.applyUnverify(cardID: route.cardID, session: session) }
                 verifiedRoute = nil
             }
             ActualsVerifiedView(
@@ -591,28 +626,6 @@ struct ActualsHistoryView: View {
             next.stravaCurrentDescription = cachedDescription
         }
         return next
-    }
-
-    @ViewBuilder
-    private func countedDestination(for route: HistoryCountedRoute) -> some View {
-        if let card = viewModel.card(withID: route.cardID) {
-            let source = ActualsCopy.sourceDisplayName(card.sourceProvider ?? .strava).uppercased()
-            ActualsCountedDetailView(
-                title: card.title,
-                metaLine: "\(card.timeLabel) · \(card.sourceLabel.uppercased()) · FROM \(source)",
-                sourceName: ActualsCopy.sourceDisplayName(card.sourceProvider ?? .strava),
-                decoration: card.stravaDecoration,
-                stravaActivityId: ActualsTodayDemoFeed.stravaActivityId(fromCardID: card.id),
-                initialDescription: card.activity?.activityDescription ?? "",
-                backLabel: ActualsCopy.historyTitle
-            ) { description in
-                viewModel.applyActivityDescription(cardID: route.cardID, description: description)
-            }
-        } else {
-            Text("Couldn't open that counted session.")
-                .foregroundColor(DailyDriver.foregroundDim)
-                .padding()
-        }
     }
 
     private func dayRow(_ card: ActualsTodayDemoCard) -> some View {
@@ -657,10 +670,6 @@ struct ActualsHistoryView: View {
                 .foregroundColor(DailyDriver.amber)
         case .verified:
             Text(ActualsCopy.verifiedTimelineCTA)
-                .ddDisplayText(11.5, weight: .bold)
-                .foregroundColor(DailyDriver.lime)
-        case .counted:
-            Text(ActualsCopy.historyCountedCTA)
                 .ddDisplayText(11.5, weight: .bold)
                 .foregroundColor(DailyDriver.lime)
         }

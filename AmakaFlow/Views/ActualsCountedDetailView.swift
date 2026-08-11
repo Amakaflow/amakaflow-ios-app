@@ -2,9 +2,14 @@
 //  ActualsCountedDetailView.swift
 //  AmakaFlow
 //
-//  AMA-2405: read-only detail for counted / kept-as-is — same chrome as
-//  verified (header + status callout + optional Strava text). Never re-fetch
-//  Strava description when decoration is `.ours` (AmakaFlow already wrote).
+//  AMA-2405: shared read-only detail chrome (status callout + optional Strava
+//  text) used by `ActualsVerifiedView`. Never re-fetch Strava description
+//  when decoration is `.ours` (AmakaFlow already wrote).
+//
+//  AMA-2407: the durable "Counted" detail screen that originally lived here
+//  was removed — Verify-as-is always renders through `ActualsVerifiedView`,
+//  which is why the type names below still say "Counted"/"Verified" for the
+//  shared pieces they were extracted from.
 //
 
 import SwiftUI
@@ -155,127 +160,3 @@ struct ActualsSessionStatusCallout: View {
         .accessibilityIdentifier(accessibilityID)
     }
 }
-
-struct ActualsCountedDetailView: View {
-    let title: String
-    let metaLine: String
-    let sourceName: String
-    let decoration: StravaDecorationState
-    let stravaActivityId: String?
-    let initialDescription: String
-    /// Presenting screen name for the custom back control (`Today` / `History`).
-    var backLabel: String = "Today"
-    var onDescriptionLoaded: ((String) -> Void)?
-
-    @Environment(\.dismiss) private var dismiss
-
-    private var showsStravaDescription: Bool {
-        ActualsStravaDescriptionPolicy.showsDescriptionSection(
-            decoration: decoration,
-            stravaActivityId: stravaActivityId,
-            cachedDescription: initialDescription
-        )
-    }
-
-    private var allowsRemoteFetch: Bool {
-        ActualsStravaDescriptionPolicy.allowsRemoteFetch(decoration: decoration)
-    }
-
-    var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 0) {
-                header
-                    .padding(.top, 10)
-
-                if decoration.badgeLabel != nil {
-                    SZStravaBadge(decoration: decoration)
-                        .padding(.top, 10)
-                }
-
-                ActualsSessionStatusCallout(
-                    headline: ActualsCopy.countedHeadline,
-                    bodyText: ActualsCopy.countedCalloutBody(sourceName: sourceName),
-                    accessibilityID: ActualsCopy.countedCalloutAccessibilityID
-                )
-                .padding(.top, 12)
-
-                if showsStravaDescription {
-                    ActualsStravaDescriptionSection(
-                        stravaActivityId: stravaActivityId,
-                        initialDescription: initialDescription,
-                        allowsRemoteFetch: allowsRemoteFetch,
-                        onLoaded: onDescriptionLoaded
-                    )
-                    .padding(.top, 12)
-                }
-            }
-            .padding(.horizontal, 18)
-            .padding(.bottom, 96)
-        }
-        .background(DailyDriver.screenBackground.ignoresSafeArea())
-        .preferredColorScheme(.dark)
-        .ddSuppressFloatingChrome()
-        .navigationBarBackButtonHidden(true)
-        .accessibilityIdentifier(ActualsCopy.countedDetailAccessibilityID)
-    }
-
-    private var header: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Button { dismiss() } label: {
-                HStack(spacing: 4) {
-                    Image(systemName: "chevron.left")
-                        .font(.system(size: 13, weight: .semibold))
-                    Text(backLabel)
-                        .font(.system(size: 13, weight: .semibold))
-                }
-                .foregroundColor(DailyDriver.foregroundMuted)
-            }
-            .buttonStyle(.plain)
-
-            HStack(spacing: 12) {
-                DDIconChip(systemName: "dumbbell.fill", background: DailyDriver.purple, size: 34)
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(title)
-                        .ddDisplayText(22, weight: .heavy)
-                        .foregroundColor(DailyDriver.foreground)
-                    Text(metaLine)
-                        .font(.system(size: 9, design: .monospaced))
-                        .foregroundColor(DailyDriver.foregroundDim)
-                        .lineLimit(2)
-                        .minimumScaleFactor(0.8)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-            }
-        }
-    }
-}
-
-#if DEBUG
-#Preview("Counted detail · untouched") {
-    NavigationStack {
-        ActualsCountedDetailView(
-            title: "Bike ski row repeats",
-            metaLine: "20:14 · KEPT AS-IS · FROM STRAVA",
-            sourceName: "Strava",
-            decoration: .untouched,
-            stravaActivityId: nil,
-            initialDescription: "Assault bike · ski · row"
-        )
-    }
-    .preferredColorScheme(.dark)
-}
-
-#Preview("Counted detail · ours (no re-fetch)") {
-    NavigationStack {
-        ActualsCountedDetailView(
-            title: "Bike ski row repeats",
-            metaLine: "20:14 · KEPT AS-IS · FROM STRAVA",
-            sourceName: "Strava",
-            decoration: .ours,
-            stravaActivityId: "555",
-            initialDescription: ""
-        )
-    }
-    .preferredColorScheme(.dark)
-}
-#endif
