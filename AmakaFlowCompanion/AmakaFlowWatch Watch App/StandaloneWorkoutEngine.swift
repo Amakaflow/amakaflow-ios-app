@@ -37,6 +37,12 @@ final class StandaloneWorkoutEngine: ObservableObject {
 
     private(set) var flattenedSteps: [WatchFlattenedInterval] = []
 
+    /// AMA-2420 — last logged weight per exercise for crown seed.
+    private var lastLoggedWeightByExercise: [String: (weight: Double, unit: String)] = [:]
+    private var exerciseSetEntries: [String: [StandaloneSetEntry]] = [:]
+    private var exerciseIndexMap: [String: Int] = [:]
+    private var nextExerciseIndex: Int = 0
+
     var currentStep: WatchFlattenedInterval? {
         guard currentStepIndex >= 0, currentStepIndex < flattenedSteps.count else { return nil }
         return flattenedSteps[currentStepIndex]
@@ -119,6 +125,10 @@ final class StandaloneWorkoutEngine: ObservableObject {
         self.averageHeartRateSamples = []
         self.workoutStartDate = Date()
         self.phase = .running
+        self.lastLoggedWeightByExercise = [:]
+        self.exerciseSetEntries = [:]
+        self.exerciseIndexMap = [:]
+        self.nextExerciseIndex = 0
 
         print("⌚️ Starting standalone workout: \(workout.name)")
         print("⌚️ Flattened steps count: \(flattenedSteps.count)")
@@ -278,6 +288,71 @@ final class StandaloneWorkoutEngine: ObservableObject {
         playHaptic(.click)
     }
 
+    /// AMA-2420 Phase 2 — crown LOG / skip on a reps step, then advance (may enter rest).
+    func logSetWeight(weight: Double?, unit: String?) {
+        guard let step = currentStep, step.stepType == .reps else {
+            nextStep()
+            return
+        }
+
+        let exerciseName = step.label
+        let setNumber = step.setNumber ?? 1
+
+        if exerciseIndexMap[exerciseName] == nil {
+            exerciseIndexMap[exerciseName] = nextExerciseIndex
+            nextExerciseIndex += 1
+        }
+
+        let entry = StandaloneSetEntry(
+            setNumber: setNumber,
+            weight: weight,
+            unit: weight != nil ? unit : nil,
+            completed: true
+        )
+        if exerciseSetEntries[exerciseName] == nil {
+            exerciseSetEntries[exerciseName] = []
+        }
+        exerciseSetEntries[exerciseName]?.append(entry)
+
+        if let weight, let unit, weight > 0 {
+            lastLoggedWeightByExercise[exerciseName] = (weight, unit)
+        }
+
+        print("⌚️ Logged set: \(exerciseName) set \(setNumber) — \(weight ?? 0) \(unit ?? "")")
+        playHaptic(.click)
+        nextStep()
+    }
+
+    func suggestedWeight(for step: WatchFlattenedInterval) -> Double? {
+        if let last = lastLoggedWeightByExercise[step.label] {
+            return last.weight
+        }
+        return StandaloneLoadHint.parse(step.loadHint)?.weight
+    }
+
+    func suggestedWeightUnit(for step: WatchFlattenedInterval) -> String {
+        if let last = lastLoggedWeightByExercise[step.label] {
+            return last.unit
+        }
+        return StandaloneLoadHint.parse(step.loadHint)?.unit ?? "lbs"
+    }
+
+    func buildSetLogs() -> [StandaloneSetLog]? {
+        guard !exerciseSetEntries.isEmpty else { return nil }
+        var logs: [StandaloneSetLog] = []
+        for (exerciseName, entries) in exerciseSetEntries {
+            let exerciseIndex = exerciseIndexMap[exerciseName] ?? 0
+            logs.append(
+                StandaloneSetLog(
+                    exerciseName: exerciseName,
+                    exerciseIndex: exerciseIndex,
+                    sets: entries
+                )
+            )
+        }
+        return logs.sorted { $0.exerciseIndex < $1.exerciseIndex }
+    }
+
     func end(reason: EndReason) async {
         print("⌚️ Ending workout with reason: \(reason)")
 
@@ -310,6 +385,10 @@ final class StandaloneWorkoutEngine: ObservableObject {
         activeCalories = 0
         averageHeartRateSamples = []
         workoutStartDate = nil
+        lastLoggedWeightByExercise = [:]
+        exerciseSetEntries = [:]
+        exerciseIndexMap = [:]
+        nextExerciseIndex = 0
     }
 
     // MARK: - Timer Management
@@ -390,7 +469,8 @@ final class StandaloneWorkoutEngine: ObservableObject {
             totalCalories: activeCalories,
             averageHeartRate: avgHeartRate,
             completedSteps: currentStepIndex + 1,
-            totalSteps: flattenedSteps.count
+            totalSteps: flattenedSteps.count,
+            setLogs: buildSetLogs()
         )
 
         // AMA-1751 Bug 2: completion summaries must NEVER be lost. Use
@@ -452,6 +532,8 @@ struct WatchFlattenedInterval: Identifiable {
     let totalSets: Int?      // Total number of sets
     let hasRestAfter: Bool   // Whether this step has a rest period after it
     let restAfterSeconds: Int?  // Rest duration: nil = manual (tap when ready), 0 = no rest, >0 = timed countdown
+    /// Planned load string from the interval (e.g. "100 kg") for crown seed.
+    let loadHint: String?
 
     var formattedTime: String? {
         guard let seconds = timerSeconds else { return nil }
@@ -526,7 +608,8 @@ func flattenWatchIntervals(_ intervals: [WorkoutInterval]) -> [WatchFlattenedInt
                             setNumber: i,
                             totalSets: repeatCount,
                             hasRestAfter: hasRest,
-                            restAfterSeconds: restSec
+                            restAfterSeconds: restSec,
+                            loadHint: load
                         ))
                     }
                 } else {
@@ -560,7 +643,8 @@ func flattenWatchIntervals(_ intervals: [WorkoutInterval]) -> [WatchFlattenedInt
                         setNumber: setNum,
                         totalSets: totalSets,
                         hasRestAfter: hasRest,
-                        restAfterSeconds: hasRest ? restSec : nil
+                        restAfterSeconds: hasRest ? restSec : nil,
+                        loadHint: load
                     ))
                 }
 
@@ -585,7 +669,8 @@ func flattenWatchIntervals(_ intervals: [WorkoutInterval]) -> [WatchFlattenedInt
                     setNumber: nil,
                     totalSets: nil,
                     hasRestAfter: !isCooldown,  // All steps except cooldown have rest
-                    restAfterSeconds: isCooldown ? nil : nil  // nil = manual rest
+                    restAfterSeconds: isCooldown ? nil : nil,  // nil = manual rest
+                    loadHint: nil
                 ))
             }
         }

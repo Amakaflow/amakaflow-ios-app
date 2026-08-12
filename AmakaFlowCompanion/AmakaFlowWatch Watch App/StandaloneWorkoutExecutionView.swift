@@ -76,7 +76,32 @@ struct StandaloneWorkoutExecutionView: View {
 
     // MARK: - Active Workout View
 
+    @ViewBuilder
     private var activeWorkoutView: some View {
+        // AMA-2420 Phase 2 — crown weight capture on reps steps (same as remote AMA-286).
+        if let step = engine.currentStep,
+           step.stepType == .reps,
+           let setNumber = step.setNumber,
+           let totalSets = step.totalSets {
+            WeightInputWatchView(
+                exerciseName: step.label,
+                setNumber: setNumber,
+                totalSets: totalSets,
+                suggestedWeight: engine.suggestedWeight(for: step),
+                weightUnit: engine.suggestedWeightUnit(for: step),
+                onLogSet: { weight, unit in
+                    engine.logSetWeight(weight: weight, unit: unit)
+                },
+                onSkipWeight: {
+                    engine.logSetWeight(weight: nil, unit: nil)
+                }
+            )
+        } else {
+            standardActiveWorkoutView
+        }
+    }
+
+    private var standardActiveWorkoutView: some View {
         ScrollView {
             VStack(spacing: 4) {
                 // Heart Rate Display

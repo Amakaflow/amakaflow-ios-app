@@ -227,6 +227,7 @@ final class WorkoutCompletionModule: ObservableObject, WorkoutCompletionModulePr
                 )
             }
             succeedSave()
+            upsertWatchActualsDraft(from: summary)
             onWorkoutCompleted?(summary.workoutId)
             NotificationCenter.default.post(
                 name: .workoutCompleted,
@@ -235,6 +236,21 @@ final class WorkoutCompletionModule: ObservableObject, WorkoutCompletionModulePr
             )
         } catch {
             failSave(CTAError.map(error))
+        }
+    }
+
+    /// AMA-2420 — land Watch strength sets on Today Actuals fill-in for correction.
+    private func upsertWatchActualsDraft(from summary: StandaloneWorkoutSummary) {
+        guard summary.setLogs?.isEmpty == false else { return }
+        guard let session = WatchActualsDraftBuilder.makeFillInSession(
+            summary: summary,
+            libraryWorkout: nil
+        ) else { return }
+        do {
+            try ActualsRepository().upsertMatchedDraft(session)
+            print("⌚️ Upserted Actuals fill-in draft for Watch workout \(summary.workoutId)")
+        } catch {
+            print("⌚️ Failed to upsert Watch Actuals draft: \(error)")
         }
     }
 

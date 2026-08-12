@@ -154,6 +154,8 @@ public struct StandaloneWorkoutSummary: Codable {
     public let averageHeartRate: Double?
     public let completedSteps: Int
     public let totalSteps: Int
+    /// AMA-2420 Phase 2 — crown-logged sets from standalone Watch strength.
+    public let setLogs: [StandaloneSetLog]?
 
     public init(
         workoutId: String,
@@ -164,7 +166,8 @@ public struct StandaloneWorkoutSummary: Codable {
         totalCalories: Double,
         averageHeartRate: Double?,
         completedSteps: Int,
-        totalSteps: Int
+        totalSteps: Int,
+        setLogs: [StandaloneSetLog]? = nil
     ) {
         self.workoutId = workoutId
         self.workoutName = workoutName
@@ -175,5 +178,75 @@ public struct StandaloneWorkoutSummary: Codable {
         self.averageHeartRate = averageHeartRate
         self.completedSteps = completedSteps
         self.totalSteps = totalSteps
+        self.setLogs = setLogs
+    }
+}
+
+/// Wire-compatible with phone `SetEntry` / `SetLog` (snake_case).
+public struct StandaloneSetEntry: Codable, Equatable {
+    public let setNumber: Int
+    public let weight: Double?
+    public let unit: String?
+    public let completed: Bool
+
+    public enum CodingKeys: String, CodingKey {
+        case setNumber = "set_number"
+        case weight
+        case unit
+        case completed
+    }
+
+    public init(setNumber: Int, weight: Double?, unit: String?, completed: Bool) {
+        self.setNumber = setNumber
+        self.weight = weight
+        self.unit = unit
+        self.completed = completed
+    }
+}
+
+public struct StandaloneSetLog: Codable, Equatable {
+    public let exerciseName: String
+    public let exerciseIndex: Int
+    public let sets: [StandaloneSetEntry]
+
+    public enum CodingKeys: String, CodingKey {
+        case exerciseName = "exercise_name"
+        case exerciseIndex = "exercise_index"
+        case sets
+    }
+
+    public init(exerciseName: String, exerciseIndex: Int, sets: [StandaloneSetEntry]) {
+        self.exerciseName = exerciseName
+        self.exerciseIndex = exerciseIndex
+        self.sets = sets
+    }
+}
+
+/// Parse planned load strings like `"100 kg"` / `"225lbs"` for crown seed.
+public enum StandaloneLoadHint {
+    public static func parse(_ load: String?) -> (weight: Double, unit: String)? {
+        guard let raw = load?.trimmingCharacters(in: .whitespacesAndNewlines), !raw.isEmpty else {
+            return nil
+        }
+        let lowered = raw.lowercased()
+        let unit: String
+        if lowered.contains("kg") {
+            unit = "kg"
+        } else if lowered.contains("lb") {
+            unit = "lbs"
+        } else {
+            unit = "lbs"
+        }
+        let numeric = lowered
+            .replacingOccurrences(of: "kg", with: "")
+            .replacingOccurrences(of: "lbs", with: "")
+            .replacingOccurrences(of: "lb", with: "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let weight = Double(numeric.filter { $0.isNumber || $0 == "." || $0 == "," }
+            .replacingOccurrences(of: ",", with: ".")),
+              weight > 0 else {
+            return nil
+        }
+        return (weight, unit)
     }
 }
