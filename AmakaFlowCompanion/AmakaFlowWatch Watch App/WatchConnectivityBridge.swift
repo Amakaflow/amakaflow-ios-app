@@ -4,6 +4,7 @@
 //
 //  Handles WatchConnectivity communication with iPhone for remote control
 //
+// swiftlint:disable file_length
 
 import Combine
 import Foundation
@@ -11,7 +12,7 @@ import WatchConnectivity
 import WatchKit
 
 @MainActor
-final class WatchConnectivityBridge: NSObject, ObservableObject {
+final class WatchConnectivityBridge: NSObject, ObservableObject { // swiftlint:disable:this type_body_length
     static let shared = WatchConnectivityBridge()
 
     // MARK: - Published State

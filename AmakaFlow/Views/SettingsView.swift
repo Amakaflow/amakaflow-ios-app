@@ -896,7 +896,7 @@ struct SettingsView: View {
     }
 
     @ViewBuilder
-    private func settingsPreferenceRow(_ row: SettingsRefreshRowModel) -> some View {
+    private func settingsPreferenceRow(_ row: SettingsRefreshRowModel) -> some View { // swiftlint:disable:this cyclomatic_complexity function_body_length
         switch row.destination {
         case .editProfile:
             NavigationLink(destination: EditProfileView(initialNameFallback: pairingService.userProfile?.name)) {
