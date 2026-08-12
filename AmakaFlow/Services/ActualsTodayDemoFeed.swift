@@ -231,11 +231,13 @@ final class ActualsTodayDemoFeed: ObservableObject {
     }
 
     /// AMA-2391: after Strava OAuth succeeds, pull sync-completed into the Today rail.
+    /// AMA-2419: after Apple Health grant, pull HKWorkout samples the same way.
     /// Demo flag (`AMA2387_TODAY_DEMO`) still wins in DEBUG for fixture dogfood.
     func handleProviderConnected(
         _ provider: ActualsSourceProvider,
         sync: ActualsSyncProgressStore,
-        client: BFFStravaClient? = nil
+        client: BFFStravaClient? = nil,
+        appleHealthFetcher: (any ActualsHealthKitWorkoutFetching)? = nil
     ) async {
         #if DEBUG
         if Self.shouldAutoActivate {
@@ -243,8 +245,48 @@ final class ActualsTodayDemoFeed: ObservableObject {
             return
         }
         #endif
-        guard provider == .strava else { return }
-        await activateFromStravaSync(sync: sync, client: client ?? BFFStravaClient.live())
+        switch provider {
+        case .strava:
+            await activateFromStravaSync(sync: sync, client: client ?? BFFStravaClient.live())
+        case .appleHealth:
+            await activateFromAppleHealth(
+                sync: sync,
+                fetcher: appleHealthFetcher ?? LiveActualsHealthKitWorkoutFetcher()
+            )
+        case .garmin:
+            break
+        }
+    }
+
+    /// Replace Today cards with Apple Health workouts for the lookback window.
+    func activateFromAppleHealth(
+        sync: ActualsSyncProgressStore,
+        fetcher: any ActualsHealthKitWorkoutFetching,
+        daysBack: Int = 30
+    ) async {
+        isRefreshing = true
+        sync.beginPulling()
+        defer { isRefreshing = false }
+        do {
+            let samples = try await fetcher.fetchWorkouts(daysBack: daysBack)
+            isActive = true
+            showMergeAsk = false
+            let windowCards = Self.historyCards(from: samples).flatMap(\.cards)
+            if !samples.isEmpty {
+                sync.beginBackfill(total: samples.count)
+                for _ in samples {
+                    sync.recordIngestedSession()
+                }
+            } else {
+                sync.clear()
+            }
+            cards = Self.applyLocalOverlays(to: windowCards, repository: repository)
+        } catch {
+            isActive = false
+            showMergeAsk = false
+            cards = []
+            sync.clear()
+        }
     }
 
     /// Replace Today cards with Strava sync-completed activities for the lookback window.
@@ -437,6 +479,100 @@ final class ActualsTodayDemoFeed: ObservableObject {
             activity: unmapped,
             fillInSession: nil
         )
+    }
+
+    // MARK: - Apple Health → cards (AMA-2419)
+
+    static func historyCards(
+        from samples: [ActualsHealthKitWorkoutSample],
+        calendar: Calendar = .current,
+        now: Date = Date()
+    ) -> [(day: Date, cards: [ActualsTodayDemoCard])] {
+        _ = now
+        let buckets = ActualsDayBucketing.bucketByLocalDay(
+            samples,
+            startDate: { $0.startDate },
+            calendar: calendar
+        )
+        return buckets.map { day, items in
+            (day: day, cards: items.map { card(from: $0) })
+        }
+    }
+
+    static func cards(
+        from samples: [ActualsHealthKitWorkoutSample],
+        on day: Date,
+        calendar: Calendar = .current
+    ) -> [ActualsTodayDemoCard] {
+        samples
+            .filter { calendar.isDate($0.startDate, inSameDayAs: day) }
+            .sorted { $0.startDate > $1.startDate }
+            .map { card(from: $0) }
+    }
+
+    static func card(from sample: ActualsHealthKitWorkoutSample) -> ActualsTodayDemoCard {
+        let minutes = max(1, Int(sample.durationSeconds / 60))
+        let unmapped = ActualsUnmappedActivity(
+            title: sample.title,
+            provider: .appleHealth,
+            startDate: sample.startDate,
+            durationSeconds: sample.durationSeconds,
+            distanceMeters: sample.distanceMeters,
+            calories: sample.activeEnergyKcal,
+            avgHR: sample.averageHeartRateBPM,
+            type: sample.activityType
+        )
+        var stats: [(icon: String, value: String)] = [
+            ("clock", "\(minutes)m")
+        ]
+        if let distanceMeters = sample.distanceMeters, distanceMeters > 0 {
+            let kilometers = distanceMeters / 1_000
+            let distanceText = kilometers >= 10
+                ? String(format: "%.0f km", kilometers)
+                : String(format: "%.1f km", kilometers)
+            stats.append(("figure.run", distanceText))
+        }
+        if let kcal = sample.activeEnergyKcal {
+            stats.append(("flame.fill", "\(Int(kcal.rounded())) kcal"))
+        }
+        if let hr = sample.averageHeartRateBPM {
+            stats.append(("heart.fill", "\(Int(hr.rounded())) bpm"))
+        }
+        return ActualsTodayDemoCard(
+            id: "applehealth_\(sample.id)",
+            kind: .unmapped,
+            timeLabel: cardTimeFormatter.string(from: sample.startDate),
+            title: sample.title,
+            stats: stats,
+            sourceLabel: "Synced from \(ActualsCopy.sourceDisplayName(.appleHealth))",
+            sourceProvider: .appleHealth,
+            session: nil,
+            activity: unmapped,
+            fillInSession: nil
+        )
+    }
+
+    /// Profile / stats: map Apple Health samples into completion rows.
+    static func completions(from samples: [ActualsHealthKitWorkoutSample]) -> [WorkoutCompletion] {
+        samples.map { sample in
+            WorkoutCompletion(
+                id: "applehealth_\(sample.id)",
+                workoutName: sample.title,
+                startedAt: sample.startDate,
+                endedAt: sample.startDate.addingTimeInterval(sample.durationSeconds),
+                durationSeconds: max(0, Int(sample.durationSeconds.rounded())),
+                avgHeartRate: sample.averageHeartRateBPM.map { Int($0.rounded()) },
+                maxHeartRate: nil,
+                activeCalories: sample.activeEnergyKcal.map { Int($0.rounded()) },
+                distanceMeters: sample.distanceMeters.map { Int($0.rounded()) },
+                source: .appleWatch,
+                syncedToStrava: false,
+                workoutId: nil,
+                originalWorkout: nil,
+                isSimulated: false
+            )
+        }
+        .sorted { $0.startedAt > $1.startedAt }
     }
 
     private static func workoutType(from raw: String) -> ActualsWorkoutType {

@@ -3,6 +3,7 @@
 //  AmakaFlow
 //
 //  AMA-2387: Apple Health read-only connect for Actuals (primer → HK prompt).
+//  AMA-2419: HKWorkout 30-day pull → Actuals cards (Today / History / Profile).
 //
 
 import Foundation
@@ -11,31 +12,116 @@ import UIKit
 
 /// Result of an Actuals Apple Health connect attempt.
 enum ActualsHealthKitAuthOutcome: Equatable {
-    /// Read access confirmed (mock / evidence path) — caller may `markConnected(.appleHealth)`.
+    /// Read path usable — caller may `markConnected(.appleHealth)`.
     case granted
     /// User denied (or HealthKit unavailable) — leave disconnected.
     case denied
     /// Already determined denied; iOS will not re-prompt — open Settings → Health.
     case needsSettings
-    /// System prompt finished; HealthKit does not expose read grant/deny — stay disconnected.
+    /// System prompt finished with no usable read path — stay disconnected.
     case promptCompleted
 }
 
 /// Read-authorization state we persist locally (HealthKit does not expose read grant/deny).
 enum ActualsHealthKitReadAuthorizationState: String, Equatable {
     case notDetermined
-    /// Only set when we have a confirmed grant (mock / future evidence path).
+    /// Evidence query succeeded after the system sheet (or mock grant).
     case authorized
     case denied
-    /// System sheet completed; access remains unknown.
+    /// System sheet completed; access remains unknown / unusable.
     case promptCompleted
 }
 
 protocol ActualsHealthKitConnecting: AnyObject {
     var authorizationState: ActualsHealthKitReadAuthorizationState { get }
-    /// First prompt → system sheet; retry after deny → `.needsSettings`.
+    /// First prompt → system sheet + evidence query; retry after deny → `.needsSettings`.
     func connect() async -> ActualsHealthKitAuthOutcome
     func openHealthSettings()
+}
+
+// MARK: - Workout sample (HealthKit → Actuals)
+
+/// On-device workout row from HealthKit — Strava DTO analogue for Apple Health.
+struct ActualsHealthKitWorkoutSample: Equatable, Identifiable, Sendable {
+    let id: String
+    let title: String
+    let activityType: ActualsWorkoutType
+    let startDate: Date
+    let durationSeconds: TimeInterval
+    let distanceMeters: Double?
+    let activeEnergyKcal: Double?
+    let averageHeartRateBPM: Double?
+}
+
+protocol ActualsHealthKitWorkoutFetching: AnyObject {
+    /// Newest-first workouts ending within `daysBack` local days.
+    func fetchWorkouts(daysBack: Int) async throws -> [ActualsHealthKitWorkoutSample]
+}
+
+enum ActualsHealthKitWorkoutMapping {
+    static func workoutType(for activityType: HKWorkoutActivityType) -> ActualsWorkoutType {
+        switch activityType {
+        case .running, .walking, .hiking, .trackAndField:
+            return .run
+        case .cycling, .handCycling:
+            return .ride
+        case .traditionalStrengthTraining, .functionalStrengthTraining,
+             .highIntensityIntervalTraining, .crossTraining, .flexibility,
+             .yoga, .pilates, .coreTraining, .elliptical:
+            return .strength
+        default:
+            return .other
+        }
+    }
+
+    static func title(for activityType: HKWorkoutActivityType, metadataName: String?) -> String {
+        let trimmed = metadataName?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        if !trimmed.isEmpty { return trimmed }
+        return displayName(for: activityType)
+    }
+
+    static func displayName(for activityType: HKWorkoutActivityType) -> String {
+        switch activityType {
+        case .running: return "Run"
+        case .walking: return "Walk"
+        case .hiking: return "Hike"
+        case .cycling: return "Ride"
+        case .traditionalStrengthTraining, .functionalStrengthTraining:
+            return "Strength"
+        case .highIntensityIntervalTraining: return "HIIT"
+        case .crossTraining: return "Cross Training"
+        case .yoga: return "Yoga"
+        case .pilates: return "Pilates"
+        case .elliptical: return "Elliptical"
+        case .rowing: return "Row"
+        case .swimming: return "Swim"
+        case .mixedCardio: return "Cardio"
+        case .cooldown: return "Cooldown"
+        default: return "Workout"
+        }
+    }
+
+    static func sample(from workout: HKWorkout) -> ActualsHealthKitWorkoutSample {
+        let distanceMeters = workout.totalDistance?.doubleValue(for: .meter())
+        let energy = workout.totalEnergyBurned?.doubleValue(for: .kilocalorie())
+        var avgHR: Double?
+        if let hrType = HKQuantityType.quantityType(forIdentifier: .heartRate),
+           let avg = workout.statistics(for: hrType)?.averageQuantity() {
+            avgHR = avg.doubleValue(for: HKUnit.count().unitDivided(by: .minute()))
+        }
+        let customTitle = (workout.metadata?["Title"] as? String)
+            ?? (workout.metadata?[HKMetadataKeyWorkoutBrandName] as? String)
+        return ActualsHealthKitWorkoutSample(
+            id: workout.uuid.uuidString,
+            title: title(for: workout.workoutActivityType, metadataName: customTitle),
+            activityType: workoutType(for: workout.workoutActivityType),
+            startDate: workout.startDate,
+            durationSeconds: workout.duration,
+            distanceMeters: distanceMeters.flatMap { $0 > 0 ? $0 : nil },
+            activeEnergyKcal: energy.flatMap { $0 > 0 ? $0 : nil },
+            averageHeartRateBPM: avgHR.flatMap { $0 > 0 ? $0 : nil }
+        )
+    }
 }
 
 // MARK: - Connect outcome applicator (unit-testable)
@@ -69,6 +155,7 @@ final class LiveActualsHealthKitConnector: ActualsHealthKitConnecting {
 
     private let defaults: UserDefaults
     private let healthStore: HKHealthStore?
+    private let workoutFetcher: any ActualsHealthKitWorkoutFetching
     private let openURL: (URL) -> Void
 
     private(set) var authorizationState: ActualsHealthKitReadAuthorizationState {
@@ -78,19 +165,23 @@ final class LiveActualsHealthKitConnector: ActualsHealthKitConnecting {
     init(
         defaults: UserDefaults = .standard,
         healthStore: HKHealthStore? = nil,
+        workoutFetcher: (any ActualsHealthKitWorkoutFetching)? = nil,
         openURL: @escaping (URL) -> Void = { UIApplication.shared.open($0) }
     ) {
         self.defaults = defaults
         self.openURL = openURL
+        let store: HKHealthStore?
         if HKHealthStore.isHealthDataAvailable() {
-            self.healthStore = healthStore ?? HKHealthStore()
+            store = healthStore ?? HKHealthStore()
         } else {
-            self.healthStore = nil
+            store = nil
         }
+        self.healthStore = store
+        self.workoutFetcher = workoutFetcher
+            ?? LiveActualsHealthKitWorkoutFetcher(healthStore: store)
         if let raw = defaults.string(forKey: Keys.state),
            let stored = ActualsHealthKitReadAuthorizationState(rawValue: raw) {
-            // Migrate older builds that incorrectly persisted `.authorized` after the sheet.
-            authorizationState = stored == .authorized ? .promptCompleted : stored
+            authorizationState = stored
         } else {
             authorizationState = .notDetermined
         }
@@ -103,23 +194,32 @@ final class LiveActualsHealthKitConnector: ActualsHealthKitConnecting {
         case .denied:
             return .needsSettings
         case .promptCompleted:
-            // Already prompted with no read evidence — route retry to Settings
-            // (iOS will not re-show the HealthKit sheet). Stay disconnected.
-            return .needsSettings
+            // AMA-2419: older builds left users here after the sheet with no ingest.
+            // Retry evidence query without re-prompting; promote to authorized on success.
+            do {
+                _ = try await workoutFetcher.fetchWorkouts(daysBack: 30)
+                authorizationState = .authorized
+                return .granted
+            } catch {
+                return .needsSettings
+            }
         case .notDetermined:
             break
         }
 
-        guard let healthStore else {
+        guard healthStore != nil else {
             authorizationState = .denied
             return .denied
         }
 
         do {
-            try await healthStore.requestAuthorization(toShare: [], read: Self.readTypes)
-            // HealthKit does not report read grant/deny. Do not claim connected.
-            authorizationState = .promptCompleted
-            return .promptCompleted
+            try await healthStore!.requestAuthorization(toShare: [], read: Self.readTypes)
+            // Evidence: a workout sample query that completes (0+ rows). Empty is OK —
+            // HealthKit still won't confess deny, but a successful query after the
+            // user finished our primer + system sheet is the dogfood connect signal.
+            _ = try await workoutFetcher.fetchWorkouts(daysBack: 30)
+            authorizationState = .authorized
+            return .granted
         } catch {
             authorizationState = .denied
             return .denied
@@ -127,7 +227,6 @@ final class LiveActualsHealthKitConnector: ActualsHealthKitConnecting {
     }
 
     func openHealthSettings() {
-        // App Settings is where the user re-enables Health access after Don't Allow.
         if let url = URL(string: UIApplication.openSettingsURLString) {
             openURL(url)
         }
@@ -147,6 +246,57 @@ final class LiveActualsHealthKitConnector: ActualsHealthKitConnecting {
             types.insert(energy)
         }
         return types
+    }
+}
+
+// MARK: - Live workout fetcher
+
+@MainActor
+final class LiveActualsHealthKitWorkoutFetcher: ActualsHealthKitWorkoutFetching {
+    private let healthStore: HKHealthStore?
+
+    init(healthStore: HKHealthStore? = nil) {
+        if let healthStore {
+            self.healthStore = healthStore
+        } else if HKHealthStore.isHealthDataAvailable() {
+            self.healthStore = HKHealthStore()
+        } else {
+            self.healthStore = nil
+        }
+    }
+
+    func fetchWorkouts(daysBack: Int) async throws -> [ActualsHealthKitWorkoutSample] {
+        guard let healthStore else { return [] }
+        let calendar = Calendar.current
+        let end = Date()
+        guard let start = calendar.date(byAdding: .day, value: -max(daysBack, 1), to: end) else {
+            return []
+        }
+        let predicate = HKQuery.predicateForSamples(
+            withStart: start,
+            end: end,
+            options: .strictStartDate
+        )
+        let sort = NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: false)
+
+        let workouts: [HKWorkout] = try await withCheckedThrowingContinuation { continuation in
+            let query = HKSampleQuery(
+                sampleType: HKObjectType.workoutType(),
+                predicate: predicate,
+                limit: HKObjectQueryNoLimit,
+                sortDescriptors: [sort]
+            ) { _, samples, error in
+                if let error {
+                    continuation.resume(throwing: error)
+                    return
+                }
+                let workouts = (samples as? [HKWorkout]) ?? []
+                continuation.resume(returning: workouts)
+            }
+            healthStore.execute(query)
+        }
+
+        return workouts.map(ActualsHealthKitWorkoutMapping.sample(from:))
     }
 }
 
@@ -194,5 +344,22 @@ final class MockActualsHealthKitConnector: ActualsHealthKitConnecting {
         if let url = URL(string: UIApplication.openSettingsURLString) {
             openedURLs.append(url)
         }
+    }
+}
+
+@MainActor
+final class MockActualsHealthKitWorkoutFetcher: ActualsHealthKitWorkoutFetching {
+    var samples: [ActualsHealthKitWorkoutSample]
+    var error: Error?
+
+    init(samples: [ActualsHealthKitWorkoutSample] = [], error: Error? = nil) {
+        self.samples = samples
+        self.error = error
+    }
+
+    func fetchWorkouts(daysBack: Int) async throws -> [ActualsHealthKitWorkoutSample] {
+        _ = daysBack
+        if let error { throw error }
+        return samples
     }
 }

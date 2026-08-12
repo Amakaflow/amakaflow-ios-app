@@ -150,9 +150,10 @@ final class ActualsAppleHealthConnectTests: XCTestCase {
         XCTAssertEqual(opened.first?.absoluteString, UIApplication.openSettingsURLString)
     }
 
-    // MARK: - Second connect after promptCompleted → Settings
+    // MARK: - Second connect after promptCompleted
 
-    func testSecondConnectAfterPromptCompletedNeedsSettingsAndStaysDisconnected() async {
+    func testSecondConnectAfterPromptCompletedNeedsSettingsWhenEvidenceFails() async {
+        struct Boom: Error {}
         defaults.set(
             ActualsHealthKitReadAuthorizationState.promptCompleted.rawValue,
             forKey: "ama2387.actuals.appleHealth.authState"
@@ -160,6 +161,7 @@ final class ActualsAppleHealthConnectTests: XCTestCase {
         var opened: [URL] = []
         let live = LiveActualsHealthKitConnector(
             defaults: defaults,
+            workoutFetcher: MockActualsHealthKitWorkoutFetcher(error: Boom()),
             openURL: { opened.append($0) }
         )
         XCTAssertEqual(live.authorizationState, .promptCompleted)

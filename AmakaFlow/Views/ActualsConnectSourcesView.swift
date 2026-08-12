@@ -263,10 +263,22 @@ struct ActualsConnectSourcesView<Store: ActualsSourceConnecting>: View where Sto
     private func connectTapped(_ provider: ActualsSourceProvider) {
         switch provider {
         case .appleHealth:
-            // Retry after Don't Allow / prompt-with-no-evidence: iOS never re-prompts.
-            if healthKit.authorizationState == .denied
-                || healthKit.authorizationState == .promptCompleted {
+            if healthKit.authorizationState == .denied {
                 healthKit.openHealthSettings()
+            } else if healthKit.authorizationState == .promptCompleted {
+                // AMA-2419: older installs stuck on promptCompleted — retry evidence query.
+                Task { @MainActor in
+                    let outcome = await healthKit.connect()
+                    ActualsAppleHealthConnectAction.apply(
+                        outcome: outcome,
+                        store: store,
+                        openSettings: { healthKit.openHealthSettings() }
+                    )
+                    if outcome == .granted {
+                        ActualsLinkFeedback.announceLinked(.appleHealth)
+                        onConnect(.appleHealth)
+                    }
+                }
             } else {
                 showAppleHealthPrimer = true
             }

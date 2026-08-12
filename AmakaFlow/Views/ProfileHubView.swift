@@ -31,9 +31,9 @@ struct ProfileHubView: View {
     @ObservedObject private var friendsStore = FriendsSharingStore.shared
     @ObservedObject private var actualsSources = ActualsSourceConnectionStore.shared
     @State private var weekExpanded = false
-    /// AMA-2417: Strava sync-completed mapped into Profile completion rows.
-    @State private var stravaCompletions: [WorkoutCompletion] = []
-    @State private var stravaStatsLoaded = false
+    /// AMA-2417 / AMA-2419: Strava + Apple Health mapped into Profile completion rows.
+    @State private var externalCompletions: [WorkoutCompletion] = []
+    @State private var externalStatsLoaded = false
 
     private var mondayCalendar: Calendar { ProfileTrainingStats.mondayFirstCalendar }
 
@@ -52,22 +52,25 @@ struct ProfileHubView: View {
         DDHandoffFixtures.isEnabled
             && !historyViewModel.isLoading
             && historyViewModel.completions.isEmpty
-            && stravaCompletions.isEmpty
+            && externalCompletions.isEmpty
     }
 
-    /// Prefer Strava when connected + loaded; otherwise mapper completions / fixtures.
+    /// Prefer connected Actuals sources (Strava / Apple Health); else mapper completions.
     private var profileCompletions: [WorkoutCompletion] {
         if usesProfileFixture {
             return WorkoutCompletion.profileHubSampleData(now: today)
         }
-        if stravaStatsLoaded, actualsSources.isConnected(.strava) {
-            return stravaCompletions
+        if externalStatsLoaded,
+           actualsSources.isConnected(.strava) || actualsSources.isConnected(.appleHealth) {
+            return externalCompletions
         }
         return historyViewModel.completions
     }
 
-    private var usesStravaProfileStats: Bool {
-        !usesProfileFixture && stravaStatsLoaded && actualsSources.isConnected(.strava)
+    private var usesExternalProfileStats: Bool {
+        !usesProfileFixture
+            && externalStatsLoaded
+            && (actualsSources.isConnected(.strava) || actualsSources.isConnected(.appleHealth))
     }
 
     private var weekSummary: WeeklySummary {
@@ -92,7 +95,7 @@ struct ProfileHubView: View {
     }
 
     private var detailRoute: ProfileHubRoute {
-        usesStravaProfileStats ? .actualsHistory : .history
+        usesExternalProfileStats ? .actualsHistory : .history
     }
 
     var body: some View {
@@ -132,9 +135,9 @@ struct ProfileHubView: View {
                     ActualsConnectSourcesView()
                 }
             }
-            .task(id: actualsSources.isConnected(.strava)) {
+            .task(id: "\(actualsSources.isConnected(.strava))-\(actualsSources.isConnected(.appleHealth))") {
                 await historyViewModel.loadCompletions()
-                await loadStravaProfileStats()
+                await loadExternalProfileStats()
                 await friendsStore.reload()
             }
             .overlay(alignment: .top) {
@@ -352,7 +355,7 @@ struct ProfileHubView: View {
     }
 
     private var hasKnownTrainingData: Bool {
-        !profileCompletions.isEmpty || usesStravaProfileStats
+        !profileCompletions.isEmpty || usesExternalProfileStats
     }
 
     private var monthSessionsLabel: String {
@@ -400,31 +403,43 @@ struct ProfileHubView: View {
         )
     }
 
-    private func loadStravaProfileStats() async {
-        guard actualsSources.isConnected(.strava) else {
-            stravaCompletions = []
-            stravaStatsLoaded = false
+    private func loadExternalProfileStats() async {
+        let wantsStrava = actualsSources.isConnected(.strava)
+        let wantsApple = actualsSources.isConnected(.appleHealth)
+        guard wantsStrava || wantsApple else {
+            externalCompletions = []
+            externalStatsLoaded = false
             return
         }
-        do {
-            // 60 days covers a full month + streak best lookback.
-            let result = try await BFFStravaClient.live().syncCompleted(daysBack: 60)
-            guard result.success else {
-                stravaCompletions = []
-                stravaStatsLoaded = false
-                return
+
+        var merged: [WorkoutCompletion] = []
+
+        if wantsStrava {
+            do {
+                let result = try await BFFStravaClient.live().syncCompleted(daysBack: 60)
+                if result.success {
+                    merged.append(contentsOf: ProfileTrainingStats.completions(
+                        from: result.activities,
+                        calendar: mondayCalendar,
+                        now: today
+                    ))
+                }
+            } catch {
+                // Fall through — Apple Health may still load.
             }
-            stravaCompletions = ProfileTrainingStats.completions(
-                from: result.activities,
-                calendar: mondayCalendar,
-                now: today
-            )
-            stravaStatsLoaded = true
-        } catch {
-            // Keep mapper completions as fallback when Strava tokens/network fail.
-            stravaCompletions = []
-            stravaStatsLoaded = false
         }
+
+        if wantsApple {
+            do {
+                let samples = try await LiveActualsHealthKitWorkoutFetcher().fetchWorkouts(daysBack: 60)
+                merged.append(contentsOf: ActualsTodayDemoFeed.completions(from: samples))
+            } catch {
+                // Keep Strava rows if present.
+            }
+        }
+
+        externalCompletions = merged.sorted { $0.startedAt > $1.startedAt }
+        externalStatsLoaded = true
     }
 }
 
