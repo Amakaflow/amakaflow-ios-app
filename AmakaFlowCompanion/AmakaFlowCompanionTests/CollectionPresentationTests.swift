@@ -28,6 +28,37 @@ final class CollectionPresentationTests: XCTestCase {
         XCTAssertEqual(CollectionPresentation.uncategorizedID, "uncategorized")
     }
 
+    // MARK: - AMA-2416 latest-first ordering
+
+    func testLatestFirstOrdersByCreatedAtDescending() {
+        let older = Workout(
+            id: "a",
+            name: "Older",
+            sport: .strength,
+            duration: 60,
+            source: .manual,
+            createdAt: Date(timeIntervalSince1970: 100)
+        )
+        let newer = Workout(
+            id: "b",
+            name: "Newer",
+            sport: .strength,
+            duration: 60,
+            source: .manual,
+            createdAt: Date(timeIntervalSince1970: 200)
+        )
+        let undated = Workout(
+            id: "c",
+            name: "Undated",
+            sport: .strength,
+            duration: 60,
+            source: .manual,
+            createdAt: nil
+        )
+        let ordered = LibraryWorkoutOrdering.latestFirst([older, undated, newer])
+        XCTAssertEqual(ordered.map(\.id), ["b", "a", "c"])
+    }
+
     // MARK: - Detail meta (Task 6: Collection detail)
 
     func testDetailMetaPluralWithoutNote() {

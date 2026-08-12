@@ -36,4 +36,10 @@ struct AmakaFlowCompanionTests {
             "profile_tab"
         ])
     }
+
+    @Test func routeToLibrarySwitchesSelectedTab() async throws {
+        var state = AFTabSelectionState(selectedTab: .profile)
+        state.route(to: .library)
+        #expect(state.selectedTab == .library)
+    }
 }

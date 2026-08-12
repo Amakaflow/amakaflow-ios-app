@@ -47,3 +47,23 @@ enum CollectionPresentation {
         "removed from \(collectionName) — still in Library."
     }
 }
+
+/// AMA-2416: Uncategorized library list prefers newest saved/imported workouts.
+enum LibraryWorkoutOrdering {
+    /// Newest `createdAt` first; missing dates sort last (stable by id).
+    static func latestFirst(_ workouts: [Workout]) -> [Workout] {
+        workouts.sorted { lhs, rhs in
+            switch (lhs.createdAt, rhs.createdAt) {
+            case let (leftDate?, rightDate?):
+                if leftDate != rightDate { return leftDate > rightDate }
+                return lhs.id > rhs.id
+            case (_?, nil):
+                return true
+            case (nil, _?):
+                return false
+            case (nil, nil):
+                return lhs.id > rhs.id
+            }
+        }
+    }
+}

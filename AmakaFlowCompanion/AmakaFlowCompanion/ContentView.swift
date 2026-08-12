@@ -272,6 +272,10 @@ struct ContentView: View {
 
     private func notifyLibraryReload() {
         NotificationCenter.default.post(name: .libraryContentDidChange, object: nil)
+        // AMA-2416: create / social-import save should land on Library, not the
+        // tab the FAB was opened from (often Profile).
+        tabState.route(to: .library)
+        popToRoot(.library)
     }
 
     private func resetToken(for tab: AFTab) -> UUID {
