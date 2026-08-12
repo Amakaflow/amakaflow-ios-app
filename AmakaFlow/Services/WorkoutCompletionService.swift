@@ -6,6 +6,8 @@
 //  Includes offline queuing and retry logic
 //
 
+// swiftlint:disable file_length
+
 import Foundation
 import Combine
 import Network
@@ -264,6 +266,7 @@ protocol WorkoutCompletionServiceProviding: AnyObject {
 }
 
 @MainActor
+// swiftlint:disable:next type_body_length
 class WorkoutCompletionService: ObservableObject, WorkoutCompletionServiceProviding, WorkoutCompletionQueueProviding {
     static let shared = WorkoutCompletionService()
 
@@ -423,6 +426,21 @@ class WorkoutCompletionService: ObservableObject, WorkoutCompletionServiceProvid
             osVersion: nil
         )
 
+        let setLogs = summary.setLogs?.map { log in
+            SetLog(
+                exerciseName: log.exerciseName,
+                exerciseIndex: log.exerciseIndex,
+                sets: log.sets.map { entry in
+                    SetEntry(
+                        setNumber: entry.setNumber,
+                        weight: entry.weight,
+                        unit: entry.unit,
+                        completed: entry.completed
+                    )
+                }
+            )
+        }
+
         return WorkoutCompletionRequest(
             workoutEventId: nil,
             workoutId: summary.workoutId,
@@ -436,7 +454,7 @@ class WorkoutCompletionService: ObservableObject, WorkoutCompletionServiceProvid
             workoutStructure: workoutStructure,
             workoutName: workoutName ?? summary.workoutName,
             isSimulated: nil,  // Watch workouts are never simulated
-            setLogs: nil,      // Watch weight tracking coming in AMA-286
+            setLogs: setLogs,
             executionLog: nil, // (AMA-291) Watch execution tracking coming later
             clientGeneratedId: UUID().uuidString.lowercased()  // (AMA-1848 Bug B)
         )

@@ -210,6 +210,7 @@
 		AMA2316SHEETBLD01 /* GarminWatchDisplayPrefsSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2316SHEETREF01 /* GarminWatchDisplayPrefsSheet.swift */; };
 		AMA2360PREFTESTBLD /* AppleWatchDeliveryPrefsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2360PREFTESTREF /* AppleWatchDeliveryPrefsTests.swift */; };
 		AMA2420TSTBLD /* StrengthAutoCaptureSettingsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2420TSTREF /* StrengthAutoCaptureSettingsTests.swift */; };
+		AMA2420P2TSTBLD /* WatchActualsDraftBuilderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2420P2TSTREF /* WatchActualsDraftBuilderTests.swift */; };
 		AMA2381HEROTESTBLD /* UnifiedWorkoutDetailViewHeroTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2381HEROTESTREF /* UnifiedWorkoutDetailViewHeroTests.swift */; };
 		AMA2316PREFTESTBLD /* GarminWatchDisplayPrefsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2316PREFTESTREF /* GarminWatchDisplayPrefsTests.swift */; };
 		AMA2336MDLBLD001 /* WorkoutEnrichmentModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2336MDLREF001 /* WorkoutEnrichmentModels.swift */; };
@@ -416,6 +417,7 @@
 		AMA435SACCSVCA /* SuggestionAcceptanceService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA435SACCSVCREF /* SuggestionAcceptanceService.swift */; };
 		AMA435SACCTST_B /* SuggestionAcceptanceServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA435SACCTSTREFA /* SuggestionAcceptanceServiceTests.swift */; };
 		AMA446WCMODBLD /* WorkoutCompletionModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA446WCMODREF /* WorkoutCompletionModule.swift */; };
+		AMA2420DRAFTBLD /* WatchActualsDraftBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2420DRAFTREF /* WatchActualsDraftBuilder.swift */; };
 		AMA446WCMODTSTBLD /* WorkoutCompletionModuleTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA446WCMODTSTREF /* WorkoutCompletionModuleTests.swift */; };
 		AMA447WCOQTSTBLD /* WorkoutCompletionOfflineQueueTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA447WCOQTSTREF /* WorkoutCompletionOfflineQueueTests.swift */; };
 		AK00NUT002B /* NutritionViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00NUT002A /* NutritionViewModel.swift */; };
@@ -996,6 +998,7 @@
 		AMA2360SHEETREF01 /* AppleWatchDeliveryPrefsSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppleWatchDeliveryPrefsSheet.swift; path = ../AmakaFlow/Views/AppleWatchDeliveryPrefsSheet.swift; sourceTree = SOURCE_ROOT; };
 		AMA2360PREFTESTREF /* AppleWatchDeliveryPrefsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppleWatchDeliveryPrefsTests.swift; path = AmakaFlowCompanionTests/AppleWatchDeliveryPrefsTests.swift; sourceTree = "<group>"; };
 		AMA2420TSTREF /* StrengthAutoCaptureSettingsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = StrengthAutoCaptureSettingsTests.swift; path = AmakaFlowCompanionTests/StrengthAutoCaptureSettingsTests.swift; sourceTree = "<group>"; };
+		AMA2420P2TSTREF /* WatchActualsDraftBuilderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WatchActualsDraftBuilderTests.swift; path = AmakaFlowCompanionTests/WatchActualsDraftBuilderTests.swift; sourceTree = "<group>"; };
 		AMA2381HEROTESTREF /* UnifiedWorkoutDetailViewHeroTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = UnifiedWorkoutDetailViewHeroTests.swift; path = AmakaFlowCompanionTests/UnifiedWorkoutDetailViewHeroTests.swift; sourceTree = "<group>"; };
 		AMA2360STEPSREF01 /* WorkoutKitPlanStepSummary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutKitPlanStepSummary.swift; path = ../AmakaFlow/Models/WorkoutKitPlanStepSummary.swift; sourceTree = SOURCE_ROOT; };
 		AMA2374SECTSREF01 /* WorkoutKitPlanStepSummary+Sections.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "WorkoutKitPlanStepSummary+Sections.swift"; path = "../AmakaFlow/Models/WorkoutKitPlanStepSummary+Sections.swift"; sourceTree = SOURCE_ROOT; };
@@ -1205,6 +1208,7 @@
 		AMA435SACCSVCREF /* SuggestionAcceptanceService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SuggestionAcceptanceService.swift; path = ../AmakaFlow/Services/SuggestionAcceptanceService.swift; sourceTree = "<group>"; };
 		AMA435SACCTSTREFA /* SuggestionAcceptanceServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SuggestionAcceptanceServiceTests.swift; path = AmakaFlowCompanionTests/SuggestionAcceptanceServiceTests.swift; sourceTree = "<group>"; };
 		AMA446WCMODREF /* WorkoutCompletionModule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutCompletionModule.swift; path = ../AmakaFlow/Services/WorkoutCompletionModule.swift; sourceTree = "<group>"; };
+		AMA2420DRAFTREF /* WatchActualsDraftBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WatchActualsDraftBuilder.swift; path = "../AmakaFlow/Services/WatchActualsDraftBuilder.swift"; sourceTree = SOURCE_ROOT; };
 		AMA446WCMODTSTREF /* WorkoutCompletionModuleTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutCompletionModuleTests.swift; path = AmakaFlowCompanionTests/WorkoutCompletionModuleTests.swift; sourceTree = "<group>"; };
 		AMA447WCOQTSTREF /* WorkoutCompletionOfflineQueueTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutCompletionOfflineQueueTests.swift; path = AmakaFlowCompanionTests/WorkoutCompletionOfflineQueueTests.swift; sourceTree = "<group>"; };
 		AK00NUT002A /* NutritionViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = NutritionViewModel.swift; path = ../AmakaFlow/ViewModels/NutritionViewModel.swift; sourceTree = "<group>"; };
@@ -2063,6 +2067,7 @@
 				AMA433HKPVDRA /* HealthKitProvider.swift */,
 				AMA435SACCSVCREF /* SuggestionAcceptanceService.swift */,
 				AMA446WCMODREF /* WorkoutCompletionModule.swift */,
+				AMA2420DRAFTREF /* WatchActualsDraftBuilder.swift */,
 				AMA2291DETREF /* WorkoutLibraryDetailStore.swift */,
 				AMA2285PENDREF /* PendingShareImportCoordinator.swift */,
 				AMA2297PSTEREF /* LibraryPasteRouter.swift */,
@@ -2361,6 +2366,7 @@
 				AMA2286GARTESTREF /* GarminStartHandoffTests.swift */,
 				AMA2360PREFTESTREF /* AppleWatchDeliveryPrefsTests.swift */,
 				AMA2420TSTREF /* StrengthAutoCaptureSettingsTests.swift */,
+				AMA2420P2TSTREF /* WatchActualsDraftBuilderTests.swift */,
 				AMA2381HEROTESTREF /* UnifiedWorkoutDetailViewHeroTests.swift */,
 				AMA2316PREFTESTREF /* GarminWatchDisplayPrefsTests.swift */,
 				AMA2336TESTREF /* WorkoutEnrichmentModelsTests.swift */,
@@ -3296,6 +3302,7 @@
 				AMA433HKPVDRB /* HealthKitProvider.swift in Sources */,
 				AMA435SACCSVCA /* SuggestionAcceptanceService.swift in Sources */,
 				AMA446WCMODBLD /* WorkoutCompletionModule.swift in Sources */,
+				AMA2420DRAFTBLD /* WatchActualsDraftBuilder.swift in Sources */,
 				AK00NUT002B /* NutritionViewModel.swift in Sources */,
 				AK00NUT003B /* NutritionDashboardCard.swift in Sources */,
 				AK00NUT004B /* ProteinTrackerView.swift in Sources */,
@@ -3396,6 +3403,7 @@
 				AMA2286GARTESTBLD /* GarminStartHandoffTests.swift in Sources */,
 				AMA2360PREFTESTBLD /* AppleWatchDeliveryPrefsTests.swift in Sources */,
 				AMA2420TSTBLD /* StrengthAutoCaptureSettingsTests.swift in Sources */,
+				AMA2420P2TSTBLD /* WatchActualsDraftBuilderTests.swift in Sources */,
 				AMA2381HEROTESTBLD /* UnifiedWorkoutDetailViewHeroTests.swift in Sources */,
 				AMA2316PREFTESTBLD /* GarminWatchDisplayPrefsTests.swift in Sources */,
 				AMA2336TESTBLD /* WorkoutEnrichmentModelsTests.swift in Sources */,

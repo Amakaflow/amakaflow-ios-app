@@ -9,7 +9,8 @@
 //
 //    - makeWatchCompletionRequest(...)  for Watch standalone workouts
 //      (input: StandaloneWorkoutSummary; source = "apple_watch";
-//      platform = "watchos"; no execution_log, no set_logs).
+//      platform = "watchos"; no execution_log; set_logs only when
+//      AMA-2420 crown logging populated the summary).
 //
 //  Garmin path: AMA-1855 follow-up exposed
 //  `makeGarminCompletionRequestForTesting` as a DEBUG-only seam
@@ -106,10 +107,9 @@ final class AMA1855_WatchGarmin_AssemblyTests: XCTestCase {
     }
 
     func test_makeWatchCompletionRequest__omitsExecutionLogAndSetLogs() throws {
-        // AMA-1855 invariant: the Watch path does NOT build execution_log
-        // or set_logs on-device today (those are phone-path concepts).
-        // If we ever start sending them from watchOS, this test failure
-        // makes the change visible.
+        // AMA-1855: execution_log still phone-only. set_logs stay absent when
+        // the Watch summary has none (non-strength / no crown logs). AMA-2420
+        // Phase 2 may populate set_logs when crown logging ran — covered below.
         let request = WorkoutCompletionService
             .makeWatchCompletionRequestForTesting(summary: makeStandaloneSummary())
         let json = try encode(request)
@@ -122,10 +122,40 @@ final class AMA1855_WatchGarmin_AssemblyTests: XCTestCase {
                       "execution_log should be null/absent on the Watch path; got \(String(describing: executionLog))")
         let setLogs = json["set_logs"]
         XCTAssertTrue(setLogs == nil || setLogs is NSNull,
-                      "set_logs should be null/absent on the Watch path; got \(String(describing: setLogs))")
+                      "set_logs should be null/absent when Watch summary has no setLogs; got \(String(describing: setLogs))")
         let hrSamples = json["heart_rate_samples"]
         XCTAssertTrue(hrSamples == nil || hrSamples is NSNull,
                       "heart_rate_samples should be null/absent on the Watch path today.")
+    }
+
+    func test_makeWatchCompletionRequest__includesSetLogsWhenSummaryHasThem() throws {
+        // AMA-2420 Phase 2 — crown-logged standalone strength may carry set_logs.
+        let summary = StandaloneWorkoutSummary(
+            workoutId: "watch-ama2420-sets",
+            workoutName: "Strength",
+            startDate: Date(timeIntervalSince1970: 1_700_000_000),
+            endDate: Date(timeIntervalSince1970: 1_700_001_500),
+            durationSeconds: 1500,
+            totalCalories: 320,
+            averageHeartRate: 138,
+            completedSteps: 25,
+            totalSteps: 25,
+            setLogs: [
+                StandaloneSetLog(
+                    exerciseName: "Press",
+                    exerciseIndex: 0,
+                    sets: [
+                        StandaloneSetEntry(setNumber: 1, weight: 40, unit: "kg", completed: true)
+                    ]
+                )
+            ]
+        )
+        let request = WorkoutCompletionService
+            .makeWatchCompletionRequestForTesting(summary: summary)
+        let json = try encode(request)
+        let setLogs = try XCTUnwrap(json["set_logs"] as? [[String: Any]])
+        XCTAssertEqual(setLogs.count, 1)
+        XCTAssertEqual(setLogs[0]["exercise_name"] as? String, "Press")
     }
 
     func test_makeWatchCompletionRequest__isSimulatedAlwaysAbsent() throws {
