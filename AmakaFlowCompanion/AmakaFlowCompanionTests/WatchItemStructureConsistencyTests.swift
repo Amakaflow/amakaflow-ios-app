@@ -382,4 +382,86 @@ final class WatchItemStructureConsistencyTests: XCTestCase {
         XCTAssertNil(timed[0].steps[0].restChip)
         XCTAssertEqual(timed[0].steps[1].restChip, "REST 120S")
     }
+
+    /// AMA-2423 — reflection read every chip as Rest, so a delivered circuit
+    /// with Transitions came back as "Rest, timed 60s" and the next Watch Item
+    /// save pushed between_set_rest into standing prefs.
+    func testReflectionReadsTransitionChipsAsTransitionsNotRest() {
+        let delivered = [
+            PreviewSection(
+                accent: .work,
+                band: "Circuit",
+                tag: "4 ROUNDS",
+                steps: [
+                    PreviewStep(number: 1, title: "Bike", detail: "0:30", restChip: "TRANSITION 45S"),
+                    PreviewStep(number: 2, title: "Ski", detail: "0:30", restChip: "TRANSITION 45S")
+                ]
+            )
+        ]
+        let readiness = WatchItemViewModel.readinessReflectingDelivered(delivered)
+        XCTAssertTrue(readiness.transitionEnabled)
+        XCTAssertFalse(readiness.restEnabled)
+
+        let config = WatchItemViewModel.configReflectingDelivered(delivered)
+        XCTAssertEqual(config.transitionSec, 45)
+        XCTAssertFalse(config.transitionOpen)
+    }
+
+    /// The open-transition chip carries no seconds, so it must reflect as open
+    /// rather than falling back to the 60s default.
+    func testReflectionReadsOpenTransitionChip() {
+        let delivered = [
+            PreviewSection(
+                accent: .work,
+                band: "Circuit",
+                tag: "4 ROUNDS",
+                steps: [
+                    PreviewStep(
+                        number: 1,
+                        title: "Bike",
+                        detail: "0:30",
+                        restChip: PreviewStep.openTransitionChip
+                    )
+                ]
+            )
+        ]
+        XCTAssertTrue(WatchItemViewModel.readinessReflectingDelivered(delivered).transitionEnabled)
+        XCTAssertTrue(WatchItemViewModel.configReflectingDelivered(delivered).transitionOpen)
+    }
+
+    /// Transitions wins where it is on — the two recoveries never stack on one
+    /// band, mirroring the backend's per-block precedence.
+    func testSectionsReflectingDeliveredPrefersTransitionChipOverRest() {
+        let prior = [
+            PreviewSection(
+                accent: .work,
+                band: "Circuit",
+                tag: "4 ROUNDS",
+                steps: [
+                    PreviewStep(number: 1, title: "Bike", detail: "0:30", restChip: "REST 60S"),
+                    PreviewStep(number: 2, title: "Ski", detail: "0:30", restChip: "REST 60S")
+                ]
+            )
+        ]
+        let rebuilt = WatchItemViewModel.sectionsReflectingDelivered(
+            readiness: WatchItemReadinessState(
+                mobilityEnabled: false,
+                warmupsEnabled: false,
+                restEnabled: true,
+                cooldownEnabled: false,
+                transitionEnabled: true
+            ),
+            config: WatchItemConfigState(
+                mobilityActivities: [],
+                cooldownActivities: [],
+                perExerciseRamps: [],
+                restOpen: false,
+                restSec: 60,
+                transitionOpen: false,
+                transitionSec: 45
+            ),
+            priorSections: prior
+        )
+        XCTAssertEqual(rebuilt[0].steps[1].restChip, "TRANSITION 45S")
+    }
 }

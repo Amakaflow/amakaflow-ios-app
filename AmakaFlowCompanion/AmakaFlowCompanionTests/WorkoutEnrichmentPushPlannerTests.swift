@@ -317,6 +317,48 @@ final class WorkoutEnrichmentPushPlannerTests: XCTestCase {
         XCTAssertFalse(plan.offers.contains { $0.kind == .stationTransition })
     }
 
+    /// The choice is per block, not per workout: a push day with a barbell block
+    /// and a finisher circuit must keep its Rest offer alongside Transitions.
+    func testMixedWorkoutOffersBothRestAndTransitions() {
+        let plan = WorkoutEnrichmentPushPlanner.plan(
+            blocks: [benchBlock(), circuitBlock(stationCount: 3)],
+            tombstones: [],
+            prefs: .defaults,
+            target: .apple
+        )
+        XCTAssertNotNil(plan.offer(.betweenSetRest))
+        XCTAssertNotNil(plan.offer(.stationTransition))
+    }
+
+    /// Transition intent lives on the circuit, so it must not pre-check Rest —
+    /// the two never stack on one block. Standing Rest prefs are off here so the
+    /// only thing that could check the row is block presence.
+    func testMixedWorkoutRestOfferIgnoresCircuitTransitionIntent() throws {
+        var prefs = WorkoutPreferences.defaults
+        prefs.betweenSetRest.enabled = false
+        let plan = WorkoutEnrichmentPushPlanner.plan(
+            blocks: [benchBlock(), circuitBlock(stationCount: 3, transitionSec: 20)],
+            tombstones: [],
+            prefs: prefs,
+            target: .apple
+        )
+        XCTAssertEqual(try XCTUnwrap(plan.offer(.stationTransition)).isChecked, true)
+        XCTAssertEqual(try XCTUnwrap(plan.offer(.betweenSetRest)).isChecked, false)
+    }
+
+    /// Mirror of the above — block rest on the straight-set block must not
+    /// pre-check Transitions.
+    func testMixedWorkoutTransitionOfferIgnoresStraightSetRestIntent() throws {
+        let plan = WorkoutEnrichmentPushPlanner.plan(
+            blocks: [benchBlock(blockRestSec: 90), circuitBlock(stationCount: 3)],
+            tombstones: [],
+            prefs: .defaults,
+            target: .apple
+        )
+        XCTAssertEqual(try XCTUnwrap(plan.offer(.betweenSetRest)).isChecked, true)
+        XCTAssertEqual(try XCTUnwrap(plan.offer(.stationTransition)).isChecked, false)
+    }
+
     /// A 1-station "circuit" behaves like straight sets — Rest, not Transitions
     /// (mirrors backend `_is_multi_station_format_group`).
     func testSingleStationCircuitStillOffersRest() {

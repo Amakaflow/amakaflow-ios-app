@@ -130,6 +130,58 @@ final class WorkoutKitPlanStepSummarySectionsTests: XCTestCase {
         XCTAssertFalse(step.isOpenRest)
     }
 
+    /// Dogfood step 4 — a Transition after every station must show on every
+    /// station. The flattener used to hang one chip off the end of the band, so
+    /// only the last station carried it.
+    func testCircuitPinsTransitionChipToEachStation() {
+        let json = plan("""
+        {
+          "kind": "repeat",
+          "reps": 4,
+          "intervals": [
+            { "kind": "time", "seconds": 30, "name": "Ski Erg" },
+            { "kind": "rest", "name": "Transition", "seconds": 20 },
+            { "kind": "time", "seconds": 30, "name": "Row" },
+            { "kind": "rest", "name": "Transition", "seconds": 20 },
+            { "kind": "time", "seconds": 30, "name": "Bike" },
+            { "kind": "rest", "name": "Transition", "seconds": 20 }
+          ]
+        }
+        """)
+        let sections = WorkoutKitPlanStepSummary.sections(from: json)
+
+        guard let circuit = sections.first(where: { $0.band == "Circuit" }) else {
+            return XCTFail("Expected a Circuit band, got \(sections.map(\.band))")
+        }
+        XCTAssertEqual(circuit.steps.map(\.title), ["Ski Erg", "Row", "Bike"])
+        XCTAssertEqual(
+            circuit.steps.map(\.restChip),
+            ["TRANSITION 20S", "TRANSITION 20S", "TRANSITION 20S"]
+        )
+    }
+
+    /// A circuit with one end-of-round rest keeps the pre-AMA-2423 shape: the
+    /// chip lands on the last station and nowhere else.
+    func testCircuitWithEndOfRoundRestKeepsSingleTrailingChip() {
+        let json = plan("""
+        {
+          "kind": "repeat",
+          "reps": 3,
+          "intervals": [
+            { "kind": "time", "seconds": 30, "name": "Ski Erg" },
+            { "kind": "time", "seconds": 30, "name": "Row" },
+            { "kind": "rest", "seconds": 90 }
+          ]
+        }
+        """)
+        let sections = WorkoutKitPlanStepSummary.sections(from: json)
+
+        guard let circuit = sections.first(where: { $0.band == "Circuit" }) else {
+            return XCTFail("Expected a Circuit band, got \(sections.map(\.band))")
+        }
+        XCTAssertEqual(circuit.steps.map(\.restChip), [nil, "REST 90S"])
+    }
+
     /// A plain, unnamed recovery step must keep reading Rest — only a
     /// `displayName == "Transition"` recovery flips to the Transition chip.
     func testPlainRestStepIsUnaffectedByTransitionCopy() {

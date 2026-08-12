@@ -178,6 +178,39 @@ final class EnrichmentReducerTests: XCTestCase {
         XCTAssertEqual(decoded.transitionSec, 60)
     }
 
+    /// AMA-2423 — a Watch Item save round-trips through `Persisted`, so dropping
+    /// the transition fields there reset the workout's Transitions config to the
+    /// defaults on every unrelated toggle.
+    func testWatchItemPersistedRoundTripKeepsTransitionConfig() throws {
+        let readiness = WatchItemReadinessState(
+            mobilityEnabled: false,
+            warmupsEnabled: false,
+            restEnabled: false,
+            cooldownEnabled: false,
+            transitionEnabled: true
+        )
+        let config = WatchItemConfigState(
+            mobilityActivities: [],
+            cooldownActivities: [],
+            perExerciseRamps: [],
+            restOpen: false,
+            restSec: 60,
+            transitionOpen: false,
+            transitionSec: 45
+        )
+        let persisted = EnrichmentState.Persisted.from(readiness: readiness, config: config)
+        XCTAssertTrue(persisted.checkedKinds.contains(.stationTransition))
+        XCTAssertEqual(persisted.transitionSec, 45)
+
+        let reloaded = try JSONDecoder().decode(
+            EnrichmentState.Persisted.self,
+            from: try JSONEncoder().encode(persisted)
+        )
+        XCTAssertTrue(reloaded.asReadiness().transitionEnabled)
+        XCTAssertEqual(reloaded.asConfig().transitionSec, 45)
+        XCTAssertFalse(reloaded.asConfig().transitionOpen)
+    }
+
     func testMigrationByteIdenticalEffectiveRamps() {
         let candidates = ["Incline Smith", "Row", "Curl", "Press"]
         let legacy = ExerciseWarmupSetsPrefs(
