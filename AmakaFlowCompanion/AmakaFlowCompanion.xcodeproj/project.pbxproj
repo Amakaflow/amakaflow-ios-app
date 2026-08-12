@@ -664,7 +664,6 @@
 		F84E22862ED0D5D100459747 /* WorkoutKitConverter.swift in Sources */ = {isa = PBXBuildFile; fileRef = F84E22852ED0D5D100459747 /* WorkoutKitConverter.swift */; };
 		F84E22872ED0D5D100459747 /* CalendarManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F84E22832ED0D5D100459747 /* CalendarManager.swift */; };
 		F84E22882ED0D5D100459747 /* WatchConnectivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F84E22842ED0D5D100459747 /* WatchConnectivityManager.swift */; };
-		AMA2420WCBLD /* WatchConnectivityManager+ExperimentalFlags.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2420WCREF /* WatchConnectivityManager+ExperimentalFlags.swift */; };
 		F84E22892ED0D5D100459747 /* APIService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F84E22812ED0D5D100459747 /* APIService.swift */; };
 		F84E228A2ED0D5D100459747 /* AuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F84E22822ED0D5D100459747 /* AuthService.swift */; };
 		F84E22932ED0D9FA00459747 /* EventKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F84E22922ED0D9FA00459747 /* EventKit.framework */; };
@@ -1464,7 +1463,6 @@
 		F84E22822ED0D5D100459747 /* AuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AuthService.swift; path = ../AmakaFlow/Services/AuthService.swift; sourceTree = SOURCE_ROOT; };
 		F84E22832ED0D5D100459747 /* CalendarManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CalendarManager.swift; path = ../AmakaFlow/Services/CalendarManager.swift; sourceTree = SOURCE_ROOT; };
 		F84E22842ED0D5D100459747 /* WatchConnectivityManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WatchConnectivityManager.swift; path = ../AmakaFlow/Services/WatchConnectivityManager.swift; sourceTree = SOURCE_ROOT; };
-		AMA2420WCREF /* WatchConnectivityManager+ExperimentalFlags.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "WatchConnectivityManager+ExperimentalFlags.swift"; path = "../AmakaFlow/Services/WatchConnectivityManager+ExperimentalFlags.swift"; sourceTree = SOURCE_ROOT; };
 		F84E22852ED0D5D100459747 /* WorkoutKitConverter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutKitConverter.swift; path = ../AmakaFlow/Services/WorkoutKitConverter.swift; sourceTree = SOURCE_ROOT; };
 		F84E22922ED0D9FA00459747 /* EventKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = EventKit.framework; path = System/Library/Frameworks/EventKit.framework; sourceTree = SDKROOT; };
 		F84E22942ED0DA0200459747 /* HealthKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = HealthKit.framework; path = System/Library/Frameworks/HealthKit.framework; sourceTree = SDKROOT; };
@@ -1704,7 +1702,6 @@
 				F84E22822ED0D5D100459747 /* AuthService.swift */,
 				F84E22832ED0D5D100459747 /* CalendarManager.swift */,
 				F84E22842ED0D5D100459747 /* WatchConnectivityManager.swift */,
-				AMA2420WCREF /* WatchConnectivityManager+ExperimentalFlags.swift */,
 				F8C125A02EFAB01000459747 /* GarminConnectManager.swift */,
 				AMA2286GARHANDREF /* GarminStartHandoff.swift */,
 				AMA2342GARLABREF /* GarminDeliveryLab.swift */,
@@ -2871,7 +2868,6 @@
 				F84E22862ED0D5D100459747 /* WorkoutKitConverter.swift in Sources */,
 				F84E22872ED0D5D100459747 /* CalendarManager.swift in Sources */,
 				F84E22882ED0D5D100459747 /* WatchConnectivityManager.swift in Sources */,
-				AMA2420WCBLD /* WatchConnectivityManager+ExperimentalFlags.swift in Sources */,
 				F8C125A12EFAB01000459747 /* GarminConnectManager.swift in Sources */,
 				F84E22892ED0D5D100459747 /* APIService.swift in Sources */,
 				AMA1828TRANS00B /* APITransport.swift in Sources */,
