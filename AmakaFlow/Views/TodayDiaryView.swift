@@ -106,14 +106,13 @@ struct TodayDiaryView: View {
     private var actualsCardsForSelectedDay: [ActualsTodayDemoCard] {
         let calendar = Calendar.current
         return actualsDemo.cards.filter { card in
-            if let start = card.activity?.startDate {
-                return calendar.isDate(start, inSameDayAs: selectedScrubberDay)
-            }
-            if let start = card.session?.primaryRecording?.startDate {
-                return calendar.isDate(start, inSameDayAs: selectedScrubberDay)
-            }
-            // Fixture / undated demo cards only belong on calendar-today.
-            return calendar.isDateInToday(selectedScrubberDay)
+            ActualsDayBucketing.cardBelongsOnSelectedDay(
+                cardID: card.id,
+                activityStart: card.activity?.startDate,
+                recordingStart: card.session?.primaryRecording?.startDate,
+                selectedDay: selectedScrubberDay,
+                calendar: calendar
+            )
         }
     }
 
