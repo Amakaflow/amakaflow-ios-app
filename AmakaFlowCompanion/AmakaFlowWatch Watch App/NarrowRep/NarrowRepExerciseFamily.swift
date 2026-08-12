@@ -25,25 +25,107 @@ enum NarrowRepExerciseFamily: String, Equatable, Codable, CaseIterable {
     }
 
     /// Map a planned exercise name to a supported family, or `nil` if unsupported.
+    ///
+    /// Uses an explicit phrase allow-list (word-boundary) plus a deny-list for
+    /// common false positives (`Leg Press`, brand + machine presses, step-ups).
     static func resolve(exerciseName: String) -> NarrowRepExerciseFamily? {
-        let normalized = exerciseName
+        let normalized = normalize(exerciseName)
+        guard !normalized.isEmpty else { return nil }
+
+        if denyList.contains(where: { containsPhrase(normalized, phrase: $0) }) {
+            return nil
+        }
+
+        // Longest matching allow phrase wins (avoids generic short tokens winning).
+        var best: (family: NarrowRepExerciseFamily, length: Int)?
+        for (family, phrases) in allowList {
+            for phrase in phrases where containsPhrase(normalized, phrase: phrase) {
+                if best == nil || phrase.count > best!.length {
+                    best = (family, phrase.count)
+                }
+            }
+        }
+        return best?.family
+    }
+
+    // MARK: - Allow / deny
+
+    /// Validated movement phrases only — no bare brand tokens (`hammer`) or
+    /// unbounded `contains("press")` / `contains("bench")` matching.
+    private static let allowList: [(NarrowRepExerciseFamily, [String])] = [
+        (.curl, [
+            "hammer curl",
+            "bicep curl",
+            "biceps curl",
+            "preacher curl",
+            "concentration curl",
+            "cable curl",
+            "barbell curl",
+            "dumbbell curl",
+            "db curl",
+            "curl",
+        ]),
+        (.row, [
+            "face pull",
+            "bent over row",
+            "seated row",
+            "cable row",
+            "barbell row",
+            "dumbbell row",
+            "db row",
+            "pull down",
+            "pulldown",
+            "row",
+        ]),
+        (.swing, [
+            "kettlebell swing",
+            "kb swing",
+            "russian swing",
+            "swing",
+        ]),
+        (.press, [
+            "bench press",
+            "overhead press",
+            "shoulder press",
+            "military press",
+            "push press",
+            "chest press",
+            "incline press",
+            "decline press",
+            "dumbbell press",
+            "db press",
+            "barbell press",
+            "ohp",
+        ]),
+    ]
+
+    /// Names that would otherwise collide with allow phrases.
+    private static let denyList: [String] = [
+        "leg press",
+        "calf press",
+        "hip press",
+        "step up",
+        "stepups",
+        "box step",
+        "bench step",
+        "hammer strength", // brand / machine line — not hammer curls
+    ]
+
+    // MARK: - Matching helpers
+
+    private static func normalize(_ name: String) -> String {
+        name
             .lowercased()
             .replacingOccurrences(of: "-", with: " ")
             .replacingOccurrences(of: "_", with: " ")
+            .split(whereSeparator: \.isWhitespace)
+            .joined(separator: " ")
+    }
 
-        // Order matters: more specific tokens first (e.g. "press" before generic).
-        let rules: [(NarrowRepExerciseFamily, [String])] = [
-            (.curl, ["curl", "bicep", "hammer"]),
-            (.row, ["row", "pulldown", "pull down", "face pull"]),
-            (.swing, ["swing", "kb swing", "kettlebell swing"]),
-            (.press, ["press", "bench", "overhead", "ohp", "push press", "military"]),
-        ]
-
-        for (family, keywords) in rules {
-            if keywords.contains(where: { normalized.contains($0) }) {
-                return family
-            }
-        }
-        return nil
+    /// True when `phrase` appears as whole word(s) inside `text`.
+    private static func containsPhrase(_ text: String, phrase: String) -> Bool {
+        let escaped = NSRegularExpression.escapedPattern(for: phrase)
+        let pattern = "(^|\\s)\(escaped)(s)?($|\\s)"
+        return text.range(of: pattern, options: .regularExpression) != nil
     }
 }

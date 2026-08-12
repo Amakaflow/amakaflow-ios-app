@@ -18,12 +18,22 @@ final class NarrowRepAssistStateMachineTests: XCTestCase {
         XCTAssertEqual(NarrowRepExerciseFamily.resolve(exerciseName: "DB Bench Press"), .press)
         XCTAssertEqual(NarrowRepExerciseFamily.resolve(exerciseName: "Seated Row"), .row)
         XCTAssertEqual(NarrowRepExerciseFamily.resolve(exerciseName: "KB Swing"), .swing)
+        XCTAssertEqual(NarrowRepExerciseFamily.resolve(exerciseName: "Hammer Curl"), .curl)
+        XCTAssertEqual(NarrowRepExerciseFamily.resolve(exerciseName: "Overhead Press"), .press)
     }
 
     func test_family_unsupported_returnsNil() {
         XCTAssertNil(NarrowRepExerciseFamily.resolve(exerciseName: "Back Squat"))
         XCTAssertNil(NarrowRepExerciseFamily.resolve(exerciseName: "Deadlift"))
         XCTAssertNil(NarrowRepExerciseFamily.resolve(exerciseName: "Lunges"))
+    }
+
+    func test_family_rejectsFalsePositivePressAndHammerNames() {
+        // Regression: unbounded substring matching wrongly mapped these.
+        XCTAssertNil(NarrowRepExerciseFamily.resolve(exerciseName: "Leg Press"))
+        XCTAssertNil(NarrowRepExerciseFamily.resolve(exerciseName: "Bench Step-Up"))
+        XCTAssertNil(NarrowRepExerciseFamily.resolve(exerciseName: "Hammer Strength Leg Press"))
+        XCTAssertNil(NarrowRepExerciseFamily.resolve(exerciseName: "Hammer Strength Chest Press"))
     }
 
     // MARK: - Ranking
