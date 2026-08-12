@@ -29,6 +29,11 @@ final class MotionCapture: ObservableObject {
         }
     }
 
+    /// Clear accumulated samples (e.g. new set window for AMA-2420 Phase 5).
+    func clearBuffer() {
+        buffer = []
+    }
+
     func startCapture() {
         guard motionManager.isDeviceMotionAvailable else { return }
         motionManager.deviceMotionUpdateInterval = 1.0 / sampleRate

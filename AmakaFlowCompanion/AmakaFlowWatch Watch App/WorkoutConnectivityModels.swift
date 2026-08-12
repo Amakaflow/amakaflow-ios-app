@@ -190,6 +190,8 @@ public struct StandaloneSetEntry: Codable, Equatable {
     public let completed: Bool
     /// AMA-2420 Phase 3 — `manual` | `autoConfirmed` | `inferred` (local + Actuals; optional on wire).
     public let detectionMethod: String?
+    /// AMA-2420 Phase 5 — confirmed / logged rep count when known.
+    public let reps: Int?
 
     public enum CodingKeys: String, CodingKey {
         case setNumber = "set_number"
@@ -197,6 +199,7 @@ public struct StandaloneSetEntry: Codable, Equatable {
         case unit
         case completed
         case detectionMethod = "detection_method"
+        case reps
     }
 
     public init(
@@ -204,13 +207,15 @@ public struct StandaloneSetEntry: Codable, Equatable {
         weight: Double?,
         unit: String?,
         completed: Bool,
-        detectionMethod: String? = nil
+        detectionMethod: String? = nil,
+        reps: Int? = nil
     ) {
         self.setNumber = setNumber
         self.weight = weight
         self.unit = unit
         self.completed = completed
         self.detectionMethod = detectionMethod
+        self.reps = reps
     }
 }
 

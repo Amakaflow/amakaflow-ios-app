@@ -18,26 +18,32 @@ final class WorkRestAssistController: ObservableObject {
     @Published private(set) var lastMotionConfidence: Double = 0
     @Published private(set) var lastActivityScore: Double = 0
 
-    private let motionCapture = MotionCapture(sampleRate: 50.0, maxBufferSize: 300)
+    /// Longer buffer so Phase 5 rep assist can share this single CMMotionManager stream.
+    private let motionCapture = MotionCapture(sampleRate: 50.0, maxBufferSize: 1_500)
     private var machine = WorkRestStateMachine()
     private var cancellables = Set<AnyCancellable>()
     private var heartRateProvider: (() -> Double)?
     private var didPlayPromptHaptic = false
+    /// AMA-2420 Phase 5 — optional consumer of the shared IMU buffer (no second capture).
+    private var motionBufferHandler: (([IMUSample]) -> Void)?
 
     func start(
         initialPhase: WorkRestPhase,
-        heartRateProvider: @escaping () -> Double
+        heartRateProvider: @escaping () -> Double,
+        motionBufferHandler: (([IMUSample]) -> Void)? = nil
     ) {
         stop()
         guard WatchStrengthAutoCaptureSettings.isEnabled else { return }
 
         self.heartRateProvider = heartRateProvider
+        self.motionBufferHandler = motionBufferHandler
         machine = WorkRestStateMachine(phase: initialPhase)
         phase = initialPhase
         pendingProposal = nil
         didPlayPromptHaptic = false
         isRunning = true
 
+        motionCapture.clearBuffer()
         motionCapture.startCapture()
         motionCapture.$buffer
             .throttle(for: .milliseconds(400), scheduler: RunLoop.main, latest: true)
@@ -55,6 +61,13 @@ final class WorkRestAssistController: ObservableObject {
         isRunning = false
         didPlayPromptHaptic = false
         heartRateProvider = nil
+        motionBufferHandler = nil
+    }
+
+    /// Reset IMU window when a new work set begins (rep assist set boundary).
+    func clearMotionBufferForNewSet() {
+        guard isRunning else { return }
+        motionCapture.clearBuffer()
     }
 
     /// Pause IMU sampling without tearing down the assist session (workout pause).
@@ -106,6 +119,8 @@ final class WorkRestAssistController: ObservableObject {
 
     private func process(buffer: [IMUSample]) {
         guard isRunning else { return }
+
+        motionBufferHandler?(buffer)
 
         // Use a trailing window (~2s at 50 Hz) so quiet→work edges resolve quickly.
         let window = Array(buffer.suffix(100))
