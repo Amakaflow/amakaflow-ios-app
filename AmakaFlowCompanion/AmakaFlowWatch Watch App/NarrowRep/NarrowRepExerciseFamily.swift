@@ -37,15 +37,17 @@ enum NarrowRepExerciseFamily: String, Equatable, Codable, CaseIterable {
         }
 
         // Longest matching allow phrase wins (avoids generic short tokens winning).
-        var best: (family: NarrowRepExerciseFamily, length: Int)?
+        var bestFamily: NarrowRepExerciseFamily?
+        var bestLength = 0
         for (family, phrases) in allowList {
             for phrase in phrases where containsPhrase(normalized, phrase: phrase) {
-                if best == nil || phrase.count > best!.length {
-                    best = (family, phrase.count)
+                if phrase.count > bestLength {
+                    bestFamily = family
+                    bestLength = phrase.count
                 }
             }
         }
-        return best?.family
+        return bestFamily
     }
 
     // MARK: - Allow / deny
@@ -63,7 +65,7 @@ enum NarrowRepExerciseFamily: String, Equatable, Codable, CaseIterable {
             "barbell curl",
             "dumbbell curl",
             "db curl",
-            "curl",
+            "curl"
         ]),
         (.row, [
             "face pull",
@@ -75,13 +77,13 @@ enum NarrowRepExerciseFamily: String, Equatable, Codable, CaseIterable {
             "db row",
             "pull down",
             "pulldown",
-            "row",
+            "row"
         ]),
         (.swing, [
             "kettlebell swing",
             "kb swing",
             "russian swing",
-            "swing",
+            "swing"
         ]),
         (.press, [
             "bench press",
@@ -95,8 +97,8 @@ enum NarrowRepExerciseFamily: String, Equatable, Codable, CaseIterable {
             "dumbbell press",
             "db press",
             "barbell press",
-            "ohp",
-        ]),
+            "ohp"
+        ])
     ]
 
     /// Names that would otherwise collide with allow phrases.
@@ -108,7 +110,7 @@ enum NarrowRepExerciseFamily: String, Equatable, Codable, CaseIterable {
         "stepups",
         "box step",
         "bench step",
-        "hammer strength", // brand / machine line — not hammer curls
+        "hammer strength" // brand / machine line — not hammer curls
     ]
 
     // MARK: - Matching helpers
