@@ -24,8 +24,9 @@ struct ExperimentalSettingsView: View {
                 Text("Watch strength")
             } footer: {
                 Text(
-                    "Starts an AmakaFlow Watch strength session (Traditional Strength Training). "
-                        + "Auto-captures what it can; fill and correct on Today with Actuals. "
+                    "Adds Start strength on Watch Today — no calendar plan required. "
+                        + "Starts an AmakaFlow Watch session (Traditional Strength Training), "
+                        + "auto-captures what it can, then fill and correct on Today with Actuals. "
                         + "Does not remote-start Apple Fitness. Off by default."
                 )
             }

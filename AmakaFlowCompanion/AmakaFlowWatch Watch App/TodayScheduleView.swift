@@ -3,7 +3,7 @@
 //  AmakaFlowWatch Watch App
 //
 //  Shows today's DayState: planned sessions, readiness score, next session (AMA-1150)
-//  AMA-2420 — experimental Strength Start when auto-capture is on + synced plan.
+//  AMA-2420 — experimental Strength Start (freeform always; plan-linked when matched).
 //
 
 import SwiftUI
@@ -17,13 +17,31 @@ struct TodayScheduleView: View {
     var body: some View {
         Group {
             if viewModel.isLoading {
-                loadingView
+                ScrollView {
+                    VStack(spacing: 8) {
+                        loadingView
+                        freeformStartSection
+                    }
+                    .padding(.horizontal, 4)
+                }
             } else if let dayState = viewModel.dayState {
                 scheduleContent(dayState)
             } else if let error = viewModel.errorMessage {
-                errorView(error)
+                ScrollView {
+                    VStack(spacing: 8) {
+                        errorView(error)
+                        freeformStartSection
+                    }
+                    .padding(.horizontal, 4)
+                }
             } else {
-                emptyStateView
+                ScrollView {
+                    VStack(spacing: 8) {
+                        emptyStateView
+                        freeformStartSection
+                    }
+                    .padding(.horizontal, 4)
+                }
             }
         }
         .onAppear {
@@ -46,6 +64,9 @@ struct TodayScheduleView: View {
             VStack(spacing: 8) {
                 readinessPill(score: dayState.readinessScore, label: dayState.readinessLabel)
 
+                // AMA-2420 — Start without calendar / Fitness plan when flag is on.
+                freeformStartSection
+
                 if dayState.sessions.isEmpty {
                     noWorkoutsView
                 } else {
@@ -59,6 +80,25 @@ struct TodayScheduleView: View {
                 }
             }
             .padding(.horizontal, 4)
+        }
+    }
+
+    // MARK: - Freeform Start (no plan required)
+
+    @ViewBuilder
+    private var freeformStartSection: some View {
+        // Read epoch so WC flag sync rebuilds this section.
+        if WatchStrengthAutoCaptureSettings.isEnabled, strengthAutoCaptureEpoch >= 0 {
+            NavigationLink(
+                destination: StandaloneWorkoutExecutionView(workout: FreeformStrengthWorkout.make())
+            ) {
+                Label("Start strength", systemImage: "dumbbell.fill")
+                    .font(.system(size: 12, weight: .semibold))
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(.orange)
+            .accessibilityIdentifier("af_watch_strength_auto_capture_start")
         }
     }
 
@@ -130,13 +170,13 @@ struct TodayScheduleView: View {
 
             if let workout = strengthStartWorkout(for: session) {
                 NavigationLink(destination: StandaloneWorkoutExecutionView(workout: workout)) {
-                    Label("Start strength", systemImage: "dumbbell.fill")
+                    Label("Start planned", systemImage: "list.bullet")
                         .font(.system(size: 12, weight: .semibold))
                         .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(.bordered)
                 .tint(.orange)
-                .accessibilityIdentifier("af_watch_strength_auto_capture_start")
+                .accessibilityIdentifier("af_watch_strength_auto_capture_start_plan")
             }
         }
         .padding(.vertical, 4)
@@ -146,25 +186,14 @@ struct TodayScheduleView: View {
         .accessibilityIdentifier("session-row-\(session.id)")
     }
 
-    /// AMA-2420 — plan-linked Start when experimental flag is on and a synced
-    /// strength workout with steps is available on the Watch.
+    /// AMA-2420 — plan-linked Start when a synced strength workout matches the session.
     private func strengthStartWorkout(for session: PlannedSession) -> Workout? {
         _ = strengthAutoCaptureEpoch
-        guard WatchStrengthAutoCaptureSettings.isEnabled else { return nil }
-        guard !session.isCompleted else { return nil }
-        guard HKWorkoutActivityMapping.isStrengthSportLabel(session.sport) else { return nil }
-
-        if let byID = workoutManager.workouts.first(where: { $0.id == session.id }),
-           byID.sport == .strength,
-           !byID.intervals.isEmpty {
-            return byID
-        }
-        let normalizedName = session.name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        return workoutManager.workouts.first {
-            $0.sport == .strength
-                && !$0.intervals.isEmpty
-                && $0.name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == normalizedName
-        }
+        return StrengthAutoCaptureStart.planLinkedWorkout(
+            for: session,
+            in: workoutManager.workouts,
+            flagEnabled: WatchStrengthAutoCaptureSettings.isEnabled
+        )
     }
 
     // MARK: - Conflict Banner
