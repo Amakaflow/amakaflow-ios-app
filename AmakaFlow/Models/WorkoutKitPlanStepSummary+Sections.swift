@@ -16,14 +16,30 @@ extension WorkoutKitPlanStepSummary {
     }
 }
 
+/// One row of a Circuit band, with the recovery chip that follows it.
+struct CircuitStation {
+    let exercise: String
+    let detail: String?
+    var restChip: String?
+
+    init(exercise: String, detail: String?, restChip: String? = nil) {
+        self.exercise = exercise
+        self.detail = detail
+        self.restChip = restChip
+    }
+}
+
 /// Private builder so `WorkoutKitPlanStepSummary` stays under type_body_length.
 private enum PreviewSectionBuilder {
     private enum Atom {
         case mobility(title: String, detail: String?)
         case warmupSet(exercise: String, detail: String?)
         case work(exercise: String, detail: String?, repeatCount: Int, timed: Bool)
-        /// Multi-station circuit/superset: one band, N rounds, stations listed once.
-        case circuit(reps: Int, stations: [(exercise: String, detail: String?)])
+        /// Multi-station circuit/superset: one band, N rounds, stations listed
+        /// once. `restChip` is the recovery that follows *that* station —
+        /// AMA-2423 station transitions come one per station, so a single
+        /// end-of-round chip would under-report the delivered structure.
+        case circuit(reps: Int, stations: [CircuitStation])
         case rest(chip: String)
         case cooldown(detail: String)
     }
@@ -58,8 +74,7 @@ private enum PreviewSectionBuilder {
 
     private static func flattenRepeat(reps: Int, steps: [WKPlanDTO.Interval.Step]) -> [Atom] {
         let workSteps = steps.filter { !isRest($0) }
-        let restSteps = steps.filter { isRest($0) }
-        let sharedRestChip = restSteps.first.map { restChipLabel(for: $0) }
+        let sharedRestChip = steps.first { isRest($0) }.map { restChipLabel(for: $0) }
 
         if workSteps.count == 1, let only = workSteps.first {
             return flattenSingleRepeatWork(
@@ -72,15 +87,7 @@ private enum PreviewSectionBuilder {
         // EMOM keeps per-station "Work intervals ×N" bands (mapper names "EMOM · …").
         // Circuit/superset must keep outer iterations as ROUNDS, not fan into SETS.
         if isEmomRepeat(workSteps) {
-            var out: [Atom] = []
-            for step in steps {
-                if isRest(step) {
-                    out.append(.rest(chip: restChipLabel(for: step)))
-                    continue
-                }
-                out.append(contentsOf: flattenStep(step, repeatCount: reps))
-            }
-            return out
+            return flattenStepsInOrder(steps, iterations: 1, repeatCount: reps)
         }
 
         // Mapper emits per-exercise ramps as one non-repeating block of N warm-up
@@ -89,25 +96,55 @@ private enum PreviewSectionBuilder {
         // captions "NO WARM-UPS — YOUR CALL" (AMA-2408 dogfood). Walk the full
         // step list so any between-ramp rests stay pinned in order.
         if workSteps.allSatisfy({ isWarmupSetName(displayName(for: $0)) }) {
-            var out: [Atom] = []
-            for _ in 0..<max(reps, 1) {
-                for step in steps {
-                    if isRest(step) {
-                        out.append(.rest(chip: restChipLabel(for: step)))
-                        continue
-                    }
-                    out.append(contentsOf: flattenStep(step, repeatCount: 1))
-                }
-            }
-            return out
+            return flattenStepsInOrder(steps, iterations: reps, repeatCount: 1)
         }
 
-        let stations: [(exercise: String, detail: String?)] = workSteps.map { step in
-            (displayName(for: step), workDetail(for: step))
+        return flattenCircuit(reps: reps, steps: steps, sharedRestChip: sharedRestChip)
+    }
+
+    private static func flattenStepsInOrder(
+        _ steps: [WKPlanDTO.Interval.Step],
+        iterations: Int,
+        repeatCount: Int
+    ) -> [Atom] {
+        var out: [Atom] = []
+        for _ in 0..<max(iterations, 1) {
+            for step in steps {
+                out.append(contentsOf: flattenStep(step, repeatCount: repeatCount))
+            }
+        }
+        return out
+    }
+
+    /// Walks in order so each recovery pins to the station it follows. A circuit
+    /// with one end-of-round rest still lands that chip on the last station
+    /// (unchanged); a per-station transition now shows on each.
+    private static func flattenCircuit(
+        reps: Int,
+        steps: [WKPlanDTO.Interval.Step],
+        sharedRestChip: String?
+    ) -> [Atom] {
+        var stations: [CircuitStation] = []
+        var leadingRestChip: String?
+        for step in steps {
+            guard !isRest(step) else {
+                let chip = restChipLabel(for: step)
+                if stations.isEmpty {
+                    leadingRestChip = leadingRestChip ?? chip
+                } else {
+                    stations[stations.count - 1].restChip = chip
+                }
+                continue
+            }
+            stations.append(
+                CircuitStation(exercise: displayName(for: step), detail: workDetail(for: step))
+            )
         }
         var out: [Atom] = [.circuit(reps: reps, stations: stations)]
-        if let sharedRestChip {
-            out.append(.rest(chip: sharedRestChip))
+        // Recovery declared before any station has nothing to pin to inside the
+        // band; keep the pre-AMA-2423 fallback of trailing it onto the circuit.
+        if stations.last?.restChip == nil, let chip = leadingRestChip ?? sharedRestChip {
+            out.append(.rest(chip: chip))
         }
         return out
     }
