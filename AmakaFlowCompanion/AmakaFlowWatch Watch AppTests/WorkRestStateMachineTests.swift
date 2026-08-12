@@ -73,6 +73,61 @@ final class WorkRestStateMachineTests: XCTestCase {
         XCTAssertEqual(machine.phase, .workSet)
     }
 
+    func test_recoveredHR_canNudge_nearThresholdQuiet_intoRestPrompt() {
+        var machine = WorkRestStateMachine(phase: .workSet)
+        // Quiet enough to infer rest with motion near floor; HR recovery provides boost.
+        // motionConfidence idleRest = 0.55 + ((0.22 - activity) / 0.22) * 0.45
+        // Want ~0.70: (0.22 - activity)/0.22 = 0.333 → activity ≈ 0.147
+        let withoutHR = machine.evaluate(observation(activity: 0.147, samples: 50, heartRate: nil))
+        XCTAssertNil(withoutHR.proposal)
+
+        machine = WorkRestStateMachine(phase: .workSet)
+        let withHR = machine.evaluate(observation(activity: 0.147, samples: 50, heartRate: 90))
+        XCTAssertNotNil(withHR.proposal)
+        XCTAssertEqual(withHR.proposal?.transition, .toIdleRest)
+        XCTAssertTrue(withHR.proposal?.usedHeartRateContext == true)
+    }
+
+    func test_sampleCount_exactlyMinSamples_evaluatesFully() {
+        var machine = WorkRestStateMachine(phase: .idleRest, minSamples: 25)
+        let result = machine.evaluate(observation(activity: 0.95, samples: 25))
+        XCTAssertNotNil(result.proposal)
+        XCTAssertGreaterThan(result.confidence, 0)
+    }
+
+    func test_syncPhase_samePhase_keepsPendingProposal() {
+        var machine = WorkRestStateMachine(phase: .idleRest)
+        _ = machine.evaluate(observation(activity: 0.95, samples: 50))
+        XCTAssertNotNil(machine.pendingProposal)
+
+        machine.syncPhase(.idleRest)
+        XCTAssertEqual(machine.phase, .idleRest)
+        XCTAssertNotNil(machine.pendingProposal)
+    }
+
+    func test_expiredProposal_entersCooldown_beforeReprompt() {
+        var machine = WorkRestStateMachine(
+            phase: .idleRest,
+            rejectCooldownSeconds: 20,
+            proposalHoldSeconds: 5
+        )
+        _ = machine.evaluate(observation(activity: 0.95, samples: 50, timestamp: now))
+        XCTAssertNotNil(machine.pendingProposal)
+
+        let afterHold = now.addingTimeInterval(6)
+        let expired = machine.evaluate(observation(activity: 0.95, samples: 50, timestamp: afterHold))
+        XCTAssertNil(expired.proposal)
+        XCTAssertNil(machine.pendingProposal)
+
+        let stillCooling = afterHold.addingTimeInterval(5)
+        let blocked = machine.evaluate(observation(activity: 0.95, samples: 50, timestamp: stillCooling))
+        XCTAssertNil(blocked.proposal)
+
+        let afterCooldown = afterHold.addingTimeInterval(21)
+        let again = machine.evaluate(observation(activity: 0.95, samples: 50, timestamp: afterCooldown))
+        XCTAssertNotNil(again.proposal)
+    }
+
     func test_confirmProposal_appliesTransition() {
         var machine = WorkRestStateMachine(phase: .idleRest)
         _ = machine.evaluate(observation(activity: 0.95, samples: 50))

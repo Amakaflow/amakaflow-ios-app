@@ -57,6 +57,21 @@ final class WorkRestAssistController: ObservableObject {
         heartRateProvider = nil
     }
 
+    /// Pause IMU sampling without tearing down the assist session (workout pause).
+    func pauseCapture() {
+        guard isRunning else { return }
+        motionCapture.stopCapture()
+        machine.clearProposal()
+        pendingProposal = nil
+        didPlayPromptHaptic = false
+    }
+
+    /// Resume IMU sampling after workout resume.
+    func resumeCapture() {
+        guard isRunning, !motionCapture.isCapturing else { return }
+        motionCapture.startCapture()
+    }
+
     /// Keep assist phase aligned when the user manually rests / resumes / logs.
     func syncPhase(_ newPhase: WorkRestPhase) {
         guard isRunning else { return }
@@ -80,7 +95,7 @@ final class WorkRestAssistController: ObservableObject {
     }
 
     func rejectProposal() {
-        guard isRunning else { return }
+        guard isRunning, pendingProposal != nil else { return }
         machine.rejectPendingProposal()
         pendingProposal = nil
         didPlayPromptHaptic = false

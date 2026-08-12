@@ -174,6 +174,7 @@ final class StandaloneWorkoutEngine: ObservableObject {
         timer?.invalidate()
         timer = nil
         healthManager.pauseSession()
+        workRestAssist.pauseCapture()
         playHaptic(.stop)
     }
 
@@ -183,6 +184,7 @@ final class StandaloneWorkoutEngine: ObservableObject {
         phase = .running
         startTimer()
         healthManager.resumeSession()
+        workRestAssist.resumeCapture()
         playHaptic(.start)
     }
 
@@ -368,6 +370,11 @@ final class StandaloneWorkoutEngine: ObservableObject {
 
     /// AMA-2420 Phase 4 — user confirmed a high-confidence work↔rest proposal.
     func confirmWorkRestProposal() {
+        // Paused workouts stay paused — HealthKit session must not drift from engine phase.
+        guard phase != .paused else {
+            rejectWorkRestProposal()
+            return
+        }
         guard let transition = workRestAssist.confirmProposal() else { return }
         workRestProposal = nil
 
@@ -379,15 +386,12 @@ final class StandaloneWorkoutEngine: ObservableObject {
                 workRestAssist.syncPhase(.workSet)
             }
         case .toIdleRest:
-            guard phase == .running || phase == .paused else {
+            guard phase == .running else {
                 workRestAssist.syncPhase(.idleRest)
                 return
             }
             // Mid-set assist rest: retain step so crown / AS PLANNED still apply after.
             assistedRestRetainsStep = true
-            if phase == .paused {
-                phase = .running
-            }
             enterRestPhase(restSeconds: currentStep?.restAfterSeconds)
         }
     }

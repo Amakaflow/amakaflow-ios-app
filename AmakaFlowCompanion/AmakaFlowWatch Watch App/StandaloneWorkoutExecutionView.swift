@@ -97,10 +97,12 @@ struct StandaloneWorkoutExecutionView: View {
                     engine.rejectWorkRestProposal()
                 }
                 .buttonStyle(.bordered)
+                .accessibilityLabel("Reject work rest suggestion")
                 Button("Yes") {
                     engine.confirmWorkRestProposal()
                 }
                 .buttonStyle(.borderedProminent)
+                .accessibilityLabel("Confirm work rest suggestion")
             }
         }
         .padding(10)
@@ -108,8 +110,8 @@ struct StandaloneWorkoutExecutionView: View {
         .background(.ultraThinMaterial)
         .cornerRadius(12)
         .padding(.horizontal, 4)
-        .padding(.bottom, 4)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+        .padding(.top, 4)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .accessibilityIdentifier("workRestProposalOverlay")
     }
 

@@ -65,6 +65,7 @@ struct WorkRestStateMachine {
     var restActivityThreshold: Double
     var minSamples: Int
     var rejectCooldownSeconds: TimeInterval
+    var proposalHoldSeconds: TimeInterval
     var elevatedHeartRateBPM: Double
     var recoveredHeartRateBPM: Double
 
@@ -75,6 +76,7 @@ struct WorkRestStateMachine {
         restActivityThreshold: Double = Defaults.restActivityThreshold,
         minSamples: Int = Defaults.minSamples,
         rejectCooldownSeconds: TimeInterval = Defaults.rejectCooldownSeconds,
+        proposalHoldSeconds: TimeInterval = Defaults.proposalHoldSeconds,
         elevatedHeartRateBPM: Double = Defaults.elevatedHeartRateBPM,
         recoveredHeartRateBPM: Double = Defaults.recoveredHeartRateBPM
     ) {
@@ -84,6 +86,7 @@ struct WorkRestStateMachine {
         self.restActivityThreshold = restActivityThreshold
         self.minSamples = minSamples
         self.rejectCooldownSeconds = rejectCooldownSeconds
+        self.proposalHoldSeconds = proposalHoldSeconds
         self.elevatedHeartRateBPM = elevatedHeartRateBPM
         self.recoveredHeartRateBPM = recoveredHeartRateBPM
     }
@@ -120,7 +123,7 @@ struct WorkRestStateMachine {
         if let pending = pendingProposal {
             // Keep showing until user acts or hold expires.
             if let presented = proposalPresentedAt,
-               observation.now.timeIntervalSince(presented) < Defaults.proposalHoldSeconds {
+               observation.now.timeIntervalSince(presented) < proposalHoldSeconds {
                 return WorkRestEvaluateResult(
                     phase: phase,
                     inferredPhase: inferred,
@@ -129,7 +132,17 @@ struct WorkRestStateMachine {
                     proposal: pending
                 )
             }
+            // Unanswered prompt expired — quiet interval before re-proposing same transition.
+            lastRejectedTransition = pending.transition
+            lastRejectAt = observation.now
             clearProposal()
+            return WorkRestEvaluateResult(
+                phase: phase,
+                inferredPhase: inferred,
+                confidence: confidence,
+                motionConfidence: motionConfidence,
+                proposal: nil
+            )
         }
 
         guard inferred != phase else {
