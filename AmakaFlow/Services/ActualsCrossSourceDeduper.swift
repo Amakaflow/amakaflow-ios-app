@@ -228,10 +228,9 @@ private enum ActualsCrossSourceDeduperSupport {
                 return max(1, Int((duration / 60).rounded()))
             }
             return cards.compactMap { card -> Int? in
-                guard let raw = card.stats.first(where: { $0.icon == "clock" })?.value else {
-                    return nil
-                }
-                return Int(raw.filter(\.isNumber))
+                guard let raw = card.stats.first { $0.icon == "clock" }?.value else { return nil }
+                let digits = raw.filter(\.isNumber)
+                return Int(String(digits))
             }.max() ?? 1
         }()
         var stats: [(icon: String, value: String)] = [("clock", "\(minutes)m")]
@@ -341,7 +340,7 @@ private enum ActualsCrossSourceDeduperSupport {
         guard !trimmed.isEmpty else { return "Session" }
         let nonGeneric = trimmed.filter { !isGenericTitle($0) }
         let pool = nonGeneric.isEmpty ? trimmed : nonGeneric
-        return pool.max(by: { $0.count < $1.count }) ?? pool[0]
+        return pool.max { $0.count < $1.count } ?? pool[0]
     }
 
     static func isGenericTitle(_ title: String) -> Bool {
