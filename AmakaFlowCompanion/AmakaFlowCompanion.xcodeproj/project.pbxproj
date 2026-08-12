@@ -329,6 +329,7 @@
 
 		AMA2388PRFBLD /* WatchItemPrefsPersister.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2388PRFREF /* WatchItemPrefsPersister.swift */; };
 		AMA2388DEMOBLD /* WatchItemViewModel+Demo.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2388DEMOREF /* WatchItemViewModel+Demo.swift */; };
+		AMA2423PREVBLD /* WatchItemViewModel+Preview.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2423PREVREF /* WatchItemViewModel+Preview.swift */; };
 		AMA2388FACBLD /* WatchItemViewModel+Factories.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2388FACREF /* WatchItemViewModel+Factories.swift */; };
 		AMA2388PRTBLD /* WatchItemSheet+Parts.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2388PRTREF /* WatchItemSheet+Parts.swift */; };
 		AMA2375DEMOBLD /* OnYourWatchesDemoSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2375DEMOREF /* OnYourWatchesDemoSupport.swift */; };
@@ -1101,6 +1102,7 @@
 		AMA2388CTATREF /* WatchItemViewModelCTATests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WatchItemViewModelCTATests.swift; path = AmakaFlowCompanionTests/WatchItemViewModelCTATests.swift; sourceTree = "<group>"; };
 		AMA2388PRFREF /* WatchItemPrefsPersister.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WatchItemPrefsPersister.swift; path = ../AmakaFlow/Services/WatchItemPrefsPersister.swift; sourceTree = SOURCE_ROOT; };
 		AMA2388DEMOREF /* WatchItemViewModel+Demo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "WatchItemViewModel+Demo.swift"; path = "../AmakaFlow/ViewModels/WatchItemViewModel+Demo.swift"; sourceTree = SOURCE_ROOT; };
+		AMA2423PREVREF /* WatchItemViewModel+Preview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "WatchItemViewModel+Preview.swift"; path = "../AmakaFlow/ViewModels/WatchItemViewModel+Preview.swift"; sourceTree = SOURCE_ROOT; };
 		AMA2388FACREF /* WatchItemViewModel+Factories.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "WatchItemViewModel+Factories.swift"; path = "../AmakaFlow/ViewModels/WatchItemViewModel+Factories.swift"; sourceTree = SOURCE_ROOT; };
 		AMA2388PRTREF /* WatchItemSheet+Parts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "WatchItemSheet+Parts.swift"; path = "../AmakaFlow/Views/Components/WatchItemSheet+Parts.swift"; sourceTree = SOURCE_ROOT; };
 		AMA2375DEMOREF /* OnYourWatchesDemoSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = OnYourWatchesDemoSupport.swift; path = ../AmakaFlow/Services/OnYourWatchesDemoSupport.swift; sourceTree = SOURCE_ROOT; };
@@ -2257,6 +2259,7 @@
 				AMA2375OYVMREF /* OnYourWatchesViewModel.swift */,
 				AMA2386VMREF /* WatchItemViewModel.swift */,
 				AMA2388DEMOREF /* WatchItemViewModel+Demo.swift */,
+				AMA2423PREVREF /* WatchItemViewModel+Preview.swift */,
 				AMA2388FACREF /* WatchItemViewModel+Factories.swift */,
 				AMA2375GQVMREF /* GarminWatchQueueViewModel.swift */,
 				V01C300600000000000000 /* VoiceWorkoutView.swift */,
@@ -3230,6 +3233,7 @@
 				AMA2388OVLBLD /* WatchItemDeliveredStepsOverlay.swift in Sources */,
 				AMA2388PRFBLD /* WatchItemPrefsPersister.swift in Sources */,
 				AMA2388DEMOBLD /* WatchItemViewModel+Demo.swift in Sources */,
+				AMA2423PREVBLD /* WatchItemViewModel+Preview.swift in Sources */,
 				AMA2388FACBLD /* WatchItemViewModel+Factories.swift in Sources */,
 				AMA2388PRTBLD /* WatchItemSheet+Parts.swift in Sources */,
 				AMA2375DEMOBLD /* OnYourWatchesDemoSupport.swift in Sources */,

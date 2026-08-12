@@ -264,6 +264,7 @@ struct EnrichmentState: Equatable, Sendable {
         case .mobility: return summary(for: EnrichmentKind.sessionWarmup)
         case .warmups: return summary(for: EnrichmentKind.exerciseWarmupSets)
         case .rest: return summary(for: EnrichmentKind.betweenSetRest)
+        case .transition: return summary(for: EnrichmentKind.stationTransition)
         case .cooldown: return summary(for: EnrichmentKind.cooldown)
         }
     }
@@ -288,6 +289,10 @@ extension EnrichmentState.Persisted {
         if readiness.mobilityEnabled { kinds.append(.sessionWarmup) }
         if readiness.warmupsEnabled { kinds.append(.exerciseWarmupSets) }
         if readiness.restEnabled { kinds.append(.betweenSetRest) }
+        // AMA-2423 — Transitions must survive the round-trip. Dropping it here
+        // let a Watch Item toggle silently reset the workout's saved
+        // Transitions config to the defaults (open off / 60s).
+        if readiness.transitionEnabled { kinds.append(.stationTransition) }
         if readiness.cooldownEnabled { kinds.append(.cooldown) }
         return EnrichmentState.Persisted(
             checkedKinds: kinds,
@@ -295,7 +300,9 @@ extension EnrichmentState.Persisted {
             cooldownActivities: config.cooldownActivities,
             perExerciseRamps: config.perExerciseRamps,
             restOpen: config.restOpen,
-            restSec: config.restSec
+            restSec: config.restSec,
+            transitionOpen: config.transitionOpen,
+            transitionSec: config.transitionSec
         )
     }
 
@@ -304,7 +311,8 @@ extension EnrichmentState.Persisted {
             mobilityEnabled: checkedKindSet.contains(.sessionWarmup),
             warmupsEnabled: checkedKindSet.contains(.exerciseWarmupSets),
             restEnabled: checkedKindSet.contains(.betweenSetRest),
-            cooldownEnabled: checkedKindSet.contains(.cooldown)
+            cooldownEnabled: checkedKindSet.contains(.cooldown),
+            transitionEnabled: checkedKindSet.contains(.stationTransition)
         )
     }
 
@@ -314,7 +322,9 @@ extension EnrichmentState.Persisted {
             cooldownActivities: cooldownActivities,
             perExerciseRamps: perExerciseRamps,
             restOpen: restOpen,
-            restSec: restSec
+            restSec: restSec,
+            transitionOpen: transitionOpen,
+            transitionSec: transitionSec
         )
     }
 }
