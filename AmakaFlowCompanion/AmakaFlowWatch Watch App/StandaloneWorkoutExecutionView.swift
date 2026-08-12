@@ -61,6 +61,11 @@ struct StandaloneWorkoutExecutionView: View {
         }
         .id("standalone-\(engine.currentStepIndex)-\(engine.phase.rawValue)")
         .navigationBarBackButtonHidden(engine.isActive || showCountdown)
+        .overlay {
+            if let proposal = engine.workRestProposal {
+                workRestProposalOverlay(proposal)
+            }
+        }
         .confirmationDialog(
             "End Workout?",
             isPresented: $showEndConfirmation,
@@ -73,6 +78,41 @@ struct StandaloneWorkoutExecutionView: View {
             }
             Button("Cancel", role: .cancel) {}
         }
+    }
+
+    // MARK: - AMA-2420 Phase 4 work/rest prompt
+
+    private func workRestProposalOverlay(_ proposal: WorkRestProposal) -> some View {
+        VStack(spacing: 8) {
+            Text(proposal.transition.promptTitle)
+                .font(.system(size: 15, weight: .bold))
+                .multilineTextAlignment(.center)
+            Text(proposal.transition.promptDetail)
+                .font(.system(size: 11))
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+                .lineLimit(3)
+            HStack(spacing: 10) {
+                Button("No") {
+                    engine.rejectWorkRestProposal()
+                }
+                .buttonStyle(.bordered)
+                .accessibilityLabel("Reject work rest suggestion")
+                Button("Yes") {
+                    engine.confirmWorkRestProposal()
+                }
+                .buttonStyle(.borderedProminent)
+                .accessibilityLabel("Confirm work rest suggestion")
+            }
+        }
+        .padding(10)
+        .frame(maxWidth: .infinity)
+        .background(.ultraThinMaterial)
+        .cornerRadius(12)
+        .padding(.horizontal, 4)
+        .padding(.top, 4)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .accessibilityIdentifier("workRestProposalOverlay")
     }
 
     // MARK: - Active Workout View
