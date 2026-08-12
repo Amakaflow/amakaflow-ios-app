@@ -305,8 +305,6 @@ final class ActualsHistoryViewModel: ObservableObject {
         }
     }
 
-    /// Returns `true` when groups were successfully replaced from the network.
-    @discardableResult
     /// Returns `true` when groups were successfully replaced from connected sources.
     @discardableResult
     // swiftlint:disable:next cyclomatic_complexity
