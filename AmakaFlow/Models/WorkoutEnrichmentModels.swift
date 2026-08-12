@@ -6,17 +6,23 @@
 //  Source of truth: mapper-api `domain/enrichment.py` + `api/routers/enrichment.py`
 //  (AMA-2334). Snake_case CodingKeys mirror the backend payloads exactly — no
 //  underscore smuggling, one provenance system.
+//  `BetweenSetRestPrefs` / `StationTransitionPrefs` live in
+//  WorkoutEnrichmentModels+RecoveryPrefs.swift (SwiftLint file_length).
 //
 
 import Foundation
 
 /// One enum, two positions: block field (`session_warmup` / `cooldown` only) and
-/// tombstone / prefs key (all four kinds).
+/// tombstone / prefs key (all five kinds).
 enum EnrichmentKind: String, Codable, CaseIterable, Equatable, Sendable {
     case sessionWarmup = "session_warmup"
     case cooldown
     case betweenSetRest = "between_set_rest"
     case exerciseWarmupSets = "exercise_warmup_sets"
+    /// AMA-2423 — opt-in watch-ready recovery after every station in a
+    /// multi-station circuit/superset/timed-round block. Tombstone / prefs
+    /// key only, never a block field (mirrors `betweenSetRest`).
+    case stationTransition = "station_transition"
 
     /// Kinds that appear as a `enrichment_kind` block field (soft sections).
     var isBlockKind: Bool {
@@ -320,50 +326,6 @@ struct CooldownPrefs: Equatable, Codable, Sendable {
     static let defaults = CooldownPrefs(enabled: false, activities: [])
 }
 
-/// Rest intent prefs. Invalid states are unrepresentable: `rest_open == true`
-/// requires `rest_sec == nil` (spec §2 — contradictory intent is rejected, not dropped).
-struct BetweenSetRestPrefs: Equatable, Codable, Sendable {
-    var enabled: Bool
-    private(set) var restSec: Int?
-    private(set) var restOpen: Bool
-
-    enum CodingKeys: String, CodingKey {
-        case enabled
-        case restSec = "rest_sec"
-        case restOpen = "rest_open"
-    }
-
-    init(enabled: Bool = true, restSec: Int? = nil, restOpen: Bool = false) throws {
-        let validated = try WorkoutEnrichmentMutations.validatedRest(restSec: restSec, restOpen: restOpen)
-        self.enabled = enabled
-        self.restSec = validated.restSec
-        self.restOpen = validated.restOpen
-    }
-
-    private init(enabled: Bool, uncheckedRestSec: Int?, restOpen: Bool) {
-        self.enabled = enabled
-        self.restSec = uncheckedRestSec
-        self.restOpen = restOpen
-    }
-
-    init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        try self.init(
-            enabled: container.decodeIfPresent(Bool.self, forKey: .enabled) ?? true,
-            restSec: container.decodeIfPresent(Int.self, forKey: .restSec),
-            restOpen: container.decodeIfPresent(Bool.self, forKey: .restOpen) ?? false
-        )
-    }
-
-    mutating func setRest(restSec: Int?, restOpen: Bool) throws {
-        let validated = try WorkoutEnrichmentMutations.validatedRest(restSec: restSec, restOpen: restOpen)
-        self.restSec = validated.restSec
-        self.restOpen = validated.restOpen
-    }
-
-    static let defaults = BetweenSetRestPrefs(enabled: true, uncheckedRestSec: 60, restOpen: false)
-}
-
 struct ExerciseWarmupSetsPrefs: Equatable, Codable, Sendable {
     var enabled: Bool
     var defaultSets: [WarmupSetDefault]
@@ -415,24 +377,29 @@ struct WorkoutPreferences: Equatable, Codable, Sendable {
     var cooldown: CooldownPrefs
     var betweenSetRest: BetweenSetRestPrefs
     var exerciseWarmupSets: ExerciseWarmupSetsPrefs
+    /// AMA-2423 — off by default (mirrors backend `DEFAULT_PREFS`).
+    var stationTransition: StationTransitionPrefs
 
     enum CodingKeys: String, CodingKey {
         case sessionWarmup = "session_warmup"
         case cooldown
         case betweenSetRest = "between_set_rest"
         case exerciseWarmupSets = "exercise_warmup_sets"
+        case stationTransition = "station_transition"
     }
 
     init(
         sessionWarmup: SessionWarmupPrefs = .defaults,
         cooldown: CooldownPrefs = .defaults,
         betweenSetRest: BetweenSetRestPrefs = .defaults,
-        exerciseWarmupSets: ExerciseWarmupSetsPrefs = .defaults
+        exerciseWarmupSets: ExerciseWarmupSetsPrefs = .defaults,
+        stationTransition: StationTransitionPrefs = .defaults
     ) {
         self.sessionWarmup = sessionWarmup
         self.cooldown = cooldown
         self.betweenSetRest = betweenSetRest
         self.exerciseWarmupSets = exerciseWarmupSets
+        self.stationTransition = stationTransition
     }
 
     init(from decoder: Decoder) throws {
@@ -444,6 +411,8 @@ struct WorkoutPreferences: Equatable, Codable, Sendable {
             ?? .defaults
         exerciseWarmupSets = try container
             .decodeIfPresent(ExerciseWarmupSetsPrefs.self, forKey: .exerciseWarmupSets) ?? .defaults
+        stationTransition = try container
+            .decodeIfPresent(StationTransitionPrefs.self, forKey: .stationTransition) ?? .defaults
     }
 
     /// Mirrors backend `DEFAULT_PREFS` (cooldown off).
@@ -468,6 +437,9 @@ struct WorkoutPreferences: Equatable, Codable, Sendable {
 enum WorkoutPreferencesValidationError: Error, Equatable {
     /// `rest_open == true` requires `rest_sec` to be nil (spec §2 / backend 400).
     case restOpenWithRestSec
+    /// AMA-2423 — `transition_open == true` requires `transition_sec` to be nil
+    /// (mirrors `restOpenWithRestSec` / backend `_normalize_station_transition`).
+    case transitionOpenWithTransitionSec
     /// `ActivityGoal.kind == .open` must not carry a `value` (AMA-2378 backend 422).
     case activityGoalOpenWithValue
     /// `ActivityGoal.kind != .open` requires a `value` (AMA-2378 backend 422).

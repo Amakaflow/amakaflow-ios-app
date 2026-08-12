@@ -92,10 +92,13 @@ enum WorkoutEnrichmentPushPlanner {
     ///
     /// Soft kinds (mobility / warm-up sets) are offered when missing and
     /// enabled in prefs. **Between-set rest** is always offered (unless Apple
-    /// omit) — including when blocks already have rest — so the athlete can
-    /// keep or clear it. **Cooldown** is always offered when missing. Sheet
-    /// row order: Mobility → Warm-up sets → Rest → Cooldown. Tombstoned kinds
-    /// start unchecked (except Rest already on the workout, which stays checked).
+    /// omit, or every block belongs to Transitions) — including when blocks
+    /// already have rest — so the athlete can keep or clear it.
+    /// **Transitions** joins it whenever a multi-station block is present.
+    /// **Cooldown** is always offered when missing. Sheet row order:
+    /// Mobility → Warm-up sets → Rest → Transitions → Cooldown. Tombstoned
+    /// kinds start unchecked (except recovery already on the workout, which
+    /// stays checked).
     static func plan(
         blocks: [SocialImportBlock],
         tombstones: [EnrichmentTombstone],
@@ -160,33 +163,31 @@ enum WorkoutEnrichmentPushPlanner {
             }
         }
 
-        // Always offer Rest unless Apple `rest_mode=omit` (AMA-2362). Prefs.enabled
-        // only controls the default check when the workout has no rest yet.
-        // When blocks already carry rest intent, still show the row (checked) so
-        // the athlete can keep, change, or opt out — hiding it made Rest
-        // unavoidable on Apple Watch while the sheet looked like "Send as-is".
+        // AMA-2423 — Transitions XOR Rest **per block**, mirroring mapper
+        // `enrich_blocks`: a block that is a multi-station format group takes
+        // station_transition, every other work block takes between_set_rest,
+        // and the two never stack on one block. A mixed workout (circuit
+        // finisher + straight-sets bench) therefore offers both rows — hiding
+        // Rest workout-wide took rest away from the bench. Both honor Apple
+        // `rest_mode=omit` (AMA-2362) — that prefs gate is about the *device*,
+        // not which of the two kinds is offered.
         if !WorkoutEnrichmentPushCopy.shouldSkipRestOffer(target: target) {
-            let tombstoned = WorkoutEnrichmentPresence.isTombstoned(
-                .betweenSetRest,
-                tombstones: tombstones
-            )
-            let alreadyHasRest = hasBlockRestIntent(in: blocks)
-            let prefsWantRest = prefs.betweenSetRest.enabled
-            // Presence wins: rest on the workout starts checked even after a prior
-            // reject tombstone, so unchecking can clear it this push.
-            let isChecked = alreadyHasRest || (prefsWantRest && !tombstoned)
-            offers.append(
-                Offer(
-                    kind: .betweenSetRest,
-                    isChecked: isChecked,
-                    wasTombstoned: tombstoned && !alreadyHasRest,
-                    detail: WorkoutEnrichmentPushCopy.restDetail(
-                        prefs.betweenSetRest,
+            let hasMultiStation = hasMultiStationFormatGroup(in: blocks)
+            // No multi-station block at all keeps the pre-AMA-2423 behaviour
+            // verbatim, including an empty draft with nothing parsed yet.
+            if !hasMultiStation || hasRestEligibleBlock(in: blocks) {
+                offers.append(restOffer(blocks: blocks, tombstones: tombstones, prefs: prefs, target: target))
+            }
+            if hasMultiStation {
+                offers.append(
+                    stationTransitionOffer(
+                        blocks: blocks,
+                        tombstones: tombstones,
+                        prefs: prefs,
                         target: target
-                    ),
-                    target: target
+                    )
                 )
-            )
+            }
         }
 
         // Always offer Cooldown when missing — same opt-in pattern as Rest
@@ -216,6 +217,63 @@ enum WorkoutEnrichmentPushPlanner {
         return Plan(offers: offers, target: target)
     }
 
+    /// Always offer Rest unless Apple `rest_mode=omit` (AMA-2362) or every
+    /// block belongs to Transitions. Prefs.enabled only controls the default
+    /// check when the workout has no rest yet. When blocks already carry rest
+    /// intent, still show the row (checked) so the athlete can keep, change,
+    /// or opt out — hiding it made Rest unavoidable on Apple Watch while the
+    /// sheet looked like "Send as-is".
+    private static func restOffer(
+        blocks: [SocialImportBlock],
+        tombstones: [EnrichmentTombstone],
+        prefs: WorkoutPreferences,
+        target: EnrichmentPushTarget
+    ) -> Offer {
+        let tombstoned = WorkoutEnrichmentPresence.isTombstoned(.betweenSetRest, tombstones: tombstones)
+        // Rest authored on a multi-station block is about to be cleared by
+        // Transitions, so it must not pre-check the Rest row (AMA-2423).
+        let alreadyHasRest = hasBlockRestIntent(
+            in: blocks.filter { !WorkoutEnrichmentMutations.isMultiStationFormatGroup($0) }
+        )
+        let prefsWantRest = prefs.betweenSetRest.enabled
+        // Presence wins: rest on the workout starts checked even after a
+        // prior reject tombstone, so unchecking can clear it this push.
+        let isChecked = alreadyHasRest || (prefsWantRest && !tombstoned)
+        return Offer(
+            kind: .betweenSetRest,
+            isChecked: isChecked,
+            wasTombstoned: tombstoned && !alreadyHasRest,
+            detail: WorkoutEnrichmentPushCopy.restDetail(prefs.betweenSetRest, target: target),
+            target: target
+        )
+    }
+
+    /// AMA-2423 — Transitions counterpart of `restOffer`, offered for the
+    /// multi-station format-group blocks (`hasMultiStationFormatGroup`) and
+    /// only those. `StationTransitionPrefs.defaults` is off, so this starts
+    /// unchecked unless a prior push already wrote transition intent onto one
+    /// of those blocks.
+    private static func stationTransitionOffer(
+        blocks: [SocialImportBlock],
+        tombstones: [EnrichmentTombstone],
+        prefs: WorkoutPreferences,
+        target: EnrichmentPushTarget
+    ) -> Offer {
+        let tombstoned = WorkoutEnrichmentPresence.isTombstoned(.stationTransition, tombstones: tombstones)
+        let alreadyHasTransition = hasBlockTransitionIntent(
+            in: blocks.filter(WorkoutEnrichmentMutations.isMultiStationFormatGroup)
+        )
+        let prefsWantTransition = prefs.stationTransition.enabled
+        let isChecked = alreadyHasTransition || (prefsWantTransition && !tombstoned)
+        return Offer(
+            kind: .stationTransition,
+            isChecked: isChecked,
+            wasTombstoned: tombstoned && !alreadyHasTransition,
+            detail: WorkoutEnrichmentPushCopy.stationTransitionDetail(prefs.stationTransition, target: target),
+            target: target
+        )
+    }
+
     // MARK: - Presence helpers
 
     /// Block-level rest intent — mirrors mapper `enrichment._has_rest_intent`.
@@ -235,6 +293,38 @@ enum WorkoutEnrichmentPushPlanner {
     /// Legacy alias — block-level only (exercise rows ignored).
     static func hasRestIntent(in blocks: [SocialImportBlock]) -> Bool {
         hasBlockRestIntent(in: blocks)
+    }
+
+    /// AMA-2423 — true when any non-soft block is a multi-station format group
+    /// (circuit/superset/timed_circuit/timed_round with 2+ exercises). Gates
+    /// the Transitions row: warmup/cooldown blocks never match
+    /// `isMultiStationFormatGroup`'s type set, so no separate soft-block filter
+    /// is needed here.
+    static func hasMultiStationFormatGroup(in blocks: [SocialImportBlock]) -> Bool {
+        blocks.contains { WorkoutEnrichmentMutations.isMultiStationFormatGroup($0) }
+    }
+
+    /// AMA-2423 — true when at least one block would still receive
+    /// `between_set_rest` after station_transition claims the multi-station
+    /// format groups. Mirrors the mapper's `elif bsr_enabled …` arm: enrichment
+    /// soft sections are skipped entirely, multi-station groups belong to
+    /// Transitions, everything else (straight sets, emom/tabata/for-time/amrap,
+    /// a 1-station "circuit") is Rest's.
+    static func hasRestEligibleBlock(in blocks: [SocialImportBlock]) -> Bool {
+        blocks.contains { block in
+            guard !WorkoutEnrichmentPresence.isEnrichmentSoftSection(block) else { return false }
+            return !WorkoutEnrichmentMutations.isMultiStationFormatGroup(block)
+        }
+    }
+
+    /// Block-level transition intent — mirrors `hasBlockRestIntent`. Only ever
+    /// true after a prior `applyStationTransition` wrote `transition_open` /
+    /// `transition_sec` onto the block (never authored).
+    static func hasBlockTransitionIntent(in blocks: [SocialImportBlock]) -> Bool {
+        blocks.contains { block in
+            if block.transitionOpen == true { return true }
+            return block.transitionSec != nil
+        }
     }
 
     /// Rows that could take warm-up sets: a strength shape, no rows yet,
@@ -332,7 +422,9 @@ enum WorkoutEnrichmentBlocksJSON {
                 enrichmentKind: raw["enrichment_kind"] as? String,
                 restOpen: raw["rest_open"] as? Bool,
                 fieldProvenance: (raw["field_provenance"] as? [String: Any])?
-                    .compactMapValues { $0 as? String }
+                    .compactMapValues { $0 as? String },
+                transitionSec: raw[WorkoutEnrichmentMutations.transitionSecKey] as? Int,
+                transitionOpen: raw[WorkoutEnrichmentMutations.transitionOpenKey] as? Bool
             )
         }
         return Parsed(

@@ -106,6 +106,21 @@ enum EnrichmentRowSummary {
         )
     }
 
+    /// AMA-2423 — Transitions row, parallel to `rest`. OFF → nil; ON → live detail.
+    static func transition(
+        isOn: Bool,
+        transitionOpen: Bool,
+        transitionSec: Int,
+        target: EnrichmentPushTarget
+    ) -> String? {
+        guard isOn else { return nil }
+        return WorkoutEnrichmentPushCopy.liveTransitionDetail(
+            transitionOpen: transitionOpen,
+            transitionSec: transitionSec,
+            target: target
+        )
+    }
+
     /// Unified dispatcher used by sheet renderers.
     static func line(
         kind: EnrichmentRowKind,

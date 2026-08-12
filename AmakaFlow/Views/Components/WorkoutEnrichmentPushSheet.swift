@@ -226,6 +226,8 @@ extension WorkoutEnrichmentPushSheet {
     private func offerRow(_ offer: WorkoutEnrichmentPushPlanner.Offer) -> some View {
         if offer.kind == .betweenSetRest {
             restRow(offer)
+        } else if offer.kind == .stationTransition {
+            transitionRow(offer)
         } else {
             doorRow(offer)
         }
@@ -234,75 +236,59 @@ extension WorkoutEnrichmentPushSheet {
     // MARK: - v1 inline rest row
 
     private func restRow(_ offer: WorkoutEnrichmentPushPlanner.Offer) -> some View {
-        let isChecked = state.checkedKinds.contains(offer.kind)
-        return VStack(alignment: .leading, spacing: 8) {
-            Toggle(isOn: checkedBinding(for: offer.kind)) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(offer.title)
-                        .ddDisplayText(14, weight: .bold)
-                        .foregroundColor(DailyDriver.foreground)
-                    if let detail = liveSummary(for: offer.kind) ?? optionalOfferDetail(offer) {
-                        Text(detail)
-                            .font(.system(size: 10.5))
-                            .foregroundColor(DailyDriver.foregroundMuted)
-                            .monospacedDigit()
-                            .multilineTextAlignment(.leading)
-                    }
-                    if offer.wasTombstoned, !offer.isChecked {
-                        Text("You removed this before — tick to add it back.")
-                            .font(.system(size: 10))
-                            .foregroundColor(DailyDriver.amber)
-                            .multilineTextAlignment(.leading)
-                    }
-                }
-            }
-            .tint(DailyDriver.lime)
-            .accessibilityIdentifier("af_enrichment_push_offer_\(offer.kind.rawValue)")
-            .accessibilityAddTraits(isChecked ? [.isSelected] : [])
-
-            if isChecked {
-                restOverride
-            }
+        EnrichmentRecoveryRow(
+            title: offer.title,
+            detail: liveSummary(for: offer.kind) ?? optionalOfferDetail(offer),
+            showsTombstoneHint: offer.wasTombstoned && !offer.isChecked,
+            rowIdentifier: doorRowIdentifier(for: offer.kind),
+            toggleIdentifier: "af_enrichment_push_offer_\(offer.kind.rawValue)",
+            isChecked: checkedBinding(for: offer.kind)
+        ) {
+            restOverride
         }
-        .padding(.horizontal, 15)
-        .padding(.vertical, 11)
-        .background(DailyDriver.card)
-        .overlay(
-            RoundedRectangle(cornerRadius: Theme.CornerRadius.md, style: .continuous)
-                .stroke(DailyDriver.border, lineWidth: 1)
-        )
-        .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.md, style: .continuous))
-        .accessibilityIdentifier("af_enhance_row_rest")
     }
 
     private var restOverride: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Picker("", selection: restOpenBinding) {
-                Text(WorkoutEnrichmentPushCopy.restOpenSegmentLabel(target: target)).tag(true)
-                Text(WorkoutEnrichmentPushCopy.restTimedSegmentLabel).tag(false)
-            }
-            .pickerStyle(.segmented)
-            .tint(DailyDriver.lime)
-            .accessibilityIdentifier("af_enrichment_push_rest_open")
-
-            if !state.restOpen {
-                Stepper(
-                    "\(state.restSec)s",
-                    value: restSecBinding,
-                    in: WorkoutEnrichmentPushCopy.restSecRange,
-                    step: 15
-                )
-                .font(.system(size: 11))
-                .foregroundColor(DailyDriver.foregroundMuted)
-                .monospacedDigit()
-                .accessibilityIdentifier("af_enrichment_push_rest_sec")
-            }
-        }
-        .padding(.leading, 28)
+        EnrichmentRecoveryOverride(
+            openLabel: WorkoutEnrichmentPushCopy.restOpenSegmentLabel(target: target),
+            timedLabel: WorkoutEnrichmentPushCopy.restTimedSegmentLabel,
+            secondsRange: WorkoutEnrichmentPushCopy.restSecRange,
+            openIdentifier: "af_enrichment_push_rest_open",
+            secondsIdentifier: "af_enrichment_push_rest_sec",
+            isOpen: restOpenBinding,
+            seconds: restSecBinding
+        )
     }
 
     private func optionalOfferDetail(_ offer: WorkoutEnrichmentPushPlanner.Offer) -> String? {
-        offer.kind == .betweenSetRest ? offer.detail : nil
+        offer.kind == .betweenSetRest || offer.kind == .stationTransition ? offer.detail : nil
+    }
+
+    // MARK: - AMA-2423 v1 inline transitions row (mirrors restRow)
+
+    private func transitionRow(_ offer: WorkoutEnrichmentPushPlanner.Offer) -> some View {
+        EnrichmentRecoveryRow(
+            title: offer.title,
+            detail: liveSummary(for: offer.kind) ?? optionalOfferDetail(offer),
+            showsTombstoneHint: offer.wasTombstoned && !offer.isChecked,
+            rowIdentifier: doorRowIdentifier(for: offer.kind),
+            toggleIdentifier: "af_enrichment_push_offer_\(offer.kind.rawValue)",
+            isChecked: checkedBinding(for: offer.kind)
+        ) {
+            transitionOverride
+        }
+    }
+
+    private var transitionOverride: some View {
+        EnrichmentRecoveryOverride(
+            openLabel: WorkoutEnrichmentPushCopy.transitionOpenSegmentLabel(target: target),
+            timedLabel: WorkoutEnrichmentPushCopy.transitionTimedSegmentLabel,
+            secondsRange: WorkoutEnrichmentPushCopy.transitionSecRange,
+            openIdentifier: "af_enrichment_push_transition_open",
+            secondsIdentifier: "af_enrichment_push_transition_sec",
+            isOpen: transitionOpenBinding,
+            seconds: transitionSecBinding
+        )
     }
 
     // MARK: - v2 door rows
@@ -369,6 +355,8 @@ extension WorkoutEnrichmentPushSheet {
         case .cooldown: return .sequence(.cooldown)
         case .exerciseWarmupSets: return .warmupPick
         case .betweenSetRest: return nil
+        // Transitions is a v1 inline row (transitionRow), not a v2 door.
+        case .stationTransition: return nil
         }
     }
 
@@ -378,6 +366,7 @@ extension WorkoutEnrichmentPushSheet {
         case .cooldown: return "af_enhance_row_cooldown"
         case .exerciseWarmupSets: return "af_enhance_row_warmup"
         case .betweenSetRest: return "af_enhance_row_rest"
+        case .stationTransition: return "af_enhance_row_transition"
         }
     }
 
@@ -402,6 +391,25 @@ extension WorkoutEnrichmentPushSheet {
                 dispatch(.setRest(
                     open: state.restOpen,
                     sec: WorkoutEnrichmentPushCopy.normalizedRestSec($0)
+                ))
+            }
+        )
+    }
+
+    private var transitionOpenBinding: Binding<Bool> {
+        Binding(
+            get: { state.transitionOpen },
+            set: { dispatch(.setStationTransition(open: $0, sec: state.transitionSec)) }
+        )
+    }
+
+    private var transitionSecBinding: Binding<Int> {
+        Binding(
+            get: { state.transitionSec },
+            set: {
+                dispatch(.setStationTransition(
+                    open: state.transitionOpen,
+                    sec: WorkoutEnrichmentPushCopy.normalizedTransitionSec($0)
                 ))
             }
         )

@@ -154,6 +154,16 @@ extension FixtureAPIService {
                 blocksJSON = FixtureEnrichment.applyBetweenSetRest(into: blocksJSON, prefs: prefs.betweenSetRest)
                 added.append("between_set_rest")
             }
+            // AMA-2423 — mirrors the mapper's `_apply_station_transition`: writes
+            // block transition intent + clears stale rest on eligible blocks.
+            if prefs.stationTransition.enabled {
+                blocksJSON = WorkoutEnrichmentMutations.applyStationTransition(
+                    in: blocksJSON,
+                    transitionSec: prefs.stationTransition.transitionSec,
+                    transitionOpen: prefs.stationTransition.transitionOpen
+                )
+                added.append("station_transition")
+            }
             if prefs.exerciseWarmupSets.enabled {
                 blocksJSON = FixtureEnrichment.applyExerciseWarmupSets(
                     into: blocksJSON,

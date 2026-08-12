@@ -63,12 +63,37 @@ enum WorkoutEnrichmentPushCopy {
         return min(max(snapped, restSecRange.lowerBound), restSecRange.upperBound)
     }
 
+    /// AMA-2423 — Transitions config segmented control, parallel to `restOpenSegmentLabel`.
+    static func transitionOpenSegmentLabel(target: EnrichmentPushTarget) -> String {
+        switch target {
+        case .apple: return "Open transition"
+        case .garmin: return "Lap button"
+        }
+    }
+
+    static let transitionTimedSegmentLabel = "Timed"
+
+    /// Same stepper bounds/grid as Rest (spec — "same stepper range as rest").
+    static let transitionSecRange = restSecRange
+    private static let transitionSecStep = restSecStep
+
+    /// Clamp + snap a persisted `transitionSec` to the sheet's supported range.
+    static func normalizedTransitionSec(_ transitionSec: Int?) -> Int {
+        let value = transitionSec ?? 60
+        let snapped = ((value + transitionSecStep / 2) / transitionSecStep) * transitionSecStep
+        return min(max(snapped, transitionSecRange.lowerBound), transitionSecRange.upperBound)
+    }
+
+    /// AMA-2423 — Transitions row title (offer XOR's with `betweenSetRest`).
+    static let stationTransitionTitle = "Transitions between stations"
+
     static func offerTitle(for kind: EnrichmentKind, target: EnrichmentPushTarget) -> String {
         switch kind {
         case .sessionWarmup: return "Mobility prep"
         case .cooldown: return "Cool-down"
         case .betweenSetRest: return "Rest between sets"
         case .exerciseWarmupSets: return "Warm-up sets"
+        case .stationTransition: return stationTransitionTitle
         }
     }
 
@@ -103,6 +128,23 @@ enum WorkoutEnrichmentPushCopy {
         return "\(restSec)s between sets"
     }
 
+    /// AMA-2423 — Transitions row detail, parallel to `restDetail`.
+    static func stationTransitionDetail(
+        _ prefs: StationTransitionPrefs,
+        target: EnrichmentPushTarget = .garmin
+    ) -> String {
+        if prefs.transitionOpen {
+            switch target {
+            case .apple: return "Open transition between stations"
+            case .garmin: return "Transition until Lap between stations"
+            }
+        }
+        guard let transitionSec = prefs.transitionSec, transitionSec > 0 else {
+            return "No transition length set — add one in Settings."
+        }
+        return "\(transitionSec)s between stations"
+    }
+
     static func liveRestDetail(
         restOpen: Bool,
         restSec: Int,
@@ -115,6 +157,23 @@ enum WorkoutEnrichmentPushCopy {
             }
         }
         return "Timed \(restSec)s between sets/rounds"
+    }
+
+    /// AMA-2423 — live Transitions row detail while the sheet is open, parallel
+    /// to `liveRestDetail`. Copy calls out "stations" (moving between machines),
+    /// not "sets/rounds" — this is not a sit-down rest.
+    static func liveTransitionDetail(
+        transitionOpen: Bool,
+        transitionSec: Int,
+        target: EnrichmentPushTarget
+    ) -> String {
+        if transitionOpen {
+            switch target {
+            case .apple: return "Open transition between stations"
+            case .garmin: return "Lap button press between stations"
+            }
+        }
+        return "Timed \(transitionSec)s between stations"
     }
 
     static func warmupSetsDetail(_ defaults: [WarmupSetDefault], exerciseCount: Int) -> String {
@@ -147,6 +206,20 @@ enum WorkoutEnrichmentPushCopy {
     static func shouldSkipRestOffer(target: EnrichmentPushTarget) -> Bool {
         guard target == .apple, AppleWatchDeliveryPrefsStore.hasConfigured else { return false }
         return AppleWatchDeliveryPrefsStore.current.restMode == .omit
+    }
+
+    /// AMA-2423 — seed the sheet's Transitions open toggle. Apple always seeds
+    /// **Open** when the row is checked (spec "Apple seed: Open when enabled")
+    /// — the `rest_mode=omit` gate already excludes the whole offer upstream
+    /// (`shouldSkipRestOffer`), so no separate omit check is needed here.
+    static func initialTransitionOpen(
+        standing: StationTransitionPrefs,
+        target: EnrichmentPushTarget
+    ) -> Bool {
+        switch target {
+        case .garmin: return standing.transitionOpen
+        case .apple: return true
+        }
     }
 
     // MARK: - AMA-2378 v2 — enhance sheet mono summaries + copy-lock

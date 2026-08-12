@@ -34,6 +34,12 @@ struct PreviewStep: Equatable, Identifiable {
     /// `hasRamp` / `RAMPS` checks on this constant, never a bare literal.
     static let warmupSetTitle = "Warm-up set"
 
+    /// Open/tap-to-end between-set rest chip text (`WorkoutKitPlanStepSummary+Sections.restChipLabel`).
+    static let openRestChip = "REST · YOU END IT"
+    /// AMA-2423 — open/tap-to-end station-transition chip; same amber "you
+    /// end it" feel as `openRestChip`, distinct copy so it never reads as Rest.
+    static let openTransitionChip = "TRANSITION · YOU END IT"
+
     static func == (lhs: PreviewStep, rhs: PreviewStep) -> Bool {
         lhs.number == rhs.number
             && lhs.title == rhs.title
@@ -46,8 +52,9 @@ struct PreviewStep: Equatable, Identifiable {
     /// builder — amber-flag it instead of the usual muted detail styling.
     var isOpenGoal: Bool { detail == "OPEN" }
 
-    /// AMA-2378 — untimed/open rest between sets ("REST · YOU END IT" chip).
-    var isOpenRest: Bool { restChip == "REST · YOU END IT" }
+    /// AMA-2378/2423 — untimed/open rest or station transition between sets
+    /// (`"REST · YOU END IT"` / `"TRANSITION · YOU END IT"` chip) — both stay amber.
+    var isOpenRest: Bool { restChip == PreviewStep.openRestChip || restChip == PreviewStep.openTransitionChip }
 }
 
 /// A banded group of steps for the preview sheet.

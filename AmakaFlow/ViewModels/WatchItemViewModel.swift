@@ -54,7 +54,15 @@ final class WatchItemViewModel: ObservableObject {
     var mobilityEnabled: Bool { tracker.draft.mobilityEnabled }
     var warmupsEnabled: Bool { tracker.draft.warmupsEnabled }
     var restEnabled: Bool { tracker.draft.restEnabled }
+    var transitionEnabled: Bool { tracker.draft.transitionEnabled }
     var cooldownEnabled: Bool { tracker.draft.cooldownEnabled }
+
+    /// AMA-2423 — the Transitions row only belongs on workouts that actually
+    /// have stations: it is on the draft, or the delivered plan already shows a
+    /// Transition chip. Straight-sets workouts keep the Rest-only surface.
+    var showsTransitionRow: Bool {
+        transitionEnabled || Self.hasTransitionChip(in: stepSections)
+    }
 
     var mobilityActivities: [EnrichmentActivityPref] {
         get { tracker.draftConfig.mobilityActivities }
@@ -85,6 +93,20 @@ final class WatchItemViewModel: ObservableObject {
         }
     }
 
+    var transitionOpen: Bool {
+        get { tracker.draftConfig.transitionOpen }
+        set { mutateConfig { $0.transitionOpen = newValue } }
+    }
+
+    var transitionSec: Int {
+        get { tracker.draftConfig.transitionSec }
+        set {
+            mutateConfig {
+                $0.transitionSec = WorkoutEnrichmentPushCopy.normalizedTransitionSec(newValue)
+            }
+        }
+    }
+
     private func mutateConfig(_ body: (inout WatchItemConfigState) -> Void) {
         var next = tracker
         next.updateConfig(body)
@@ -109,6 +131,7 @@ final class WatchItemViewModel: ObservableObject {
                 tracker.draft.mobilityEnabled ? EnrichmentKind.sessionWarmup : nil,
                 tracker.draft.warmupsEnabled ? EnrichmentKind.exerciseWarmupSets : nil,
                 tracker.draft.restEnabled ? EnrichmentKind.betweenSetRest : nil,
+                tracker.draft.transitionEnabled ? EnrichmentKind.stationTransition : nil,
                 tracker.draft.cooldownEnabled ? EnrichmentKind.cooldown : nil
             ].compactMap { $0 }),
             mobilityActivities: mobilityActivities,
@@ -116,6 +139,8 @@ final class WatchItemViewModel: ObservableObject {
             perExerciseRamps: perExerciseRamps,
             restOpen: restOpen,
             restSec: restSec,
+            transitionOpen: transitionOpen,
+            transitionSec: transitionSec,
             candidateExerciseNames: warmupExerciseNames,
             target: enrichmentTarget
         )
@@ -187,41 +212,6 @@ final class WatchItemViewModel: ObservableObject {
 
     func isEdited(_ row: WatchItemReadinessRow) -> Bool {
         tracker.isChanged(row)
-    }
-
-    func mobilityBinding() -> Binding<[EnrichmentActivityPref]> {
-        Binding(
-            get: { self.mobilityActivities },
-            set: { self.mobilityActivities = $0 }
-        )
-    }
-
-    func cooldownBinding() -> Binding<[EnrichmentActivityPref]> {
-        Binding(
-            get: { self.cooldownActivities },
-            set: { self.cooldownActivities = $0 }
-        )
-    }
-
-    func rampsBinding() -> Binding<[PerExerciseRamp]> {
-        Binding(
-            get: { self.perExerciseRamps },
-            set: { self.perExerciseRamps = $0 }
-        )
-    }
-
-    func restOpenBinding() -> Binding<Bool> {
-        Binding(
-            get: { self.restOpen },
-            set: { self.restOpen = $0 }
-        )
-    }
-
-    func restSecBinding() -> Binding<Int> {
-        Binding(
-            get: { self.restSec },
-            set: { self.restSec = $0 }
-        )
     }
 
     func replaceCTATitle() -> String {
@@ -351,100 +341,55 @@ final class WatchItemViewModel: ObservableObject {
     }
 }
 
+// MARK: - Configurator bindings
+
 extension WatchItemViewModel {
-    /// Rebuild the read-only preview from the newly delivered draft while
-    /// preserving prior WORK bands (exercise rows the enrichment draft doesn't own).
-    static func sectionsReflectingDelivered(
-        readiness: WatchItemReadinessState,
-        config: WatchItemConfigState,
-        priorSections: [PreviewSection]
-    ) -> [PreviewSection] {
-        var sections: [PreviewSection] = []
-        var nextNumber = 1
-
-        func appendNumbered(_ title: String, detail: String? = nil, restChip: String? = nil) -> PreviewStep {
-            let step = PreviewStep(
-                number: nextNumber,
-                title: title,
-                detail: detail,
-                restChip: restChip
-            )
-            nextNumber += 1
-            return step
-        }
-
-        if readiness.mobilityEnabled {
-            let names = config.mobilityActivities.map(\.name)
-            let labels = names.isEmpty ? ["Mobility"] : names
-            sections.append(
-                PreviewSection(
-                    accent: .mobility,
-                    band: "MOBILITY",
-                    tag: nil,
-                    steps: labels.map { appendNumbered($0) }
-                )
-            )
-        }
-
-        if readiness.warmupsEnabled {
-            let enabledRamps = config.perExerciseRamps.filter(\.enabled)
-            for ramp in enabledRamps {
-                let details = ["~40%", "~60%", "~80%"]
-                sections.append(
-                    PreviewSection(
-                        accent: .work,
-                        band: "WARM-UP · \(ramp.exerciseRef.uppercased())",
-                        tag: nil,
-                        steps: details.map { appendNumbered(PreviewStep.warmupSetTitle, detail: $0) }
-                    )
-                )
-            }
-        }
-
-        // Rest chips must follow the delivered readiness/config — never stale
-        // prior chips after Rest is unchecked or timed/open rest is edited.
-        let deliveredRestChip = readiness.restEnabled
-            ? restChipLabel(restOpen: config.restOpen, restSec: config.restSec)
-            : nil
-
-        let workBands = priorSections.filter {
-            $0.accent == .work && !$0.band.uppercased().contains("WARM")
-        }
-        for band in workBands {
-            let lastIndex = band.steps.indices.last
-            sections.append(
-                PreviewSection(
-                    accent: .work,
-                    band: band.band,
-                    tag: band.tag,
-                    steps: band.steps.enumerated().map { index, step in
-                        let chip = (index == lastIndex) ? deliveredRestChip : nil
-                        return appendNumbered(step.title, detail: step.detail, restChip: chip)
-                    },
-                    caption: band.caption
-                )
-            )
-        }
-
-        if readiness.cooldownEnabled {
-            let names = config.cooldownActivities.map(\.name)
-            let labels = names.isEmpty ? ["Cooldown"] : names
-            sections.append(
-                PreviewSection(
-                    accent: .cooldown,
-                    band: "COOLDOWN",
-                    tag: nil,
-                    steps: labels.map { appendNumbered($0) }
-                )
-            )
-        }
-
-        return sections.isEmpty ? priorSections : sections
+    func mobilityBinding() -> Binding<[EnrichmentActivityPref]> {
+        Binding(
+            get: { self.mobilityActivities },
+            set: { self.mobilityActivities = $0 }
+        )
     }
 
-    /// Matches plan-preview chips (`REST 60S` / `REST · YOU END IT`).
-    static func restChipLabel(restOpen: Bool, restSec: Int) -> String {
-        if restOpen { return "REST · YOU END IT" }
-        return "REST \(max(restSec, 1))S"
+    func cooldownBinding() -> Binding<[EnrichmentActivityPref]> {
+        Binding(
+            get: { self.cooldownActivities },
+            set: { self.cooldownActivities = $0 }
+        )
+    }
+
+    func rampsBinding() -> Binding<[PerExerciseRamp]> {
+        Binding(
+            get: { self.perExerciseRamps },
+            set: { self.perExerciseRamps = $0 }
+        )
+    }
+
+    func restOpenBinding() -> Binding<Bool> {
+        Binding(
+            get: { self.restOpen },
+            set: { self.restOpen = $0 }
+        )
+    }
+
+    func restSecBinding() -> Binding<Int> {
+        Binding(
+            get: { self.restSec },
+            set: { self.restSec = $0 }
+        )
+    }
+
+    func transitionOpenBinding() -> Binding<Bool> {
+        Binding(
+            get: { self.transitionOpen },
+            set: { self.transitionOpen = $0 }
+        )
+    }
+
+    func transitionSecBinding() -> Binding<Int> {
+        Binding(
+            get: { self.transitionSec },
+            set: { self.transitionSec = $0 }
+        )
     }
 }

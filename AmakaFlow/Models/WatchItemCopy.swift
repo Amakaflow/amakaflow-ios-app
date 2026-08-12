@@ -49,6 +49,8 @@ enum WatchItemCopy {
     static let mobilityTitle = "Mobility prep"
     static let warmupsTitle = "Warm-up sets"
     static let restTitle = "Rest between sets"
+    /// AMA-2423 — matches the watch-ready sheet's Transitions row title.
+    static let transitionTitle = WorkoutEnrichmentPushCopy.stationTransitionTitle
     static let cooldownTitle = "Cooldown"
 
     static let garminWarmupsUnused = "NOT USED FOR EMOM"

@@ -3,6 +3,8 @@
 //  AmakaFlow
 //
 //  Presence reads + caller-owned tombstone / identity mutations (AMA-2336 / AMA-2363).
+//  AMA-2423 station_transition helpers live in
+//  WorkoutEnrichmentMutations+StationTransition.swift (SwiftLint type_body_length).
 //
 
 import Foundation
@@ -30,6 +32,25 @@ enum WorkoutEnrichmentPresence {
             guard let exerciseId, let tombstonedId = tombstone.exerciseId else { return false }
             return tombstonedId == exerciseId
         }
+    }
+
+    /// AMA-2346 mirror for parsed blocks — enrichment-injected Mobility prep /
+    /// cool-down sections are not work rounds, so no recovery kind applies to
+    /// them. An author block mislabeled `type=warmup` (no enrichment
+    /// provenance) is still real work and stays eligible.
+    static func isEnrichmentSoftSection(_ block: SocialImportBlock) -> Bool {
+        let kind = block.enrichmentKind?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased() ?? ""
+        if kind == EnrichmentKind.sessionWarmup.rawValue || kind == EnrichmentKind.cooldown.rawValue {
+            return true
+        }
+        let type = normalizedType(block)
+        guard type == StructureBlockType.warmup.rawValue
+            || type == StructureBlockType.cooldown.rawValue else {
+            return false
+        }
+        return block.structureSource == StructureSource.enrichmentDefault.rawValue
     }
 
     private static func normalizedType(_ block: SocialImportBlock) -> String {
@@ -146,7 +167,8 @@ enum WorkoutEnrichmentMutations {
     }
 
     /// Matches `WorkoutEnrichmentBlocksJSON.parse` (`type` then `structure`).
-    private static func resolvedBlockKind(_ block: [String: Any]) -> String {
+    /// Internal (not private) so `+StationTransition` can share the same rule.
+    static func resolvedBlockKind(_ block: [String: Any]) -> String {
         let type = (block["type"] as? String)?
             .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         if !type.isEmpty { return type.lowercased() }

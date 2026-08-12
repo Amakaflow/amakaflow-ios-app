@@ -180,7 +180,18 @@ final class WorkoutEnrichmentPushCoordinator {
                 blocksJSON = cleared
             }
 
-            guard application.needsPersist || didClearRest else {
+            // AMA-2423 — Transitions offered + unchecked → strip block
+            // transition intent, mirroring the Rest opt-out above, so reject
+            // cannot leave a stale Transition on the block.
+            var didClearTransition = false
+            if prepared.plan.offer(.stationTransition) != nil,
+               !decision.checkedKinds.contains(.stationTransition) {
+                let cleared = WorkoutEnrichmentMutations.clearBlockTransitionIntent(in: blocksJSON)
+                didClearTransition = !NSDictionary(dictionary: cleared).isEqual(to: blocksJSON)
+                blocksJSON = cleared
+            }
+
+            guard application.needsPersist || didClearRest || didClearTransition else {
                 return ApplyOutcome(applied: false, note: nil)
             }
 
@@ -290,6 +301,11 @@ final class WorkoutEnrichmentPushCoordinator {
             return true
         }
         if application.prefs.betweenSetRest.enabled, !satisfied("between_set_rest") {
+            return true
+        }
+        // AMA-2423 — Transitions supersedes Rest on multi-station blocks; a
+        // checked offer that never lands is as incomplete as an unsatisfied Rest.
+        if application.prefs.stationTransition.enabled, !satisfied("station_transition") {
             return true
         }
         if application.prefs.exerciseWarmupSets.enabled, !satisfied("exercise_warmup_sets") {

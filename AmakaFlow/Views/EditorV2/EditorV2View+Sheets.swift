@@ -317,7 +317,7 @@ extension EditorV2View {
                 added = session.quickAddCooldown(from: prefs, clearingTombstone: true)
             case .sessionWarmup:
                 added = session.quickAddSessionWarmup(from: prefs, clearingTombstone: true)
-            case .betweenSetRest, .exerciseWarmupSets:
+            case .betweenSetRest, .exerciseWarmupSets, .stationTransition:
                 assertionFailure("quickAddSoftSection called with unsupported kind \(kind)")
                 return
             }

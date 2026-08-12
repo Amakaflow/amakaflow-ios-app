@@ -9,6 +9,40 @@
 
 import Foundation
 
+/// AMA-2423 — one reader for the recovery chips the preview builders write
+/// (`REST 60S` / `REST · YOU END IT` / `TRANSITION 45S` /
+/// `TRANSITION · YOU END IT`). Before this, everything with a chip was read as
+/// Rest, so a delivered Transition came back as "TIMED REST 60S" and leaked
+/// `between_set_rest` into standing prefs.
+enum WatchItemRecoveryChip {
+    private static let restPrefix = "REST "
+    private static let transitionPrefix = "TRANSITION "
+
+    static func isRest(_ chip: String) -> Bool {
+        chip.uppercased().hasPrefix(restPrefix)
+    }
+
+    static func isTransition(_ chip: String) -> Bool {
+        chip.uppercased().hasPrefix(transitionPrefix)
+    }
+
+    /// Declared seconds, or `nil` for an open ("you end it") chip.
+    static func seconds(in chip: String) -> Int? {
+        let upper = chip.uppercased()
+        let prefix: String
+        if upper.hasPrefix(transitionPrefix) {
+            prefix = transitionPrefix
+        } else if upper.hasPrefix(restPrefix) {
+            prefix = restPrefix
+        } else {
+            return nil
+        }
+        let token = upper.dropFirst(prefix.count).trimmingCharacters(in: .whitespaces)
+        guard token.hasSuffix("S") else { return nil }
+        return Int(token.dropLast())
+    }
+}
+
 @MainActor
 extension WatchItemViewModel {
     struct Seed {
@@ -293,25 +327,26 @@ extension WatchItemViewModel {
             mobilityEnabled: prefs.sessionWarmup.enabled,
             warmupsEnabled: prefs.exerciseWarmupSets.enabled,
             restEnabled: prefs.betweenSetRest.enabled,
-            cooldownEnabled: prefs.cooldown.enabled
+            cooldownEnabled: prefs.cooldown.enabled,
+            transitionEnabled: prefs.stationTransition.enabled
         )
     }
 
     /// Readiness toggles that match bands/chips already on the delivered plan.
     static func readinessReflectingDelivered(_ sections: [PreviewSection]) -> WatchItemReadinessState {
-        WatchItemReadinessState(
+        let chips = sections.flatMap(\.steps).compactMap(\.restChip).filter { !$0.isEmpty }
+        return WatchItemReadinessState(
             mobilityEnabled: sections.contains { $0.accent == .mobility },
             warmupsEnabled: sections.contains { section in
                 section.band.uppercased().contains("WARM")
                     || section.steps.contains { $0.title == PreviewStep.warmupSetTitle }
             },
-            restEnabled: sections.contains { section in
-                section.steps.contains { step in
-                    guard let chip = step.restChip else { return false }
-                    return !chip.isEmpty
-                }
-            },
-            cooldownEnabled: sections.contains { $0.accent == .cooldown }
+            // AMA-2423 — a Transition chip is not Rest. Reading it as Rest
+            // showed "TIMED REST 60S" for an open transition and pushed
+            // between_set_rest into standing prefs on the next edit.
+            restEnabled: chips.contains(where: WatchItemRecoveryChip.isRest),
+            cooldownEnabled: sections.contains { $0.accent == .cooldown },
+            transitionEnabled: chips.contains(where: WatchItemRecoveryChip.isTransition)
         )
     }
 
@@ -323,23 +358,26 @@ extension WatchItemViewModel {
                 : prefs.cooldown.activities,
             perExerciseRamps: prefs.exerciseWarmupSets.perExercise ?? [],
             restOpen: prefs.betweenSetRest.restOpen,
-            restSec: WorkoutEnrichmentPushCopy.normalizedRestSec(prefs.betweenSetRest.restSec ?? 60)
+            restSec: WorkoutEnrichmentPushCopy.normalizedRestSec(prefs.betweenSetRest.restSec ?? 60),
+            transitionOpen: prefs.stationTransition.transitionOpen,
+            transitionSec: WorkoutEnrichmentPushCopy.normalizedTransitionSec(
+                prefs.stationTransition.transitionSec
+            )
         )
     }
 
-    /// Config shaped from delivered sections (rest chip → timed/open; else neutral).
+    /// Config shaped from delivered sections (recovery chip → timed/open; else neutral).
     static func configReflectingDelivered(_ sections: [PreviewSection]) -> WatchItemConfigState {
-        let restChip = sections
+        let chips = sections
             .flatMap(\.steps)
             .compactMap(\.restChip)
-            .first { !$0.isEmpty }
-        let restOpen = restChip == "REST · YOU END IT"
-        let restSec: Int
-        if let restChip, let parsed = parseRestChipSeconds(restChip) {
-            restSec = parsed
-        } else {
-            restSec = 60
-        }
+            .filter { !$0.isEmpty }
+        let restChip = chips.first(where: WatchItemRecoveryChip.isRest)
+        let restOpen = restChip == PreviewStep.openRestChip
+        let restSec = restChip.flatMap(WatchItemRecoveryChip.seconds(in:)) ?? 60
+        let transitionChip = chips.first(where: WatchItemRecoveryChip.isTransition)
+        let transitionOpen = transitionChip == PreviewStep.openTransitionChip
+        let transitionSec = transitionChip.flatMap(WatchItemRecoveryChip.seconds(in:)) ?? 60
         let mobility = sections
             .filter { $0.accent == .mobility }
             .flatMap(\.steps)
@@ -355,17 +393,10 @@ extension WatchItemViewModel {
                 : cooldown,
             perExerciseRamps: [],
             restOpen: restOpen,
-            restSec: WorkoutEnrichmentPushCopy.normalizedRestSec(restSec)
+            restSec: WorkoutEnrichmentPushCopy.normalizedRestSec(restSec),
+            transitionOpen: transitionOpen,
+            transitionSec: WorkoutEnrichmentPushCopy.normalizedTransitionSec(transitionSec)
         )
-    }
-
-    private static func parseRestChipSeconds(_ chip: String) -> Int? {
-        // "REST 60S" / "REST 60s"
-        let upper = chip.uppercased()
-        guard upper.hasPrefix("REST ") else { return nil }
-        let token = upper.dropFirst(5).trimmingCharacters(in: .whitespaces)
-        guard token.hasSuffix("S") else { return nil }
-        return Int(token.dropLast())
     }
 
     static func appleStateLine(for row: WorkoutScheduleRow, calendar: Calendar) -> String {
@@ -413,7 +444,13 @@ extension WatchItemViewModel {
             }
         }
         if readiness.restEnabled {
-            pills.append(config.restOpen ? "TRANSITION" : "TIMED REST")
+            pills.append(config.restOpen ? "OPEN REST" : "TIMED REST")
+            enrichmentSteps += 1
+        }
+        // AMA-2423 — the real station-transition kind, distinct from the open
+        // Rest pill that used to borrow this word.
+        if readiness.transitionEnabled {
+            pills.append(config.transitionOpen ? "OPEN TRANSITION" : "TIMED TRANSITION")
             enrichmentSteps += 1
         }
         if readiness.cooldownEnabled {

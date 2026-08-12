@@ -67,7 +67,9 @@ struct SectionAccumulator {
     }
 
     /// Circuit band: stations once, outer iterations as ROUNDS (Library parity).
-    mutating func appendCircuit(reps: Int, stations: [(exercise: String, detail: String?)]) {
+    /// AMA-2423: each station carries its own recovery chip, so a per-station
+    /// Transition shows on every row instead of only the last.
+    mutating func appendCircuit(reps: Int, stations: [CircuitStation]) {
         flushMobility()
         flushExercise()
         flushCooldownAsInterstitial()
@@ -75,7 +77,9 @@ struct SectionAccumulator {
         // Drop rest that arrived *before* the circuit (nothing earlier to pin to).
         // Rest *after* the circuit is attached in `finish()` via pendingRest.
         pendingRest = nil
-        let rows = stations.map { PreviewRow(title: $0.exercise, detail: $0.detail, setCount: 1) }
+        let rows = stations.map {
+            PreviewRow(title: $0.exercise, detail: $0.detail, rest: $0.restChip, setCount: 1)
+        }
         let tag = reps == 1 ? "1 ROUND" : "\(reps) ROUNDS"
         sections.append(PreviewSection(
             accent: .work,

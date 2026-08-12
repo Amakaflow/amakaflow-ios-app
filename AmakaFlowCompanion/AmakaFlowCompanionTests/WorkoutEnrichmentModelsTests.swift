@@ -439,6 +439,168 @@ final class WorkoutEnrichmentModelsTests: XCTestCase {
         XCTAssertFalse(skipped.restOpen)
     }
 
+    // MARK: - AMA-2423: station_transition prefs + mutations
+
+    func testStationTransitionOpenClearsSec() throws {
+        let prefs = try StationTransitionPrefs(enabled: true, transitionSec: nil, transitionOpen: true)
+        XCTAssertTrue(prefs.transitionOpen)
+        XCTAssertNil(prefs.transitionSec)
+        XCTAssertThrowsError(try StationTransitionPrefs(enabled: true, transitionSec: 60, transitionOpen: true)) { error in
+            XCTAssertEqual(error as? WorkoutPreferencesValidationError, .transitionOpenWithTransitionSec)
+        }
+    }
+
+    func testStationTransitionOpenWithSecIsRejectedOnDecode() {
+        let data = Data(#"{"enabled": true, "transition_sec": 20, "transition_open": true}"#.utf8)
+        XCTAssertThrowsError(try WorkoutEnrichmentJSON.decoder.decode(StationTransitionPrefs.self, from: data))
+    }
+
+    func testValidatedTransitionMirrorsValidatedRest() {
+        XCTAssertThrowsError(
+            try WorkoutEnrichmentMutations.validatedTransition(transitionSec: 20, transitionOpen: true)
+        ) { error in
+            XCTAssertEqual(error as? WorkoutPreferencesValidationError, .transitionOpenWithTransitionSec)
+        }
+        XCTAssertNoThrow(try WorkoutEnrichmentMutations.validatedTransition(transitionSec: 20, transitionOpen: false))
+        XCTAssertNoThrow(try WorkoutEnrichmentMutations.validatedTransition(transitionSec: nil, transitionOpen: true))
+    }
+
+    func testStationTransitionKindDefaultsOffAndIsNotABlockKind() {
+        XCTAssertFalse(WorkoutPreferences.defaults.stationTransition.enabled)
+        XCTAssertNil(WorkoutPreferences.defaults.stationTransition.transitionSec)
+        XCTAssertFalse(WorkoutPreferences.defaults.stationTransition.transitionOpen)
+        XCTAssertFalse(EnrichmentKind.stationTransition.isBlockKind)
+        XCTAssertEqual(EnrichmentKind.stationTransition.rawValue, "station_transition")
+    }
+
+    func testStationTransitionPrefsEncodeSnakeCaseKeys() throws {
+        let object = try WorkoutEnrichmentJSON.object(from: WorkoutPreferences.defaults)
+        let station = try XCTUnwrap(object["station_transition"] as? [String: Any])
+        XCTAssertEqual(station["enabled"] as? Bool, false)
+        XCTAssertNil(station["transition_sec"])
+        XCTAssertEqual(station["transition_open"] as? Bool, false)
+    }
+
+    func testStationTransitionPrefsLegacyDecodeDefaultsToOff() throws {
+        // No `station_transition` key at all — v1 backend payloads must stay byte-compatible.
+        let prefs = try WorkoutEnrichmentJSON.decoder.decode(
+            WorkoutPreferences.self,
+            from: Data(#"{"between_set_rest": {"enabled": true, "rest_sec": 60, "rest_open": false}}"#.utf8)
+        )
+        XCTAssertEqual(prefs.stationTransition, StationTransitionPrefs.defaults)
+    }
+
+    func testIsMultiStationFormatGroupMirrorsBackendTypes() {
+        for type in ["circuit", "superset", "timed_circuit", "timed_round"] {
+            let block: [String: Any] = [
+                "type": type,
+                "exercises": [["name": "Row"], ["name": "Push-up"]]
+            ]
+            XCTAssertTrue(
+                WorkoutEnrichmentMutations.isMultiStationFormatGroup(block),
+                "\(type) with 2 exercises should be a multi-station format group"
+            )
+        }
+        // 1-station "circuit" behaves like straight sets (spec edge case).
+        let oneStation: [String: Any] = ["type": "circuit", "exercises": [["name": "Row"]]]
+        XCTAssertFalse(WorkoutEnrichmentMutations.isMultiStationFormatGroup(oneStation))
+        // emom/tabata/for-time/amrap stay on between_set_rest, never station_transition.
+        let emom: [String: Any] = ["type": "emom", "exercises": [["name": "Row"], ["name": "Push-up"]]]
+        XCTAssertFalse(WorkoutEnrichmentMutations.isMultiStationFormatGroup(emom))
+        let straight: [String: Any] = ["type": "sets", "exercises": [["name": "Row"], ["name": "Push-up"]]]
+        XCTAssertFalse(WorkoutEnrichmentMutations.isMultiStationFormatGroup(straight))
+    }
+
+    func testApplyStationTransitionWritesBlockFieldsAndClearsRestOnFormatGroups() throws {
+        let blocksJSON: [String: Any] = [
+            "blocks": [
+                [
+                    "type": "circuit",
+                    "rest_sec": 60,
+                    "rest_open": false,
+                    "field_provenance": ["rest_sec": "enrichment_default", "rest_open": "enrichment_default"],
+                    "exercises": [["name": "Row"], ["name": "Push-up"]]
+                ],
+                [
+                    "type": "sets",
+                    "rest_sec": 45,
+                    "exercises": [["name": "Bench Press"]]
+                ]
+            ]
+        ]
+
+        let result = WorkoutEnrichmentMutations.applyStationTransition(
+            in: blocksJSON,
+            transitionSec: 20,
+            transitionOpen: false
+        )
+
+        let blocks = try XCTUnwrap(result["blocks"] as? [[String: Any]])
+        let circuit = blocks[0]
+        XCTAssertEqual(circuit["transition_sec"] as? Int, 20)
+        XCTAssertEqual(circuit["transition_open"] as? Bool, false)
+        XCTAssertNil(circuit["rest_sec"], "station_transition must clear stale rest on the same format-group block")
+        XCTAssertNil(circuit["rest_open"])
+        let circuitProv = try XCTUnwrap(circuit["field_provenance"] as? [String: Any])
+        XCTAssertEqual(circuitProv["transition_sec"] as? String, "enrichment_default")
+        XCTAssertEqual(circuitProv["transition_open"] as? String, "enrichment_default")
+        XCTAssertNil(circuitProv["rest_sec"])
+        XCTAssertNil(circuitProv["rest_open"])
+
+        // Straight sets block is untouched — station_transition never writes there.
+        let straight = blocks[1]
+        XCTAssertNil(straight["transition_sec"])
+        XCTAssertEqual(straight["rest_sec"] as? Int, 45)
+    }
+
+    func testApplyStationTransitionOpenWritesNullSec() throws {
+        let blocksJSON: [String: Any] = [
+            "blocks": [
+                ["type": "superset", "exercises": [["name": "Row"], ["name": "Push-up"]]]
+            ]
+        ]
+        let result = WorkoutEnrichmentMutations.applyStationTransition(
+            in: blocksJSON,
+            transitionSec: nil,
+            transitionOpen: true
+        )
+        let data = try JSONSerialization.data(withJSONObject: result)
+        let object = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        let blocks = try XCTUnwrap(object["blocks"] as? [[String: Any]])
+        XCTAssertTrue(blocks[0]["transition_sec"] is NSNull)
+        XCTAssertEqual(blocks[0]["transition_open"] as? Bool, true)
+    }
+
+    func testClearBlockTransitionIntentRemovesFieldsAndProvenance() throws {
+        let blocksJSON: [String: Any] = [
+            "blocks": [
+                [
+                    "type": "circuit",
+                    "transition_sec": 20,
+                    "transition_open": false,
+                    "field_provenance": ["transition_sec": "enrichment_default", "transition_open": "enrichment_default"],
+                    "exercises": [["name": "Row"], ["name": "Push-up"]]
+                ]
+            ]
+        ]
+        let result = WorkoutEnrichmentMutations.clearBlockTransitionIntent(in: blocksJSON)
+        let blocks = try XCTUnwrap(result["blocks"] as? [[String: Any]])
+        XCTAssertNil(blocks[0]["transition_sec"])
+        XCTAssertNil(blocks[0]["transition_open"])
+        XCTAssertNil(blocks[0]["field_provenance"])
+    }
+
+    func testStampTransitionProvenanceHelpersMirrorRest() {
+        var fieldProvenance: [String: ProvSource] = [:]
+        WorkoutEnrichmentMutations.stampTransitionEnrichmentDefault(fieldProvenance: &fieldProvenance)
+        XCTAssertEqual(fieldProvenance[WorkoutEnrichmentMutations.transitionSecKey], .enrichmentDefault)
+        XCTAssertEqual(fieldProvenance[WorkoutEnrichmentMutations.transitionOpenKey], .enrichmentDefault)
+
+        WorkoutEnrichmentMutations.stampTransitionUser(fieldProvenance: &fieldProvenance)
+        XCTAssertEqual(fieldProvenance[WorkoutEnrichmentMutations.transitionSecKey], .user)
+        XCTAssertEqual(fieldProvenance[WorkoutEnrichmentMutations.transitionOpenKey], .user)
+    }
+
     // MARK: - Presence by type + tombstones
 
     func testPresenceIsTestedByTypeNotProvenance() {

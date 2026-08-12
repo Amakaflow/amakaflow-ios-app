@@ -271,6 +271,170 @@ final class WorkoutEnrichmentPushPlannerTests: XCTestCase {
         XCTAssertFalse(application.rejectedTombstones.contains(where: { $0.kind == .betweenSetRest }))
     }
 
+    // MARK: - AMA-2423 Transitions XOR Rest
+
+    private func circuitBlock(
+        stationCount: Int,
+        rounds: Int = 4,
+        transitionSec: Int? = nil,
+        transitionOpen: Bool? = nil,
+        blockRestSec: Int? = nil
+    ) -> SocialImportBlock {
+        SocialImportBlock(
+            label: "Circuit",
+            rounds: rounds,
+            exercises: (1...stationCount).map { index in
+                SocialImportExercise(name: "Station \(index)", sets: 1, seconds: 30)
+            },
+            type: "circuit",
+            restSec: blockRestSec,
+            transitionSec: transitionSec,
+            transitionOpen: transitionOpen
+        )
+    }
+
+    /// Brief step 1 — a multi-station circuit offers Transitions, never Rest.
+    func testCircuitOffersTransitionsHidesRest() {
+        let plan = WorkoutEnrichmentPushPlanner.plan(
+            blocks: [circuitBlock(stationCount: 3)],
+            tombstones: [],
+            prefs: .defaults,
+            target: .apple
+        )
+        XCTAssertTrue(plan.offers.contains { $0.kind == .stationTransition })
+        XCTAssertFalse(plan.offers.contains { $0.kind == .betweenSetRest })
+    }
+
+    /// Brief step 1 — a straight-sets block keeps offering Rest, never Transitions.
+    func testStraightSetsOffersRestHidesTransitions() {
+        let plan = WorkoutEnrichmentPushPlanner.plan(
+            blocks: [benchBlock()],
+            tombstones: [],
+            prefs: .defaults,
+            target: .apple
+        )
+        XCTAssertTrue(plan.offers.contains { $0.kind == .betweenSetRest })
+        XCTAssertFalse(plan.offers.contains { $0.kind == .stationTransition })
+    }
+
+    /// The choice is per block, not per workout: a push day with a barbell block
+    /// and a finisher circuit must keep its Rest offer alongside Transitions.
+    func testMixedWorkoutOffersBothRestAndTransitions() {
+        let plan = WorkoutEnrichmentPushPlanner.plan(
+            blocks: [benchBlock(), circuitBlock(stationCount: 3)],
+            tombstones: [],
+            prefs: .defaults,
+            target: .apple
+        )
+        XCTAssertNotNil(plan.offer(.betweenSetRest))
+        XCTAssertNotNil(plan.offer(.stationTransition))
+    }
+
+    /// Transition intent lives on the circuit, so it must not pre-check Rest —
+    /// the two never stack on one block. Standing Rest prefs are off here so the
+    /// only thing that could check the row is block presence.
+    func testMixedWorkoutRestOfferIgnoresCircuitTransitionIntent() throws {
+        var prefs = WorkoutPreferences.defaults
+        prefs.betweenSetRest.enabled = false
+        let plan = WorkoutEnrichmentPushPlanner.plan(
+            blocks: [benchBlock(), circuitBlock(stationCount: 3, transitionSec: 20)],
+            tombstones: [],
+            prefs: prefs,
+            target: .apple
+        )
+        XCTAssertEqual(try XCTUnwrap(plan.offer(.stationTransition)).isChecked, true)
+        XCTAssertEqual(try XCTUnwrap(plan.offer(.betweenSetRest)).isChecked, false)
+    }
+
+    /// Mirror of the above — block rest on the straight-set block must not
+    /// pre-check Transitions.
+    func testMixedWorkoutTransitionOfferIgnoresStraightSetRestIntent() throws {
+        let plan = WorkoutEnrichmentPushPlanner.plan(
+            blocks: [benchBlock(blockRestSec: 90), circuitBlock(stationCount: 3)],
+            tombstones: [],
+            prefs: .defaults,
+            target: .apple
+        )
+        XCTAssertEqual(try XCTUnwrap(plan.offer(.betweenSetRest)).isChecked, true)
+        XCTAssertEqual(try XCTUnwrap(plan.offer(.stationTransition)).isChecked, false)
+    }
+
+    /// A 1-station "circuit" behaves like straight sets — Rest, not Transitions
+    /// (mirrors backend `_is_multi_station_format_group`).
+    func testSingleStationCircuitStillOffersRest() {
+        let plan = WorkoutEnrichmentPushPlanner.plan(
+            blocks: [circuitBlock(stationCount: 1)],
+            tombstones: [],
+            prefs: .defaults
+        )
+        XCTAssertNotNil(plan.offer(.betweenSetRest))
+        XCTAssertNil(plan.offer(.stationTransition))
+    }
+
+    /// `StationTransitionPrefs.defaults` is off — Transitions defaults unchecked
+    /// unless the block already carries transition intent.
+    func testTransitionOfferedUncheckedByDefault() throws {
+        let plan = WorkoutEnrichmentPushPlanner.plan(
+            blocks: [circuitBlock(stationCount: 3)],
+            tombstones: [],
+            prefs: .defaults
+        )
+        let offer = try XCTUnwrap(plan.offer(.stationTransition))
+        XCTAssertFalse(offer.isChecked)
+        XCTAssertFalse(offer.detail.isEmpty)
+        XCTAssertEqual(offer.title, "Transitions between stations")
+    }
+
+    /// A block that already carries station_transition intent (a prior push
+    /// applied it) starts checked, mirroring existing-Rest presence-wins.
+    func testExistingTransitionIntentIsOfferedChecked() throws {
+        let timed = WorkoutEnrichmentPushPlanner.plan(
+            blocks: [circuitBlock(stationCount: 3, transitionSec: 20)],
+            tombstones: [],
+            prefs: .defaults
+        )
+        XCTAssertEqual(timed.offer(.stationTransition)?.isChecked, true)
+
+        let open = WorkoutEnrichmentPushPlanner.plan(
+            blocks: [circuitBlock(stationCount: 3, transitionOpen: true)],
+            tombstones: [],
+            prefs: .defaults
+        )
+        XCTAssertEqual(open.offer(.stationTransition)?.isChecked, true)
+    }
+
+    /// Rejecting Transitions must tombstone `.stationTransition`, not `.betweenSetRest`.
+    func testTombstonedTransitionOfferIsUnchecked() throws {
+        let plan = WorkoutEnrichmentPushPlanner.plan(
+            blocks: [circuitBlock(stationCount: 3)],
+            tombstones: [EnrichmentTombstone(kind: .stationTransition)],
+            prefs: .defaults
+        )
+        let offer = try XCTUnwrap(plan.offer(.stationTransition))
+        XCTAssertFalse(offer.isChecked)
+        XCTAssertTrue(offer.wasTombstoned)
+    }
+
+    /// AMA-2362 — Apple `rest_mode=omit` skips inject for both Rest and Transitions.
+    func testAppleOmitRestModeSkipsTransitionOfferToo() {
+        AppleWatchDeliveryPrefsStore.resetForTests()
+        defer { AppleWatchDeliveryPrefsStore.resetForTests() }
+
+        AppleWatchDeliveryPrefsStore.current = AppleWatchDeliveryPrefs(
+            exerciseEnd: .tap,
+            restMode: .omit,
+            alertsEnabled: false
+        )
+        let plan = WorkoutEnrichmentPushPlanner.plan(
+            blocks: [circuitBlock(stationCount: 3)],
+            tombstones: [],
+            prefs: .defaults,
+            target: .apple
+        )
+        XCTAssertNil(plan.offer(.stationTransition))
+        XCTAssertNil(plan.offer(.betweenSetRest))
+    }
+
     func testExistingWarmupSetsAndExcludedNamesAreNotOffered() {
         let present = WorkoutEnrichmentPushPlanner.plan(
             blocks: [benchBlock(warmupSets: [WarmupSetRow(reps: 8)])],
@@ -685,6 +849,63 @@ final class WorkoutEnrichmentPushPlannerTests: XCTestCase {
         )
         XCTAssertNil(open.prefs.betweenSetRest.restSec)
         XCTAssertTrue(open.prefs.betweenSetRest.restOpen)
+    }
+
+    /// AMA-2423 — Transitions override, parallel to `testApplyHonoursRestOverrides`.
+    /// Confirms `application()` wires `checkedKinds.contains(.stationTransition)`
+    /// into `prefs.stationTransition.enabled` + `setTransition`.
+    func testApplyHonoursTransitionOverrides() throws {
+        let plan = WorkoutEnrichmentPushPlanner.plan(
+            blocks: [circuitBlock(stationCount: 3)],
+            tombstones: [],
+            prefs: .defaults
+        )
+        XCTAssertNotNil(plan.offer(.stationTransition))
+
+        let timed = try WorkoutEnrichmentPushPlanner.application(
+            plan: plan,
+            decision: WorkoutEnrichmentPushPlanner.Decision(
+                checkedKinds: [.stationTransition],
+                transitionSecOverride: 120,
+                transitionOpenOverride: false
+            ),
+            prefs: .defaults,
+            tombstones: []
+        )
+        XCTAssertTrue(timed.prefs.stationTransition.enabled)
+        XCTAssertEqual(timed.prefs.stationTransition.transitionSec, 120)
+        XCTAssertFalse(timed.prefs.stationTransition.transitionOpen)
+
+        // Open transition must clear transition_sec — contradictory intent is a backend 400.
+        let open = try WorkoutEnrichmentPushPlanner.application(
+            plan: plan,
+            decision: WorkoutEnrichmentPushPlanner.Decision(
+                checkedKinds: [.stationTransition],
+                transitionSecOverride: 120,
+                transitionOpenOverride: true
+            ),
+            prefs: .defaults,
+            tombstones: []
+        )
+        XCTAssertNil(open.prefs.stationTransition.transitionSec)
+        XCTAssertTrue(open.prefs.stationTransition.transitionOpen)
+    }
+
+    /// AMA-2423 — an unchecked Transitions offer must disable prefs, parallel
+    /// to Rest/mobility/cooldown/warm-ups in `testApplyDisablesUncheckedKindsAndKeepsTheirTombstones`.
+    func testApplyDisablesUncheckedStationTransition() throws {
+        let plan = WorkoutEnrichmentPushPlanner.plan(
+            blocks: [circuitBlock(stationCount: 3)],
+            tombstones: [],
+            prefs: .defaults
+        )
+        let application = try WorkoutEnrichmentPushPlanner.application(
+            plan: plan,
+            decision: WorkoutEnrichmentPushPlanner.Decision(checkedKinds: []),
+            prefs: .defaults,
+            tombstones: []
+        )
+        XCTAssertFalse(application.prefs.stationTransition.enabled)
     }
 
     func testApplyWithNothingCheckedAppliesNothing() throws {
@@ -1117,6 +1338,8 @@ final class WorkoutEnrichmentPushPlannerTests: XCTestCase {
     @MainActor
     func testApplyClearsBlockRestWhenRestUnchecked() async throws {
         let mock = MockAPIService()
+        // Single-station circuit (1 exercise) — AMA-2423's multi-station rule
+        // (2+ exercises) does not apply, so this stays on the Rest path.
         let blocksJSON: [String: Any] = [
             "blocks": [
                 [
@@ -1125,8 +1348,7 @@ final class WorkoutEnrichmentPushPlannerTests: XCTestCase {
                     "rounds": 6,
                     "rest_sec": 60,
                     "exercises": [
-                        ["name": "Assault Bike", "duration_sec": 180],
-                        ["name": "Ski Erg", "duration_sec": 180]
+                        ["name": "Assault Bike", "duration_sec": 180]
                     ]
                 ]
             ]
@@ -1137,8 +1359,7 @@ final class WorkoutEnrichmentPushPlannerTests: XCTestCase {
                     label: "Circuit",
                     rounds: 6,
                     exercises: [
-                        SocialImportExercise(name: "Assault Bike", seconds: 180),
-                        SocialImportExercise(name: "Ski Erg", seconds: 180)
+                        SocialImportExercise(name: "Assault Bike", seconds: 180)
                     ],
                     type: "circuit",
                     restSec: 60
@@ -1173,6 +1394,137 @@ final class WorkoutEnrichmentPushPlannerTests: XCTestCase {
         let block = try XCTUnwrap((saved["blocks"] as? [[String: Any]])?.first)
         XCTAssertNil(block["rest_sec"])
         XCTAssertNil(block["rest_open"])
+    }
+
+    /// AMA-2423 — a Transitions-only accept (no other kind checked) must still
+    /// call mapper enrich. Without `appliesAnything` including
+    /// `stationTransition.enabled` this decision would only persist tombstones
+    /// and never actually write `transition_open`/`transition_sec` on the block.
+    @MainActor
+    func testApplyEnrichesWhenOnlyStationTransitionChecked() async {
+        let mock = MockAPIService()
+        let block = SocialImportBlock(
+            label: "Circuit",
+            rounds: 5,
+            exercises: [
+                SocialImportExercise(name: "Ski Erg", seconds: 180),
+                SocialImportExercise(name: "Row", seconds: 180)
+            ],
+            type: "circuit"
+        )
+        let blocksJSON: [String: Any] = [
+            "blocks": [
+                [
+                    "label": "Circuit",
+                    "type": "circuit",
+                    "rounds": 5,
+                    "exercises": [
+                        ["name": "Ski Erg", "duration_sec": 180],
+                        ["name": "Row", "duration_sec": 180]
+                    ]
+                ]
+            ]
+        ]
+        var prefs = WorkoutPreferences.defaults
+        prefs.sessionWarmup.enabled = false
+        prefs.exerciseWarmupSets.enabled = false
+        let plan = WorkoutEnrichmentPushPlanner.plan(blocks: [block], tombstones: [], prefs: prefs)
+        let prepared = WorkoutEnrichmentPushCoordinator.Prepared(
+            workoutId: "w-transition-only",
+            title: "Ski row repeats",
+            plan: plan,
+            prefs: prefs,
+            tombstones: [],
+            blocksJSON: blocksJSON,
+            target: .garmin
+        )
+
+        let outcome = await WorkoutEnrichmentPushCoordinator(apiService: mock).apply(
+            prepared: prepared,
+            decision: WorkoutEnrichmentPushPlanner.Decision(checkedKinds: [.stationTransition])
+        )
+
+        XCTAssertEqual(mock.enrichWorkoutCallCount, 1)
+        XCTAssertTrue(outcome.applied)
+        XCTAssertEqual(mock.lastEnrichRequest?.prefs?.stationTransition.enabled, true)
+    }
+
+    /// AMA-2423 — Transitions offered + unchecked strips block transition
+    /// intent, mirroring `testApplyClearsBlockRestWhenRestUnchecked`.
+    @MainActor
+    func testApplyClearsBlockTransitionWhenTransitionUnchecked() async throws {
+        let mock = MockAPIService()
+        let blocksJSON: [String: Any] = [
+            "blocks": [
+                [
+                    "label": "Circuit",
+                    "type": "circuit",
+                    "rounds": 5,
+                    "transition_open": true,
+                    "field_provenance": ["transition_open": "enrichment_default"],
+                    "exercises": [
+                        ["name": "Ski Erg", "duration_sec": 180],
+                        ["name": "Row", "duration_sec": 180]
+                    ]
+                ]
+            ]
+        ]
+        let block = SocialImportBlock(
+            label: "Circuit",
+            rounds: 5,
+            exercises: [
+                SocialImportExercise(name: "Ski Erg", seconds: 180),
+                SocialImportExercise(name: "Row", seconds: 180)
+            ],
+            type: "circuit",
+            transitionOpen: true
+        )
+        var prefs = WorkoutPreferences.defaults
+        prefs.sessionWarmup.enabled = false
+        prefs.exerciseWarmupSets.enabled = false
+        let plan = WorkoutEnrichmentPushPlanner.plan(blocks: [block], tombstones: [], prefs: prefs)
+        XCTAssertEqual(plan.offer(.stationTransition)?.isChecked, true)
+
+        let prepared = WorkoutEnrichmentPushCoordinator.Prepared(
+            workoutId: "w-transition-unchecked",
+            title: "Ski row repeats",
+            plan: plan,
+            prefs: prefs,
+            tombstones: [],
+            blocksJSON: blocksJSON,
+            target: .garmin
+        )
+        let outcome = await WorkoutEnrichmentPushCoordinator(apiService: mock).apply(
+            prepared: prepared,
+            decision: WorkoutEnrichmentPushPlanner.Decision(checkedKinds: [])
+        )
+
+        XCTAssertTrue(outcome.applied)
+        XCTAssertEqual(mock.enrichWorkoutCallCount, 0)
+        let saved = try XCTUnwrap(mock.savedWorkoutBlocksJSON.first?.blocksJSON)
+        let savedBlock = try XCTUnwrap((saved["blocks"] as? [[String: Any]])?.first)
+        XCTAssertNil(savedBlock["transition_open"])
+        XCTAssertNil(savedBlock["transition_sec"])
+    }
+
+    /// Rejecting Transitions must tombstone `.stationTransition`, parallel to
+    /// `testRejectSessionWarmupTombsWhileAcceptingRest`.
+    func testRejectStationTransitionTombsWhileAcceptingSessionWarmup() throws {
+        let block = circuitBlock(stationCount: 3, transitionOpen: true)
+        var prefs = WorkoutPreferences.defaults
+        prefs.exerciseWarmupSets.enabled = false
+        let plan = WorkoutEnrichmentPushPlanner.plan(blocks: [block], tombstones: [], prefs: prefs)
+        XCTAssertEqual(plan.offer(.stationTransition)?.isChecked, true)
+
+        let application = try WorkoutEnrichmentPushPlanner.application(
+            plan: plan,
+            decision: WorkoutEnrichmentPushPlanner.Decision(checkedKinds: [.sessionWarmup]),
+            prefs: prefs,
+            tombstones: []
+        )
+        XCTAssertFalse(application.prefs.stationTransition.enabled)
+        XCTAssertTrue(application.tombstones.contains(where: { $0.kind == .stationTransition }))
+        XCTAssertTrue(application.rejectedTombstones.contains(where: { $0.kind == .stationTransition }))
     }
 
     func testRejectSessionWarmupTombsWhileAcceptingRest() throws {

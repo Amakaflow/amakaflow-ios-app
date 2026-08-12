@@ -97,7 +97,12 @@ struct WatchItemSheet: View {
 
                     doorRow(.mobility, title: WatchItemCopy.mobilityTitle)
                     doorRow(.warmups, title: WatchItemCopy.warmupsTitle)
-                    restRow
+                    recoveryRow(.rest)
+                    // AMA-2423 — only workouts with stations get the row; a
+                    // straight-sets plan keeps the Rest-only surface.
+                    if viewModel.showsTransitionRow {
+                        recoveryRow(.transition)
+                    }
                     doorRow(.cooldown, title: WatchItemCopy.cooldownTitle)
 
                     WatchItemLibraryRow(viewModel: viewModel, onOpenWorkout: onOpenWorkout)
@@ -223,23 +228,29 @@ struct WatchItemSheet: View {
             )
     }
 
-    private var restRow: some View {
-        let enabled = viewModel.restEnabled
-        let edited = viewModel.isEdited(.rest)
+    /// AMA-2423 — Rest and Transitions render the same inline card; only the
+    /// copy and which draft config they drive differ.
+    private func recoveryRow(_ row: WatchItemReadinessRow) -> some View {
+        let isTransition = row == .transition
+        let enabled = viewModel.tracker.draft.isEnabled(row)
+        let edited = viewModel.isEdited(row)
+        let title = isTransition ? WatchItemCopy.transitionTitle : WatchItemCopy.restTitle
+        let isOpen = isTransition ? viewModel.transitionOpen : viewModel.restOpen
+        let target = viewModel.enrichmentTarget
         return VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 12) {
                 VStack(alignment: .leading, spacing: 3) {
                     HStack(spacing: 7) {
-                        Text(WatchItemCopy.restTitle)
+                        Text(title)
                             .ddDisplayText(14.5, weight: .bold)
                             .foregroundColor(DailyDriver.foreground)
                         if edited {
                             editedChip
-                                .accessibilityIdentifier("af_watchitem_row_rest_edited")
+                                .accessibilityIdentifier("af_watchitem_row_\(row.rawValue)_edited")
                         }
                     }
                     // Always reserve one summary line so OFF rows keep constant height.
-                    let summary = viewModel.summary(for: .rest)
+                    let summary = viewModel.summary(for: row)
                     Text(summary ?? " ")
                         .font(.system(size: 8.5, weight: .medium, design: .monospaced))
                         .foregroundColor(edited ? DailyDriver.amber : DailyDriver.foregroundMuted)
@@ -250,39 +261,49 @@ struct WatchItemSheet: View {
                 Spacer(minLength: 0)
                 Toggle("", isOn: Binding(
                     get: { enabled },
-                    set: { viewModel.setEnabled(.rest, $0) }
+                    set: { viewModel.setEnabled(row, $0) }
                 ))
                 .labelsHidden()
-                .accessibilityLabel(WatchItemCopy.restTitle)
+                .accessibilityLabel(title)
                 .tint(DailyDriver.lime)
                 .disabled(viewModel.isReplacing)
-                .accessibilityIdentifier("af_watchitem_row_rest_toggle")
+                .accessibilityIdentifier("af_watchitem_row_\(row.rawValue)_toggle")
             }
 
             if enabled {
-                Picker("", selection: viewModel.restOpenBinding()) {
-                    Text(WorkoutEnrichmentPushCopy.restOpenSegmentLabel(target: viewModel.enrichmentTarget))
+                Picker("", selection: isTransition
+                    ? viewModel.transitionOpenBinding()
+                    : viewModel.restOpenBinding()) {
+                    Text(isTransition
+                        ? WorkoutEnrichmentPushCopy.transitionOpenSegmentLabel(target: target)
+                        : WorkoutEnrichmentPushCopy.restOpenSegmentLabel(target: target))
                         .tag(true)
-                    Text(WorkoutEnrichmentPushCopy.restTimedSegmentLabel)
+                    Text(isTransition
+                        ? WorkoutEnrichmentPushCopy.transitionTimedSegmentLabel
+                        : WorkoutEnrichmentPushCopy.restTimedSegmentLabel)
                         .tag(false)
                 }
                 .pickerStyle(.segmented)
                 .tint(DailyDriver.lime)
                 .disabled(viewModel.isReplacing)
-                .accessibilityIdentifier("af_watchitem_rest_open")
+                .accessibilityIdentifier("af_watchitem_\(row.rawValue)_open")
 
-                if !viewModel.restOpen {
+                if !isOpen {
                     Stepper(
-                        "\(viewModel.restSec)s",
-                        value: viewModel.restSecBinding(),
-                        in: WorkoutEnrichmentPushCopy.restSecRange,
+                        "\(isTransition ? viewModel.transitionSec : viewModel.restSec)s",
+                        value: isTransition
+                            ? viewModel.transitionSecBinding()
+                            : viewModel.restSecBinding(),
+                        in: isTransition
+                            ? WorkoutEnrichmentPushCopy.transitionSecRange
+                            : WorkoutEnrichmentPushCopy.restSecRange,
                         step: 15
                     )
                     .font(.system(size: 11))
                     .foregroundColor(DailyDriver.foregroundMuted)
                     .monospacedDigit()
                     .disabled(viewModel.isReplacing)
-                    .accessibilityIdentifier("af_watchitem_rest_sec")
+                    .accessibilityIdentifier("af_watchitem_\(row.rawValue)_sec")
                 }
             }
         }
@@ -295,7 +316,7 @@ struct WatchItemSheet: View {
         )
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         .padding(.bottom, 8)
-        .accessibilityIdentifier("af_watchitem_row_rest")
+        .accessibilityIdentifier("af_watchitem_row_\(row.rawValue)")
     }
 
     private func doorRoute(for row: WatchItemReadinessRow) -> Route? {
@@ -303,7 +324,8 @@ struct WatchItemSheet: View {
         case .mobility: return .sequence(.mobility)
         case .cooldown: return .sequence(.cooldown)
         case .warmups: return .warmupPick
-        case .rest: return nil
+        // Rest / Transitions are inline rows, not configurator doors.
+        case .rest, .transition: return nil
         }
     }
 }
