@@ -10,9 +10,12 @@ import SwiftUI
 struct OnYourWatchesView: View {
     @StateObject private var viewModel: OnYourWatchesViewModel
     @State private var didLoad = false
+    /// Shown on the back chip (`< Library` from Library, `< Today` from Today).
+    private let backTitle: String
 
-    init(viewModel: OnYourWatchesViewModel? = nil) {
+    init(viewModel: OnYourWatchesViewModel? = nil, backTitle: String = "Library") {
         _viewModel = StateObject(wrappedValue: viewModel ?? OnYourWatchesViewModel())
+        self.backTitle = backTitle
     }
 
     var body: some View {
@@ -75,7 +78,7 @@ struct OnYourWatchesView: View {
         VStack(alignment: .leading, spacing: 4) {
             // Back is provided by the Library NavigationStack chrome via swipe / system —
             // match mock with an explicit label using dismiss environment when pushed.
-            OnYourWatchesBackLabel(title: "Library")
+            OnYourWatchesBackLabel(title: backTitle)
             Text(OnYourWatchesCopy.overviewTitle)
                 .ddDisplayText(26, weight: .heavy)
                 .foregroundColor(DailyDriver.foreground)
@@ -216,6 +219,37 @@ struct OnYourWatchesBackLabel: View {
         }
         .buttonStyle(.plain)
         .accessibilityIdentifier("af_on_your_watches_back")
+    }
+}
+
+/// AMA-2418: Today watch pill — same overview as Library, with local destinations
+/// so Apple / Garmin drill-down works outside Library's NavigationStack.
+struct TodayOnYourWatchesView: View {
+    @StateObject private var viewModel = OnYourWatchesViewModel()
+
+    var body: some View {
+        OnYourWatchesView(viewModel: viewModel, backTitle: "Today")
+            .navigationDestination(for: LibraryDestination.self) { destination in
+                switch destination {
+                case .appleScheduled:
+                    AppleWatchScheduledListView(
+                        libraryWorkouts: [],
+                        onScheduleFromLibrary: {},
+                        onOpenWorkoutFromWatchItem: { _ in }
+                    )
+                case .garminQueue:
+                    GarminWatchQueueView(
+                        onPushFromLibrary: {},
+                        onFix: { _ in },
+                        onOpenWorkoutFromWatchItem: { _ in }
+                    )
+                case .libraryPick(let target):
+                    WatchLibraryPickView(target: target) { _ in }
+                default:
+                    EmptyView()
+                }
+            }
+            .accessibilityIdentifier("af_today_on_your_watches")
     }
 }
 
