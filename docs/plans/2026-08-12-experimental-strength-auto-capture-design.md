@@ -91,7 +91,7 @@ Lower-body / machines: prefer **tap to start / tap to finish** set; automate res
 - Off by default; copy discloses Watch AmakaFlow recorder (not Apple Fitness auto-start)
 
 ### Phase 1 — One-tap session start
-- Expose Start on Watch Today when experimental flag on and a strength-capable plan exists (or explicit Strength open later)
+- Expose Start on Watch Today when experimental flag on (freeform open always; prefer plan-linked when a synced strength workout matches)
 - `HKWorkoutConfiguration`: `.traditionalStrengthTraining`, indoor
 - `HKWorkoutSession` + builder collection; store **one** workout at end
 - Reuse / extend `HealthKitWorkoutManager` + standalone engine; fix orphaned Start entry in live tab UI
@@ -139,6 +139,7 @@ Lower-body / machines: prefer **tap to start / tap to finish** set; automate res
 
 ## Open follow-ups (not blocking Phase 0–2)
 
-- Freeform Strength open (no plan) → still Actuals “map or keep”
+- ~~Freeform Strength open (no plan)~~ — shipped: Watch Today Start when flag on; Actuals fill-in still applies
 - Functional strength / multi-sport segments
 - Opt-in short-lived encrypted IMU debug samples for model eval
+- Optionally WC-sync named workouts when pushing to Fitness so plan-linked Start has titles

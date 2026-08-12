@@ -327,31 +327,73 @@ enum WorkoutEnrichmentPushPlanner {
         }
     }
 
-    /// Rows that could take warm-up sets: a strength `sets` shape, no rows yet,
+    /// Rows that could take warm-up sets: a strength shape, no rows yet,
     /// and not excluded by name. Exclusion matching is server-side at enrich time;
     /// this preview mirrors it with `ExerciseKeyNormalizer` so counts stay honest.
     ///
     /// AMA-2400: timed / distance / cals stations (Assault Bike `1 × 0:30`) are
     /// not strength ramps — offering warm-up sets on them made Rest/WU/CD
     /// enrich look broken when the athlete only wanted session extras.
+    ///
+    /// AMA-2424: AI/coach often writes `rounds` + `reps` with `sets` omitted.
+    /// Detail UI already treats single-station `block.rounds` as the set count —
+    /// candidates must accept that shape or Warm-up sets never appears.
     static func warmupSetCandidates(
         in blocks: [SocialImportBlock],
         prefs: ExerciseWarmupSetsPrefs
     ) -> [SocialImportExercise] {
         let excluded = Set(prefs.excludeExerciseKeys.map(ExerciseKeyNormalizer.normalize))
         var seenNames = Set<String>()
+        var result: [SocialImportExercise] = []
         // De-dupe by normalized name so the pick screen cannot show two cards
         // that share one PerExerciseRamp (same exercise across two blocks).
-        return blocks.flatMap(\.exercises).filter { exercise in
-            guard exercise.sets != nil else { return false }
-            // Timed/distance/cals stations are not ramp candidates.
-            if exercise.seconds != nil || exercise.distanceMeters != nil || exercise.calories != nil {
-                return false
+        for block in blocks {
+            for exercise in block.exercises {
+                // Timed/distance/cals stations are not ramp candidates.
+                if exercise.seconds != nil || exercise.distanceMeters != nil || exercise.calories != nil {
+                    continue
+                }
+                guard exercise.warmupSets?.isEmpty ?? true else { continue }
+                guard let effectiveSets = effectiveWorkingSets(for: exercise, in: block) else {
+                    continue
+                }
+                let key = ExerciseKeyNormalizer.normalize(exercise.name)
+                guard !excluded.contains(key) else { continue }
+                guard seenNames.insert(key).inserted else { continue }
+                var candidate = exercise
+                if candidate.sets == nil {
+                    candidate.sets = effectiveSets
+                }
+                result.append(candidate)
             }
-            guard exercise.warmupSets?.isEmpty ?? true else { return false }
-            let key = ExerciseKeyNormalizer.normalize(exercise.name)
-            guard !excluded.contains(key) else { return false }
-            return seenNames.insert(key).inserted
+        }
+        return result
+    }
+
+    /// Working-set count for ramp eligibility — mirrors detail rounds-as-sets.
+    static func effectiveWorkingSets(
+        for exercise: SocialImportExercise,
+        in block: SocialImportBlock
+    ) -> Int? {
+        if let sets = exercise.sets { return sets }
+        let hasReps = exercise.reps != nil
+            || !(exercise.repsRange?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true)
+        guard hasReps else { return nil }
+        // Detail UI only proxies rounds → sets on single-station blocks.
+        // Multi-station circuits keep per-station `sets` when present; reps-only
+        // stations there are not treated as rounds-as-sets strength.
+        guard !isMultiStation(block) else { return nil }
+        return max(1, block.rounds)
+    }
+
+    /// Same multi-station rule as `WorkoutDurationEstimator.isMultiStation`.
+    private static func isMultiStation(_ block: SocialImportBlock) -> Bool {
+        guard block.exercises.count > 1 else { return false }
+        switch (block.type ?? "").trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
+        case "circuit", "timed_circuit", "timedcircuit", "superset", "amrap", "emom", "tabata":
+            return true
+        default:
+            return false
         }
     }
 }

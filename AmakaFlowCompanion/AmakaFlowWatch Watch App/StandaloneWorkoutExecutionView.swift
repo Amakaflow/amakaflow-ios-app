@@ -64,6 +64,8 @@ struct StandaloneWorkoutExecutionView: View {
         .overlay {
             if let proposal = engine.workRestProposal {
                 workRestProposalOverlay(proposal)
+            } else if let proposal = engine.narrowRepProposal {
+                narrowRepProposalOverlay(proposal)
             }
         }
         .confirmationDialog(
@@ -115,6 +117,41 @@ struct StandaloneWorkoutExecutionView: View {
         .accessibilityIdentifier("workRestProposalOverlay")
     }
 
+    // MARK: - AMA-2420 Phase 5 narrow rep prompt
+
+    private func narrowRepProposalOverlay(_ proposal: NarrowRepProposal) -> some View {
+        VStack(spacing: 8) {
+            Text(proposal.promptTitle)
+                .font(.system(size: 15, weight: .bold))
+                .multilineTextAlignment(.center)
+            Text(proposal.promptDetail)
+                .font(.system(size: 11))
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+                .lineLimit(3)
+            HStack(spacing: 10) {
+                Button("No") {
+                    engine.rejectNarrowRepProposal()
+                }
+                .buttonStyle(.bordered)
+                .accessibilityLabel("Reject rep count suggestion")
+                Button("Yes") {
+                    engine.confirmNarrowRepProposal()
+                }
+                .buttonStyle(.borderedProminent)
+                .accessibilityLabel("Confirm rep count suggestion")
+            }
+        }
+        .padding(10)
+        .frame(maxWidth: .infinity)
+        .background(.ultraThinMaterial)
+        .cornerRadius(12)
+        .padding(.horizontal, 4)
+        .padding(.top, 4)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .accessibilityIdentifier("narrowRepProposalOverlay")
+    }
+
     // MARK: - Active Workout View
 
     @ViewBuilder
@@ -132,6 +169,7 @@ struct StandaloneWorkoutExecutionView: View {
                 weightUnit: engine.suggestedWeightUnit(for: step),
                 allowCompleteAsPrescribed: engine.canCompleteAsPrescribed(for: step),
                 prescribedWeight: engine.prescribedLoad(for: step)?.weight,
+                assistedReps: engine.confirmedAssistedReps ?? step.targetReps,
                 onLogSet: { weight, unit in
                     engine.logSetWeight(weight: weight, unit: unit)
                 },

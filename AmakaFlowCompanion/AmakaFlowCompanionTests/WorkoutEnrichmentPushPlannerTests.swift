@@ -468,6 +468,48 @@ final class WorkoutEnrichmentPushPlannerTests: XCTestCase {
         XCTAssertNil(plan.offer(.exerciseWarmupSets))
     }
 
+    /// AMA-2424 — AI often writes rounds + reps with `sets` omitted; detail shows
+    /// "3 x 8" via rounds-as-sets, so Warm-up sets must still be offered.
+    func testRoundsAsSetsStrengthGetsWarmupSetOffer() {
+        let block = SocialImportBlock(
+            label: nil,
+            rounds: 3,
+            exercises: [
+                SocialImportExercise(name: "Dumbbell Bench Press", sets: nil, reps: 8)
+            ],
+            type: "circuit"
+        )
+        let plan = WorkoutEnrichmentPushPlanner.plan(
+            blocks: [block],
+            tombstones: [],
+            prefs: .defaults
+        )
+        let offer = plan.offer(.exerciseWarmupSets)
+        XCTAssertNotNil(offer)
+        XCTAssertEqual(offer?.candidateExerciseNames, ["Dumbbell Bench Press"])
+        XCTAssertEqual(offer?.candidateWorkingSetCounts, [3])
+    }
+
+    /// AMA-2424 — multi-station circuit with reps-only stations is not
+    /// rounds-as-sets (detail does not proxy); leave Warm-up sets off.
+    func testMultiStationRepsOnlyCircuitDoesNotOfferWarmupSets() {
+        let circuit = SocialImportBlock(
+            label: nil,
+            rounds: 3,
+            exercises: [
+                SocialImportExercise(name: "Dumbbell Bench Press", sets: nil, reps: 8),
+                SocialImportExercise(name: "One Arm Dumbbell Row", sets: nil, reps: 8)
+            ],
+            type: "circuit"
+        )
+        let plan = WorkoutEnrichmentPushPlanner.plan(
+            blocks: [circuit],
+            tombstones: [],
+            prefs: .defaults
+        )
+        XCTAssertNil(plan.offer(.exerciseWarmupSets))
+    }
+
     /// AMA-2400 — Wingate circuit stations look like `1 × 0:30` (sets + duration).
     /// Warm-up ramps are for strength reps, not timed Assault Bike intervals.
     func testTimedCircuitStationWithSetsDoesNotOfferWarmupSets() {

@@ -17,6 +17,8 @@ struct WeightInputWatchView: View {
     let allowCompleteAsPrescribed: Bool
     /// Prescribed load from plan (not last-logged). Used to decide AS PLANNED vs LOG.
     let prescribedWeight: Double?
+    /// AMA-2420 Phase 5 — confirmed / planned reps shown under weight.
+    let assistedReps: Int?
     let onLogSet: (Double?, String) -> Void
     let onSkipWeight: () -> Void
     let onCompleteAsPrescribed: (() -> Void)?
@@ -46,6 +48,7 @@ struct WeightInputWatchView: View {
         weightUnit: String,
         allowCompleteAsPrescribed: Bool = false,
         prescribedWeight: Double? = nil,
+        assistedReps: Int? = nil,
         onLogSet: @escaping (Double?, String) -> Void,
         onSkipWeight: @escaping () -> Void,
         onCompleteAsPrescribed: (() -> Void)? = nil
@@ -57,6 +60,7 @@ struct WeightInputWatchView: View {
         self.weightUnit = weightUnit
         self.allowCompleteAsPrescribed = allowCompleteAsPrescribed
         self.prescribedWeight = prescribedWeight
+        self.assistedReps = assistedReps
         self.onLogSet = onLogSet
         self.onSkipWeight = onSkipWeight
         self.onCompleteAsPrescribed = onCompleteAsPrescribed
@@ -75,6 +79,12 @@ struct WeightInputWatchView: View {
 
                 Text("Set \(setNumber)/\(totalSets)")
                     .font(.system(size: 14, weight: .bold))
+
+                if let assistedReps {
+                    Text("\(assistedReps) reps")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundColor(.blue)
+                }
             }
 
             // Weight display with Digital Crown control

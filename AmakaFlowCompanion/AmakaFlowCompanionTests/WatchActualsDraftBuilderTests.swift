@@ -79,6 +79,86 @@ final class WatchActualsDraftBuilderTests: XCTestCase {
 
     // MARK: - Draft builder
 
+    func testMakeFillInSessionOverlaysConfirmedReps() throws {
+        let summary = makeSummary(setLogs: [
+            StandaloneSetLog(
+                exerciseName: "Curl",
+                exerciseIndex: 0,
+                sets: [
+                    StandaloneSetEntry(
+                        setNumber: 1,
+                        weight: 20,
+                        unit: "kg",
+                        completed: true,
+                        detectionMethod: "inferred",
+                        reps: 9
+                    )
+                ]
+            )
+        ])
+        let library = Workout(
+            id: "lib-curl",
+            name: "Arms",
+            sport: .strength,
+            duration: 30 * 60,
+            blocks: [
+                Block(
+                    label: nil,
+                    structure: .straight,
+                    rounds: 3,
+                    exercises: [
+                        Exercise(
+                            name: "Curl",
+                            canonicalName: nil,
+                            sets: 3,
+                            reps: "10",
+                            durationSeconds: nil,
+                            load: ExerciseLoad(value: 20, unit: "kg"),
+                            restSeconds: 60,
+                            distance: nil,
+                            notes: nil,
+                            focus: nil,
+                            supersetGroup: nil
+                        )
+                    ]
+                )
+            ],
+            source: .manual
+        )
+
+        let session = try XCTUnwrap(
+            WatchActualsDraftBuilder.makeFillInSession(summary: summary, libraryWorkout: library)
+        )
+        XCTAssertEqual(session.exercises[0].name, "Curl")
+        XCTAssertEqual(session.exercises[0].actualReps, 9)
+        XCTAssertNil(session.exercises[0].confirmation)
+    }
+
+    func testMakeFillInSessionFromSetLogsAloneUsesConfirmedReps() throws {
+        let summary = makeSummary(setLogs: [
+            StandaloneSetLog(
+                exerciseName: "Curl",
+                exerciseIndex: 0,
+                sets: [
+                    StandaloneSetEntry(
+                        setNumber: 1,
+                        weight: 20,
+                        unit: "kg",
+                        completed: true,
+                        detectionMethod: "inferred",
+                        reps: 9
+                    )
+                ]
+            )
+        ])
+
+        let session = try XCTUnwrap(
+            WatchActualsDraftBuilder.makeFillInSession(summary: summary, libraryWorkout: nil)
+        )
+        XCTAssertEqual(session.exercises[0].actualReps, 9)
+        XCTAssertNil(session.exercises[0].confirmation)
+    }
+
     func testMakeFillInSessionFromSetLogsAlone() throws {
         let summary = makeSummary(setLogs: [
             StandaloneSetLog(

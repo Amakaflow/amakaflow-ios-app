@@ -25,7 +25,8 @@ enum WatchActualsDraftBuilder {
                         weight: $0.weight,
                         unit: $0.unit,
                         completed: $0.completed,
-                        detectionMethod: $0.detectionMethod
+                        detectionMethod: $0.detectionMethod,
+                        reps: $0.reps
                     )
                 }
             )
@@ -72,6 +73,9 @@ enum WatchActualsDraftBuilder {
                     exercises[index].actualWeightKg = kilograms(weight: weight, unit: last.unit)
                 }
                 exercises[index].actualSets = max(completed.count, exercises[index].planned.sets)
+                if let reps = last.reps, reps > 0 {
+                    exercises[index].actualReps = reps
+                }
                 if isAutoConfirmedAsPlanned(completed) {
                     exercises[index].confirmation = .asPlanned
                 }
@@ -85,18 +89,19 @@ enum WatchActualsDraftBuilder {
             let last = completed.last
             let weightKg = last.flatMap { kilograms(weight: $0.weight ?? 0, unit: $0.unit) }
             let setCount = max(completed.count, 1)
+            let reps = last?.reps.flatMap { $0 > 0 ? $0 : nil } ?? 1
             return ExerciseActual(
                 id: slug(log.exerciseName),
                 name: log.exerciseName,
                 planned: ExerciseActualPlanned(
                     sets: setCount,
-                    reps: 1,
+                    reps: reps,
                     weightKg: weightKg,
                     note: nil
                 ),
                 confirmation: isAutoConfirmedAsPlanned(completed) ? .asPlanned : nil,
                 actualSets: setCount,
-                actualReps: 1,
+                actualReps: reps,
                 actualWeightKg: weightKg
             )
         }
