@@ -548,10 +548,10 @@ struct SettingsView: View {
     private var ddHandoffAppSection: some View {
         SettingsSectionCard(
             title: "App",
-            subtitle: "Notifications · kg/km · dark",
+            subtitle: "Notifications · kg/km · experimental",
             icon: "slider.horizontal.3",
             iconBackground: DailyDriver.purple,
-            rowCount: 3
+            rowCount: 4
         ) {
             VStack(spacing: 0) {
                 ddSettingsLinkRow(
@@ -578,6 +578,24 @@ struct SettingsView: View {
                 ) {
                     settingsInfoMessage = "Daily Driver currently uses dark mode only."
                 }
+                ddSettingsDivider
+                // Typed NavigationLink — avoid AnyView(destination) nested-nav drop.
+                NavigationLink {
+                    ExperimentalSettingsView()
+                } label: {
+                    DDSettingsRow(
+                        icon: "flask.fill",
+                        iconBackground: DailyDriver.orange,
+                        title: "Experimental",
+                        detail: "Strength auto-capture"
+                    ) {
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundColor(DailyDriver.foregroundDim)
+                    }
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("settings_row_experimental")
             }
         }
     }
@@ -896,7 +914,7 @@ struct SettingsView: View {
     }
 
     @ViewBuilder
-    private func settingsPreferenceRow(_ row: SettingsRefreshRowModel) -> some View {
+    private func settingsPreferenceRow(_ row: SettingsRefreshRowModel) -> some View { // swiftlint:disable:this cyclomatic_complexity function_body_length
         switch row.destination {
         case .editProfile:
             NavigationLink(destination: EditProfileView(initialNameFallback: pairingService.userProfile?.name)) {
@@ -1007,6 +1025,18 @@ struct SettingsView: View {
             }
             .buttonStyle(.plain)
             .accessibilityIdentifier("settings_row_social")
+
+        case .experimental:
+            NavigationLink(destination: ExperimentalSettingsView()) {
+                SettingsNavigationRow(
+                    icon: "flask.fill",
+                    tint: Theme.Colors.accentOrange,
+                    title: row.title,
+                    subtitle: row.subtitle
+                )
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("settings_row_experimental")
 
         case .trainingPreferences:
             NavigationLink(destination: TrainingPreferencesView()) {
@@ -3132,6 +3162,7 @@ struct SettingsRefreshRowModel: Equatable, Identifiable {
         case syncDashboard
         case shoeComparison
         case accountPrivacyData
+        case experimental
         case debugSettings
         case errorLog
         case workoutDebug
@@ -3193,6 +3224,12 @@ struct SettingsRefreshSectionModel: Equatable, Identifiable {
                 id: "app",
                 title: "App",
                 rows: [
+                    SettingsRefreshRowModel(
+                        id: "experimental",
+                        title: "Experimental",
+                        subtitle: "Strength auto-capture and other dogfood toggles",
+                        destination: .experimental
+                    ),
                     SettingsRefreshRowModel(id: "account_privacy_data", title: "Account, privacy & data", subtitle: "Export, privacy notice, sign out, and account deletion", destination: .accountPrivacyData)
                 ]
             )

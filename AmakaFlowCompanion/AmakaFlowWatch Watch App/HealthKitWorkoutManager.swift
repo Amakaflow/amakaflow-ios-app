@@ -85,7 +85,7 @@ final class HealthKitWorkoutManager: NSObject, ObservableObject {
 
     // MARK: - Session Management
 
-    func startSession(activityType: HKWorkoutActivityType = .functionalStrengthTraining) async throws {
+    func startSession(activityType: HKWorkoutActivityType) async throws {
         guard !isSessionActive else {
             print("❤️ Session already active")
             return

@@ -1,0 +1,78 @@
+# AMA-2420 — Settings → Experimental → Strength auto-capture toggle
+#
+# Note: NavigationLink + UISwitch on iOS 26 need text/point taps in Maestro;
+# accessibility ids are still asserted for presence. Pure id taps do not
+# activate the accordion NavigationLink or flip the switch reliably.
+appId: com.myamaka.AmakaFlowCompanion
+---
+- launchApp:
+    appId: com.myamaka.AmakaFlowCompanion
+    clearState: true
+    permissions:
+      notifications: deny
+    arguments:
+      UITEST_CLERK_TEST_SESSION: "user_id=user_ama2420_experimental,email=claude+clerk_test@amakaflow.dev,name=AMA2420 Experimental"
+      UITEST_SKIP_ONBOARDING: "true"
+      UITEST_SKIP_APPLE_WATCH: "true"
+      UITEST_USE_FIXTURES: "true"
+- waitForAnimationToEnd:
+    timeout: 5000
+- extendedWaitUntil:
+    visible:
+      id: "af_tabbar"
+    timeout: 60000
+- tapOn:
+    text: "Profile"
+    index: 0
+- waitForAnimationToEnd:
+    timeout: 3000
+- extendedWaitUntil:
+    visible:
+      id: "af_profile_settings_entry"
+    timeout: 15000
+- tapOn:
+    id: "af_profile_settings_entry"
+- waitForAnimationToEnd:
+    timeout: 3000
+- scrollUntilVisible:
+    element:
+      text: "App"
+    direction: DOWN
+    timeout: 15000
+- tapOn:
+    text: "App"
+- waitForAnimationToEnd:
+    timeout: 2000
+- extendedWaitUntil:
+    visible:
+      id: "settings_row_experimental"
+    timeout: 10000
+- tapOn:
+    text: "Experimental"
+- waitForAnimationToEnd:
+    timeout: 3000
+- extendedWaitUntil:
+    visible:
+      id: "settings_toggle_strength_auto_capture"
+    timeout: 10000
+- assertVisible: "Strength auto-capture"
+- assertVisible: "Watch strength"
+- takeScreenshot: docs/ama-2420-dogfood/01-experimental-off
+- tapOn:
+    point: "88%,20%"
+- waitForAnimationToEnd:
+    timeout: 2500
+- takeScreenshot: docs/ama-2420-dogfood/02-experimental-toggled
+- tapOn:
+    point: "6%,11%"
+- waitForAnimationToEnd:
+    timeout: 1500
+- tapOn:
+    text: "Experimental"
+- waitForAnimationToEnd:
+    timeout: 2000
+- extendedWaitUntil:
+    visible:
+      id: "settings_toggle_strength_auto_capture"
+    timeout: 10000
+- takeScreenshot: docs/ama-2420-dogfood/03-experimental-persisted

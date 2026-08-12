@@ -4,6 +4,7 @@
 //
 //  Handles WatchConnectivity communication with iPhone for remote control
 //
+// swiftlint:disable file_length
 
 import Combine
 import Foundation
@@ -11,7 +12,7 @@ import WatchConnectivity
 import WatchKit
 
 @MainActor
-final class WatchConnectivityBridge: NSObject, ObservableObject {
+final class WatchConnectivityBridge: NSObject, ObservableObject { // swiftlint:disable:this type_body_length
     static let shared = WatchConnectivityBridge()
 
     // MARK: - Published State
@@ -79,9 +80,10 @@ final class WatchConnectivityBridge: NSObject, ObservableObject {
         }
     }
 
-    func startHealthSession() async {
+    func startHealthSession(sport: WorkoutSport = .strength) async {
         do {
-            try await healthManager.startSession()
+            let activityType = HKWorkoutActivityMapping.activityType(for: sport)
+            try await healthManager.startSession(activityType: activityType)
             startHRStreaming()
         } catch {
             print("⌚️ Failed to start health session: \(error)")
@@ -513,13 +515,21 @@ extension WatchConnectivityBridge: WCSessionDelegate {
     }
 
     // AMA-297: Receive background-queued workout syncs sent via transferUserInfo.
+    // AMA-2420: also experimental flags.
     nonisolated func session(_ session: WCSession, didReceiveUserInfo userInfo: [String: Any] = [:]) {
-        guard (userInfo["action"] as? String) == "syncWorkouts" else { return }
+        let action = userInfo["action"] as? String
         Task { @MainActor in
-            if let workouts = Workout.decodeFromSyncWorkoutsUserInfo(userInfo) {
-                self.workoutManager?.setWorkouts(workouts)
-            } else {
-                print("⌚️ syncWorkouts userInfo: failed to decode workouts payload")
+            switch action {
+            case "syncWorkouts":
+                if let workouts = Workout.decodeFromSyncWorkoutsUserInfo(userInfo) {
+                    self.workoutManager?.setWorkouts(workouts)
+                } else {
+                    print("⌚️ syncWorkouts userInfo: failed to decode workouts payload")
+                }
+            case "experimentalFlags":
+                WatchStrengthAutoCaptureSettings.apply(from: userInfo)
+            default:
+                break
             }
         }
     }
@@ -599,6 +609,9 @@ extension WatchConnectivityBridge: WCSessionDelegate {
             } else {
                 print("⌚️ receiveWorkout: failed to decode workout payload")
             }
+
+        case "experimentalFlags":
+            WatchStrengthAutoCaptureSettings.apply(from: message)
 
         // AMA-1150: DayState push messages from phone
         case DayStateAction.dayStateResponse.rawValue:

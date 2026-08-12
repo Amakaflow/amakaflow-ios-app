@@ -96,7 +96,7 @@ class WatchWorkoutManager: ObservableObject {
         print("⌚️ Starting legacy workout session: \(workout.name)")
         
         let configuration = HKWorkoutConfiguration()
-        configuration.activityType = hkActivityType(for: workout.sport)
+        configuration.activityType = HKWorkoutActivityMapping.activityType(for: workout.sport)
         configuration.locationType = .outdoor
         
         // Create and start HKWorkoutSession
@@ -109,28 +109,4 @@ class WatchWorkoutManager: ObservableObject {
         currentWorkout = nil
         print("⌚️ Workout stopped")
     }
-    
-    // MARK: - Helpers
-    
-    private func hkActivityType(for sport: WorkoutSport) -> HKWorkoutActivityType {
-        switch sport {
-        case .running:
-            return .running
-        case .cycling:
-            return .cycling
-        case .strength:
-            return .functionalStrengthTraining
-        case .mobility:
-            return .yoga
-        case .swimming:
-            return .swimming
-        case .cardio, .mixed:
-            return .mixedCardio
-        case .conditioning:
-            return .highIntensityIntervalTraining
-        case .other:
-            return .other
-        }
-    }
-    
 }

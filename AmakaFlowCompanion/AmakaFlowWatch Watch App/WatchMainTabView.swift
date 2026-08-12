@@ -18,9 +18,11 @@ struct WatchMainTabView: View {
             WatchRemoteView(bridge: bridge)
                 .tag(0)
 
-            // Tab 1: Today's Schedule (AMA-1150)
-            TodayScheduleView(viewModel: dayStateViewModel)
-                .tag(1)
+            // Tab 1: Today's Schedule (AMA-1150) + AMA-2420 strength Start
+            NavigationStack {
+                TodayScheduleView(viewModel: dayStateViewModel)
+            }
+            .tag(1)
 
             // Tab 2: Readiness Glance (AMA-1150)
             ReadinessGlanceView(viewModel: dayStateViewModel)
