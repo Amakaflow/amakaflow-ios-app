@@ -38,6 +38,9 @@ final class PassiveStrengthSessionEngine: ObservableObject {
     private var pendingSummary: StandaloneWorkoutSummary?
 
     private static let pendingSummaryDefaultsKey = "ama2420_pending_passive_strength_summary"
+    /// Drop undelivered summaries older than this so a stale gym session isn't
+    /// replayed days later into Today.
+    private static let pendingSummaryMaxAge: TimeInterval = 24 * 60 * 60
 
     var formattedElapsedTime: String {
         Self.formatElapsed(seconds: elapsedSeconds)
@@ -84,7 +87,7 @@ final class PassiveStrengthSessionEngine: ObservableObject {
                 self.heartRate = bpm
                 self.activeCalories = active
                 self.totalCalories = self.healthManager.totalCalories
-                if bpm > 0 {
+                if bpm > 0, self.phase == .running {
                     self.averageHeartRateSamples.append(bpm)
                 }
             }
@@ -133,6 +136,10 @@ final class PassiveStrengthSessionEngine: ObservableObject {
         timer = nil
         phase = .ended
         let endDate = Date()
+        // Snapshot calories before HK clears them in endSession().
+        activeCalories = healthManager.activeCalories
+        totalCalories = healthManager.totalCalories
+        heartRate = healthManager.heartRate
         await healthManager.endSession()
         removeHeartRateHandler()
         playHaptic(.success)
@@ -237,6 +244,12 @@ final class PassiveStrengthSessionEngine: ObservableObject {
     private func flushPendingSummaryIfNeeded() -> Bool {
         let candidate = pendingSummary ?? loadPendingSummaryFromDefaults()
         guard let summary = candidate else { return false }
+        let age = Date().timeIntervalSince(summary.endDate)
+        if age > Self.pendingSummaryMaxAge {
+            print("⌚️ Dropping stale pending passive summary (age=\(Int(age))s)")
+            clearPendingSummary()
+            return false
+        }
         if transferSummary(summary) {
             clearPendingSummary()
             return true

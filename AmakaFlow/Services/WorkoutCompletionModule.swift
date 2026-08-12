@@ -213,6 +213,13 @@ final class WorkoutCompletionModule: ObservableObject, WorkoutCompletionModulePr
     }
 
     func saveWatchCompletion(summary: StandaloneWorkoutSummary) async {
+        let draftID = WatchActualsDraftBuilder.draftID(for: summary)
+        // WC transferUserInfo can redeliver; skip duplicate completion posts.
+        if (try? ActualsRepository().fetchSession(id: draftID)) != nil {
+            print("⌚️ Skipping duplicate Watch completion for \(draftID)")
+            return
+        }
+
         beginSave()
         do {
             let response = try await completionService.postWatchWorkoutCompletion(

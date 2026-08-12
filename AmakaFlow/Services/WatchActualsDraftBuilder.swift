@@ -9,6 +9,11 @@
 import Foundation
 
 enum WatchActualsDraftBuilder {
+    /// Stable Actuals fill-in id for a Watch standalone / passive summary.
+    static func draftID(for summary: StandaloneWorkoutSummary) -> String {
+        "watch-\(summary.workoutId)-\(Int(summary.endDate.timeIntervalSince1970))"
+    }
+
     /// Build an unverified fill-in session from a Watch summary.
     /// Prefer Library workout structure when available; otherwise use set logs alone.
     static func makeFillInSession(
@@ -64,7 +69,7 @@ enum WatchActualsDraftBuilder {
         let when = formatter.string(from: summary.endDate).uppercased()
 
         return ActualsFillInSession(
-            id: "watch-\(summary.workoutId)-\(Int(summary.endDate.timeIntervalSince1970))",
+            id: draftID(for: summary),
             title: summary.workoutName,
             subtitle: "APPLE WATCH · \(when)",
             exercises: exercises,

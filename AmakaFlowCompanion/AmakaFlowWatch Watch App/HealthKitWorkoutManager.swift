@@ -102,6 +102,13 @@ final class HealthKitWorkoutManager: NSObject, ObservableObject {
         config.activityType = activityType
         config.locationType = .indoor
 
+        // Reset live metrics before starting collection so early samples can't
+        // race against stale values from a prior session.
+        basalCalories = 0
+        activeCalories = 0
+        totalCalories = 0
+        heartRate = 0
+
         do {
             session = try HKWorkoutSession(healthStore: healthStore, configuration: config)
             let liveBuilder = session?.associatedWorkoutBuilder()
@@ -126,14 +133,14 @@ final class HealthKitWorkoutManager: NSObject, ObservableObject {
             session?.startActivity(with: startDate)
             try await liveBuilder?.beginCollection(at: startDate)
 
-            basalCalories = 0
-            activeCalories = 0
-            totalCalories = 0
-            heartRate = 0
             isSessionActive = true
             print("❤️ Workout session started")
         } catch {
             print("❤️ Failed to start workout session: \(error)")
+            // Tear down any partially created session/builder before propagating.
+            session?.end()
+            liveWorkoutBuilder?.discardWorkout()
+            clearSessionState()
             throw error
         }
     }
@@ -161,7 +168,11 @@ final class HealthKitWorkoutManager: NSObject, ObservableObject {
 
     /// AMA-2420 — discard an in-progress session without saving an HKWorkout.
     func discardSession() async {
-        guard isSessionActive else {
+        let hasSessionState = isSessionActive
+            || session != nil
+            || builder != nil
+            || liveWorkoutBuilder != nil
+        guard hasSessionState else {
             print("❤️ No active session to discard")
             return
         }
