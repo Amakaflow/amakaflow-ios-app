@@ -63,12 +63,19 @@ final class HealthKitWorkoutManager: NSObject, ObservableObject {
             return false
         }
 
-        // Types to read
-        let typesToRead: Set<HKObjectType> = [
-            HKQuantityType.quantityType(forIdentifier: .heartRate)!,
-            HKQuantityType.quantityType(forIdentifier: .activeEnergyBurned)!,
-            HKQuantityType.quantityType(forIdentifier: .basalEnergyBurned)!
+        // Types to read — avoid force-unwraps (SwiftLint force_unwrapping).
+        let readIdentifiers: [HKQuantityTypeIdentifier] = [
+            .heartRate,
+            .activeEnergyBurned,
+            .basalEnergyBurned
         ]
+        let typesToRead = Set(
+            readIdentifiers.compactMap { HKQuantityType.quantityType(forIdentifier: $0) as HKObjectType? }
+        )
+        guard let heartRateType = HKQuantityType.quantityType(forIdentifier: .heartRate) else {
+            print("❤️ HealthKit heart-rate type unavailable")
+            return false
+        }
 
         // Types to write (workout)
         let typesToWrite: Set<HKSampleType> = [
@@ -77,7 +84,7 @@ final class HealthKitWorkoutManager: NSObject, ObservableObject {
 
         do {
             try await healthStore.requestAuthorization(toShare: typesToWrite, read: typesToRead)
-            let hrStatus = healthStore.authorizationStatus(for: HKQuantityType.quantityType(forIdentifier: .heartRate)!)
+            let hrStatus = healthStore.authorizationStatus(for: heartRateType)
             authorizationStatus = hrStatus
             print("❤️ HealthKit authorization complete: \(hrStatus.rawValue)")
             return hrStatus == .sharingAuthorized || hrStatus == .notDetermined

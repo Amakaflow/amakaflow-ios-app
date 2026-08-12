@@ -214,12 +214,36 @@ final class WorkoutCompletionModule: ObservableObject, WorkoutCompletionModulePr
 
     func saveWatchCompletion(summary: StandaloneWorkoutSummary) async {
         let draftID = WatchActualsDraftBuilder.draftID(for: summary)
-        // WC transferUserInfo can redeliver; skip duplicate completion posts.
-        if (try? ActualsRepository().fetchSession(id: draftID)) != nil {
-            print("⌚️ Skipping duplicate Watch completion for \(draftID)")
+
+        // Durable receipt keyed by draft ID — reject concurrent WC redeliveries
+        // and retain draft-retry state after a successful remote post.
+        switch WatchCompletionReceiptStore.status(for: draftID) {
+        case .some(.complete), .some(.claimed):
+            print("⌚️ Skipping duplicate Watch completion for \(draftID) (receipt)")
+            return
+        case .some(.postedNeedsDraft):
+            print("⌚️ Retrying Actuals draft upsert for \(draftID)")
+            if upsertWatchActualsDraft(from: summary) {
+                WatchCompletionReceiptStore.mark(draftID, .complete)
+            }
+            return
+        case .none:
+            break
+        }
+
+        do {
+            if try ActualsRepository().fetchSession(id: draftID) != nil {
+                WatchCompletionReceiptStore.mark(draftID, .complete)
+                print("⌚️ Skipping duplicate Watch completion for \(draftID)")
+                return
+            }
+        } catch {
+            print("⌚️ Actuals draft lookup failed for \(draftID): \(error)")
+            failSave(CTAError.map(error))
             return
         }
 
+        WatchCompletionReceiptStore.mark(draftID, .claimed)
         beginSave()
         do {
             let response = try await completionService.postWatchWorkoutCompletion(
@@ -234,7 +258,11 @@ final class WorkoutCompletionModule: ObservableObject, WorkoutCompletionModulePr
                 )
             }
             succeedSave()
-            upsertWatchActualsDraft(from: summary)
+            if upsertWatchActualsDraft(from: summary) {
+                WatchCompletionReceiptStore.mark(draftID, .complete)
+            } else {
+                WatchCompletionReceiptStore.mark(draftID, .postedNeedsDraft)
+            }
             onWorkoutCompleted?(summary.workoutId)
             NotificationCenter.default.post(
                 name: .workoutCompleted,
@@ -242,22 +270,26 @@ final class WorkoutCompletionModule: ObservableObject, WorkoutCompletionModulePr
                 userInfo: ["workoutId": summary.workoutId]
             )
         } catch {
+            WatchCompletionReceiptStore.clear(draftID)
             failSave(CTAError.map(error))
         }
     }
 
     /// AMA-2420 — land Watch strength sessions on Today Actuals fill-in for correction.
     /// Passive free-capture may have empty set logs; still seed a blank Fill-in draft.
-    private func upsertWatchActualsDraft(from summary: StandaloneWorkoutSummary) {
+    @discardableResult
+    private func upsertWatchActualsDraft(from summary: StandaloneWorkoutSummary) -> Bool {
         guard let session = WatchActualsDraftBuilder.makeFillInSession(
             summary: summary,
             libraryWorkout: nil
-        ) else { return }
+        ) else { return false }
         do {
             try ActualsRepository().upsertMatchedDraft(session)
             print("⌚️ Upserted Actuals fill-in draft for Watch workout \(summary.workoutId)")
+            return true
         } catch {
             print("⌚️ Failed to upsert Watch Actuals draft: \(error)")
+            return false
         }
     }
 
@@ -297,5 +329,53 @@ final class WorkoutCompletionModule: ObservableObject, WorkoutCompletionModulePr
         } catch {
             failSave(CTAError.map(error))
         }
+    }
+}
+
+// MARK: - Watch completion receipts (AMA-2420)
+
+/// Durable local receipt so WC `transferUserInfo` redelivery cannot double-post,
+/// and a failed Actuals draft write can retry without another network completion.
+enum WatchCompletionReceiptStore {
+    enum Status: String, Codable {
+        case claimed
+        case postedNeedsDraft
+        case complete
+    }
+
+    private static let defaultsKey = "ama2420_watch_completion_receipts"
+
+    static func status(for draftID: String) -> Status? {
+        load()[draftID]
+    }
+
+    static func mark(_ draftID: String, _ status: Status) {
+        var map = load()
+        map[draftID] = status
+        save(map)
+    }
+
+    static func clear(_ draftID: String) {
+        var map = load()
+        map.removeValue(forKey: draftID)
+        save(map)
+    }
+
+    #if DEBUG
+    static func resetAllForTesting() {
+        UserDefaults.standard.removeObject(forKey: defaultsKey)
+    }
+    #endif
+
+    private static func load() -> [String: Status] {
+        guard let data = UserDefaults.standard.data(forKey: defaultsKey) else {
+            return [:]
+        }
+        return (try? JSONDecoder().decode([String: Status].self, from: data)) ?? [:]
+    }
+
+    private static func save(_ map: [String: Status]) {
+        guard let data = try? JSONEncoder().encode(map) else { return }
+        UserDefaults.standard.set(data, forKey: defaultsKey)
     }
 }

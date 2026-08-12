@@ -72,6 +72,15 @@ struct PassiveStrengthSessionView: View {
             }
             Button("Cancel", role: .cancel) {}
         }
+        .onChange(of: engine.healthCaptureFailed) { _, failed in
+            guard failed else { return }
+            dismiss()
+        }
+        .onDisappear {
+            // Avoid orphaning an HKWorkoutSession if the view is popped mid-session.
+            guard engine.isActive else { return }
+            Task { await engine.end() }
+        }
     }
 
     // MARK: - Metrics (main page)
