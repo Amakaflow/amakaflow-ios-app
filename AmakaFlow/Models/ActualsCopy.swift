@@ -47,21 +47,6 @@ enum ActualsCopy {
     static let linkedEmptyToday =
         "No Strava sessions for today — earlier days stay in Strava (we pulled the last 30 on connect)."
 
-    /// Adaptive empty-day line from the sources the athlete actually linked.
-    static func linkedEmptyToday(connected: Set<ActualsSourceProvider>) -> String {
-        let ordered = Self.displayOrdered(connected)
-        switch ordered.count {
-        case 0:
-            return "No sessions for today — connect a source to pull your last 30 days."
-        case 1:
-            let name = sourceDisplayName(ordered[0])
-            return "No \(name) sessions for today — earlier days stay in \(name) (we pulled the last 30 on connect)."
-        default:
-            let list = Self.joinedDisplayNames(ordered)
-            return "No sessions from \(list) for today — we pulled the last 30 days on connect."
-        }
-    }
-
     static func sourceDisplayName(_ provider: ActualsSourceProvider) -> String {
         switch provider {
         case .appleHealth: return "Apple Health"
@@ -158,29 +143,6 @@ enum ActualsCopy {
     /// Prefer `historyScrubberHint(connected:)` so the line lists linked sources only.
     static let historyScrubberHint =
         "SWIPE OR TAP — LAST 30 DAYS · PULLED FROM STRAVA + GARMIN ON CONNECT"
-
-    /// Scrubber mono hint — names only the sources currently connected.
-    static func historyScrubberHint(connected: Set<ActualsSourceProvider>) -> String {
-        let ordered = Self.displayOrdered(connected)
-        guard !ordered.isEmpty else {
-            return "SWIPE OR TAP — LAST 30 DAYS · CONNECT A SOURCE TO PULL HISTORY"
-        }
-        let names = ordered.map { Self.sourceDisplayName($0).uppercased() }
-        return "SWIPE OR TAP — LAST 30 DAYS · PULLED FROM \(names.joined(separator: " + ")) ON CONNECT"
-    }
-
-    /// Stable display order: Apple Health → Garmin → Strava.
-    static func displayOrdered(_ connected: Set<ActualsSourceProvider>) -> [ActualsSourceProvider] {
-        ActualsSourceProvider.allCases.filter { connected.contains($0) }
-    }
-
-    private static func joinedDisplayNames(_ providers: [ActualsSourceProvider]) -> String {
-        let names = providers.map(Self.sourceDisplayName)
-        guard let last = names.last else { return "" }
-        if names.count == 1 { return last }
-        if names.count == 2 { return "\(names[0]) and \(last)" }
-        return names.dropLast().joined(separator: ", ") + ", and \(last)"
-    }
 
     static let historyLocalTimeFooter =
         "TIMES ARE YOUR LOCAL TIME · NEWEST FIRST — THE WRONG-DAY BUG DIES HERE"
@@ -410,6 +372,48 @@ enum ActualsCopy {
 
     static func oauthAuthorizeHeadline(for provider: ActualsSourceProvider) -> String {
         "Authorize AmakaFlow to connect to \(sourceDisplayName(provider))"
+    }
+}
+
+// MARK: - Adaptive Today / history source copy (AMA-2418)
+
+extension ActualsCopy {
+    /// Adaptive empty-day line from the sources the athlete actually linked.
+    static func linkedEmptyToday(connected: Set<ActualsSourceProvider>) -> String {
+        let ordered = Self.displayOrdered(connected)
+        switch ordered.count {
+        case 0:
+            return "No sessions for today — connect a source to pull your last 30 days."
+        case 1:
+            let name = sourceDisplayName(ordered[0])
+            return "No \(name) sessions for today — earlier days stay in \(name) (we pulled the last 30 on connect)."
+        default:
+            let list = Self.joinedDisplayNames(ordered)
+            return "No sessions from \(list) for today — we pulled the last 30 days on connect."
+        }
+    }
+
+    /// Scrubber mono hint — names only the sources currently connected.
+    static func historyScrubberHint(connected: Set<ActualsSourceProvider>) -> String {
+        let ordered = Self.displayOrdered(connected)
+        guard !ordered.isEmpty else {
+            return "SWIPE OR TAP — LAST 30 DAYS · CONNECT A SOURCE TO PULL HISTORY"
+        }
+        let names = ordered.map { Self.sourceDisplayName($0).uppercased() }
+        return "SWIPE OR TAP — LAST 30 DAYS · PULLED FROM \(names.joined(separator: " + ")) ON CONNECT"
+    }
+
+    /// Stable display order: Apple Health → Garmin → Strava.
+    static func displayOrdered(_ connected: Set<ActualsSourceProvider>) -> [ActualsSourceProvider] {
+        ActualsSourceProvider.allCases.filter { connected.contains($0) }
+    }
+
+    private static func joinedDisplayNames(_ providers: [ActualsSourceProvider]) -> String {
+        let names = providers.map(Self.sourceDisplayName)
+        guard let last = names.last else { return "" }
+        if names.count == 1 { return last }
+        if names.count == 2 { return "\(names[0]) and \(last)" }
+        return names.dropLast().joined(separator: ", ") + ", and \(last)"
     }
 }
 

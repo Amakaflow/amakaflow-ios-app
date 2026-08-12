@@ -80,9 +80,9 @@ enum ActualsHealthKitWorkoutMapping {
         return displayName(for: activityType)
     }
 
+    // Large HKWorkoutActivityType surface — keep a single lookup table.
+    // swiftlint:disable:next cyclomatic_complexity
     static func displayName(for activityType: HKWorkoutActivityType) -> String {
-        // Large HKWorkoutActivityType surface — keep a single lookup table.
-        // swiftlint:disable:next cyclomatic_complexity
         switch activityType {
         case .running: return "Run"
         case .walking: return "Walk"
