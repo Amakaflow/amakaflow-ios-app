@@ -10,11 +10,19 @@ import Foundation
 import Testing
 
 struct PassiveStrengthSessionEngineTests {
-    @Test @MainActor func elapsedFormatsMinutesAndSeconds() {
+    @Test func elapsedFormatsMinutesAndSeconds() {
+        #expect(PassiveStrengthSessionEngine.formatElapsed(seconds: 0) == "0:00")
+        #expect(PassiveStrengthSessionEngine.formatElapsed(seconds: 65) == "1:05")
+        #expect(PassiveStrengthSessionEngine.formatElapsed(seconds: 3_600) == "60:00")
+        #expect(PassiveStrengthSessionEngine.formatElapsed(seconds: -5) == "0:00")
+    }
+
+    @Test @MainActor func engineStartsIdle() {
         let engine = PassiveStrengthSessionEngine()
         #expect(engine.formattedElapsedTime == "0:00")
         #expect(engine.phase == .idle)
         #expect(!engine.isActive)
+        #expect(!engine.summaryQueued)
     }
 
     @Test func freeformIDStillMarksPassiveSessions() {

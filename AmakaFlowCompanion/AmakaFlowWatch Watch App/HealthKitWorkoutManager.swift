@@ -191,12 +191,11 @@ final class HealthKitWorkoutManager: NSObject, ObservableObject {
         activeCalories = 0
         basalCalories = 0
         totalCalories = 0
-        heartRateHandlers.removeAll()
+        // Keep registered heart-rate handlers across sessions so consumers stay wired.
     }
 
     private func publishCalories() {
         totalCalories = activeCalories + basalCalories
-        heartRateHandlers.values.forEach { $0(heartRate, activeCalories) }
     }
 
 #if DEBUG

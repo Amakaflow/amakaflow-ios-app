@@ -197,6 +197,7 @@ final class WatchActualsDraftBuilderTests: XCTestCase {
         XCTAssertEqual(session.exercises.count, 1)
         XCTAssertEqual(session.exercises[0].name, "Exercise 1")
         XCTAssertNil(session.exercises[0].confirmation)
+        XCTAssertFalse(session.verified)
     }
 
     func testMakeFillInSessionSeedsBlankExerciseWhenSetLogsEmptyArray() throws {
@@ -208,6 +209,7 @@ final class WatchActualsDraftBuilderTests: XCTestCase {
         )
         XCTAssertEqual(session.exercises.count, 1)
         XCTAssertEqual(session.exercises[0].name, "Exercise 1")
+        XCTAssertFalse(session.verified)
     }
 
     func testMakeFillInSessionConvertsLbsToKg() throws {

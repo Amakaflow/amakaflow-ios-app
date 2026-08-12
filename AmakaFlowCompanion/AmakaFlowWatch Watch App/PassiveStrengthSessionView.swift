@@ -12,6 +12,7 @@ struct PassiveStrengthSessionView: View {
     @Environment(\.dismiss) private var dismiss
 
     @State private var showCountdown = true
+    @State private var didRequestStart = false
     @State private var controlsPage = 0
     @State private var showEndConfirmation = false
     @State private var showDiscardConfirmation = false
@@ -21,6 +22,8 @@ struct PassiveStrengthSessionView: View {
             if showCountdown && engine.phase == .idle {
                 WorkoutCountdownView(isPresented: $showCountdown) {
                     Task {
+                        guard !didRequestStart else { return }
+                        didRequestStart = true
                         await engine.start()
                     }
                 }
@@ -36,10 +39,10 @@ struct PassiveStrengthSessionView: View {
                 .tabViewStyle(.page(indexDisplayMode: .never))
             } else if !showCountdown {
                 ProgressView("Starting...")
-                    .onAppear {
-                        Task {
-                            await engine.start()
-                        }
+                    .task {
+                        guard !didRequestStart else { return }
+                        didRequestStart = true
+                        await engine.start()
                     }
             }
         }
@@ -218,11 +221,11 @@ struct PassiveStrengthSessionView: View {
 
     private var completeView: some View {
         VStack(spacing: 10) {
-            Image(systemName: "checkmark.circle.fill")
+            Image(systemName: engine.summaryQueued ? "checkmark.circle.fill" : "exclamationmark.circle.fill")
                 .font(.system(size: 44))
-                .foregroundColor(.green)
+                .foregroundColor(engine.summaryQueued ? .green : .orange)
 
-            Text("Saved")
+            Text(engine.summaryQueued ? "Saved" : "Saved on Watch")
                 .font(.title3)
                 .fontWeight(.bold)
 
@@ -236,10 +239,23 @@ struct PassiveStrengthSessionView: View {
                     .foregroundColor(.secondary)
             }
 
-            Text("Fill in on iPhone Today")
-                .font(.system(size: 11))
-                .foregroundColor(.secondary)
-                .multilineTextAlignment(.center)
+            if engine.summaryQueued {
+                Text("Fill in on iPhone Today")
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+            } else {
+                Text("iPhone sync pending — open AmakaFlow nearby")
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+
+                Button("Retry sync") {
+                    _ = engine.retrySummarySync()
+                }
+                .buttonStyle(.bordered)
+                .accessibilityIdentifier("af_watch_passive_strength_retry_sync")
+            }
 
             Button("Done") {
                 engine.reset()
