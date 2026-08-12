@@ -77,7 +77,9 @@ struct TodayDiaryView: View {
     }
 
     private var watchConnected: Bool {
-        watchConnectivity.isWatchReachable || watchConnectivity.isWatchAppInstalled
+        watchConnectivity.isWatchReachable
+            || watchConnectivity.isWatchAppInstalled
+            || GarminCIQPairingStore.shared.hasPairedGarmin
     }
 
     private var showsActualsTeachCard: Bool {
@@ -95,9 +97,9 @@ struct TodayDiaryView: View {
         actualsDemo.isActive
     }
 
-    /// Linked Strava with an in-flight sync — show progress, never Connect CTA.
-    private var showsStravaRefreshing: Bool {
-        actualsDemo.isRefreshing && actualsSources.isConnected(.strava)
+    /// Linked source with an in-flight sync — show progress, never Connect CTA.
+    private var showsSourcesRefreshing: Bool {
+        actualsDemo.isRefreshing && actualsSources.hasAnySourceConnected
     }
 
     /// Actuals rail cards restricted to the scrubber-selected local day.
@@ -116,9 +118,8 @@ struct TodayDiaryView: View {
     }
 
     /// Linked, sync done, nothing for the selected local day.
-    private var showsLinkedStravaEmptyToday: Bool {
-        actualsSources.isConnected(.strava)
-            && actualsDemo.isActive
+    private var showsLinkedSourcesEmptyToday: Bool {
+        actualsSources.hasAnySourceConnected
             && !actualsDemo.isRefreshing
             && actualsCardsForSelectedDay.isEmpty
             && todaysCompletions.isEmpty
@@ -136,7 +137,7 @@ struct TodayDiaryView: View {
                             guard days.indices.contains(newIndex) else { return }
                             selectedScrubberDay = days[newIndex].id
                         }
-                    Text(ActualsCopy.historyScrubberHint)
+                    Text(ActualsCopy.historyScrubberHint(connected: actualsSources.connectedProviders))
                         .font(.system(size: 8, design: .monospaced))
                         .foregroundColor(DailyDriver.foregroundDim)
                         .padding(.horizontal, 18)
@@ -151,9 +152,9 @@ struct TodayDiaryView: View {
                         }
 
                         if historyViewModel.isLoading && historyViewModel.completions.isEmpty
-                            && !showsActualsDemoRail && !showsStravaRefreshing {
+                            && !showsActualsDemoRail && !showsSourcesRefreshing {
                             loadingState
-                        } else if showsStravaRefreshing && !showsActualsDemoRail {
+                        } else if showsSourcesRefreshing && !showsActualsDemoRail {
                             // Already linked — keep the 30-day pull banner; no Connect CTA.
                             Color.clear.frame(height: 8)
                         } else if showsActualsTeachCard {
@@ -163,13 +164,10 @@ struct TodayDiaryView: View {
                             .padding(.top, 12)
                         } else if showsActualsDemoRail, !actualsCardsForSelectedDay.isEmpty {
                             actualsDemoContent
-                        } else if showsLinkedStravaEmptyToday {
-                            linkedStravaEmptyTodayState
-                        } else if todaysCompletions.isEmpty, !actualsSources.isConnected(.strava) {
-                            emptyDiaryState
+                        } else if showsLinkedSourcesEmptyToday {
+                            linkedSourcesEmptyTodayState
                         } else if todaysCompletions.isEmpty {
-                            // Linked but feed not active yet (edge) — still no Connect flash.
-                            linkedStravaEmptyTodayState
+                            emptyDiaryState
                         } else {
                             timeline
                             systemEventRows
@@ -862,7 +860,7 @@ struct TodayDiaryView: View {
                 .accessibilityIdentifier("af_today_jump_today")
             } else {
                 NavigationLink {
-                    DDDeviceDetailView()
+                    TodayOnYourWatchesView()
                         .ddSuppressFloatingChrome()
                 } label: {
                     DDWatchReadinessPill(
@@ -871,6 +869,7 @@ struct TodayDiaryView: View {
                     )
                 }
                 .buttonStyle(.plain)
+                .accessibilityIdentifier("af_today_watch_pill")
             }
         }
         .padding(.horizontal, 18)
@@ -918,32 +917,34 @@ struct TodayDiaryView: View {
                 .frame(maxWidth: .infinity)
                 .accessibilityIdentifier("af_today_empty_state")
 
-            // Offer Connect Sources only when nothing is linked yet.
-            Button {
-                showConnectSources = true
-            } label: {
-                Text(ActualsCopy.teachCTA)
-                    .ddDisplayText(14, weight: .bold)
-                    .foregroundColor(DailyDriver.ink)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 13)
-                    .background(DailyDriver.lime)
-                    .clipShape(Capsule())
+    // Offer Connect Sources only when nothing is linked yet.
+            if !actualsSources.hasAnySourceConnected {
+                Button {
+                    showConnectSources = true
+                } label: {
+                    Text(ActualsCopy.teachCTA)
+                        .ddDisplayText(14, weight: .bold)
+                        .foregroundColor(DailyDriver.ink)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 13)
+                        .background(DailyDriver.lime)
+                        .clipShape(Capsule())
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier(ActualsCopy.teachCTAAccessibilityID)
             }
-            .buttonStyle(.plain)
-            .accessibilityIdentifier(ActualsCopy.teachCTAAccessibilityID)
         }
         .padding(.top, 26)
     }
 
-    private var linkedStravaEmptyTodayState: some View {
+    private var linkedSourcesEmptyTodayState: some View {
         VStack(spacing: 12) {
-            Text(ActualsCopy.linkedEmptyToday)
+            Text(ActualsCopy.linkedEmptyToday(connected: actualsSources.connectedProviders))
                 .font(.system(size: 12))
                 .foregroundColor(DailyDriver.foregroundDim)
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: .infinity)
-                .accessibilityIdentifier("af_today_strava_empty_today")
+                .accessibilityIdentifier("af_today_linked_empty_today")
 
             Text("Sessions land here as they happen — or add one with ＋")
                 .font(.system(size: 12))
