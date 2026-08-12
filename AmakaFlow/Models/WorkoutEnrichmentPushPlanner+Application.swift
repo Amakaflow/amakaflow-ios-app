@@ -26,6 +26,10 @@ extension WorkoutEnrichmentPushPlanner {
         /// pick/ramp editor screens — every candidate the user touched
         /// (enabled or disabled), not just the enabled ones.
         var perExerciseRamps: [PerExerciseRamp]?
+        /// AMA-2423 — Transitions override for this push, parallel to
+        /// `restSecOverride`/`restOpenOverride`. `nil` keeps the prefs value.
+        var transitionSecOverride: Int?
+        var transitionOpenOverride: Bool?
 
         init(
             checkedKinds: Set<EnrichmentKind>,
@@ -33,7 +37,9 @@ extension WorkoutEnrichmentPushPlanner {
             restOpenOverride: Bool? = nil,
             sessionWarmupActivities: [EnrichmentActivityPref]? = nil,
             cooldownActivities: [EnrichmentActivityPref]? = nil,
-            perExerciseRamps: [PerExerciseRamp]? = nil
+            perExerciseRamps: [PerExerciseRamp]? = nil,
+            transitionSecOverride: Int? = nil,
+            transitionOpenOverride: Bool? = nil
         ) {
             self.checkedKinds = checkedKinds
             self.restSecOverride = restSecOverride
@@ -41,6 +47,8 @@ extension WorkoutEnrichmentPushPlanner {
             self.sessionWarmupActivities = sessionWarmupActivities
             self.cooldownActivities = cooldownActivities
             self.perExerciseRamps = perExerciseRamps
+            self.transitionSecOverride = transitionSecOverride
+            self.transitionOpenOverride = transitionOpenOverride
         }
     }
 
@@ -58,6 +66,11 @@ extension WorkoutEnrichmentPushPlanner {
                 || prefs.cooldown.enabled
                 || prefs.betweenSetRest.enabled
                 || prefs.exerciseWarmupSets.enabled
+                // AMA-2423 — Transitions-only accepts must still call mapper
+                // enrich; without this a checked Transitions-only decision
+                // would silently persist tombstones/prefs and never write
+                // transition_open/transition_sec onto the block.
+                || prefs.stationTransition.enabled
         }
 
         /// True when the sheet answer must be persisted (enrich and/or tombstones).
@@ -79,6 +92,9 @@ extension WorkoutEnrichmentPushPlanner {
         overridden.cooldown.enabled = checked.contains(.cooldown)
         overridden.betweenSetRest.enabled = checked.contains(.betweenSetRest)
         overridden.exerciseWarmupSets.enabled = checked.contains(.exerciseWarmupSets)
+        // AMA-2423 — mirrors betweenSetRest above; sends station_transition
+        // prefs to mapper enrich, tombstoned via the generic reject path below.
+        overridden.stationTransition.enabled = checked.contains(.stationTransition)
 
         // AMA-2378 Task 6 — door-screen edits only land when the kind is
         // checked; an unchecked kind keeps its standing activities/ramps
@@ -96,6 +112,16 @@ extension WorkoutEnrichmentPushPlanner {
             let restOpen = decision.restOpenOverride ?? prefs.betweenSetRest.restOpen
             let restSec = restOpen ? nil : (decision.restSecOverride ?? prefs.betweenSetRest.restSec)
             try overridden.betweenSetRest.setRest(restSec: restSec, restOpen: restOpen)
+        }
+
+        // AMA-2423 — mirrors the betweenSetRest override above.
+        if checked.contains(.stationTransition),
+           decision.transitionSecOverride != nil || decision.transitionOpenOverride != nil {
+            let transitionOpen = decision.transitionOpenOverride ?? prefs.stationTransition.transitionOpen
+            let transitionSec = transitionOpen
+                ? nil
+                : (decision.transitionSecOverride ?? prefs.stationTransition.transitionSec)
+            try overridden.stationTransition.setTransition(transitionSec: transitionSec, transitionOpen: transitionOpen)
         }
 
         // AMA-2408 F2 — opt-in ramps. Empty/nil `perExercise` no longer falls

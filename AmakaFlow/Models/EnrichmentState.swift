@@ -16,6 +16,12 @@ struct EnrichmentState: Equatable, Sendable {
     var perExerciseRamps: [PerExerciseRamp]
     var restOpen: Bool
     var restSec: Int
+    /// AMA-2423 — Transitions row config, parallel to `restOpen`/`restSec`.
+    /// Only meaningful when `.stationTransition` is checked (XOR with Rest).
+    /// Defaulted so the synthesized memberwise init stays source-compatible
+    /// with call sites (e.g. `WatchItemViewModel`) that predate this kind.
+    var transitionOpen: Bool = false
+    var transitionSec: Int = 60
     /// Warm-up candidates from the current workout — never invents ramps for
     /// names that appear later (late-added exercises stay unchecked).
     var candidateExerciseNames: [String]
@@ -29,6 +35,10 @@ struct EnrichmentState: Equatable, Sendable {
         var perExerciseRamps: [PerExerciseRamp]
         var restOpen: Bool
         var restSec: Int
+        /// AMA-2423 — additive; absent in pre-existing saved payloads (decode
+        /// falls back to `StationTransitionPrefs.defaults`-equivalent values).
+        var transitionOpen: Bool
+        var transitionSec: Int
 
         // Nested CodingKeys trips SwiftLint `nesting` at the default type_level.
         // swiftlint:disable:next nesting
@@ -39,6 +49,8 @@ struct EnrichmentState: Equatable, Sendable {
             case perExerciseRamps = "per_exercise_ramps"
             case restOpen = "rest_open"
             case restSec = "rest_sec"
+            case transitionOpen = "transition_open"
+            case transitionSec = "transition_sec"
         }
 
         var checkedKindSet: Set<EnrichmentKind> { Set(checkedKinds) }
@@ -49,7 +61,9 @@ struct EnrichmentState: Equatable, Sendable {
             cooldownActivities: [EnrichmentActivityPref],
             perExerciseRamps: [PerExerciseRamp],
             restOpen: Bool,
-            restSec: Int
+            restSec: Int,
+            transitionOpen: Bool = false,
+            transitionSec: Int = 60
         ) {
             self.checkedKinds = checkedKinds
             self.mobilityActivities = mobilityActivities
@@ -57,6 +71,8 @@ struct EnrichmentState: Equatable, Sendable {
             self.perExerciseRamps = perExerciseRamps
             self.restOpen = restOpen
             self.restSec = restSec
+            self.transitionOpen = transitionOpen
+            self.transitionSec = transitionSec
         }
 
         /// Lenient `checked_kinds`: unknown raw values drop that entry only so a
@@ -79,6 +95,9 @@ struct EnrichmentState: Equatable, Sendable {
             )
             restOpen = try container.decode(Bool.self, forKey: .restOpen)
             restSec = try container.decode(Int.self, forKey: .restSec)
+            // AMA-2423 — legacy saves predate these keys; default off/nil-equivalent.
+            transitionOpen = try container.decodeIfPresent(Bool.self, forKey: .transitionOpen) ?? false
+            transitionSec = try container.decodeIfPresent(Int.self, forKey: .transitionSec) ?? 60
         }
 
         func encode(to encoder: Encoder) throws {
@@ -89,6 +108,8 @@ struct EnrichmentState: Equatable, Sendable {
             try container.encode(perExerciseRamps, forKey: .perExerciseRamps)
             try container.encode(restOpen, forKey: .restOpen)
             try container.encode(restSec, forKey: .restSec)
+            try container.encode(transitionOpen, forKey: .transitionOpen)
+            try container.encode(transitionSec, forKey: .transitionSec)
         }
     }
 
@@ -112,6 +133,8 @@ struct EnrichmentState: Equatable, Sendable {
                 perExerciseRamps: saved.perExerciseRamps,
                 restOpen: saved.restOpen,
                 restSec: WorkoutEnrichmentPushCopy.normalizedRestSec(saved.restSec),
+                transitionOpen: saved.transitionOpen,
+                transitionSec: WorkoutEnrichmentPushCopy.normalizedTransitionSec(saved.transitionSec),
                 candidateExerciseNames: candidateExerciseNames,
                 target: target
             )
@@ -133,6 +156,13 @@ struct EnrichmentState: Equatable, Sendable {
             ),
             restSec: WorkoutEnrichmentPushCopy.normalizedRestSec(
                 globalDefaults.betweenSetRest.restSec
+            ),
+            transitionOpen: WorkoutEnrichmentPushCopy.initialTransitionOpen(
+                standing: globalDefaults.stationTransition,
+                target: target
+            ),
+            transitionSec: WorkoutEnrichmentPushCopy.normalizedTransitionSec(
+                globalDefaults.stationTransition.transitionSec
             ),
             candidateExerciseNames: candidateExerciseNames,
             target: target
@@ -171,7 +201,9 @@ struct EnrichmentState: Equatable, Sendable {
             cooldownActivities: cooldownActivities,
             perExerciseRamps: perExerciseRamps,
             restOpen: restOpen,
-            restSec: restSec
+            restSec: restSec,
+            transitionOpen: transitionOpen,
+            transitionSec: transitionSec
         )
     }
 
@@ -184,7 +216,9 @@ struct EnrichmentState: Equatable, Sendable {
             sessionWarmupActivities: checkedKinds.contains(.sessionWarmup) ? mobilityActivities : nil,
             cooldownActivities: checkedKinds.contains(.cooldown) ? cooldownActivities : nil,
             // Empty array is intentional (opt-in): tells apply to exclude all.
-            perExerciseRamps: checkedKinds.contains(.exerciseWarmupSets) ? perExerciseRamps : nil
+            perExerciseRamps: checkedKinds.contains(.exerciseWarmupSets) ? perExerciseRamps : nil,
+            transitionSecOverride: checkedKinds.contains(.stationTransition) && !transitionOpen ? transitionSec : nil,
+            transitionOpenOverride: checkedKinds.contains(.stationTransition) ? transitionOpen : nil
         )
     }
 
@@ -216,9 +250,12 @@ struct EnrichmentState: Equatable, Sendable {
                 target: target
             )
         case .stationTransition:
-            // AMA-2423 Task 6 wires the transition row summary + state fields;
-            // this kind is never offered/checked until then.
-            return nil
+            return EnrichmentRowSummary.transition(
+                isOn: checkedKinds.contains(.stationTransition),
+                transitionOpen: transitionOpen,
+                transitionSec: transitionSec,
+                target: target
+            )
         }
     }
 

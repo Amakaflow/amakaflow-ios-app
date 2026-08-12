@@ -226,6 +226,8 @@ extension WorkoutEnrichmentPushSheet {
     private func offerRow(_ offer: WorkoutEnrichmentPushPlanner.Offer) -> some View {
         if offer.kind == .betweenSetRest {
             restRow(offer)
+        } else if offer.kind == .stationTransition {
+            transitionRow(offer)
         } else {
             doorRow(offer)
         }
@@ -302,7 +304,77 @@ extension WorkoutEnrichmentPushSheet {
     }
 
     private func optionalOfferDetail(_ offer: WorkoutEnrichmentPushPlanner.Offer) -> String? {
-        offer.kind == .betweenSetRest ? offer.detail : nil
+        offer.kind == .betweenSetRest || offer.kind == .stationTransition ? offer.detail : nil
+    }
+
+    // MARK: - AMA-2423 v1 inline transitions row (mirrors restRow)
+
+    private func transitionRow(_ offer: WorkoutEnrichmentPushPlanner.Offer) -> some View {
+        let isChecked = state.checkedKinds.contains(offer.kind)
+        return VStack(alignment: .leading, spacing: 8) {
+            Toggle(isOn: checkedBinding(for: offer.kind)) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(offer.title)
+                        .ddDisplayText(14, weight: .bold)
+                        .foregroundColor(DailyDriver.foreground)
+                    if let detail = liveSummary(for: offer.kind) ?? optionalOfferDetail(offer) {
+                        Text(detail)
+                            .font(.system(size: 10.5))
+                            .foregroundColor(DailyDriver.foregroundMuted)
+                            .monospacedDigit()
+                            .multilineTextAlignment(.leading)
+                    }
+                    if offer.wasTombstoned, !offer.isChecked {
+                        Text("You removed this before — tick to add it back.")
+                            .font(.system(size: 10))
+                            .foregroundColor(DailyDriver.amber)
+                            .multilineTextAlignment(.leading)
+                    }
+                }
+            }
+            .tint(DailyDriver.lime)
+            .accessibilityIdentifier("af_enrichment_push_offer_\(offer.kind.rawValue)")
+            .accessibilityAddTraits(isChecked ? [.isSelected] : [])
+
+            if isChecked {
+                transitionOverride
+            }
+        }
+        .padding(.horizontal, 15)
+        .padding(.vertical, 11)
+        .background(DailyDriver.card)
+        .overlay(
+            RoundedRectangle(cornerRadius: Theme.CornerRadius.md, style: .continuous)
+                .stroke(DailyDriver.border, lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.md, style: .continuous))
+        .accessibilityIdentifier("af_enhance_row_transition")
+    }
+
+    private var transitionOverride: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Picker("", selection: transitionOpenBinding) {
+                Text(WorkoutEnrichmentPushCopy.transitionOpenSegmentLabel(target: target)).tag(true)
+                Text(WorkoutEnrichmentPushCopy.transitionTimedSegmentLabel).tag(false)
+            }
+            .pickerStyle(.segmented)
+            .tint(DailyDriver.lime)
+            .accessibilityIdentifier("af_enrichment_push_transition_open")
+
+            if !state.transitionOpen {
+                Stepper(
+                    "\(state.transitionSec)s",
+                    value: transitionSecBinding,
+                    in: WorkoutEnrichmentPushCopy.transitionSecRange,
+                    step: 15
+                )
+                .font(.system(size: 11))
+                .foregroundColor(DailyDriver.foregroundMuted)
+                .monospacedDigit()
+                .accessibilityIdentifier("af_enrichment_push_transition_sec")
+            }
+        }
+        .padding(.leading, 28)
     }
 
     // MARK: - v2 door rows
@@ -369,7 +441,7 @@ extension WorkoutEnrichmentPushSheet {
         case .cooldown: return .sequence(.cooldown)
         case .exerciseWarmupSets: return .warmupPick
         case .betweenSetRest: return nil
-        // AMA-2423 Task 6 wires the transition row's door; not offered yet.
+        // Transitions is a v1 inline row (transitionRow), not a v2 door.
         case .stationTransition: return nil
         }
     }
@@ -405,6 +477,25 @@ extension WorkoutEnrichmentPushSheet {
                 dispatch(.setRest(
                     open: state.restOpen,
                     sec: WorkoutEnrichmentPushCopy.normalizedRestSec($0)
+                ))
+            }
+        )
+    }
+
+    private var transitionOpenBinding: Binding<Bool> {
+        Binding(
+            get: { state.transitionOpen },
+            set: { dispatch(.setStationTransition(open: $0, sec: state.transitionSec)) }
+        )
+    }
+
+    private var transitionSecBinding: Binding<Int> {
+        Binding(
+            get: { state.transitionSec },
+            set: {
+                dispatch(.setStationTransition(
+                    open: state.transitionOpen,
+                    sec: WorkoutEnrichmentPushCopy.normalizedTransitionSec($0)
                 ))
             }
         )

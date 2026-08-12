@@ -173,6 +173,9 @@ final class EnrichmentReducerTests: XCTestCase {
         let decoded = try JSONDecoder().decode(EnrichmentState.Persisted.self, from: json)
         XCTAssertEqual(decoded.checkedKinds, [.exerciseWarmupSets])
         XCTAssertEqual(decoded.restSec, 60)
+        // AMA-2423 — legacy saves predate transition_open/transition_sec.
+        XCTAssertFalse(decoded.transitionOpen)
+        XCTAssertEqual(decoded.transitionSec, 60)
     }
 
     func testMigrationByteIdenticalEffectiveRamps() {
@@ -391,6 +394,61 @@ final class EnrichmentReducerTests: XCTestCase {
         XCTAssertEqual(state, before)
         state = EnrichmentReducer.reduce(state, .skip)
         XCTAssertEqual(state, before)
+    }
+
+    /// AMA-2423 — Transitions segmented control, parallel to `testReducerSetSequenceAndRestAndSkipConfirm`.
+    func testReducerSetStationTransition() {
+        var state = baseState(candidates: ["A"])
+        state = EnrichmentReducer.reduce(state, .setStationTransition(open: true, sec: 60))
+        XCTAssertTrue(state.transitionOpen)
+        state = EnrichmentReducer.reduce(state, .setStationTransition(open: false, sec: 999))
+        XCTAssertFalse(state.transitionOpen)
+        XCTAssertEqual(state.transitionSec, 300) // clamped, same grid as Rest
+    }
+
+    /// AMA-2423 — `decision.transitionSecOverride`/`transitionOpenOverride` only
+    /// ride along when `.stationTransition` is checked (mirrors Rest's contract).
+    func testDecisionIncludesTransitionOverridesOnlyWhenChecked() {
+        var state = baseState(candidates: ["A"])
+        state.transitionOpen = false
+        state.transitionSec = 90
+        XCTAssertNil(state.decision.transitionSecOverride)
+        XCTAssertNil(state.decision.transitionOpenOverride)
+
+        state.checkedKinds.insert(.stationTransition)
+        XCTAssertEqual(state.decision.transitionSecOverride, 90)
+        XCTAssertEqual(state.decision.transitionOpenOverride, false)
+
+        state.transitionOpen = true
+        XCTAssertNil(state.decision.transitionSecOverride)
+        XCTAssertEqual(state.decision.transitionOpenOverride, true)
+    }
+
+    /// AMA-2423 — Transitions round-trips through persist/reopen like Rest.
+    func testRoundTripPersistsTransitionFields() throws {
+        let workoutID = "w-roundtrip-transition-\(UUID().uuidString)"
+        var state = EnrichmentState.seed(
+            workoutPrefs: nil,
+            globalDefaults: .defaults,
+            defaultCheckedKinds: [.stationTransition],
+            candidateExerciseNames: [],
+            target: .garmin
+        )
+        state = EnrichmentReducer.reduce(state, .setStationTransition(open: false, sec: 45))
+
+        store.save(workoutID: workoutID, prefs: state.persisted())
+        let reloaded = store.load(workoutID: workoutID)
+        let reopened = EnrichmentState.seed(
+            workoutPrefs: reloaded,
+            globalDefaults: .defaults,
+            defaultCheckedKinds: [],
+            candidateExerciseNames: [],
+            target: .garmin
+        )
+
+        XCTAssertTrue(reopened.checkedKinds.contains(.stationTransition))
+        XCTAssertFalse(reopened.transitionOpen)
+        XCTAssertEqual(reopened.transitionSec, 45)
     }
 
     func testWatchItemSummaryRoutesThroughEnrichmentRowSummary() throws {

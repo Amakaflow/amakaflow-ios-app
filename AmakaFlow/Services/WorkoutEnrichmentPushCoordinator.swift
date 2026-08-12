@@ -180,7 +180,18 @@ final class WorkoutEnrichmentPushCoordinator {
                 blocksJSON = cleared
             }
 
-            guard application.needsPersist || didClearRest else {
+            // AMA-2423 — Transitions offered + unchecked → strip block
+            // transition intent, mirroring the Rest opt-out above, so reject
+            // cannot leave a stale Transition on the block.
+            var didClearTransition = false
+            if prepared.plan.offer(.stationTransition) != nil,
+               !decision.checkedKinds.contains(.stationTransition) {
+                let cleared = WorkoutEnrichmentMutations.clearBlockTransitionIntent(in: blocksJSON)
+                didClearTransition = !NSDictionary(dictionary: cleared).isEqual(to: blocksJSON)
+                blocksJSON = cleared
+            }
+
+            guard application.needsPersist || didClearRest || didClearTransition else {
                 return ApplyOutcome(applied: false, note: nil)
             }
 

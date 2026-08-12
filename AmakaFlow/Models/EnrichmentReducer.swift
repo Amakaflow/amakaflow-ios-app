@@ -14,6 +14,8 @@ enum EnrichmentAction: Equatable, Sendable {
     case toggleExercise(String)
     case setSequence(EnrichmentSequenceKind, [EnrichmentActivityPref])
     case setRest(open: Bool, sec: Int)
+    /// AMA-2423 — Transitions row segmented control, parallel to `setRest`.
+    case setStationTransition(open: Bool, sec: Int)
     case applyRampToAll(sets: [RampSet])
     case replaceRamps([PerExerciseRamp])
     case confirm
@@ -35,6 +37,8 @@ enum EnrichmentReducer {
             return setSequence(state, kind: kind, steps: steps)
         case .setRest(let open, let sec):
             return setRest(state, open: open, sec: sec)
+        case .setStationTransition(let open, let sec):
+            return setStationTransition(state, open: open, sec: sec)
         case .applyRampToAll(let sets):
             return applyRampToAll(state, sets: sets)
         case .replaceRamps(let ramps):
@@ -116,6 +120,17 @@ enum EnrichmentReducer {
         var next = state
         next.restOpen = open
         next.restSec = WorkoutEnrichmentPushCopy.normalizedRestSec(sec)
+        return next
+    }
+
+    private static func setStationTransition(
+        _ state: EnrichmentState,
+        open: Bool,
+        sec: Int
+    ) -> EnrichmentState {
+        var next = state
+        next.transitionOpen = open
+        next.transitionSec = WorkoutEnrichmentPushCopy.normalizedTransitionSec(sec)
         return next
     }
 
