@@ -5,20 +5,21 @@
 //  AMA-2420 — freeform Start template + plan-linked resolver.
 //
 
+@testable import AmakaFlowWatch_Watch_App
 import Foundation
 import Testing
-@testable import AmakaFlowWatch_Watch_App
 
 struct FreeformStrengthWorkoutTests {
-
     @Test func freeformTemplateIsStrengthWithOpenSets() {
         let workout = FreeformStrengthWorkout.make(
-            now: Date(timeIntervalSince1970: 1_776_000_000)
+            now: Date(timeIntervalSince1970: 1_776_000_000),
+            uniqueSuffix: "test-a"
         )
         #expect(workout.sport == .strength)
         #expect(workout.name == "Strength")
         #expect(FreeformStrengthWorkout.isFreeformID(workout.id))
         #expect(workout.id.contains("1776000000"))
+        #expect(workout.id.contains("test-a"))
 
         let steps = flattenWatchIntervals(workout.intervals)
         #expect(steps.count == FreeformStrengthWorkout.openSetCapacity)
@@ -26,6 +27,15 @@ struct FreeformStrengthWorkoutTests {
         #expect(steps.first?.label == "Exercise")
         #expect(steps.first?.setNumber == 1)
         #expect(steps.last?.setNumber == FreeformStrengthWorkout.openSetCapacity)
+    }
+
+    @Test func freeformIDsDifferForSameNow() {
+        let now = Date(timeIntervalSince1970: 1_776_000_000)
+        let first = FreeformStrengthWorkout.make(now: now)
+        let second = FreeformStrengthWorkout.make(now: now)
+        #expect(first.id != second.id)
+        #expect(FreeformStrengthWorkout.isFreeformID(first.id))
+        #expect(FreeformStrengthWorkout.isFreeformID(second.id))
     }
 
     @Test func planLinkedRequiresFlagAndStrengthSession() {
@@ -92,6 +102,46 @@ struct FreeformStrengthWorkoutTests {
             flagEnabled: true
         )
         #expect(resolved?.id == "lib-9")
+    }
+
+    @Test func planLinkedRejectsAmbiguousNameMatches() {
+        let session = PlannedSession(
+            id: "day-1",
+            name: "Legs",
+            scheduledTime: nil,
+            sport: "strength",
+            durationMinutes: nil,
+            isCompleted: false,
+            isNext: true
+        )
+        let first = Workout(
+            id: "lib-a",
+            name: "Legs",
+            sport: .strength,
+            duration: 0,
+            intervals: [
+                .reps(sets: 2, reps: 5, name: "Squat", load: nil, restSec: nil, followAlongUrl: nil)
+            ],
+            source: .other
+        )
+        let second = Workout(
+            id: "lib-b",
+            name: " legs ",
+            sport: .strength,
+            duration: 0,
+            intervals: [
+                .reps(sets: 3, reps: 8, name: "RDL", load: nil, restSec: nil, followAlongUrl: nil)
+            ],
+            source: .other
+        )
+
+        #expect(
+            StrengthAutoCaptureStart.planLinkedWorkout(
+                for: session,
+                in: [first, second],
+                flagEnabled: true
+            ) == nil
+        )
     }
 
     @Test func planLinkedSkipsCompletedAndNonStrength() {

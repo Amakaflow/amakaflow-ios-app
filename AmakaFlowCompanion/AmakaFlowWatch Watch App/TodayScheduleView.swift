@@ -17,7 +17,13 @@ struct TodayScheduleView: View {
     var body: some View {
         Group {
             if viewModel.isLoading {
-                loadingView
+                ScrollView {
+                    VStack(spacing: 8) {
+                        loadingView
+                        freeformStartSection
+                    }
+                    .padding(.horizontal, 4)
+                }
             } else if let dayState = viewModel.dayState {
                 scheduleContent(dayState)
             } else if let error = viewModel.errorMessage {

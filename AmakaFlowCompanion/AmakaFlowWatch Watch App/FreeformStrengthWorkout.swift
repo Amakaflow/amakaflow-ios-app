@@ -12,9 +12,12 @@ enum FreeformStrengthWorkout {
     /// Open set slots for a typical gym session; user can End early.
     static let openSetCapacity = 24
 
-    static func make(now: Date = Date()) -> Workout {
+    static func make(
+        now: Date = Date(),
+        uniqueSuffix: String = UUID().uuidString
+    ) -> Workout {
         Workout(
-            id: "\(idPrefix)-\(Int(now.timeIntervalSince1970))",
+            id: "\(idPrefix)-\(Int(now.timeIntervalSince1970))-\(uniqueSuffix)",
             name: "Strength",
             sport: .strength,
             duration: 0,

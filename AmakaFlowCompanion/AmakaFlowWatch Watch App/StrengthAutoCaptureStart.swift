@@ -27,11 +27,14 @@ enum StrengthAutoCaptureStart {
         let normalizedName = session.name
             .trimmingCharacters(in: .whitespacesAndNewlines)
             .lowercased()
-        return workouts.first {
+        let matches = workouts.filter {
             $0.sport == .strength
                 && !$0.intervals.isEmpty
                 && $0.name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
                     == normalizedName
         }
+        // Ambiguous duplicates must not silently pick an arbitrary plan target.
+        guard matches.count == 1 else { return nil }
+        return matches[0]
     }
 }
