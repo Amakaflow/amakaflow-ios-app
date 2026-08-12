@@ -7,6 +7,7 @@
 
 import SwiftUI
 
+// swiftlint:disable:next type_body_length
 struct StandaloneWorkoutExecutionView: View {
     @StateObject private var engine = StandaloneWorkoutEngine.shared
     @Environment(\.dismiss) private var dismiss

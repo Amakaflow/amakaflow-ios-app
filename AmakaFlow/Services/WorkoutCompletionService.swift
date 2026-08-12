@@ -6,6 +6,8 @@
 //  Includes offline queuing and retry logic
 //
 
+// swiftlint:disable file_length
+
 import Foundation
 import Combine
 import Network
@@ -264,6 +266,7 @@ protocol WorkoutCompletionServiceProviding: AnyObject {
 }
 
 @MainActor
+// swiftlint:disable:next type_body_length
 class WorkoutCompletionService: ObservableObject, WorkoutCompletionServiceProviding, WorkoutCompletionQueueProviding {
     static let shared = WorkoutCompletionService()
 
