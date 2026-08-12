@@ -1,0 +1,53 @@
+# AMA-2420 — Settings → Experimental → Strength auto-capture toggle
+appId: com.myamaka.AmakaFlowCompanion
+---
+- launchApp:
+    appId: com.myamaka.AmakaFlowCompanion
+    clearState: true
+    permissions:
+      notifications: deny
+    arguments:
+      UITEST_CLERK_TEST_SESSION: "user_id=user_ama2420_experimental,email=claude+clerk_test@amakaflow.dev,name=AMA2420 Experimental"
+      UITEST_SKIP_ONBOARDING: "true"
+      UITEST_SKIP_APPLE_WATCH: "true"
+      UITEST_USE_FIXTURES: "true"
+- waitForAnimationToEnd:
+    timeout: 5000
+- extendedWaitUntil:
+    visible:
+      id: "af_tabbar"
+    timeout: 60000
+- tapOn:
+    text: "Profile"
+    index: 0
+- waitForAnimationToEnd:
+    timeout: 3000
+- extendedWaitUntil:
+    visible:
+      text: "Settings"
+    timeout: 15000
+- tapOn:
+    text: "Settings"
+- waitForAnimationToEnd:
+    timeout: 3000
+- scrollUntilVisible:
+    element:
+      id: "settings_row_experimental"
+    direction: DOWN
+    timeout: 20000
+- tapOn:
+    id: "settings_row_experimental"
+- waitForAnimationToEnd:
+    timeout: 2000
+- extendedWaitUntil:
+    visible:
+      id: "settings_toggle_strength_auto_capture"
+    timeout: 10000
+- assertVisible: "Strength auto-capture"
+- assertVisible: "Does not remote-start Apple Fitness"
+- takeScreenshot: docs/ama-2420-dogfood/01-experimental-off
+- tapOn:
+    id: "settings_toggle_strength_auto_capture"
+- waitForAnimationToEnd:
+    timeout: 1000
+- takeScreenshot: docs/ama-2420-dogfood/02-experimental-on
