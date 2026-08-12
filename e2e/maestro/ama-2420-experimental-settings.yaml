@@ -1,4 +1,8 @@
 # AMA-2420 — Settings → Experimental → Strength auto-capture toggle
+#
+# Note: NavigationLink + UISwitch on iOS 26 need text/point taps in Maestro;
+# accessibility ids are still asserted for presence. Pure id taps do not
+# activate the accordion NavigationLink or flip the switch reliably.
 appId: com.myamaka.AmakaFlowCompanion
 ---
 - launchApp:
@@ -68,7 +72,7 @@ appId: com.myamaka.AmakaFlowCompanion
 - waitForAnimationToEnd:
     timeout: 2000
 - extendedWaitUntil:
-        visible:
-            id: "settings_toggle_strength_auto_capture"
-        timeout: 10000
+    visible:
+      id: "settings_toggle_strength_auto_capture"
+    timeout: 10000
 - takeScreenshot: docs/ama-2420-dogfood/03-experimental-persisted
