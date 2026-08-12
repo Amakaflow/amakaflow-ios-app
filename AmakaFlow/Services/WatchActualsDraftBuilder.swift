@@ -24,7 +24,8 @@ enum WatchActualsDraftBuilder {
                         setNumber: $0.setNumber,
                         weight: $0.weight,
                         unit: $0.unit,
-                        completed: $0.completed
+                        completed: $0.completed,
+                        detectionMethod: $0.detectionMethod
                     )
                 }
             )
@@ -71,6 +72,9 @@ enum WatchActualsDraftBuilder {
                     exercises[index].actualWeightKg = kilograms(weight: weight, unit: last.unit)
                 }
                 exercises[index].actualSets = max(completed.count, exercises[index].planned.sets)
+                if completed.allSatisfy({ $0.detectionMethod == "autoConfirmed" }) {
+                    exercises[index].confirmation = .asPlanned
+                }
             }
         }
     }
@@ -90,7 +94,9 @@ enum WatchActualsDraftBuilder {
                     weightKg: weightKg,
                     note: nil
                 ),
-                confirmation: nil,
+                confirmation: completed.allSatisfy({ $0.detectionMethod == "autoConfirmed" })
+                    ? .asPlanned
+                    : nil,
                 actualSets: setCount,
                 actualReps: 1,
                 actualWeightKg: weightKg

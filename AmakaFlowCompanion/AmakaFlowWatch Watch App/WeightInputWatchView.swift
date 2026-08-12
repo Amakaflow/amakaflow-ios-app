@@ -13,8 +13,13 @@ struct WeightInputWatchView: View {
     let totalSets: Int
     let suggestedWeight: Double?
     let weightUnit: String
+    /// When true and crown still matches prescribed load, primary CTA is "AS PLANNED" (AMA-2420 Phase 3).
+    let allowCompleteAsPrescribed: Bool
+    /// Prescribed load from plan (not last-logged). Used to decide AS PLANNED vs LOG.
+    let prescribedWeight: Double?
     let onLogSet: (Double?, String) -> Void
     let onSkipWeight: () -> Void
+    let onCompleteAsPrescribed: (() -> Void)?
 
     @State private var weight: Double
     @State private var crownValue: Double = 0
@@ -24,22 +29,33 @@ struct WeightInputWatchView: View {
         weightUnit == "kg" ? 2.5 : 5.0
     }
 
+    private var isAtPrescribedWeight: Bool {
+        guard allowCompleteAsPrescribed, let prescribed = prescribedWeight else { return false }
+        return abs(weight - prescribed) < 0.01
+    }
+
     init(
         exerciseName: String,
         setNumber: Int,
         totalSets: Int,
         suggestedWeight: Double?,
         weightUnit: String,
+        allowCompleteAsPrescribed: Bool = false,
+        prescribedWeight: Double? = nil,
         onLogSet: @escaping (Double?, String) -> Void,
-        onSkipWeight: @escaping () -> Void
+        onSkipWeight: @escaping () -> Void,
+        onCompleteAsPrescribed: (() -> Void)? = nil
     ) {
         self.exerciseName = exerciseName
         self.setNumber = setNumber
         self.totalSets = totalSets
         self.suggestedWeight = suggestedWeight
         self.weightUnit = weightUnit
+        self.allowCompleteAsPrescribed = allowCompleteAsPrescribed
+        self.prescribedWeight = prescribedWeight
         self.onLogSet = onLogSet
         self.onSkipWeight = onSkipWeight
+        self.onCompleteAsPrescribed = onCompleteAsPrescribed
         _weight = State(initialValue: suggestedWeight ?? 0)
         _crownValue = State(initialValue: suggestedWeight ?? 0)
     }
@@ -106,23 +122,33 @@ struct WeightInputWatchView: View {
                 }
                 .buttonStyle(.plain)
 
-                // Log Set button (primary action)
+                // Primary: AS PLANNED when still at prescribed, else LOG
                 Button {
-                    let logWeight = weight > 0 ? weight : nil
-                    onLogSet(logWeight, weightUnit)
+                    if isAtPrescribedWeight, let onCompleteAsPrescribed {
+                        onCompleteAsPrescribed()
+                    } else {
+                        let logWeight = weight > 0 ? weight : nil
+                        onLogSet(logWeight, weightUnit)
+                    }
                 } label: {
                     HStack(spacing: 4) {
                         Image(systemName: "checkmark")
                             .font(.system(size: 14, weight: .bold))
-                        Text("LOG")
-                            .font(.system(size: 14, weight: .bold))
+                        Text(isAtPrescribedWeight ? "AS PLANNED" : "LOG")
+                            .font(.system(size: 12, weight: .bold))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
                     }
                     .foregroundColor(.white)
-                    .frame(width: 80, height: 44)
+                    .frame(minWidth: 88, minHeight: 44)
+                    .padding(.horizontal, 8)
                     .background(Color.green)
                     .cornerRadius(22)
                 }
                 .buttonStyle(.plain)
+                .accessibilityIdentifier(
+                    isAtPrescribedWeight ? "af_watch_as_planned" : "af_watch_log_set"
+                )
             }
         }
         .padding(.horizontal, 4)

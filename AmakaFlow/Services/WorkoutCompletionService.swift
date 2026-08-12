@@ -157,12 +157,29 @@ struct SetEntry: Codable {
     let weight: Double?
     let unit: String?
     let completed: Bool
+    /// AMA-2420 — `manual` | `autoConfirmed` | `inferred` (optional; ignored by older backends).
+    let detectionMethod: String?
 
     enum CodingKeys: String, CodingKey {
         case setNumber = "set_number"
         case weight
         case unit
         case completed
+        case detectionMethod = "detection_method"
+    }
+
+    init(
+        setNumber: Int,
+        weight: Double?,
+        unit: String?,
+        completed: Bool,
+        detectionMethod: String? = nil
+    ) {
+        self.setNumber = setNumber
+        self.weight = weight
+        self.unit = unit
+        self.completed = completed
+        self.detectionMethod = detectionMethod
     }
 }
 
@@ -435,7 +452,8 @@ class WorkoutCompletionService: ObservableObject, WorkoutCompletionServiceProvid
                         setNumber: entry.setNumber,
                         weight: entry.weight,
                         unit: entry.unit,
-                        completed: entry.completed
+                        completed: entry.completed,
+                        detectionMethod: entry.detectionMethod
                     )
                 }
             )

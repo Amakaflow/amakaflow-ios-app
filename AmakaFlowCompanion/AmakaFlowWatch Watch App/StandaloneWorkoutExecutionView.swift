@@ -90,11 +90,16 @@ struct StandaloneWorkoutExecutionView: View {
                 totalSets: totalSets,
                 suggestedWeight: engine.suggestedWeight(for: step),
                 weightUnit: engine.suggestedWeightUnit(for: step),
+                allowCompleteAsPrescribed: engine.canCompleteAsPrescribed(for: step),
+                prescribedWeight: engine.prescribedLoad(for: step)?.weight,
                 onLogSet: { weight, unit in
                     engine.logSetWeight(weight: weight, unit: unit)
                 },
                 onSkipWeight: {
                     engine.logSetWeight(weight: nil, unit: nil)
+                },
+                onCompleteAsPrescribed: {
+                    engine.completeSetAsPrescribed()
                 }
             )
         } else {

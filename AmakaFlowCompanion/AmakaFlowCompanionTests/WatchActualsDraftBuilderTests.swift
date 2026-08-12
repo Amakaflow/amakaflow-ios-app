@@ -12,6 +12,29 @@ final class WatchActualsDraftBuilderTests: XCTestCase {
 
     // MARK: - StandaloneLoadHint
 
+    func testMakeFillInSessionMarksAsPlannedWhenAutoConfirmed() throws {
+        let summary = makeSummary(setLogs: [
+            StandaloneSetLog(
+                exerciseName: "Press",
+                exerciseIndex: 0,
+                sets: [
+                    StandaloneSetEntry(
+                        setNumber: 1,
+                        weight: 40,
+                        unit: "kg",
+                        completed: true,
+                        detectionMethod: "autoConfirmed"
+                    )
+                ]
+            )
+        ])
+
+        let session = try XCTUnwrap(
+            WatchActualsDraftBuilder.makeFillInSession(summary: summary, libraryWorkout: nil)
+        )
+        XCTAssertEqual(session.exercises[0].confirmation, .asPlanned)
+    }
+
     func testLoadHintParsesKg() {
         let parsed = StandaloneLoadHint.parse("100 kg")
         XCTAssertEqual(parsed?.weight, 100)
