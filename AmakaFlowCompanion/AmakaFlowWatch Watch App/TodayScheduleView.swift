@@ -11,6 +11,8 @@ import SwiftUI
 struct TodayScheduleView: View {
     @ObservedObject var viewModel: DayStateViewModel
     @EnvironmentObject var workoutManager: WatchWorkoutManager
+    /// Bumps when phone syncs the experimental Strength auto-capture flag so Start re-evaluates.
+    @State private var strengthAutoCaptureEpoch = 0
 
     var body: some View {
         Group {
@@ -26,6 +28,13 @@ struct TodayScheduleView: View {
         }
         .onAppear {
             viewModel.requestDayState()
+        }
+        .onReceive(
+            NotificationCenter.default.publisher(
+                for: WatchStrengthAutoCaptureSettings.didChangeNotification
+            )
+        ) { _ in
+            strengthAutoCaptureEpoch += 1
         }
     }
 
@@ -140,11 +149,13 @@ struct TodayScheduleView: View {
     /// AMA-2420 — plan-linked Start when experimental flag is on and a synced
     /// strength workout with steps is available on the Watch.
     private func strengthStartWorkout(for session: PlannedSession) -> Workout? {
+        _ = strengthAutoCaptureEpoch
         guard WatchStrengthAutoCaptureSettings.isEnabled else { return nil }
         guard !session.isCompleted else { return nil }
         guard HKWorkoutActivityMapping.isStrengthSportLabel(session.sport) else { return nil }
 
         if let byID = workoutManager.workouts.first(where: { $0.id == session.id }),
+           byID.sport == .strength,
            !byID.intervals.isEmpty {
             return byID
         }

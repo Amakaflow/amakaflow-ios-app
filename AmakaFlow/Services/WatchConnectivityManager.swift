@@ -281,9 +281,9 @@ class WatchConnectivityManager: NSObject, ObservableObject {
         // transferUserInfo survives when the Watch is not reachable.
         _ = session.transferUserInfo(payload)
         if session.isReachable {
-            session.sendMessage(payload, replyHandler: nil, errorHandler: { error in
+            session.sendMessage(payload, replyHandler: nil) { error in
                 print("⌚️ Failed to send experimentalFlags: \(error)")
-            })
+            }
         }
     }
 }

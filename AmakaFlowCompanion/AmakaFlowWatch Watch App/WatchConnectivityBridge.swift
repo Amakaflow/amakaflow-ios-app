@@ -79,9 +79,10 @@ final class WatchConnectivityBridge: NSObject, ObservableObject {
         }
     }
 
-    func startHealthSession() async {
+    func startHealthSession(sport: WorkoutSport = .strength) async {
         do {
-            try await healthManager.startSession()
+            let activityType = HKWorkoutActivityMapping.activityType(for: sport)
+            try await healthManager.startSession(activityType: activityType)
             startHRStreaming()
         } catch {
             print("⌚️ Failed to start health session: \(error)")
