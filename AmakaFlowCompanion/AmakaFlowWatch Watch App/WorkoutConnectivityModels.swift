@@ -188,19 +188,29 @@ public struct StandaloneSetEntry: Codable, Equatable {
     public let weight: Double?
     public let unit: String?
     public let completed: Bool
+    /// AMA-2420 Phase 3 — `manual` | `autoConfirmed` | `inferred` (local + Actuals; optional on wire).
+    public let detectionMethod: String?
 
     public enum CodingKeys: String, CodingKey {
         case setNumber = "set_number"
         case weight
         case unit
         case completed
+        case detectionMethod = "detection_method"
     }
 
-    public init(setNumber: Int, weight: Double?, unit: String?, completed: Bool) {
+    public init(
+        setNumber: Int,
+        weight: Double?,
+        unit: String?,
+        completed: Bool,
+        detectionMethod: String? = nil
+    ) {
         self.setNumber = setNumber
         self.weight = weight
         self.unit = unit
         self.completed = completed
+        self.detectionMethod = detectionMethod
     }
 }
 

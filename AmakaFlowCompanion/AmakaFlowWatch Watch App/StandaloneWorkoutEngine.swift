@@ -288,8 +288,12 @@ final class StandaloneWorkoutEngine: ObservableObject {
         playHaptic(.click)
     }
 
-    /// AMA-2420 Phase 2 — crown LOG / skip on a reps step, then advance (may enter rest).
-    func logSetWeight(weight: Double?, unit: String?) {
+    /// AMA-2420 Phase 2/3 — crown LOG / skip / as-prescribed on a reps step, then advance.
+    func logSetWeight(
+        weight: Double?,
+        unit: String?,
+        detectionMethod: String = "manual"
+    ) {
         guard let step = currentStep, step.stepType == .reps else {
             nextStep()
             return
@@ -307,7 +311,8 @@ final class StandaloneWorkoutEngine: ObservableObject {
             setNumber: setNumber,
             weight: weight,
             unit: weight != nil ? unit : nil,
-            completed: true
+            completed: true,
+            detectionMethod: detectionMethod
         )
         if exerciseSetEntries[exerciseName] == nil {
             exerciseSetEntries[exerciseName] = []
@@ -318,9 +323,30 @@ final class StandaloneWorkoutEngine: ObservableObject {
             lastLoggedWeightByExercise[exerciseName] = (weight, unit)
         }
 
-        print("⌚️ Logged set: \(exerciseName) set \(setNumber) — \(weight ?? 0) \(unit ?? "")")
+        print("⌚️ Logged set: \(exerciseName) set \(setNumber) — \(weight ?? 0) \(unit ?? "") [\(detectionMethod)]")
         playHaptic(.click)
         nextStep()
+    }
+
+    /// AMA-2420 Phase 3 — one-tap complete using prescribed load from the plan.
+    func completeSetAsPrescribed() {
+        guard let step = currentStep, step.stepType == .reps else {
+            nextStep()
+            return
+        }
+        guard let prescribed = prescribedLoad(for: step) else {
+            logSetWeight(weight: suggestedWeight(for: step), unit: suggestedWeightUnit(for: step))
+            return
+        }
+        logSetWeight(weight: prescribed.weight, unit: prescribed.unit, detectionMethod: "autoConfirmed")
+    }
+
+    func prescribedLoad(for step: WatchFlattenedInterval) -> (weight: Double, unit: String)? {
+        StandaloneLoadHint.parse(step.loadHint)
+    }
+
+    func canCompleteAsPrescribed(for step: WatchFlattenedInterval) -> Bool {
+        prescribedLoad(for: step) != nil
     }
 
     func suggestedWeight(for step: WatchFlattenedInterval) -> Double? {
