@@ -201,6 +201,11 @@ struct TodayDiaryView: View {
                         .strava,
                         sync: actualsSyncProgress
                     )
+                } else if actualsSources.isConnected(.appleHealth), !actualsDemo.isActive {
+                    await actualsDemo.handleProviderConnected(
+                        .appleHealth,
+                        sync: actualsSyncProgress
+                    )
                 } else {
                     actualsDemo.reapplyLocalOverlays()
                 }
@@ -232,6 +237,11 @@ struct TodayDiaryView: View {
                 if actualsSources.isConnected(.strava) {
                     await actualsDemo.handleProviderConnected(
                         .strava,
+                        sync: actualsSyncProgress
+                    )
+                } else if actualsSources.isConnected(.appleHealth) {
+                    await actualsDemo.handleProviderConnected(
+                        .appleHealth,
                         sync: actualsSyncProgress
                     )
                 }

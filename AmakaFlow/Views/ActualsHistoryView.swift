@@ -13,6 +13,7 @@ import OSLog
 import SwiftUI
 
 @MainActor
+// swiftlint:disable:next type_body_length
 final class ActualsHistoryViewModel: ObservableObject {
     @Published private(set) var dayGroups: [(day: Date, cards: [ActualsTodayDemoCard])] = []
     @Published private(set) var isLoading = false
@@ -20,17 +21,23 @@ final class ActualsHistoryViewModel: ObservableObject {
     @Published var bannerExpanded = true
 
     private let client: BFFStravaClient
+    private let appleHealthFetcher: any ActualsHealthKitWorkoutFetching
+    private let sources: ActualsSourceConnecting
     private let calendar: Calendar
     private let now: () -> Date
     private let repository: ActualsRepository
 
     init(
         client: BFFStravaClient? = nil,
+        appleHealthFetcher: (any ActualsHealthKitWorkoutFetching)? = nil,
+        sources: ActualsSourceConnecting? = nil,
         calendar: Calendar = .current,
         now: @escaping () -> Date = Date.init,
         repository: ActualsRepository? = nil
     ) {
         self.client = client ?? BFFStravaClient.live()
+        self.appleHealthFetcher = appleHealthFetcher ?? LiveActualsHealthKitWorkoutFetcher()
+        self.sources = sources ?? ActualsSourceConnectionStore.shared
         self.calendar = calendar
         self.now = now
         self.repository = repository ?? ActualsRepository()
@@ -300,42 +307,104 @@ final class ActualsHistoryViewModel: ObservableObject {
 
     /// Returns `true` when groups were successfully replaced from the network.
     @discardableResult
+    /// Returns `true` when groups were successfully replaced from connected sources.
+    @discardableResult
+    // swiftlint:disable:next cyclomatic_complexity
     private func load(replacingExisting: Bool) async -> Bool {
         isLoading = true
         defer { isLoading = false }
-        do {
-            let result = try await client.syncCompleted(daysBack: daysBack)
-            guard result.success else {
-                if replacingExisting, dayGroups.isEmpty {
+
+        var combinedCards: [ActualsTodayDemoCard] = []
+        var loadedAny = false
+        var stravaActivities: [StravaCompletedActivityDTO] = []
+
+        if sources.isConnected(.strava) {
+            do {
+                let result = try await client.syncCompleted(daysBack: daysBack)
+                if result.success {
+                    loadedAny = true
+                    stravaActivities = result.activities
+                    let groups = ActualsTodayDemoFeed.historyCards(
+                        from: result.activities,
+                        calendar: calendar,
+                        now: now()
+                    )
+                    combinedCards.append(contentsOf: groups.flatMap(\.cards))
+                }
+            } catch {
+                // Keep going — Apple Health may still load.
+            }
+        }
+
+        if sources.isConnected(.appleHealth) {
+            do {
+                let samples = try await appleHealthFetcher.fetchWorkouts(daysBack: daysBack)
+                loadedAny = true
+                let groups = ActualsTodayDemoFeed.historyCards(
+                    from: samples,
+                    calendar: calendar,
+                    now: now()
+                )
+                combinedCards.append(contentsOf: groups.flatMap(\.cards))
+            } catch {
+                // Keep Strava rows if present.
+            }
+        }
+
+        // Neither source connected — preserve prior Strava-only behavior for dogfood
+        // when the store wasn't injected (tests without connection).
+        if !sources.isConnected(.strava), !sources.isConnected(.appleHealth) {
+            do {
+                let result = try await client.syncCompleted(daysBack: daysBack)
+                guard result.success else {
+                    if replacingExisting, dayGroups.isEmpty {
+                        dayGroups = []
+                    }
+                    return false
+                }
+                loadedAny = true
+                stravaActivities = result.activities
+                let groups = ActualsTodayDemoFeed.historyCards(
+                    from: result.activities,
+                    calendar: calendar,
+                    now: now()
+                )
+                combinedCards = groups.flatMap(\.cards)
+            } catch {
+                if dayGroups.isEmpty {
                     dayGroups = []
                 }
                 return false
             }
-            let groups = ActualsTodayDemoFeed.historyCards(
-                from: result.activities,
-                calendar: calendar,
-                now: now()
-            )
-            dayGroups = groups.map { group in
-                (
-                    day: group.day,
-                    cards: ActualsTodayDemoFeed.applyLocalOverlays(
-                        to: group.cards,
-                        repository: repository
-                    )
-                )
-            }
-            // Signature / wrote-Strava without server verified — persist those ids.
-            let feed = ActualsTodayDemoFeed(repository: repository)
-            await feed.ensureServerVerifiedForLinkedActivities(result.activities, client: client)
-            return true
-        } catch {
-            // Never crash History on a missing/expired token — keep what we have.
-            if dayGroups.isEmpty {
+        }
+
+        guard loadedAny else {
+            if replacingExisting, dayGroups.isEmpty {
                 dayGroups = []
             }
             return false
         }
+
+        let overlaid = ActualsTodayDemoFeed.applyLocalOverlays(
+            to: combinedCards,
+            repository: repository
+        )
+        let buckets = ActualsDayBucketing.bucketByLocalDay(
+            overlaid,
+            startDate: { card in
+                card.activity?.startDate ?? now()
+            },
+            calendar: calendar
+        )
+        dayGroups = buckets.map { day, items in
+            (day: day, cards: items)
+        }
+
+        if !stravaActivities.isEmpty {
+            let feed = ActualsTodayDemoFeed(repository: repository)
+            await feed.ensureServerVerifiedForLinkedActivities(stravaActivities, client: client)
+        }
+        return true
     }
 }
 
