@@ -535,8 +535,8 @@ final class ActualsTodayDemoFeed: ObservableObject {
         if let kcal = sample.activeEnergyKcal {
             stats.append(("flame.fill", "\(Int(kcal.rounded())) kcal"))
         }
-        if let hr = sample.averageHeartRateBPM {
-            stats.append(("heart.fill", "\(Int(hr.rounded())) bpm"))
+        if let averageHeartRate = sample.averageHeartRateBPM {
+            stats.append(("heart.fill", "\(Int(averageHeartRate.rounded())) bpm"))
         }
         return ActualsTodayDemoCard(
             id: "applehealth_\(sample.id)",

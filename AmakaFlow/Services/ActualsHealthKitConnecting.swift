@@ -81,6 +81,8 @@ enum ActualsHealthKitWorkoutMapping {
     }
 
     static func displayName(for activityType: HKWorkoutActivityType) -> String {
+        // Large HKWorkoutActivityType surface — keep a single lookup table.
+        // swiftlint:disable:next cyclomatic_complexity
         switch activityType {
         case .running: return "Run"
         case .walking: return "Walk"
@@ -207,13 +209,13 @@ final class LiveActualsHealthKitConnector: ActualsHealthKitConnecting {
             break
         }
 
-        guard healthStore != nil else {
+        guard let healthStore else {
             authorizationState = .denied
             return .denied
         }
 
         do {
-            try await healthStore!.requestAuthorization(toShare: [], read: Self.readTypes)
+            try await healthStore.requestAuthorization(toShare: [], read: Self.readTypes)
             // Evidence: a workout sample query that completes (0+ rows). Empty is OK —
             // HealthKit still won't confess deny, but a successful query after the
             // user finished our primer + system sheet is the dogfood connect signal.

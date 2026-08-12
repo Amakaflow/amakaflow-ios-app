@@ -13,6 +13,7 @@ import OSLog
 import SwiftUI
 
 @MainActor
+// swiftlint:disable:next type_body_length
 final class ActualsHistoryViewModel: ObservableObject {
     @Published private(set) var dayGroups: [(day: Date, cards: [ActualsTodayDemoCard])] = []
     @Published private(set) var isLoading = false
@@ -306,6 +307,9 @@ final class ActualsHistoryViewModel: ObservableObject {
 
     /// Returns `true` when groups were successfully replaced from the network.
     @discardableResult
+    /// Returns `true` when groups were successfully replaced from connected sources.
+    @discardableResult
+    // swiftlint:disable:next cyclomatic_complexity
     private func load(replacingExisting: Bool) async -> Bool {
         isLoading = true
         defer { isLoading = false }
