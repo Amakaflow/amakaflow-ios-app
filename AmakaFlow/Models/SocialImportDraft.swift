@@ -247,6 +247,12 @@ struct SocialImportBlock: Equatable, Codable {
     var restOpen: Bool?
     /// AMA-2311 / AMA-2336 — rest ownership for the refresh rule.
     var fieldProvenance: [String: String]?
+    /// AMA-2423 — programmed station_transition intent in seconds. Mirrors
+    /// `restSec`; only ever set by a prior `applyStationTransition` (never
+    /// authored), so its presence means "this push already added Transitions".
+    var transitionSec: Int?
+    /// AMA-2423 — open station_transition intent → lap at delivery. Mirrors `restOpen`.
+    var transitionOpen: Bool?
 
     enum CodingKeys: String, CodingKey {
         case label, rounds, exercises, type
@@ -256,6 +262,8 @@ struct SocialImportBlock: Equatable, Codable {
         case enrichmentKind
         case restOpen
         case fieldProvenance
+        case transitionSec
+        case transitionOpen
     }
 
     init(
@@ -268,7 +276,9 @@ struct SocialImportBlock: Equatable, Codable {
         structureSource: String? = nil,
         enrichmentKind: String? = nil,
         restOpen: Bool? = nil,
-        fieldProvenance: [String: String]? = nil
+        fieldProvenance: [String: String]? = nil,
+        transitionSec: Int? = nil,
+        transitionOpen: Bool? = nil
     ) {
         self.label = label
         self.rounds = rounds
@@ -280,6 +290,8 @@ struct SocialImportBlock: Equatable, Codable {
         self.enrichmentKind = enrichmentKind
         self.restOpen = restOpen
         self.fieldProvenance = fieldProvenance
+        self.transitionSec = transitionSec
+        self.transitionOpen = transitionOpen
     }
 }
 

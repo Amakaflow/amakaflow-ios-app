@@ -63,13 +63,16 @@ enum WorkoutEnrichmentPushCopy {
         return min(max(snapped, restSecRange.lowerBound), restSecRange.upperBound)
     }
 
+    /// AMA-2423 — Transitions row title (offer XOR's with `betweenSetRest`).
+    static let stationTransitionTitle = "Transitions between stations"
+
     static func offerTitle(for kind: EnrichmentKind, target: EnrichmentPushTarget) -> String {
         switch kind {
         case .sessionWarmup: return "Mobility prep"
         case .cooldown: return "Cool-down"
         case .betweenSetRest: return "Rest between sets"
         case .exerciseWarmupSets: return "Warm-up sets"
-        case .stationTransition: return "Station transitions"
+        case .stationTransition: return stationTransitionTitle
         }
     }
 
@@ -102,6 +105,23 @@ enum WorkoutEnrichmentPushCopy {
             return "No rest length set — add one in Settings."
         }
         return "\(restSec)s between sets"
+    }
+
+    /// AMA-2423 — Transitions row detail, parallel to `restDetail`.
+    static func stationTransitionDetail(
+        _ prefs: StationTransitionPrefs,
+        target: EnrichmentPushTarget = .garmin
+    ) -> String {
+        if prefs.transitionOpen {
+            switch target {
+            case .apple: return "Open transition between stations"
+            case .garmin: return "Transition until Lap between stations"
+            }
+        }
+        guard let transitionSec = prefs.transitionSec, transitionSec > 0 else {
+            return "No transition length set — add one in Settings."
+        }
+        return "\(transitionSec)s between stations"
     }
 
     static func liveRestDetail(

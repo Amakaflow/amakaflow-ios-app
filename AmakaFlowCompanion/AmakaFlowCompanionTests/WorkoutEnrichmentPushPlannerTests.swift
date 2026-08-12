@@ -271,6 +271,128 @@ final class WorkoutEnrichmentPushPlannerTests: XCTestCase {
         XCTAssertFalse(application.rejectedTombstones.contains(where: { $0.kind == .betweenSetRest }))
     }
 
+    // MARK: - AMA-2423 Transitions XOR Rest
+
+    private func circuitBlock(
+        stationCount: Int,
+        rounds: Int = 4,
+        transitionSec: Int? = nil,
+        transitionOpen: Bool? = nil,
+        blockRestSec: Int? = nil
+    ) -> SocialImportBlock {
+        SocialImportBlock(
+            label: "Circuit",
+            rounds: rounds,
+            exercises: (1...stationCount).map { index in
+                SocialImportExercise(name: "Station \(index)", sets: 1, seconds: 30)
+            },
+            type: "circuit",
+            restSec: blockRestSec,
+            transitionSec: transitionSec,
+            transitionOpen: transitionOpen
+        )
+    }
+
+    /// Brief step 1 — a multi-station circuit offers Transitions, never Rest.
+    func testCircuitOffersTransitionsHidesRest() {
+        let plan = WorkoutEnrichmentPushPlanner.plan(
+            blocks: [circuitBlock(stationCount: 3)],
+            tombstones: [],
+            prefs: .defaults,
+            target: .apple
+        )
+        XCTAssertTrue(plan.offers.contains { $0.kind == .stationTransition })
+        XCTAssertFalse(plan.offers.contains { $0.kind == .betweenSetRest })
+    }
+
+    /// Brief step 1 — a straight-sets block keeps offering Rest, never Transitions.
+    func testStraightSetsOffersRestHidesTransitions() {
+        let plan = WorkoutEnrichmentPushPlanner.plan(
+            blocks: [benchBlock()],
+            tombstones: [],
+            prefs: .defaults,
+            target: .apple
+        )
+        XCTAssertTrue(plan.offers.contains { $0.kind == .betweenSetRest })
+        XCTAssertFalse(plan.offers.contains { $0.kind == .stationTransition })
+    }
+
+    /// A 1-station "circuit" behaves like straight sets — Rest, not Transitions
+    /// (mirrors backend `_is_multi_station_format_group`).
+    func testSingleStationCircuitStillOffersRest() {
+        let plan = WorkoutEnrichmentPushPlanner.plan(
+            blocks: [circuitBlock(stationCount: 1)],
+            tombstones: [],
+            prefs: .defaults
+        )
+        XCTAssertNotNil(plan.offer(.betweenSetRest))
+        XCTAssertNil(plan.offer(.stationTransition))
+    }
+
+    /// `StationTransitionPrefs.defaults` is off — Transitions defaults unchecked
+    /// unless the block already carries transition intent.
+    func testTransitionOfferedUncheckedByDefault() throws {
+        let plan = WorkoutEnrichmentPushPlanner.plan(
+            blocks: [circuitBlock(stationCount: 3)],
+            tombstones: [],
+            prefs: .defaults
+        )
+        let offer = try XCTUnwrap(plan.offer(.stationTransition))
+        XCTAssertFalse(offer.isChecked)
+        XCTAssertFalse(offer.detail.isEmpty)
+        XCTAssertEqual(offer.title, "Transitions between stations")
+    }
+
+    /// A block that already carries station_transition intent (a prior push
+    /// applied it) starts checked, mirroring existing-Rest presence-wins.
+    func testExistingTransitionIntentIsOfferedChecked() throws {
+        let timed = WorkoutEnrichmentPushPlanner.plan(
+            blocks: [circuitBlock(stationCount: 3, transitionSec: 20)],
+            tombstones: [],
+            prefs: .defaults
+        )
+        XCTAssertEqual(timed.offer(.stationTransition)?.isChecked, true)
+
+        let open = WorkoutEnrichmentPushPlanner.plan(
+            blocks: [circuitBlock(stationCount: 3, transitionOpen: true)],
+            tombstones: [],
+            prefs: .defaults
+        )
+        XCTAssertEqual(open.offer(.stationTransition)?.isChecked, true)
+    }
+
+    /// Rejecting Transitions must tombstone `.stationTransition`, not `.betweenSetRest`.
+    func testTombstonedTransitionOfferIsUnchecked() throws {
+        let plan = WorkoutEnrichmentPushPlanner.plan(
+            blocks: [circuitBlock(stationCount: 3)],
+            tombstones: [EnrichmentTombstone(kind: .stationTransition)],
+            prefs: .defaults
+        )
+        let offer = try XCTUnwrap(plan.offer(.stationTransition))
+        XCTAssertFalse(offer.isChecked)
+        XCTAssertTrue(offer.wasTombstoned)
+    }
+
+    /// AMA-2362 — Apple `rest_mode=omit` skips inject for both Rest and Transitions.
+    func testAppleOmitRestModeSkipsTransitionOfferToo() {
+        AppleWatchDeliveryPrefsStore.resetForTests()
+        defer { AppleWatchDeliveryPrefsStore.resetForTests() }
+
+        AppleWatchDeliveryPrefsStore.current = AppleWatchDeliveryPrefs(
+            exerciseEnd: .tap,
+            restMode: .omit,
+            alertsEnabled: false
+        )
+        let plan = WorkoutEnrichmentPushPlanner.plan(
+            blocks: [circuitBlock(stationCount: 3)],
+            tombstones: [],
+            prefs: .defaults,
+            target: .apple
+        )
+        XCTAssertNil(plan.offer(.stationTransition))
+        XCTAssertNil(plan.offer(.betweenSetRest))
+    }
+
     func testExistingWarmupSetsAndExcludedNamesAreNotOffered() {
         let present = WorkoutEnrichmentPushPlanner.plan(
             blocks: [benchBlock(warmupSets: [WarmupSetRow(reps: 8)])],
@@ -1075,6 +1197,8 @@ final class WorkoutEnrichmentPushPlannerTests: XCTestCase {
     @MainActor
     func testApplyClearsBlockRestWhenRestUnchecked() async throws {
         let mock = MockAPIService()
+        // Single-station circuit (1 exercise) — AMA-2423's multi-station rule
+        // (2+ exercises) does not apply, so this stays on the Rest path.
         let blocksJSON: [String: Any] = [
             "blocks": [
                 [
@@ -1083,8 +1207,7 @@ final class WorkoutEnrichmentPushPlannerTests: XCTestCase {
                     "rounds": 6,
                     "rest_sec": 60,
                     "exercises": [
-                        ["name": "Assault Bike", "duration_sec": 180],
-                        ["name": "Ski Erg", "duration_sec": 180]
+                        ["name": "Assault Bike", "duration_sec": 180]
                     ]
                 ]
             ]
@@ -1095,8 +1218,7 @@ final class WorkoutEnrichmentPushPlannerTests: XCTestCase {
                     label: "Circuit",
                     rounds: 6,
                     exercises: [
-                        SocialImportExercise(name: "Assault Bike", seconds: 180),
-                        SocialImportExercise(name: "Ski Erg", seconds: 180)
+                        SocialImportExercise(name: "Assault Bike", seconds: 180)
                     ],
                     type: "circuit",
                     restSec: 60

@@ -174,6 +174,16 @@ enum WorkoutEnrichmentMutations {
         return exerciseCount >= 2
     }
 
+    /// AMA-2423 — `SocialImportBlock` overload of `isMultiStationFormatGroup`,
+    /// for the push planner's presence checks (which never round-trip through
+    /// raw `blocks_json`). Same rule: circuit/superset/timed_circuit/timed_round
+    /// with 2+ exercises only.
+    static func isMultiStationFormatGroup(_ block: SocialImportBlock) -> Bool {
+        let kind = (block.type ?? "").trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard multiStationFormatGroupTypes.contains(kind) else { return false }
+        return block.exercises.count >= 2
+    }
+
     /// Name-only soft leftovers (no strength `sets`) that match mobility/cooldown prefs.
     private static func isOrphanSoftActivityBlock(
         _ block: [String: Any],

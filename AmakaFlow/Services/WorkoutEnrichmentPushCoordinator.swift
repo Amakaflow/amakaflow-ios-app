@@ -292,6 +292,11 @@ final class WorkoutEnrichmentPushCoordinator {
         if application.prefs.betweenSetRest.enabled, !satisfied("between_set_rest") {
             return true
         }
+        // AMA-2423 — Transitions supersedes Rest on multi-station blocks; a
+        // checked offer that never lands is as incomplete as an unsatisfied Rest.
+        if application.prefs.stationTransition.enabled, !satisfied("station_transition") {
+            return true
+        }
         if application.prefs.exerciseWarmupSets.enabled, !satisfied("exercise_warmup_sets") {
             if !summary.skippedNoIdentity.isEmpty { return true }
             // All candidates tombstoned per-exercise is an expected skip.
