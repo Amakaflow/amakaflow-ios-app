@@ -438,7 +438,9 @@ struct ProfileHubView: View {
             }
         }
 
-        externalCompletions = merged.sorted { $0.startedAt > $1.startedAt }
+        // AMA-2422: certain Strava↔Apple Health duplicates must not inflate week/month hours.
+        externalCompletions = ActualsCrossSourceDeduper.dedupeCompletions(merged)
+            .sorted { $0.startedAt > $1.startedAt }
         externalStatsLoaded = true
     }
 }
