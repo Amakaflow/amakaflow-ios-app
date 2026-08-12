@@ -123,7 +123,11 @@ private extension CollectionDetailView {
     }
 
     var memberWorkouts: [Workout] {
-        memberIDs.compactMap { workoutsByID[$0] }
+        let workouts = memberIDs.compactMap { workoutsByID[$0] }
+        // AMA-2416: Uncategorized has no organize `position` — show newest first.
+        // Named collections keep repository position order for Organize.
+        guard isUncategorized else { return workouts }
+        return LibraryWorkoutOrdering.latestFirst(workouts)
     }
 
     var totalSeconds: Int {
