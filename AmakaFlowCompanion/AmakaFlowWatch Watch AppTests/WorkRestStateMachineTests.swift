@@ -5,8 +5,8 @@
 //  AMA-2420 Phase 4 — work/rest confidence gating + confirm/reject.
 //
 
-import XCTest
 @testable import AmakaFlowWatch_Watch_App
+import XCTest
 
 final class WorkRestStateMachineTests: XCTestCase {
     private let now = Date(timeIntervalSince1970: 1_700_000_000)
