@@ -32,7 +32,9 @@ Cursor enforcement: `.cursor/rules/design-fidelity.mdc` (auto-attaches on View f
 
 ## Active work queue (2026-07-20) — read this first, Cursor
 
-**2026-08-08 — AMA-2389 Friends & workout sharing v1**: implement `FRIENDS.md` — send via the workout screen's EXISTING Share tile (sheet w/ Send-to-a-friend + system share), receive via a new From-friends row in the ＋ Add-workout sheet, manage via a Friends row in Settings, dedupe on save (lineage/fingerprint → flag, don't decide). Backend seams behind a protocol; build into the shipped screens, never invent surfaces.
+**2026-08-08 — AMA-2390 + AMA-2391 WIRING (top priority)**: implement `WIRING.md` — replace the two stubs the shipped features run on. AMA-2390: friends backend (staging tables + BFF friends/shares routers + `BFFFriendsSharingService` swap behind the existing protocol). AMA-2391: deploy the already-complete `strava-sync-api`, real OAuth via `ActualsProviderAuthProviding`, sync-completed → Today diary. Backend + seam swaps ONLY — do not rebuild UI. ⚠ old PRs #547/#549 misused the "AMA-2390" number; Linear is authoritative.
+
+**2026-08-08 — AMA-2389 Friends & workout sharing v1** (UI SHIPPED in #546): `FRIENDS.md` remains the design reference; remaining work moved to AMA-2390 wiring above.
 
 **2026-08-07 — AMA-2386 Watch item sheet**: implement `WATCHITEM.md` (tap On-your-watches row → readiness sheet → change-gated Replace). Reuse the AMA-2378 configurators + enrichment store — do not fork them. Note the Maestro sheet-a11y blocker in the validation gate.
 
