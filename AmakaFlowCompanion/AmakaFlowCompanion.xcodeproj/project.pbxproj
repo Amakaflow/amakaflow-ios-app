@@ -14,6 +14,8 @@
 		AMA2408PLAINBLD /* ama2408_plain_four.json in Resources */ = {isa = PBXBuildFile; fileRef = AMA2408PLAINREF /* ama2408_plain_four.json */; };
 		AMA2396V8BLD /* V8_actuals_exercise_structure.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2396V8REF /* V8_actuals_exercise_structure.swift */; };
 		AMA2396RESOLVERBLD /* ActualsLibraryWorkoutResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2396RESOLVERREF /* ActualsLibraryWorkoutResolver.swift */; };
+		AMA2411CLASBLD /* StravaActivityClassification.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2411CLASREF /* StravaActivityClassification.swift */; };
+		AMA2411CLASTBLD /* StravaActivityClassificationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2411CLASTREF /* StravaActivityClassificationTests.swift */; };
 		AMA2393HONBLD /* WorkoutSportHonesty.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2393HONREF /* WorkoutSportHonesty.swift */; };
 		AMA2393PICKBLD /* WorkoutSportPickerSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2393PICKREF /* WorkoutSportPickerSheet.swift */; };
 		AMA2393TSTBLD /* WorkoutSportHonestyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2393TSTREF /* WorkoutSportHonestyTests.swift */; };
@@ -1066,6 +1068,8 @@
 		AMA2396LIBPICKREF /* ActualsLibraryMatchPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "ActualsLibraryMatchPicker.swift"; path = "../AmakaFlow/Views/ActualsLibraryMatchPicker.swift"; sourceTree = SOURCE_ROOT; };
 		AMA2396LIBCANDREF /* ActualsPlanCandidate+Library.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "ActualsPlanCandidate+Library.swift"; path = "../AmakaFlow/Models/ActualsPlanCandidate+Library.swift"; sourceTree = SOURCE_ROOT; };
 		AMA2396DAYBUCKREF /* ActualsDayBucketing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActualsDayBucketing.swift; path = ../AmakaFlow/Models/ActualsDayBucketing.swift; sourceTree = SOURCE_ROOT; };
+		AMA2411CLASREF /* StravaActivityClassification.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = StravaActivityClassification.swift; path = ../AmakaFlow/Services/StravaActivityClassification.swift; sourceTree = SOURCE_ROOT; };
+		AMA2411CLASTREF /* StravaActivityClassificationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = StravaActivityClassificationTests.swift; path = AmakaFlowCompanionTests/StravaActivityClassificationTests.swift; sourceTree = "<group>"; };
 		AMA2396STRAVAWBREF /* StravaWriteBack.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = StravaWriteBack.swift; path = ../AmakaFlow/Models/StravaWriteBack.swift; sourceTree = SOURCE_ROOT; };
 		AMA2396V5REF /* V5_actuals_sync_v2.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = V5_actuals_sync_v2.swift; path = ../AmakaFlow/Storage/Migrations/V5_actuals_sync_v2.swift; sourceTree = SOURCE_ROOT; };
 		AMA2396V6REF /* V6_actuals_strava_writeback_meta.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = V6_actuals_strava_writeback_meta.swift; path = ../AmakaFlow/Storage/Migrations/V6_actuals_strava_writeback_meta.swift; sourceTree = SOURCE_ROOT; };
@@ -1725,6 +1729,7 @@
 				AMA2387AUTHREF /* ActualsProviderAuthProviding.swift */,
 				AMA2387MRGCLREF /* ActualsMergeClassifier.swift */,
 				AMA2387MAPSREF /* ActualsPlanMatcher.swift */,
+				AMA2411CLASREF /* StravaActivityClassification.swift */,
 				AMA2387GHOSTREF /* ActualsGhostFeed.swift */,
 				AMA2387TODAYDEMREF /* ActualsTodayDemoFeed.swift */,
 				AMA2387CAPDRAFTREF /* ActualsCaptureDraft.swift */,
@@ -2370,6 +2375,7 @@
 				AMA2387HKTREF /* ActualsAppleHealthConnectTests.swift */,
 				AMA2387AUTHTREF /* ActualsProviderAuthTests.swift */,
 				AMA2391OAUTHTREF /* StravaOAuthCallbackTests.swift */,
+				AMA2411CLASTREF /* StravaActivityClassificationTests.swift */,
 				AMA2387SYNCTREF /* ActualsSyncProgressTests.swift */,
 				AMA2387MRGTREF /* ActualsMergeClassifierTests.swift */,
 				AMA2387MAPTREF /* ActualsPlanMatcherTests.swift */,
@@ -3153,6 +3159,7 @@
 				AMA2387AUTHBLD /* ActualsProviderAuthProviding.swift in Sources */,
 				AMA2387MRGCLBLD /* ActualsMergeClassifier.swift in Sources */,
 				AMA2387MAPSBLD /* ActualsPlanMatcher.swift in Sources */,
+				AMA2411CLASBLD /* StravaActivityClassification.swift in Sources */,
 				AMA2387GHOSTBLD /* ActualsGhostFeed.swift in Sources */,
 				AMA2387TODAYDEMBLD /* ActualsTodayDemoFeed.swift in Sources */,
 				AMA2387CAPDRAFTBLD /* ActualsCaptureDraft.swift in Sources */,
@@ -3399,6 +3406,7 @@
 				AMA2387HKTBLD /* ActualsAppleHealthConnectTests.swift in Sources */,
 				AMA2387AUTHTBLD /* ActualsProviderAuthTests.swift in Sources */,
 				AMA2391OAUTHTBLD /* StravaOAuthCallbackTests.swift in Sources */,
+				AMA2411CLASTBLD /* StravaActivityClassificationTests.swift in Sources */,
 				AMA2387SYNCTBLD /* ActualsSyncProgressTests.swift in Sources */,
 				AMA2387MRGTBLD /* ActualsMergeClassifierTests.swift in Sources */,
 				AMA2387MAPTBLD /* ActualsPlanMatcherTests.swift in Sources */,
