@@ -190,17 +190,12 @@ struct TodayDiaryView: View {
                     )
                 }
                 #endif
-                // Kick Strava re-pull first so Connect never flashes while history loads.
+                // Kick linked-source re-pull first so Connect never flashes while history loads.
                 async let history: Void = historyViewModel.loadCompletions()
                 async let library: Void = loadLibraryCandidates()
-                if actualsSources.isConnected(.strava), !actualsDemo.isActive {
-                    await actualsDemo.handleProviderConnected(
-                        .strava,
-                        sync: actualsSyncProgress
-                    )
-                } else if actualsSources.isConnected(.appleHealth), !actualsDemo.isActive {
-                    await actualsDemo.handleProviderConnected(
-                        .appleHealth,
+                if actualsSources.hasAnySourceConnected, !actualsDemo.isActive {
+                    await actualsDemo.activateFromConnectedSources(
+                        sources: actualsSources,
                         sync: actualsSyncProgress
                     )
                 } else {
@@ -231,14 +226,9 @@ struct TodayDiaryView: View {
             }
             .refreshable {
                 await historyViewModel.refreshCompletions()
-                if actualsSources.isConnected(.strava) {
-                    await actualsDemo.handleProviderConnected(
-                        .strava,
-                        sync: actualsSyncProgress
-                    )
-                } else if actualsSources.isConnected(.appleHealth) {
-                    await actualsDemo.handleProviderConnected(
-                        .appleHealth,
+                if actualsSources.hasAnySourceConnected {
+                    await actualsDemo.activateFromConnectedSources(
+                        sources: actualsSources,
                         sync: actualsSyncProgress
                     )
                 }
@@ -253,7 +243,8 @@ struct TodayDiaryView: View {
                     Task {
                         await actualsDemo.handleProviderConnected(
                             provider,
-                            sync: actualsSyncProgress
+                            sync: actualsSyncProgress,
+                            sources: actualsSources
                         )
                     }
                 }

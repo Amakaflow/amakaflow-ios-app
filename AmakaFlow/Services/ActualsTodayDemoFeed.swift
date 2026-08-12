@@ -234,10 +234,12 @@ final class ActualsTodayDemoFeed: ObservableObject {
 
     /// AMA-2391: after Strava OAuth succeeds, pull sync-completed into the Today rail.
     /// AMA-2419: after Apple Health grant, pull HKWorkout samples the same way.
+    /// AMA-2422: when multiple sources are linked, load all and certain-dedupe.
     /// Demo flag (`AMA2387_TODAY_DEMO`) still wins in DEBUG for fixture dogfood.
     func handleProviderConnected(
         _ provider: ActualsSourceProvider,
         sync: ActualsSyncProgressStore,
+        sources: (any ActualsSourceConnecting)? = nil,
         client: BFFStravaClient? = nil,
         appleHealthFetcher: (any ActualsHealthKitWorkoutFetching)? = nil
     ) async {
@@ -247,6 +249,15 @@ final class ActualsTodayDemoFeed: ObservableObject {
             return
         }
         #endif
+        if let sources {
+            await activateFromConnectedSources(
+                sources: sources,
+                sync: sync,
+                client: client,
+                appleHealthFetcher: appleHealthFetcher
+            )
+            return
+        }
         switch provider {
         case .strava:
             await activateFromStravaSync(sync: sync, client: client ?? BFFStravaClient.live())
@@ -258,6 +269,93 @@ final class ActualsTodayDemoFeed: ObservableObject {
         case .garmin:
             break
         }
+    }
+
+    /// Load every linked provider and collapse certain Strava↔Apple Health duplicates.
+    func activateFromConnectedSources(
+        sources: any ActualsSourceConnecting,
+        sync: ActualsSyncProgressStore,
+        client: BFFStravaClient? = nil,
+        appleHealthFetcher: (any ActualsHealthKitWorkoutFetching)? = nil,
+        daysBack: Int = 30
+    ) async {
+        #if DEBUG
+        if Self.shouldAutoActivate {
+            activateAfterConnect(sync: sync)
+            return
+        }
+        #endif
+
+        let wantsStrava = sources.isConnected(.strava)
+        let wantsApple = sources.isConnected(.appleHealth)
+        guard wantsStrava || wantsApple else { return }
+
+        if wantsStrava, !wantsApple {
+            await activateFromStravaSync(sync: sync, client: client ?? BFFStravaClient.live())
+            return
+        }
+        if wantsApple, !wantsStrava {
+            await activateFromAppleHealth(
+                sync: sync,
+                fetcher: appleHealthFetcher ?? LiveActualsHealthKitWorkoutFetcher(),
+                daysBack: daysBack
+            )
+            return
+        }
+
+        isRefreshing = true
+        sync.beginPulling()
+        defer { isRefreshing = false }
+
+        let stravaClient = client ?? BFFStravaClient.live()
+        let healthFetcher = appleHealthFetcher ?? LiveActualsHealthKitWorkoutFetcher()
+
+        var combined: [ActualsTodayDemoCard] = []
+        var stravaActivities: [StravaCompletedActivityDTO] = []
+        var loadedAny = false
+
+        do {
+            let result = try await stravaClient.syncCompleted(daysBack: daysBack)
+            if result.success {
+                loadedAny = true
+                stravaActivities = result.activities
+                combined.append(
+                    contentsOf: Self.historyCards(from: result.activities).flatMap(\.cards)
+                )
+            }
+        } catch {
+            // Apple Health may still load.
+        }
+
+        do {
+            let samples = try await healthFetcher.fetchWorkouts(daysBack: daysBack)
+            loadedAny = true
+            combined.append(contentsOf: Self.historyCards(from: samples).flatMap(\.cards))
+        } catch {
+            // Keep Strava rows if present.
+        }
+
+        guard loadedAny else {
+            isActive = false
+            showMergeAsk = false
+            cards = []
+            sync.clear()
+            return
+        }
+
+        let deduped = ActualsCrossSourceDeduper.dedupeCards(combined, memory: mergeMemory)
+        isActive = true
+        showMergeAsk = false
+        if !deduped.isEmpty {
+            sync.beginBackfill(total: deduped.count)
+            for _ in deduped {
+                sync.recordIngestedSession()
+            }
+        } else {
+            sync.clear()
+        }
+        cards = Self.applyLocalOverlays(to: deduped, repository: repository)
+        await ensureServerVerifiedForLinkedActivities(stravaActivities, client: stravaClient)
     }
 
     /// Replace Today cards with Apple Health workouts for the lookback window.

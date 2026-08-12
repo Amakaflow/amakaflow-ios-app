@@ -279,6 +279,7 @@
 		AMA2387SYNCTBLD /* ActualsSyncProgressTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2387SYNCTREF /* ActualsSyncProgressTests.swift */; };
 		AMA2387SESSBLD /* ActualsSessionModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2387SESSREF /* ActualsSessionModels.swift */; };
 		AMA2387MRGCLBLD /* ActualsMergeClassifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2387MRGCLREF /* ActualsMergeClassifier.swift */; };
+		AMA2422DEDUPBLD /* ActualsCrossSourceDeduper.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2422DEDUPREF /* ActualsCrossSourceDeduper.swift */; };
 		AMA2387ASKBLD /* ActualsMergeAskCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2387ASKREF /* ActualsMergeAskCard.swift */; };
 		AMA2387MRGDBLD /* ActualsMergedDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2387MRGDREF /* ActualsMergedDetailView.swift */; };
 		AMA2387MRGTBLD /* ActualsMergeClassifierTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2387MRGTREF /* ActualsMergeClassifierTests.swift */; };
@@ -1046,6 +1047,7 @@
 		AMA2387SYNCTREF /* ActualsSyncProgressTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActualsSyncProgressTests.swift; path = AmakaFlowCompanionTests/ActualsSyncProgressTests.swift; sourceTree = "<group>"; };
 		AMA2387SESSREF /* ActualsSessionModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActualsSessionModels.swift; path = ../AmakaFlow/Models/ActualsSessionModels.swift; sourceTree = SOURCE_ROOT; };
 		AMA2387MRGCLREF /* ActualsMergeClassifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActualsMergeClassifier.swift; path = ../AmakaFlow/Services/ActualsMergeClassifier.swift; sourceTree = SOURCE_ROOT; };
+		AMA2422DEDUPREF /* ActualsCrossSourceDeduper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActualsCrossSourceDeduper.swift; path = ../AmakaFlow/Services/ActualsCrossSourceDeduper.swift; sourceTree = SOURCE_ROOT; };
 		AMA2387ASKREF /* ActualsMergeAskCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActualsMergeAskCard.swift; path = ../AmakaFlow/Views/Components/ActualsMergeAskCard.swift; sourceTree = SOURCE_ROOT; };
 		AMA2387MRGDREF /* ActualsMergedDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActualsMergedDetailView.swift; path = ../AmakaFlow/Views/ActualsMergedDetailView.swift; sourceTree = SOURCE_ROOT; };
 		AMA2387MRGTREF /* ActualsMergeClassifierTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActualsMergeClassifierTests.swift; path = AmakaFlowCompanionTests/ActualsMergeClassifierTests.swift; sourceTree = "<group>"; };
@@ -1734,6 +1736,7 @@
 				AMA2387HKREF /* ActualsHealthKitConnecting.swift */,
 				AMA2387AUTHREF /* ActualsProviderAuthProviding.swift */,
 				AMA2387MRGCLREF /* ActualsMergeClassifier.swift */,
+				AMA2422DEDUPREF /* ActualsCrossSourceDeduper.swift */,
 				AMA2387MAPSREF /* ActualsPlanMatcher.swift */,
 				AMA2411CLASREF /* StravaActivityClassification.swift */,
 				AMA2387GHOSTREF /* ActualsGhostFeed.swift */,
@@ -3168,6 +3171,7 @@
 				AMA2387HKBLD /* ActualsHealthKitConnecting.swift in Sources */,
 				AMA2387AUTHBLD /* ActualsProviderAuthProviding.swift in Sources */,
 				AMA2387MRGCLBLD /* ActualsMergeClassifier.swift in Sources */,
+				AMA2422DEDUPBLD /* ActualsCrossSourceDeduper.swift in Sources */,
 				AMA2387MAPSBLD /* ActualsPlanMatcher.swift in Sources */,
 				AMA2411CLASBLD /* StravaActivityClassification.swift in Sources */,
 				AMA2387GHOSTBLD /* ActualsGhostFeed.swift in Sources */,

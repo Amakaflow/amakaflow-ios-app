@@ -383,8 +383,9 @@ final class ActualsHistoryViewModel: ObservableObject {
             return false
         }
 
+        let deduped = ActualsCrossSourceDeduper.dedupeCards(combinedCards)
         let overlaid = ActualsTodayDemoFeed.applyLocalOverlays(
-            to: combinedCards,
+            to: deduped,
             repository: repository
         )
         let buckets = ActualsDayBucketing.bucketByLocalDay(
