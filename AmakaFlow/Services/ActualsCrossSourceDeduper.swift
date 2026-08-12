@@ -20,7 +20,7 @@ enum ActualsCrossSourceDeduper {
 
         while let seed = remaining.first {
             remaining.removeFirst()
-            guard let seedRecording = recording(from: seed) else {
+            guard let seedRecording = ActualsCrossSourceDeduperSupport.recording(from: seed) else {
                 result.append(seed)
                 continue
             }
@@ -32,7 +32,7 @@ enum ActualsCrossSourceDeduper {
             var index = 0
             while index < remaining.count {
                 let candidate = remaining[index]
-                guard let candidateRecording = recording(from: candidate) else {
+                guard let candidateRecording = ActualsCrossSourceDeduperSupport.recording(from: candidate) else {
                     index += 1
                     continue
                 }
@@ -56,11 +56,15 @@ enum ActualsCrossSourceDeduper {
             if clusterCards.count == 1 {
                 result.append(seed)
             } else {
-                result.append(mergeCards(clusterCards, recordings: clusterRecordings))
+                result.append(
+                    ActualsCrossSourceDeduperSupport.mergeCards(clusterCards, recordings: clusterRecordings)
+                )
             }
         }
 
-        return result.sorted { startDate(of: $0) > startDate(of: $1) }
+        return result.sorted {
+            ActualsCrossSourceDeduperSupport.startDate(of: $0) > ActualsCrossSourceDeduperSupport.startDate(of: $1)
+        }
     }
 
     /// Collapse certain cross-provider duplicates for Profile aggregates / This week.
@@ -75,7 +79,7 @@ enum ActualsCrossSourceDeduper {
 
         while let seed = remaining.first {
             remaining.removeFirst()
-            let seedRecording = recording(from: seed)
+            let seedRecording = ActualsCrossSourceDeduperSupport.recording(from: seed)
             var cluster = [seed]
             var clusterRecordings = [seedRecording]
             var providers: Set<ActualsSourceProvider> = [seedRecording.provider]
@@ -83,7 +87,7 @@ enum ActualsCrossSourceDeduper {
             var index = 0
             while index < remaining.count {
                 let candidate = remaining[index]
-                let candidateRecording = recording(from: candidate)
+                let candidateRecording = ActualsCrossSourceDeduperSupport.recording(from: candidate)
                 guard !providers.contains(candidateRecording.provider) else {
                     index += 1
                     continue
@@ -104,16 +108,20 @@ enum ActualsCrossSourceDeduper {
             if cluster.count == 1 {
                 result.append(seed)
             } else {
-                result.append(mergeCompletions(cluster, recordings: clusterRecordings))
+                result.append(
+                    ActualsCrossSourceDeduperSupport.mergeCompletions(cluster, recordings: clusterRecordings)
+                )
             }
         }
 
         return result.sorted { $0.startedAt > $1.startedAt }
     }
+}
 
-    // MARK: - Cards
+// MARK: - Merge helpers (separate type keeps type_body_length under the CI cap)
 
-    private static func recording(from card: ActualsTodayDemoCard) -> ActualsSourceRecording? {
+private enum ActualsCrossSourceDeduperSupport {
+    static func recording(from card: ActualsTodayDemoCard) -> ActualsSourceRecording? {
         if let primary = card.session?.primaryRecording {
             return primary
         }
@@ -131,7 +139,7 @@ enum ActualsCrossSourceDeduper {
         )
     }
 
-    private static func mergeCards(
+    static func mergeCards(
         _ cards: [ActualsTodayDemoCard],
         recordings: [ActualsSourceRecording]
     ) -> ActualsTodayDemoCard {
@@ -186,15 +194,14 @@ enum ActualsCrossSourceDeduper {
         )
     }
 
-    private static func mergedActivity(
+    static func mergedActivity(
         strava: ActualsUnmappedActivity?,
         apple: ActualsUnmappedActivity?,
         title: String,
         primaryProvider: ActualsSourceProvider
     ) -> ActualsUnmappedActivity? {
-        guard strava != nil || apple != nil else { return nil }
-        let base = strava ?? apple!
-        let start = strava?.startDate ?? apple!.startDate
+        guard let base = strava ?? apple else { return nil }
+        let start = strava?.startDate ?? apple?.startDate ?? base.startDate
         let duration = max(strava?.durationSeconds ?? 0, apple?.durationSeconds ?? 0)
         return ActualsUnmappedActivity(
             title: title,
@@ -212,7 +219,7 @@ enum ActualsCrossSourceDeduper {
         )
     }
 
-    private static func mergedStats(
+    static func mergedStats(
         from cards: [ActualsTodayDemoCard],
         activity: ActualsUnmappedActivity?
     ) -> [(icon: String, value: String)] {
@@ -224,8 +231,7 @@ enum ActualsCrossSourceDeduper {
                 guard let raw = card.stats.first(where: { $0.icon == "clock" })?.value else {
                     return nil
                 }
-                let digits = raw.filter(\.isNumber)
-                return Int(digits)
+                return Int(raw.filter(\.isNumber))
             }.max() ?? 1
         }()
         var stats: [(icon: String, value: String)] = [("clock", "\(minutes)m")]
@@ -245,7 +251,7 @@ enum ActualsCrossSourceDeduper {
         return stats
     }
 
-    private static func streamRichness(for card: ActualsTodayDemoCard) -> Int {
+    static func streamRichness(for card: ActualsTodayDemoCard) -> Int {
         var score = 0
         if card.activity?.avgHR != nil { score += 3 }
         if card.activity?.calories != nil { score += 2 }
@@ -255,15 +261,13 @@ enum ActualsCrossSourceDeduper {
         return score
     }
 
-    private static func startDate(of card: ActualsTodayDemoCard) -> Date {
+    static func startDate(of card: ActualsTodayDemoCard) -> Date {
         card.activity?.startDate
             ?? card.session?.primaryRecording?.startDate
             ?? .distantPast
     }
 
-    // MARK: - Completions
-
-    private static func recording(from completion: WorkoutCompletion) -> ActualsSourceRecording {
+    static func recording(from completion: WorkoutCompletion) -> ActualsSourceRecording {
         let provider = provider(for: completion)
         var richness = 0
         if completion.avgHeartRate != nil { richness += 3 }
@@ -282,7 +286,7 @@ enum ActualsCrossSourceDeduper {
         )
     }
 
-    private static func provider(for completion: WorkoutCompletion) -> ActualsSourceProvider {
+    static func provider(for completion: WorkoutCompletion) -> ActualsSourceProvider {
         if completion.id.hasPrefix("strava_") { return .strava }
         if completion.id.hasPrefix("applehealth_") { return .appleHealth }
         if completion.source == .appleWatch { return .appleHealth }
@@ -290,7 +294,7 @@ enum ActualsCrossSourceDeduper {
         return .appleHealth
     }
 
-    private static func mergeCompletions(
+    static func mergeCompletions(
         _ completions: [WorkoutCompletion],
         recordings: [ActualsSourceRecording]
     ) -> WorkoutCompletion {
@@ -324,16 +328,14 @@ enum ActualsCrossSourceDeduper {
         )
     }
 
-    // MARK: - Shared
-
-    private static func deviceKind(for provider: ActualsSourceProvider) -> ActualsDeviceKind {
+    static func deviceKind(for provider: ActualsSourceProvider) -> ActualsDeviceKind {
         switch provider {
         case .appleHealth, .garmin: return .watch
         case .strava: return .phone
         }
     }
 
-    private static func preferredTitle(from titles: [String]) -> String {
+    static func preferredTitle(from titles: [String]) -> String {
         let trimmed = titles.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
             .filter { !$0.isEmpty }
         guard !trimmed.isEmpty else { return "Session" }
@@ -342,7 +344,7 @@ enum ActualsCrossSourceDeduper {
         return pool.max(by: { $0.count < $1.count }) ?? pool[0]
     }
 
-    private static func isGenericTitle(_ title: String) -> Bool {
+    static func isGenericTitle(_ title: String) -> Bool {
         let lowered = title.lowercased()
         return lowered == "workout" || lowered == "session"
     }
