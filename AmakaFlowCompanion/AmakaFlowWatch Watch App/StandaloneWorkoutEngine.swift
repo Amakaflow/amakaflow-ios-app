@@ -33,6 +33,9 @@ final class StandaloneWorkoutEngine: ObservableObject {
     @Published var heartRate: Double = 0
     @Published var activeCalories: Double = 0
 
+    /// AMA-2420 Phase 4 — confidence-gated work/rest proposal (nil when low confidence / off).
+    @Published private(set) var workRestProposal: WorkRestProposal?
+
     // MARK: - Flattened Steps
 
     private(set) var flattenedSteps: [WatchFlattenedInterval] = []
@@ -42,6 +45,12 @@ final class StandaloneWorkoutEngine: ObservableObject {
     private var exerciseSetEntries: [String: [StandaloneSetEntry]] = [:]
     private var exerciseIndexMap: [String: Int] = [:]
     private var nextExerciseIndex: Int = 0
+
+    /// AMA-2420 Phase 4 — IMU work/rest assist (experimental flag gated inside controller).
+    private let workRestAssist = WorkRestAssistController()
+    private var workRestCancellables = Set<AnyCancellable>()
+    /// Assisted mid-set rest returns to the same step (does not invent / skip set logs).
+    private var assistedRestRetainsStep = false
 
     var currentStep: WatchFlattenedInterval? {
         guard currentStepIndex >= 0, currentStepIndex < flattenedSteps.count else { return nil }
@@ -88,6 +97,7 @@ final class StandaloneWorkoutEngine: ObservableObject {
 
     private init() {
         setupHealthKitBindings()
+        setupWorkRestAssistBindings()
     }
 
     // MARK: - HealthKit Integration
@@ -102,6 +112,15 @@ final class StandaloneWorkoutEngine: ObservableObject {
                 }
             }
         }
+    }
+
+    private func setupWorkRestAssistBindings() {
+        workRestAssist.$pendingProposal
+            .receive(on: RunLoop.main)
+            .sink { [weak self] proposal in
+                self?.workRestProposal = proposal
+            }
+            .store(in: &workRestCancellables)
     }
 
     // MARK: - Commands
@@ -129,6 +148,8 @@ final class StandaloneWorkoutEngine: ObservableObject {
         self.exerciseSetEntries = [:]
         self.exerciseIndexMap = [:]
         self.nextExerciseIndex = 0
+        self.assistedRestRetainsStep = false
+        self.workRestProposal = nil
 
         print("⌚️ Starting standalone workout: \(workout.name)")
         print("⌚️ Flattened steps count: \(flattenedSteps.count)")
@@ -142,6 +163,7 @@ final class StandaloneWorkoutEngine: ObservableObject {
         }
 
         setupCurrentStep()
+        startWorkRestAssistIfNeeded(for: workout)
         playHaptic(.start)
     }
 
@@ -214,6 +236,7 @@ final class StandaloneWorkoutEngine: ObservableObject {
             restRemainingSeconds = 0
         }
 
+        workRestAssist.syncPhase(.idleRest)
         playHaptic(.stop)
     }
 
@@ -252,12 +275,23 @@ final class StandaloneWorkoutEngine: ObservableObject {
     func completeRest() {
         guard phase == .resting else { return }
 
-        print("⌚️ Completing rest, advancing to next step")
-
         timer?.invalidate()
         timer = nil
         restRemainingSeconds = 0
         isManualRest = false
+
+        // AMA-2420 Phase 4 — assisted mid-set rest keeps the current step (no silent skip).
+        if assistedRestRetainsStep {
+            print("⌚️ Completing assisted rest, retaining current step")
+            assistedRestRetainsStep = false
+            phase = .running
+            setupCurrentStep()
+            workRestAssist.syncPhase(.workSet)
+            playHaptic(.start)
+            return
+        }
+
+        print("⌚️ Completing rest, advancing to next step")
 
         // Check if there are more steps
         guard currentStepIndex < flattenedSteps.count - 1 else {
@@ -271,6 +305,7 @@ final class StandaloneWorkoutEngine: ObservableObject {
         currentStepIndex += 1
         phase = .running
         setupCurrentStep()
+        workRestAssist.syncPhase(.workSet)
         playHaptic(.start)
     }
 
@@ -325,7 +360,42 @@ final class StandaloneWorkoutEngine: ObservableObject {
 
         print("⌚️ Logged set: \(exerciseName) set \(setNumber) — \(weight ?? 0) \(unit ?? "") [\(detectionMethod)]")
         playHaptic(.click)
+        // Manual / as-prescribed logging wins over any pending IMU proposal.
+        workRestAssist.rejectProposal()
+        workRestProposal = nil
         nextStep()
+    }
+
+    /// AMA-2420 Phase 4 — user confirmed a high-confidence work↔rest proposal.
+    func confirmWorkRestProposal() {
+        guard let transition = workRestAssist.confirmProposal() else { return }
+        workRestProposal = nil
+
+        switch transition {
+        case .toWorkSet:
+            if phase == .resting {
+                skipRest()
+            } else {
+                workRestAssist.syncPhase(.workSet)
+            }
+        case .toIdleRest:
+            guard phase == .running || phase == .paused else {
+                workRestAssist.syncPhase(.idleRest)
+                return
+            }
+            // Mid-set assist rest: retain step so crown / AS PLANNED still apply after.
+            assistedRestRetainsStep = true
+            if phase == .paused {
+                phase = .running
+            }
+            enterRestPhase(restSeconds: currentStep?.restAfterSeconds)
+        }
+    }
+
+    /// AMA-2420 Phase 4 — user rejected proposal; stay fully manual.
+    func rejectWorkRestProposal() {
+        workRestAssist.rejectProposal()
+        workRestProposal = nil
     }
 
     /// AMA-2420 Phase 3 — one-tap complete using prescribed load from the plan.
@@ -384,6 +454,7 @@ final class StandaloneWorkoutEngine: ObservableObject {
 
         timer?.invalidate()
         timer = nil
+        stopWorkRestAssist()
         phase = .ended
         let endDate = Date()
 
@@ -399,6 +470,7 @@ final class StandaloneWorkoutEngine: ObservableObject {
     }
 
     func reset() {
+        stopWorkRestAssist()
         phase = .idle
         workout = nil
         flattenedSteps = []
@@ -407,6 +479,7 @@ final class StandaloneWorkoutEngine: ObservableObject {
         elapsedSeconds = 0
         restRemainingSeconds = 0
         isManualRest = false
+        assistedRestRetainsStep = false
         heartRate = 0
         activeCalories = 0
         averageHeartRateSamples = []
@@ -415,6 +488,7 @@ final class StandaloneWorkoutEngine: ObservableObject {
         exerciseSetEntries = [:]
         exerciseIndexMap = [:]
         nextExerciseIndex = 0
+        workRestProposal = nil
     }
 
     // MARK: - Timer Management
@@ -529,6 +603,24 @@ final class StandaloneWorkoutEngine: ObservableObject {
     }
 
     // MARK: - Helpers
+
+    private func startWorkRestAssistIfNeeded(for workout: Workout) {
+        guard workout.sport == .strength,
+              WatchStrengthAutoCaptureSettings.isEnabled else {
+            stopWorkRestAssist()
+            return
+        }
+        workRestAssist.start(initialPhase: .workSet) { [weak self] in
+            self?.heartRate ?? 0
+        }
+        print("⌚️ Work/rest assist started (experimental)")
+    }
+
+    private func stopWorkRestAssist() {
+        workRestAssist.stop()
+        workRestProposal = nil
+        assistedRestRetainsStep = false
+    }
 
     private func playHaptic(_ type: WKHapticType) {
         WKInterfaceDevice.current().play(type)
