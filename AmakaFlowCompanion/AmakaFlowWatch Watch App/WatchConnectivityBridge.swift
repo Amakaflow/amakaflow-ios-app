@@ -503,6 +503,10 @@ extension WatchConnectivityBridge: WCSessionDelegate {
                 if session.isReachable {
                     self.requestCurrentState()
                 }
+
+                if activationState == .activated {
+                    NotificationCenter.default.post(name: .watchConnectivitySessionActivated, object: nil)
+                }
             }
         }
     }
@@ -717,4 +721,11 @@ enum WatchConnectivityBridgeError: LocalizedError {
             return "Command failed: \(reason)"
         }
     }
+}
+
+extension Notification.Name {
+    /// Posted when WCSession reaches `.activated` on the Watch.
+    static let watchConnectivitySessionActivated = Notification.Name(
+        "WatchConnectivitySessionActivated"
+    )
 }

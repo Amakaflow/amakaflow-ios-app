@@ -174,14 +174,21 @@ final class AMA1855_WatchGarmin_AssemblyTests: XCTestCase {
         // AMA-1848 Bug B regression: client_generated_id is NOT NULL on
         // workout_completions; every path must populate it. The Watch
         // path was wired during AMA-1848 — pin that it stays populated.
+        let summary = makeStandaloneSummary()
         let request = WorkoutCompletionService
-            .makeWatchCompletionRequestForTesting(summary: makeStandaloneSummary())
+            .makeWatchCompletionRequestForTesting(summary: summary)
         let json = try encode(request)
         let cgid = try XCTUnwrap(
             json["client_generated_id"] as? String,
             "client_generated_id must be set on every WorkoutCompletionRequest (AMA-1848 Bug B)."
         )
         XCTAssertFalse(cgid.isEmpty)
+        // AMA-2420: stable across redelivery (matches Actuals draft id).
+        XCTAssertEqual(cgid, WatchActualsDraftBuilder.draftID(for: summary))
+        let again = try encode(
+            WorkoutCompletionService.makeWatchCompletionRequestForTesting(summary: summary)
+        )
+        XCTAssertEqual(again["client_generated_id"] as? String, cgid)
     }
 
     // MARK: - Wire-shape integration

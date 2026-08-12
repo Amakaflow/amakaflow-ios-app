@@ -309,6 +309,7 @@ final class WorkoutCompletionModuleWatchTests: XCTestCase {
 
     override func setUp() async throws {
         try await super.setUp()
+        WatchCompletionReceiptStore.resetAllForTesting()
         completionService = StubWorkoutCompletionService()
         module = WorkoutCompletionModule(
             queueService: StubWorkoutCompletionQueueService(),
@@ -317,17 +318,18 @@ final class WorkoutCompletionModuleWatchTests: XCTestCase {
     }
 
     override func tearDown() async throws {
+        WatchCompletionReceiptStore.resetAllForTesting()
         module = nil
         completionService = nil
         try await super.tearDown()
     }
 
-    private func makeSummary(workoutId: String = "watch-w1") -> StandaloneWorkoutSummary {
+    private func makeSummary(workoutId: String = UUID().uuidString) -> StandaloneWorkoutSummary {
         StandaloneWorkoutSummary(
             workoutId: workoutId,
             workoutName: "Watch Run",
-            startDate: Date(),
-            endDate: Date(),
+            startDate: Date(timeIntervalSince1970: 1_700_000_000),
+            endDate: Date(timeIntervalSince1970: 1_700_001_800),
             durationSeconds: 1800,
             totalCalories: 300,
             averageHeartRate: 145,
@@ -343,12 +345,13 @@ final class WorkoutCompletionModuleWatchTests: XCTestCase {
         var receivedWorkoutId: String?
         module.onWorkoutCompleted = { id in receivedWorkoutId = id }
 
-        await module.saveWatchCompletion(summary: makeSummary(workoutId: "watch-w1"))
+        let workoutId = "watch-success-\(UUID().uuidString)"
+        await module.saveWatchCompletion(summary: makeSummary(workoutId: workoutId))
 
         guard case .succeeded = module.saveStatus else {
             return XCTFail("expected .succeeded, got \(module.saveStatus)")
         }
-        XCTAssertEqual(receivedWorkoutId, "watch-w1", "callback must carry the workoutId")
+        XCTAssertEqual(receivedWorkoutId, workoutId, "callback must carry the workoutId")
     }
 
     func test_saveWatchCompletion_networkError_doesNotCallOnWorkoutCompleted() async {
@@ -356,7 +359,9 @@ final class WorkoutCompletionModuleWatchTests: XCTestCase {
         var callbackFired = false
         module.onWorkoutCompleted = { _ in callbackFired = true }
 
-        await module.saveWatchCompletion(summary: makeSummary())
+        await module.saveWatchCompletion(
+            summary: makeSummary(workoutId: "watch-net-fail-\(UUID().uuidString)")
+        )
 
         guard case .failed = module.saveStatus else {
             return XCTFail("expected .failed, got \(module.saveStatus)")
@@ -373,11 +378,54 @@ final class WorkoutCompletionModuleWatchTests: XCTestCase {
             WorkoutCompletionResponse(completionId: "cid-w2", id: nil, status: "saved", success: true)
         )
 
-        await module.saveWatchCompletion(summary: makeSummary())
+        await module.saveWatchCompletion(
+            summary: makeSummary(workoutId: "watch-inflight-\(UUID().uuidString)")
+        )
 
         XCTAssertEqual(capturedDuringFlight, .inFlight)
         guard case .succeeded = module.saveStatus else {
             return XCTFail("expected .succeeded after completion")
         }
+    }
+
+    func test_saveWatchCompletion_redeliveryDuringFlight_skipsSecondPost() async {
+        let summary = makeSummary(workoutId: "watch-redeliver-\(UUID().uuidString)")
+        var postCount = 0
+        completionService.onCall = {
+            postCount += 1
+            if postCount == 1 {
+                // Nested redelivery while first post is awaiting.
+                Task { @MainActor in
+                    await self.module.saveWatchCompletion(summary: summary)
+                }
+            }
+        }
+        completionService.result = .success(
+            WorkoutCompletionResponse(completionId: "cid-rd", id: nil, status: "saved", success: true)
+        )
+
+        await module.saveWatchCompletion(summary: summary)
+        // Allow nested task to finish.
+        await Task.yield()
+        try? await Task.sleep(nanoseconds: 50_000_000)
+
+        XCTAssertEqual(postCount, 1, "claimed receipt must block concurrent redelivery posts")
+        guard case .succeeded = module.saveStatus else {
+            return XCTFail("expected .succeeded, got \(module.saveStatus)")
+        }
+    }
+
+    func test_saveWatchCompletion_duplicateAfterSuccess_skipsSecondPost() async {
+        let summary = makeSummary(workoutId: "watch-dup-\(UUID().uuidString)")
+        completionService.result = .success(
+            WorkoutCompletionResponse(completionId: "cid-dup", id: nil, status: "saved", success: true)
+        )
+
+        await module.saveWatchCompletion(summary: summary)
+        var secondPosts = 0
+        completionService.onCall = { secondPosts += 1 }
+        await module.saveWatchCompletion(summary: summary)
+
+        XCTAssertEqual(secondPosts, 0)
     }
 }

@@ -480,7 +480,8 @@ class WorkoutCompletionService: ObservableObject, WorkoutCompletionServiceProvid
             isSimulated: nil,  // Watch workouts are never simulated
             setLogs: setLogs,
             executionLog: nil, // (AMA-291) Watch execution tracking coming later
-            clientGeneratedId: UUID().uuidString.lowercased()  // (AMA-1848 Bug B)
+            // Stable id matches Actuals draft so WC redelivery does not bypass server dedupe.
+            clientGeneratedId: WatchActualsDraftBuilder.draftID(for: summary)
         )
     }
 
