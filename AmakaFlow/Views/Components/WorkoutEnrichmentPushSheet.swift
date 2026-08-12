@@ -369,6 +369,8 @@ extension WorkoutEnrichmentPushSheet {
         case .cooldown: return .sequence(.cooldown)
         case .exerciseWarmupSets: return .warmupPick
         case .betweenSetRest: return nil
+        // AMA-2423 Task 6 wires the transition row's door; not offered yet.
+        case .stationTransition: return nil
         }
     }
 
@@ -378,6 +380,7 @@ extension WorkoutEnrichmentPushSheet {
         case .cooldown: return "af_enhance_row_cooldown"
         case .exerciseWarmupSets: return "af_enhance_row_warmup"
         case .betweenSetRest: return "af_enhance_row_rest"
+        case .stationTransition: return "af_enhance_row_transition"
         }
     }
 

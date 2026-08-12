@@ -215,6 +215,10 @@ struct EnrichmentState: Equatable, Sendable {
                 restSec: restSec,
                 target: target
             )
+        case .stationTransition:
+            // AMA-2423 Task 6 wires the transition row summary + state fields;
+            // this kind is never offered/checked until then.
+            return nil
         }
     }
 

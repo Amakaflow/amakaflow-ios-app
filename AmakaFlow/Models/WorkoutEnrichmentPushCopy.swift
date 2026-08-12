@@ -69,6 +69,7 @@ enum WorkoutEnrichmentPushCopy {
         case .cooldown: return "Cool-down"
         case .betweenSetRest: return "Rest between sets"
         case .exerciseWarmupSets: return "Warm-up sets"
+        case .stationTransition: return "Station transitions"
         }
     }
 
