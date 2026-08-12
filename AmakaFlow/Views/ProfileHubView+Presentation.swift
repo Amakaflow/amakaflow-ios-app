@@ -141,6 +141,110 @@ struct ProfileThisWeekSection: View {
     }
 }
 
+// MARK: - AMA-2417 Profile training aggregates (Monday week + Strava)
+
+enum ProfileTrainingStats {
+    /// Training week starts Monday (ISO-style), independent of locale firstWeekday.
+    static var mondayFirstCalendar: Calendar {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = .current
+        calendar.firstWeekday = 2 // Monday
+        return calendar
+    }
+
+    /// Map BFF Strava activities into Profile's completion shape for tiles / This week.
+    static func completions(
+        from activities: [StravaCompletedActivityDTO],
+        calendar: Calendar = mondayFirstCalendar,
+        now: Date = Date()
+    ) -> [WorkoutCompletion] {
+        activities.compactMap { activity in
+            guard let startedAt = ActualsTodayDemoFeed.resolveStartDate(
+                activity,
+                calendar: calendar,
+                now: now
+            ) else {
+                return nil
+            }
+            let durationSeconds = max(0, activity.durationMin) * 60
+            let distanceMeters: Int? = activity.distanceKm > 0
+                ? Int((activity.distanceKm * 1_000).rounded())
+                : nil
+            return WorkoutCompletion(
+                id: "strava_\(activity.stravaId)",
+                workoutName: activity.name,
+                startedAt: startedAt,
+                endedAt: startedAt.addingTimeInterval(TimeInterval(durationSeconds)),
+                durationSeconds: durationSeconds,
+                avgHeartRate: nil,
+                maxHeartRate: nil,
+                activeCalories: nil,
+                distanceMeters: distanceMeters,
+                source: .manual,
+                syncedToStrava: true,
+                workoutId: nil,
+                originalWorkout: nil,
+                isSimulated: false
+            )
+        }
+        .sorted { $0.startedAt > $1.startedAt }
+    }
+
+    static func weekCompletions(
+        from completions: [WorkoutCompletion],
+        now: Date = Date(),
+        calendar: Calendar = mondayFirstCalendar
+    ) -> [WorkoutCompletion] {
+        completions.filter {
+            ActivityHistoryFilter.thisWeek.includes($0.startedAt, now: now, calendar: calendar)
+        }
+    }
+
+    static func monthCompletions(
+        from completions: [WorkoutCompletion],
+        now: Date = Date(),
+        calendar: Calendar = mondayFirstCalendar
+    ) -> [WorkoutCompletion] {
+        completions.filter {
+            calendar.isDate($0.startedAt, equalTo: now, toGranularity: .month)
+        }
+    }
+
+    static func dayStreak(
+        from completions: [WorkoutCompletion],
+        today: Date = Date(),
+        calendar: Calendar = mondayFirstCalendar
+    ) -> (current: Int, best: Int) {
+        let activeDays = Set(completions.map { calendar.startOfDay(for: $0.startedAt) })
+        guard !activeDays.isEmpty else { return (0, 0) }
+
+        var current = 0
+        var cursor = calendar.startOfDay(for: today)
+        while activeDays.contains(cursor) {
+            current += 1
+            guard let previous = calendar.date(byAdding: .day, value: -1, to: cursor) else { break }
+            cursor = previous
+        }
+
+        let sortedDays = activeDays.sorted()
+        var best = 0
+        var run = 0
+        var prior: Date?
+        for day in sortedDays {
+            if let prior,
+               let next = calendar.date(byAdding: .day, value: 1, to: prior),
+               calendar.isDate(day, inSameDayAs: next) {
+                run += 1
+            } else {
+                run = 1
+            }
+            best = max(best, run)
+            prior = day
+        }
+        return (current, best)
+    }
+}
+
 #if DEBUG
 #Preview("Profile hub") {
     ProfileHubView(

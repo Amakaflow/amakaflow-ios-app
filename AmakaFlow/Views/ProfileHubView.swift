@@ -3,6 +3,7 @@
 //  AmakaFlow
 //
 //  AMA-2292: Daily Driver Profile tab — identity, stat tiles, week activity.
+//  AMA-2417: Strava-backed Monday-week totals; remove hardcoded Monday backfill card.
 //
 
 import SwiftUI
@@ -28,9 +29,13 @@ struct ProfileHubView: View {
     @AppStorage(DefaultsKey.userDisplayName.rawValue) private var displayNameOverride: String = ""
     @StateObject private var historyViewModel = ActivityHistoryViewModel()
     @ObservedObject private var friendsStore = FriendsSharingStore.shared
+    @ObservedObject private var actualsSources = ActualsSourceConnectionStore.shared
     @State private var weekExpanded = false
-    @State private var showingBackfill = false
-    @AppStorage("dd_profile_backfill_completed") private var backfillCompleted = false
+    /// AMA-2417: Strava sync-completed mapped into Profile completion rows.
+    @State private var stravaCompletions: [WorkoutCompletion] = []
+    @State private var stravaStatsLoaded = false
+
+    private var mondayCalendar: Calendar { ProfileTrainingStats.mondayFirstCalendar }
 
     private var displayName: String {
         let trimmed = displayNameOverride.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -44,13 +49,25 @@ struct ProfileHubView: View {
     }
 
     private var usesProfileFixture: Bool {
-        DDHandoffFixtures.isEnabled && !historyViewModel.isLoading && historyViewModel.completions.isEmpty
+        DDHandoffFixtures.isEnabled
+            && !historyViewModel.isLoading
+            && historyViewModel.completions.isEmpty
+            && stravaCompletions.isEmpty
     }
 
+    /// Prefer Strava when connected + loaded; otherwise mapper completions / fixtures.
     private var profileCompletions: [WorkoutCompletion] {
-        usesProfileFixture
-            ? WorkoutCompletion.profileHubSampleData(now: today)
-            : historyViewModel.completions
+        if usesProfileFixture {
+            return WorkoutCompletion.profileHubSampleData(now: today)
+        }
+        if stravaStatsLoaded, actualsSources.isConnected(.strava) {
+            return stravaCompletions
+        }
+        return historyViewModel.completions
+    }
+
+    private var usesStravaProfileStats: Bool {
+        !usesProfileFixture && stravaStatsLoaded && actualsSources.isConnected(.strava)
     }
 
     private var weekSummary: WeeklySummary {
@@ -58,13 +75,11 @@ struct ProfileHubView: View {
     }
 
     private var weekCompletions: [WorkoutCompletion] {
-        profileCompletions.filter {
-            ActivityHistoryFilter.thisWeek.includes(
-                $0.startedAt,
-                now: today,
-                calendar: .current
-            )
-        }
+        ProfileTrainingStats.weekCompletions(
+            from: profileCompletions,
+            now: today,
+            calendar: mondayCalendar
+        )
     }
 
     private var weekListCompletions: [WorkoutCompletion] {
@@ -74,6 +89,10 @@ struct ProfileHubView: View {
             return handoffIDs.compactMap { id in sample.first { $0.id == id } }
         }
         return weekCompletions.sorted { $0.startedAt > $1.startedAt }
+    }
+
+    private var detailRoute: ProfileHubRoute {
+        usesStravaProfileStats ? .actualsHistory : .history
     }
 
     var body: some View {
@@ -113,8 +132,9 @@ struct ProfileHubView: View {
                     ActualsConnectSourcesView()
                 }
             }
-            .task {
+            .task(id: actualsSources.isConnected(.strava)) {
                 await historyViewModel.loadCompletions()
+                await loadStravaProfileStats()
                 await friendsStore.reload()
             }
             .overlay(alignment: .top) {
@@ -122,12 +142,6 @@ struct ProfileHubView: View {
                     .font(.system(size: 1))
                     .opacity(0.01)
                     .accessibilityIdentifier("profile_screen")
-            }
-            .fullScreenCover(isPresented: $showingBackfill) {
-                DDEditorView(mode: .backfill) {
-                    backfillCompleted = true
-                }
-                .ddSuppressFloatingChrome()
             }
         }
     }
@@ -184,21 +198,11 @@ struct ProfileHubView: View {
             actualsConnectSourcesEntryRow
                 .padding(.top, 10)
 
-            if !backfillCompleted {
-                DDInsightBanner(
-                    title: "Monday's strength needs weights",
-                    subtitle: "2-minute backfill"
-                ) {
-                    showingBackfill = true
-                }
-                .padding(.top, 14)
-            }
-
             ProfileThisWeekSection(
                 entries: weekListCompletions,
                 weekExpanded: $weekExpanded
             ) {
-                path.append(ProfileHubRoute.history)
+                path.append(detailRoute)
             }
             .padding(.top, 20)
         }
@@ -297,20 +301,20 @@ struct ProfileHubView: View {
     private var statGrid: some View {
         LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
             DDStatTile(
-                value: usesProfileFixture ? "1/5" : (weekSummary.workoutCount > 0 ? "\(weekSummary.workoutCount)/5" : "—"),
+                value: weekSessionsValue,
                 label: "sessions this week",
                 valueColor: DailyDriver.lime
             ) {
                 weekExpanded = true
-                path.append(ProfileHubRoute.history)
+                path.append(detailRoute)
             }
             .accessibilityIdentifier("af_profile_summary_week")
 
             DDStatTile(
-                value: usesProfileFixture ? "2h 14m" : (weekSummary.workoutCount > 0 ? weekSummary.formattedDuration : "—"),
+                value: trainingTimeValue,
                 label: "training time"
             ) {
-                path.append(ProfileHubRoute.history)
+                path.append(detailRoute)
             }
             .accessibilityIdentifier("af_profile_summary_totals")
 
@@ -318,7 +322,7 @@ struct ProfileHubView: View {
                 value: streakDisplay.value,
                 label: streakDisplay.label
             ) {
-                path.append(ProfileHubRoute.history)
+                path.append(detailRoute)
             }
             .accessibilityIdentifier("af_profile_summary_streak")
 
@@ -326,11 +330,29 @@ struct ProfileHubView: View {
                 value: monthSessionCount,
                 label: monthSessionsLabel
             ) {
-                path.append(ProfileHubRoute.history)
+                path.append(detailRoute)
             }
             .accessibilityIdentifier("af_profile_summary_calendar")
         }
         .accessibilityIdentifier("af_profile_summaries")
+    }
+
+    private var weekSessionsValue: String {
+        if usesProfileFixture { return "1" }
+        if weekSummary.workoutCount > 0 { return "\(weekSummary.workoutCount)" }
+        if hasKnownTrainingData { return "0" }
+        return "—"
+    }
+
+    private var trainingTimeValue: String {
+        if usesProfileFixture { return "2h 14m" }
+        if weekSummary.workoutCount > 0 { return weekSummary.formattedDuration }
+        if hasKnownTrainingData { return "0m" }
+        return "—"
+    }
+
+    private var hasKnownTrainingData: Bool {
+        !profileCompletions.isEmpty || usesStravaProfileStats
     }
 
     private var monthSessionsLabel: String {
@@ -340,11 +362,14 @@ struct ProfileHubView: View {
 
     private var monthSessionCount: String {
         if usesProfileFixture { return "9" }
-        let calendar = Calendar.current
-        let monthCompletions = profileCompletions.filter {
-            calendar.isDate($0.startedAt, equalTo: today, toGranularity: .month)
-        }
-        return monthCompletions.isEmpty ? "—" : "\(monthCompletions.count)"
+        let monthCompletions = ProfileTrainingStats.monthCompletions(
+            from: profileCompletions,
+            now: today,
+            calendar: mondayCalendar
+        )
+        if !monthCompletions.isEmpty { return "\(monthCompletions.count)" }
+        if hasKnownTrainingData { return "0" }
+        return "—"
     }
 
     private var today: Date { Date() }
@@ -353,9 +378,16 @@ struct ProfileHubView: View {
         if usesProfileFixture {
             return ("3 🔥", "day streak · best 6")
         }
-        let streak = profileComputeDayStreak(from: profileCompletions, today: today)
+        let streak = ProfileTrainingStats.dayStreak(
+            from: profileCompletions,
+            today: today,
+            calendar: mondayCalendar
+        )
         if streak.current > 0 {
             return ("\(streak.current) 🔥", "day streak · best \(streak.best)")
+        }
+        if streak.best > 0 {
+            return ("0", "day streak · best \(streak.best)")
         }
         return ("—", "day streak · best —")
     }
@@ -363,55 +395,48 @@ struct ProfileHubView: View {
     private var weekDots: some View {
         profileWeekDots(
             usesFixture: usesProfileFixture,
-            weekCompletions: weekCompletions
+            weekCompletions: weekCompletions,
+            calendar: mondayCalendar
         )
     }
-}
 
-// Free helpers keep ProfileHubView under SwiftLint type_body_length.
-private func profileComputeDayStreak(
-    from completions: [WorkoutCompletion],
-    today: Date
-) -> (current: Int, best: Int) {
-    let calendar = Calendar.current
-    let activeDays = Set(completions.map { calendar.startOfDay(for: $0.startedAt) })
-    guard !activeDays.isEmpty else { return (0, 0) }
-
-    var current = 0
-    var cursor = calendar.startOfDay(for: today)
-    while activeDays.contains(cursor) {
-        current += 1
-        guard let previous = calendar.date(byAdding: .day, value: -1, to: cursor) else { break }
-        cursor = previous
-    }
-
-    let sortedDays = activeDays.sorted()
-    var best = 0
-    var run = 0
-    var prior: Date?
-    for day in sortedDays {
-        if let prior,
-           let next = calendar.date(byAdding: .day, value: 1, to: prior),
-           calendar.isDate(day, inSameDayAs: next) {
-            run += 1
-        } else {
-            run = 1
+    private func loadStravaProfileStats() async {
+        guard actualsSources.isConnected(.strava) else {
+            stravaCompletions = []
+            stravaStatsLoaded = false
+            return
         }
-        best = max(best, run)
-        prior = day
+        do {
+            // 60 days covers a full month + streak best lookback.
+            let result = try await BFFStravaClient.live().syncCompleted(daysBack: 60)
+            guard result.success else {
+                stravaCompletions = []
+                stravaStatsLoaded = false
+                return
+            }
+            stravaCompletions = ProfileTrainingStats.completions(
+                from: result.activities,
+                calendar: mondayCalendar,
+                now: today
+            )
+            stravaStatsLoaded = true
+        } catch {
+            // Keep mapper completions as fallback when Strava tokens/network fail.
+            stravaCompletions = []
+            stravaStatsLoaded = false
+        }
     }
-    return (current, best)
 }
 
 private func profileWeekDots(
     usesFixture: Bool,
-    weekCompletions: [WorkoutCompletion]
+    weekCompletions: [WorkoutCompletion],
+    calendar: Calendar
 ) -> DDWeekDots {
     let labels = ["M", "T", "W", "T", "F", "S", "S"]
     if usesFixture {
         return DDWeekDots(labels: labels, activeIndices: [0, 1])
     }
-    let calendar = Calendar.current
     let activeDays = Set(
         weekCompletions.map { calendar.component(.weekday, from: $0.startedAt) }
             .map { weekday in ((weekday + 5) % 7) }
