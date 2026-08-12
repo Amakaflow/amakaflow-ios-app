@@ -9,7 +9,6 @@
 
 import Combine
 import Foundation
-import HealthKit
 import WatchConnectivity
 import WatchKit
 
@@ -126,7 +125,7 @@ final class StandaloneWorkoutEngine: ObservableObject {
 
         // Start HealthKit session
         do {
-            try await healthManager.startSession(activityType: hkActivityType(for: workout.sport))
+            try await healthManager.startSession(activityType: HKWorkoutActivityMapping.activityType(for: workout.sport))
             print("⌚️ HealthKit session started")
         } catch {
             print("⌚️ Failed to start HealthKit session: \(error)")
@@ -427,27 +426,6 @@ final class StandaloneWorkoutEngine: ObservableObject {
 
     private func playHaptic(_ type: WKHapticType) {
         WKInterfaceDevice.current().play(type)
-    }
-
-    private func hkActivityType(for sport: WorkoutSport) -> HKWorkoutActivityType {
-        switch sport {
-        case .running:
-            return .running
-        case .cycling:
-            return .cycling
-        case .strength:
-            return .functionalStrengthTraining
-        case .mobility:
-            return .yoga
-        case .swimming:
-            return .swimming
-        case .cardio, .mixed:
-            return .mixedCardio
-        case .conditioning:
-            return .highIntensityIntervalTraining
-        case .other:
-            return .other
-        }
     }
 }
 

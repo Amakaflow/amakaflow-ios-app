@@ -3,12 +3,14 @@
 //  AmakaFlowWatch Watch App
 //
 //  Shows today's DayState: planned sessions, readiness score, next session (AMA-1150)
+//  AMA-2420 — experimental Strength Start when auto-capture is on + synced plan.
 //
 
 import SwiftUI
 
 struct TodayScheduleView: View {
     @ObservedObject var viewModel: DayStateViewModel
+    @EnvironmentObject var workoutManager: WatchWorkoutManager
 
     var body: some View {
         Group {
@@ -33,19 +35,16 @@ struct TodayScheduleView: View {
     private func scheduleContent(_ dayState: DayState) -> some View {
         ScrollView {
             VStack(spacing: 8) {
-                // Readiness pill
                 readinessPill(score: dayState.readinessScore, label: dayState.readinessLabel)
 
                 if dayState.sessions.isEmpty {
                     noWorkoutsView
                 } else {
-                    // Session list
                     ForEach(dayState.sessions) { session in
                         sessionRow(session)
                     }
                 }
 
-                // Conflict alert banner
                 if let conflict = dayState.conflictAlert {
                     conflictBanner(conflict)
                 }
@@ -81,49 +80,80 @@ struct TodayScheduleView: View {
     // MARK: - Session Row
 
     private func sessionRow(_ session: PlannedSession) -> some View {
-        HStack(spacing: 8) {
-            // Next session indicator
-            if session.isNext {
-                Circle()
-                    .fill(Color.blue)
-                    .frame(width: 6, height: 6)
-            } else if session.isCompleted {
-                Image(systemName: "checkmark.circle.fill")
-                    .font(.system(size: 12))
-                    .foregroundColor(.green)
-            } else {
-                Circle()
-                    .strokeBorder(Color.gray.opacity(0.4), lineWidth: 1)
-                    .frame(width: 6, height: 6)
-            }
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 8) {
+                if session.isNext {
+                    Circle()
+                        .fill(Color.blue)
+                        .frame(width: 6, height: 6)
+                } else if session.isCompleted {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 12))
+                        .foregroundColor(.green)
+                } else {
+                    Circle()
+                        .strokeBorder(Color.gray.opacity(0.4), lineWidth: 1)
+                        .frame(width: 6, height: 6)
+                }
 
-            VStack(alignment: .leading, spacing: 2) {
-                Text(session.name)
-                    .font(.system(size: 13, weight: session.isNext ? .bold : .medium))
-                    .lineLimit(1)
-                    .foregroundColor(session.isCompleted ? .secondary : .primary)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(session.name)
+                        .font(.system(size: 13, weight: session.isNext ? .bold : .medium))
+                        .lineLimit(1)
+                        .foregroundColor(session.isCompleted ? .secondary : .primary)
 
-                HStack(spacing: 4) {
-                    if let time = session.scheduledTime {
-                        Text(time)
-                            .font(.system(size: 10))
-                            .foregroundColor(.secondary)
-                    }
-                    if let duration = session.durationMinutes {
-                        Text("\(duration) min")
-                            .font(.system(size: 10))
-                            .foregroundColor(.secondary)
+                    HStack(spacing: 4) {
+                        if let time = session.scheduledTime {
+                            Text(time)
+                                .font(.system(size: 10))
+                                .foregroundColor(.secondary)
+                        }
+                        if let duration = session.durationMinutes {
+                            Text("\(duration) min")
+                                .font(.system(size: 10))
+                                .foregroundColor(.secondary)
+                        }
                     }
                 }
+
+                Spacer()
             }
 
-            Spacer()
+            if let workout = strengthStartWorkout(for: session) {
+                NavigationLink(destination: StandaloneWorkoutExecutionView(workout: workout)) {
+                    Label("Start strength", systemImage: "dumbbell.fill")
+                        .font(.system(size: 12, weight: .semibold))
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(.orange)
+                .accessibilityIdentifier("af_watch_strength_auto_capture_start")
+            }
         }
         .padding(.vertical, 4)
         .padding(.horizontal, 8)
         .background(session.isNext ? Color.blue.opacity(0.1) : Color.clear)
         .cornerRadius(8)
         .accessibilityIdentifier("session-row-\(session.id)")
+    }
+
+    /// AMA-2420 — plan-linked Start when experimental flag is on and a synced
+    /// strength workout with steps is available on the Watch.
+    private func strengthStartWorkout(for session: PlannedSession) -> Workout? {
+        guard WatchStrengthAutoCaptureSettings.isEnabled else { return nil }
+        guard !session.isCompleted else { return nil }
+        guard HKWorkoutActivityMapping.isStrengthSportLabel(session.sport) else { return nil }
+
+        if let byID = workoutManager.workouts.first(where: { $0.id == session.id }),
+           !byID.intervals.isEmpty {
+            return byID
+        }
+        let normalizedName = session.name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        return workoutManager.workouts.first {
+            $0.sport == .strength
+                && !$0.intervals.isEmpty
+                && $0.name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == normalizedName
+        }
     }
 
     // MARK: - Conflict Banner

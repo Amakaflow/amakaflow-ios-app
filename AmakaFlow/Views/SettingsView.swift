@@ -1008,6 +1008,18 @@ struct SettingsView: View {
             .buttonStyle(.plain)
             .accessibilityIdentifier("settings_row_social")
 
+        case .experimental:
+            NavigationLink(destination: ExperimentalSettingsView()) {
+                SettingsNavigationRow(
+                    icon: "flask.fill",
+                    tint: Theme.Colors.accentOrange,
+                    title: row.title,
+                    subtitle: row.subtitle
+                )
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("settings_row_experimental")
+
         case .trainingPreferences:
             NavigationLink(destination: TrainingPreferencesView()) {
                 SettingsNavigationRow(
@@ -3132,6 +3144,7 @@ struct SettingsRefreshRowModel: Equatable, Identifiable {
         case syncDashboard
         case shoeComparison
         case accountPrivacyData
+        case experimental
         case debugSettings
         case errorLog
         case workoutDebug
@@ -3193,6 +3206,12 @@ struct SettingsRefreshSectionModel: Equatable, Identifiable {
                 id: "app",
                 title: "App",
                 rows: [
+                    SettingsRefreshRowModel(
+                        id: "experimental",
+                        title: "Experimental",
+                        subtitle: "Strength auto-capture and other dogfood toggles",
+                        destination: .experimental
+                    ),
                     SettingsRefreshRowModel(id: "account_privacy_data", title: "Account, privacy & data", subtitle: "Export, privacy notice, sign out, and account deletion", destination: .accountPrivacyData)
                 ]
             )

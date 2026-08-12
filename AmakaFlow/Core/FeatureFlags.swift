@@ -69,6 +69,11 @@ enum FeatureFlags {
         }
         return true
     }()
+
+    /// AMA-2420 — experimental Watch strength auto-capture (Settings toggle).
+    static var strengthAutoCaptureExperimental: Bool {
+        StrengthAutoCaptureSettings.isEnabled
+    }
 }
 
 /// Centralized UserDefaults keys.
@@ -95,6 +100,8 @@ enum DefaultsKey: String {
     case appleWatchDeliveryPrefs = "apple_watch_delivery_prefs_v1"
     /// AMA-2360: user has saved Apple delivery prefs at least once.
     case appleWatchDeliveryPrefsConfigured = "apple_watch_delivery_prefs_configured_v1"
+    /// AMA-2420: experimental Watch strength auto-capture (off by default).
+    case strengthAutoCaptureExperimental = "ama2420_strength_auto_capture_experimental"
     case instagramImportMode
     case nutritionSettings = "nutrition_settings"
     case pendingWorkoutCompletionQueue = "WorkoutCompletionPendingQueue"

@@ -513,13 +513,21 @@ extension WatchConnectivityBridge: WCSessionDelegate {
     }
 
     // AMA-297: Receive background-queued workout syncs sent via transferUserInfo.
+    // AMA-2420: also experimental flags.
     nonisolated func session(_ session: WCSession, didReceiveUserInfo userInfo: [String: Any] = [:]) {
-        guard (userInfo["action"] as? String) == "syncWorkouts" else { return }
+        let action = userInfo["action"] as? String
         Task { @MainActor in
-            if let workouts = Workout.decodeFromSyncWorkoutsUserInfo(userInfo) {
-                self.workoutManager?.setWorkouts(workouts)
-            } else {
-                print("⌚️ syncWorkouts userInfo: failed to decode workouts payload")
+            switch action {
+            case "syncWorkouts":
+                if let workouts = Workout.decodeFromSyncWorkoutsUserInfo(userInfo) {
+                    self.workoutManager?.setWorkouts(workouts)
+                } else {
+                    print("⌚️ syncWorkouts userInfo: failed to decode workouts payload")
+                }
+            case "experimentalFlags":
+                WatchStrengthAutoCaptureSettings.apply(from: userInfo)
+            default:
+                break
             }
         }
     }
@@ -599,6 +607,9 @@ extension WatchConnectivityBridge: WCSessionDelegate {
             } else {
                 print("⌚️ receiveWorkout: failed to decode workout payload")
             }
+
+        case "experimentalFlags":
+            WatchStrengthAutoCaptureSettings.apply(from: message)
 
         // AMA-1150: DayState push messages from phone
         case DayStateAction.dayStateResponse.rawValue:
