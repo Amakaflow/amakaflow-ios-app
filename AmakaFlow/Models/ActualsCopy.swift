@@ -176,9 +176,10 @@ enum ActualsCopy {
 
     private static func joinedDisplayNames(_ providers: [ActualsSourceProvider]) -> String {
         let names = providers.map(Self.sourceDisplayName)
-        guard names.count > 1 else { return names.first ?? "" }
-        if names.count == 2 { return "\(names[0]) and \(names[1])" }
-        return names.dropLast().joined(separator: ", ") + ", and \(names.last!)"
+        guard let last = names.last else { return "" }
+        if names.count == 1 { return last }
+        if names.count == 2 { return "\(names[0]) and \(last)" }
+        return names.dropLast().joined(separator: ", ") + ", and \(last)"
     }
 
     static let historyLocalTimeFooter =
