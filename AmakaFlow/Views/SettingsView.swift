@@ -548,10 +548,10 @@ struct SettingsView: View {
     private var ddHandoffAppSection: some View {
         SettingsSectionCard(
             title: "App",
-            subtitle: "Notifications · kg/km · dark",
+            subtitle: "Notifications · kg/km · experimental",
             icon: "slider.horizontal.3",
             iconBackground: DailyDriver.purple,
-            rowCount: 3
+            rowCount: 4
         ) {
             VStack(spacing: 0) {
                 ddSettingsLinkRow(
@@ -578,6 +578,24 @@ struct SettingsView: View {
                 ) {
                     settingsInfoMessage = "Daily Driver currently uses dark mode only."
                 }
+                ddSettingsDivider
+                // Typed NavigationLink — avoid AnyView(destination) nested-nav drop.
+                NavigationLink {
+                    ExperimentalSettingsView()
+                } label: {
+                    DDSettingsRow(
+                        icon: "flask.fill",
+                        iconBackground: DailyDriver.orange,
+                        title: "Experimental",
+                        detail: "Strength auto-capture"
+                    ) {
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundColor(DailyDriver.foregroundDim)
+                    }
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("settings_row_experimental")
             }
         }
     }
