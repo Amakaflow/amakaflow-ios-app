@@ -54,8 +54,8 @@ enum LibraryWorkoutOrdering {
     static func latestFirst(_ workouts: [Workout]) -> [Workout] {
         workouts.sorted { lhs, rhs in
             switch (lhs.createdAt, rhs.createdAt) {
-            case let (l?, r?):
-                if l != r { return l > r }
+            case let (leftDate?, rightDate?):
+                if leftDate != rightDate { return leftDate > rightDate }
                 return lhs.id > rhs.id
             case (_?, nil):
                 return true
