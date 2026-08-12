@@ -261,12 +261,27 @@ private enum PreviewSectionBuilder {
         return kind == "rest" || kind == "recovery"
     }
 
-    /// `REST 60S` for timed rest, `REST · YOU END IT` for open/tap-to-end rest.
+    /// `REST 60S` / `REST · YOU END IT` for plain between-set rest.
+    /// AMA-2423: the mapper names station-transition recoveries `"Transition"`
+    /// (`_apply_station_transition` → `displayName="Transition"`) — surface
+    /// `TRANSITION …` instead so the preview never mislabels it Rest; open
+    /// transitions still read as the amber "you end it" chip.
     private static func restChipLabel(for step: WKPlanDTO.Interval.Step) -> String {
+        if isTransitionStep(step) {
+            if let seconds = step.seconds, seconds > 0 {
+                return "TRANSITION \(seconds)S"
+            }
+            return PreviewStep.openTransitionChip
+        }
         if let seconds = step.seconds, seconds > 0 {
             return "REST \(seconds)S"
         }
-        return "REST · YOU END IT"
+        return PreviewStep.openRestChip
+    }
+
+    private static func isTransitionStep(_ step: WKPlanDTO.Interval.Step) -> Bool {
+        guard let name = step.name?.trimmingCharacters(in: .whitespacesAndNewlines) else { return false }
+        return name.caseInsensitiveCompare("Transition") == .orderedSame
     }
 
     /// Time-goal work (seconds present, no reps) — EMOM stations, holds, etc.

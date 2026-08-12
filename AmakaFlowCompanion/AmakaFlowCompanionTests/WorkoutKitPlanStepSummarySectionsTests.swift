@@ -96,6 +96,55 @@ final class WorkoutKitPlanStepSummarySectionsTests: XCTestCase {
         XCTAssertTrue(step.isOpenRest)
     }
 
+    // MARK: - AMA-2423 station Transitions (not Rest)
+
+    /// Brief step 1 — mapper names the recovery step "Transition" for
+    /// station_transition intent; preview must show a Transition chip, not Rest.
+    func testOpenTransitionChipShowsTransitionNotRest() {
+        let json = plan("""
+        { "kind": "work", "name": "Ski Erg", "reps": 500 },
+        { "kind": "rest", "name": "Transition" }
+        """)
+        let sections = WorkoutKitPlanStepSummary.sections(from: json)
+
+        guard let step = sections.first(where: { $0.accent == .work })?.steps.first else {
+            return XCTFail("Expected a work step")
+        }
+        XCTAssertEqual(step.restChip, "TRANSITION · YOU END IT")
+        XCTAssertTrue(step.isOpenRest, "open Transition must still read amber \"you end it\"")
+    }
+
+    /// Timed Transitions (a fixed `transitionSec`) get the same `TRANSITION Ns`
+    /// treatment as timed Rest — and must not be flagged open/amber.
+    func testTimedTransitionChipIsNotFlaggedOpen() {
+        let json = plan("""
+        { "kind": "work", "name": "Row", "reps": 500 },
+        { "kind": "rest", "name": "Transition", "seconds": 45 }
+        """)
+        let sections = WorkoutKitPlanStepSummary.sections(from: json)
+
+        guard let step = sections.first(where: { $0.accent == .work })?.steps.first else {
+            return XCTFail("Expected a work step")
+        }
+        XCTAssertEqual(step.restChip, "TRANSITION 45S")
+        XCTAssertFalse(step.isOpenRest)
+    }
+
+    /// A plain, unnamed recovery step must keep reading Rest — only a
+    /// `displayName == "Transition"` recovery flips to the Transition chip.
+    func testPlainRestStepIsUnaffectedByTransitionCopy() {
+        let json = plan("""
+        { "kind": "work", "name": "Deadlift", "reps": 5 },
+        { "kind": "rest" }
+        """)
+        let sections = WorkoutKitPlanStepSummary.sections(from: json)
+
+        guard let step = sections.first(where: { $0.accent == .work })?.steps.first else {
+            return XCTFail("Expected a work step")
+        }
+        XCTAssertEqual(step.restChip, "REST · YOU END IT")
+    }
+
     func testTimedGoalIsNotFlaggedOpen() {
         let json = plan("""
         { "kind": "work", "name": "Plank", "seconds": 45 }
