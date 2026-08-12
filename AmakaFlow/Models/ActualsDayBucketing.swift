@@ -18,7 +18,9 @@ enum ActualsDayBucketing {
         calendar: Calendar = .current,
         now: Date = Date()
     ) -> Date? {
+        // Empty string from BFF (`""`) must not block the UTC fallback.
         if let startDateLocal,
+           !startDateLocal.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
            let local = parseLocalWallClock(startDateLocal, calendar: calendar, now: now) {
             return local
         }
@@ -91,17 +93,31 @@ enum ActualsDayBucketing {
         return plain.date(from: raw)
     }
 
-    /// Strava `start_date_local` is typically `yyyy-MM-dd'T'HH:mm:ss` with no zone.
+    /// Strava `start_date_local` is athlete **wall clock**, not UTC.
+    ///
+    /// AMA-2421: Strava often appends a false trailing `Z` (ISO says UTC) even though
+    /// the digits are already local. Treating that `Z` as real UTC shifts Central/etc.
+    /// display by the zone offset (e.g. midday → 07:xx). Strip the bogus `Z`, keep
+    /// real numeric offsets (`±HH:MM`) as absolute instants.
     static func parseLocalWallClock(
         _ raw: String,
         calendar: Calendar,
         now: Date
     ) -> Date? {
+        _ = now
         let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
-        // If it carries a zone, treat as absolute.
-        if trimmed.contains("Z") || trimmed.contains("+") || trimmed.suffix(6).contains("-") {
-            // Heuristic: ISO offsets look like …±HH:MM at the end.
-            if let absolute = parseISO8601(trimmed) { return absolute }
+        guard !trimmed.isEmpty else { return nil }
+
+        // Real offset (…+00:00 / …-05:00) → absolute. Do this before stripping `Z`.
+        if hasNumericUTCOffsetSuffix(trimmed),
+           let absolute = parseISO8601(trimmed) {
+            return absolute
+        }
+
+        // Strip Strava's false `Z` / `z` — remaining digits are wall clock.
+        var wall = trimmed
+        if wall.hasSuffix("Z") || wall.hasSuffix("z") {
+            wall = String(wall.dropLast())
         }
 
         let formatter = DateFormatter()
@@ -110,20 +126,20 @@ enum ActualsDayBucketing {
         formatter.timeZone = calendar.timeZone
         for format in ["yyyy-MM-dd'T'HH:mm:ss", "yyyy-MM-dd'T'HH:mm:ss.SSS"] {
             formatter.dateFormat = format
-            if let date = formatter.date(from: trimmed) {
+            if let date = formatter.date(from: wall) {
                 return date
             }
         }
-        // Fallback: strip zone and reparse as local.
-        let stripped = trimmed
-            .replacingOccurrences(of: "Z", with: "")
-            .replacingOccurrences(
-                of: #"([+-]\d{2}:\d{2})$"#,
-                with: "",
-                options: .regularExpression
-            )
-        formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss"
-        return formatter.date(from: stripped)
+        return nil
+    }
+
+    /// True when the string ends with a numeric ISO-8601 offset (`+HH:MM` / `-HH:MM`),
+    /// not when it merely contains date dashes (`2026-08-11…`).
+    private static func hasNumericUTCOffsetSuffix(_ raw: String) -> Bool {
+        raw.range(
+            of: #"[+-]\d{2}:\d{2}$"#,
+            options: .regularExpression
+        ) != nil
     }
 
     /// Mono day header for History: `SAT · AUG 9`

@@ -130,6 +130,60 @@ final class AMA2396SyncV2Tests: XCTestCase {
         XCTAssertEqual(cardsForAug9.first?.title, "Late night lift")
     }
 
+    /// AMA-2421: Strava suffixes `start_date_local` with a false `Z`. Parsing that as
+    /// UTC then formatting in Central shifts midday → morning (12:29 → 07:29).
+    func testStravaLocalFalseZKeepsCentralWallClock() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "America/Chicago")!
+
+        let lunch = StravaCompletedActivityDTO(
+            stravaId: 42,
+            name: "Lunch Workout",
+            type: "Workout",
+            distanceKm: 0,
+            durationMin: 6,
+            startDate: "2026-08-11T17:29:00Z",
+            startDateLocal: "2026-08-11T12:29:00Z",
+            description: ""
+        )
+
+        let resolved = ActualsTodayDemoFeed.resolveStartDate(lunch, calendar: calendar)
+        XCTAssertNotNil(resolved)
+        let hour = calendar.component(.hour, from: resolved!)
+        let minute = calendar.component(.minute, from: resolved!)
+        XCTAssertEqual(hour, 12, "false Z must not shift Central wall clock")
+        XCTAssertEqual(minute, 29)
+
+        let day = calendar.startOfDay(for: resolved!)
+        let cards = ActualsTodayDemoFeed.cards(
+            from: [lunch],
+            on: day,
+            calendar: calendar,
+            now: resolved!
+        )
+        XCTAssertEqual(cards.first?.timeLabel, "12:29")
+    }
+
+    func testEmptyStartDateLocalFallsBackToUTCStartDate() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "America/Chicago")!
+
+        let activity = StravaCompletedActivityDTO(
+            stravaId: 43,
+            name: "UTC only",
+            type: "Run",
+            distanceKm: 5,
+            durationMin: 30,
+            startDate: "2026-08-11T17:29:00Z",
+            startDateLocal: "",
+            description: ""
+        )
+        let resolved = ActualsTodayDemoFeed.resolveStartDate(activity, calendar: calendar)
+        XCTAssertNotNil(resolved)
+        XCTAssertEqual(calendar.component(.hour, from: resolved!), 12)
+        XCTAssertEqual(calendar.component(.minute, from: resolved!), 29)
+    }
+
     func testHistoryDayHeaderFormat() {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(identifier: "UTC")!
