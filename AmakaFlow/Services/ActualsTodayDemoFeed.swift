@@ -373,7 +373,9 @@ final class ActualsTodayDemoFeed: ObservableObject {
         }
         .sorted { $0.1 > $1.1 }
 
-        return parsed.map { card(from: $0.0, startDate: $0.1) }
+        return parsed.map {
+            card(from: $0.0, startDate: $0.1, timeZone: calendar.timeZone)
+        }
     }
 
     /// Full 30-day (or longer) history rows, day-bucketed newest-first.
@@ -394,7 +396,12 @@ final class ActualsTodayDemoFeed: ObservableObject {
             calendar: calendar
         )
         return buckets.map { day, items in
-            (day, items.map { card(from: $0.0, startDate: $0.1) })
+            (
+                day,
+                items.map {
+                    card(from: $0.0, startDate: $0.1, timeZone: calendar.timeZone)
+                }
+            )
         }
     }
 
@@ -413,7 +420,8 @@ final class ActualsTodayDemoFeed: ObservableObject {
 
     private static func card(
         from activity: StravaCompletedActivityDTO,
-        startDate: Date
+        startDate: Date,
+        timeZone: TimeZone = .current
     ) -> ActualsTodayDemoCard {
         let durationSeconds = TimeInterval(activity.durationMin * 60)
         let distanceMeters = activity.distanceKm > 0 ? activity.distanceKm * 1_000 : nil
@@ -443,6 +451,7 @@ final class ActualsTodayDemoFeed: ObservableObject {
                 : String(format: "%.1f km", kilometers)
             stats.append(("figure.run", distanceText))
         }
+        let timeLabel = Self.timeLabel(for: startDate, timeZone: timeZone)
         let cardID = "strava_\(activity.stravaId)"
         // AMA-2407: hydrate Verified from sync flags OR our ownership signature in
         // the Strava description ("— tracked with AmakaFlow"). Signature means
@@ -461,7 +470,7 @@ final class ActualsTodayDemoFeed: ObservableObject {
             return ActualsTodayDemoCard(
                 id: cardID,
                 kind: .verified,
-                timeLabel: cardTimeFormatter.string(from: startDate),
+                timeLabel: timeLabel,
                 title: activity.name,
                 stats: stats,
                 sourceLabel: sourceLabel,
@@ -475,7 +484,7 @@ final class ActualsTodayDemoFeed: ObservableObject {
         return ActualsTodayDemoCard(
             id: cardID,
             kind: .unmapped,
-            timeLabel: cardTimeFormatter.string(from: startDate),
+            timeLabel: timeLabel,
             title: activity.name,
             stats: stats,
             sourceLabel: "Synced from \(ActualsCopy.sourceDisplayName(.strava))",
@@ -500,7 +509,10 @@ final class ActualsTodayDemoFeed: ObservableObject {
             calendar: calendar
         )
         return buckets.map { day, items in
-            (day: day, cards: items.map { card(from: $0) })
+            (
+                day: day,
+                cards: items.map { card(from: $0, timeZone: calendar.timeZone) }
+            )
         }
     }
 
@@ -512,10 +524,13 @@ final class ActualsTodayDemoFeed: ObservableObject {
         samples
             .filter { calendar.isDate($0.startDate, inSameDayAs: day) }
             .sorted { $0.startDate > $1.startDate }
-            .map { card(from: $0) }
+            .map { card(from: $0, timeZone: calendar.timeZone) }
     }
 
-    static func card(from sample: ActualsHealthKitWorkoutSample) -> ActualsTodayDemoCard {
+    static func card(
+        from sample: ActualsHealthKitWorkoutSample,
+        timeZone: TimeZone = .current
+    ) -> ActualsTodayDemoCard {
         let minutes = max(1, Int(sample.durationSeconds / 60))
         let unmapped = ActualsUnmappedActivity(
             title: sample.title,
@@ -546,7 +561,7 @@ final class ActualsTodayDemoFeed: ObservableObject {
         return ActualsTodayDemoCard(
             id: "applehealth_\(sample.id)",
             kind: .unmapped,
-            timeLabel: cardTimeFormatter.string(from: sample.startDate),
+            timeLabel: timeLabel(for: sample.startDate, timeZone: timeZone),
             title: sample.title,
             stats: stats,
             sourceLabel: "Synced from \(ActualsCopy.sourceDisplayName(.appleHealth))",
@@ -1474,7 +1489,7 @@ final class ActualsTodayDemoFeed: ObservableObject {
             avgHR: nil,
             type: .strength
         )
-        let time = Self.cardTimeFormatter.string(from: recording.startDate)
+        let time = Self.timeLabel(for: recording.startDate, timeZone: .current)
         return ActualsTodayDemoCard(
             id: recording.id,
             kind: .unmapped,
@@ -1489,12 +1504,14 @@ final class ActualsTodayDemoFeed: ObservableObject {
         )
     }
 
-    private static let cardTimeFormatter: DateFormatter = {
+    /// AMA-2421: format with the same zone used to resolve `start_date_local`.
+    private static func timeLabel(for date: Date, timeZone: TimeZone) -> String {
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = timeZone
         formatter.dateFormat = "HH:mm"
-        return formatter
-    }()
+        return formatter.string(from: date)
+    }
 
     private func loadSampleContent() {
         mergeLeft = Self.sampleWatchRecording
