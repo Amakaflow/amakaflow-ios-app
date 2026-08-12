@@ -36,6 +36,12 @@ final class StandaloneWorkoutEngine: ObservableObject {
     /// AMA-2420 Phase 4 — confidence-gated work/rest proposal (nil when low confidence / off).
     @Published private(set) var workRestProposal: WorkRestProposal?
 
+    /// AMA-2420 Phase 5 — ranked rep-count proposal (nil when unsupported / low confidence).
+    @Published private(set) var narrowRepProposal: NarrowRepProposal?
+
+    /// AMA-2420 Phase 5 — confirmed rep override for the current set (applied on next log).
+    @Published private(set) var confirmedAssistedReps: Int?
+
     // MARK: - Flattened Steps
 
     private(set) var flattenedSteps: [WatchFlattenedInterval] = []
@@ -51,6 +57,12 @@ final class StandaloneWorkoutEngine: ObservableObject {
     private var workRestCancellables = Set<AnyCancellable>()
     /// Assisted mid-set rest returns to the same step (does not invent / skip set logs).
     private var assistedRestRetainsStep = false
+
+    /// AMA-2420 Phase 5 — narrow rep assist (shares WorkRest motion stream).
+    private let narrowRepAssist = NarrowRepAssistController()
+    private var narrowRepCancellables = Set<AnyCancellable>()
+    /// Detection method from last confirmed rep proposal (cleared after log / step change).
+    private var pendingRepDetectionMethod: String?
 
     var currentStep: WatchFlattenedInterval? {
         guard currentStepIndex >= 0, currentStepIndex < flattenedSteps.count else { return nil }
@@ -98,6 +110,7 @@ final class StandaloneWorkoutEngine: ObservableObject {
     private init() {
         setupHealthKitBindings()
         setupWorkRestAssistBindings()
+        setupNarrowRepAssistBindings()
     }
 
     // MARK: - HealthKit Integration
@@ -119,8 +132,28 @@ final class StandaloneWorkoutEngine: ObservableObject {
             .receive(on: RunLoop.main)
             .sink { [weak self] proposal in
                 self?.workRestProposal = proposal
+                // Prefer work/rest prompt over rep prompt when both would fire.
+                if proposal != nil {
+                    self?.narrowRepAssist.rejectProposal()
+                    self?.narrowRepProposal = nil
+                }
             }
             .store(in: &workRestCancellables)
+    }
+
+    private func setupNarrowRepAssistBindings() {
+        narrowRepAssist.$pendingProposal
+            .receive(on: RunLoop.main)
+            .sink { [weak self] proposal in
+                guard let self else { return }
+                // Never stack on top of a work/rest prompt.
+                if self.workRestProposal != nil {
+                    self.narrowRepProposal = nil
+                    return
+                }
+                self.narrowRepProposal = proposal
+            }
+            .store(in: &narrowRepCancellables)
     }
 
     // MARK: - Commands
@@ -150,6 +183,9 @@ final class StandaloneWorkoutEngine: ObservableObject {
         self.nextExerciseIndex = 0
         self.assistedRestRetainsStep = false
         self.workRestProposal = nil
+        self.narrowRepProposal = nil
+        self.confirmedAssistedReps = nil
+        self.pendingRepDetectionMethod = nil
 
         print("⌚️ Starting standalone workout: \(workout.name)")
         print("⌚️ Flattened steps count: \(flattenedSteps.count)")
@@ -175,6 +211,7 @@ final class StandaloneWorkoutEngine: ObservableObject {
         timer = nil
         healthManager.pauseSession()
         workRestAssist.pauseCapture()
+        narrowRepAssist.setWorkContext(false)
         playHaptic(.stop)
     }
 
@@ -185,6 +222,9 @@ final class StandaloneWorkoutEngine: ObservableObject {
         startTimer()
         healthManager.resumeSession()
         workRestAssist.resumeCapture()
+        if workRestAssist.phase == .workSet {
+            narrowRepAssist.setWorkContext(true)
+        }
         playHaptic(.start)
     }
 
@@ -239,6 +279,8 @@ final class StandaloneWorkoutEngine: ObservableObject {
         }
 
         workRestAssist.syncPhase(.idleRest)
+        // Finalize rep ranking as the set ends — still requires user confirm.
+        narrowRepAssist.setWorkContext(false, finalize: true)
         playHaptic(.stop)
     }
 
@@ -289,6 +331,7 @@ final class StandaloneWorkoutEngine: ObservableObject {
             phase = .running
             setupCurrentStep()
             workRestAssist.syncPhase(.workSet)
+            beginNarrowRepSetIfNeeded()
             playHaptic(.start)
             return
         }
@@ -308,6 +351,7 @@ final class StandaloneWorkoutEngine: ObservableObject {
         phase = .running
         setupCurrentStep()
         workRestAssist.syncPhase(.workSet)
+        beginNarrowRepSetIfNeeded()
         playHaptic(.start)
     }
 
@@ -338,6 +382,15 @@ final class StandaloneWorkoutEngine: ObservableObject {
 
         let exerciseName = step.label
         let setNumber = step.setNumber ?? 1
+        let resolvedMethod: String
+        if detectionMethod != "manual" {
+            resolvedMethod = detectionMethod
+        } else if let pending = pendingRepDetectionMethod {
+            resolvedMethod = pending
+        } else {
+            resolvedMethod = "manual"
+        }
+        let loggedReps = confirmedAssistedReps ?? step.targetReps
 
         if exerciseIndexMap[exerciseName] == nil {
             exerciseIndexMap[exerciseName] = nextExerciseIndex
@@ -349,7 +402,8 @@ final class StandaloneWorkoutEngine: ObservableObject {
             weight: weight,
             unit: weight != nil ? unit : nil,
             completed: true,
-            detectionMethod: detectionMethod
+            detectionMethod: resolvedMethod,
+            reps: loggedReps
         )
         if exerciseSetEntries[exerciseName] == nil {
             exerciseSetEntries[exerciseName] = []
@@ -360,11 +414,15 @@ final class StandaloneWorkoutEngine: ObservableObject {
             lastLoggedWeightByExercise[exerciseName] = (weight, unit)
         }
 
-        print("⌚️ Logged set: \(exerciseName) set \(setNumber) — \(weight ?? 0) \(unit ?? "") [\(detectionMethod)]")
+        print("⌚️ Logged set: \(exerciseName) set \(setNumber) — \(weight ?? 0) \(unit ?? "") ×\(loggedReps ?? 0) [\(resolvedMethod)]")
         playHaptic(.click)
         // Manual / as-prescribed logging wins over any pending IMU proposal.
         workRestAssist.rejectProposal()
         workRestProposal = nil
+        narrowRepAssist.rejectProposal()
+        narrowRepProposal = nil
+        confirmedAssistedReps = nil
+        pendingRepDetectionMethod = nil
         nextStep()
     }
 
@@ -384,10 +442,12 @@ final class StandaloneWorkoutEngine: ObservableObject {
                 skipRest()
             } else {
                 workRestAssist.syncPhase(.workSet)
+                beginNarrowRepSetIfNeeded()
             }
         case .toIdleRest:
             guard phase == .running else {
                 workRestAssist.syncPhase(.idleRest)
+                narrowRepAssist.setWorkContext(false, finalize: true)
                 return
             }
             // Mid-set assist rest: retain step so crown / AS PLANNED still apply after.
@@ -402,6 +462,26 @@ final class StandaloneWorkoutEngine: ObservableObject {
         workRestProposal = nil
     }
 
+    /// AMA-2420 Phase 5 — user confirmed ranked rep suggestion (never silent).
+    func confirmNarrowRepProposal() {
+        guard phase != .paused else {
+            rejectNarrowRepProposal()
+            return
+        }
+        guard workRestProposal == nil else { return }
+        guard let proposal = narrowRepAssist.confirmProposal() else { return }
+        narrowRepProposal = nil
+        confirmedAssistedReps = proposal.suggestedReps
+        pendingRepDetectionMethod = proposal.detectionMethod
+        print("⌚️ Confirmed narrow rep assist: \(proposal.suggestedReps) [\(proposal.detectionMethod)]")
+    }
+
+    /// AMA-2420 Phase 5 — user rejected rep suggestion; keep planned reps.
+    func rejectNarrowRepProposal() {
+        narrowRepAssist.rejectProposal()
+        narrowRepProposal = nil
+    }
+
     /// AMA-2420 Phase 3 — one-tap complete using prescribed load from the plan.
     func completeSetAsPrescribed() {
         guard let step = currentStep, step.stepType == .reps else {
@@ -412,7 +492,9 @@ final class StandaloneWorkoutEngine: ObservableObject {
             logSetWeight(weight: suggestedWeight(for: step), unit: suggestedWeightUnit(for: step))
             return
         }
-        logSetWeight(weight: prescribed.weight, unit: prescribed.unit, detectionMethod: "autoConfirmed")
+        // Prefer Phase 5 confirmed detection method when present; else as-prescribed.
+        let method = pendingRepDetectionMethod ?? "autoConfirmed"
+        logSetWeight(weight: prescribed.weight, unit: prescribed.unit, detectionMethod: method)
     }
 
     func prescribedLoad(for step: WatchFlattenedInterval) -> (weight: Double, unit: String)? {
@@ -493,6 +575,9 @@ final class StandaloneWorkoutEngine: ObservableObject {
         exerciseIndexMap = [:]
         nextExerciseIndex = 0
         workRestProposal = nil
+        narrowRepProposal = nil
+        confirmedAssistedReps = nil
+        pendingRepDetectionMethod = nil
     }
 
     // MARK: - Timer Management
@@ -507,6 +592,13 @@ final class StandaloneWorkoutEngine: ObservableObject {
         }
 
         print("⌚️ setupCurrentStep: \(step.label), timerSeconds: \(step.timerSeconds ?? -1)")
+
+        confirmedAssistedReps = nil
+        pendingRepDetectionMethod = nil
+        narrowRepProposal = nil
+        if phase == .running {
+            beginNarrowRepSetIfNeeded()
+        }
 
         // Setup timer for timed steps
         if let seconds = step.timerSeconds {
@@ -614,16 +706,38 @@ final class StandaloneWorkoutEngine: ObservableObject {
             stopWorkRestAssist()
             return
         }
-        workRestAssist.start(initialPhase: .workSet) { [weak self] in
-            self?.heartRate ?? 0
+        workRestAssist.start(
+            initialPhase: .workSet,
+            heartRateProvider: { [weak self] in
+                self?.heartRate ?? 0
+            },
+            motionBufferHandler: { [weak self] buffer in
+                self?.narrowRepAssist.ingest(buffer: buffer)
+            }
+        )
+        beginNarrowRepSetIfNeeded()
+        print("⌚️ Work/rest + narrow rep assist started (experimental)")
+    }
+
+    private func beginNarrowRepSetIfNeeded() {
+        guard WatchStrengthAutoCaptureSettings.isEnabled,
+              let step = currentStep,
+              step.stepType == .reps else {
+            narrowRepAssist.setWorkContext(false)
+            return
         }
-        print("⌚️ Work/rest assist started (experimental)")
+        workRestAssist.clearMotionBufferForNewSet()
+        narrowRepAssist.beginSet(exerciseName: step.label, plannedReps: step.targetReps)
     }
 
     private func stopWorkRestAssist() {
         workRestAssist.stop()
+        narrowRepAssist.stop()
         workRestProposal = nil
+        narrowRepProposal = nil
         assistedRestRetainsStep = false
+        confirmedAssistedReps = nil
+        pendingRepDetectionMethod = nil
     }
 
     private func playHaptic(_ type: WKHapticType) {
