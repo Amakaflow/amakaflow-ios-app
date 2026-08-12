@@ -239,9 +239,9 @@ final class WorkoutCompletionModule: ObservableObject, WorkoutCompletionModulePr
         }
     }
 
-    /// AMA-2420 — land Watch strength sets on Today Actuals fill-in for correction.
+    /// AMA-2420 — land Watch strength sessions on Today Actuals fill-in for correction.
+    /// Passive free-capture may have empty set logs; still seed a blank Fill-in draft.
     private func upsertWatchActualsDraft(from summary: StandaloneWorkoutSummary) {
-        guard summary.setLogs?.isEmpty == false else { return }
         guard let session = WatchActualsDraftBuilder.makeFillInSession(
             summary: summary,
             libraryWorkout: nil

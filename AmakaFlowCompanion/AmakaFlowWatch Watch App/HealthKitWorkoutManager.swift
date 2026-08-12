@@ -5,9 +5,9 @@
 //  Manages HealthKit workout sessions for heart rate and calorie tracking
 //
 
+import Combine
 import Foundation
 import HealthKit
-import Combine
 
 protocol WorkoutSessionBuilding: AnyObject {
     func endCollection(at end: Date) async throws
@@ -24,8 +24,11 @@ final class HealthKitWorkoutManager: NSObject, ObservableObject {
 
     @Published private(set) var heartRate: Double = 0
     @Published private(set) var activeCalories: Double = 0
+    /// Active + basal when basal is available; otherwise equals active.
+    @Published private(set) var totalCalories: Double = 0
     @Published private(set) var isSessionActive = false
     @Published private(set) var authorizationStatus: HKAuthorizationStatus = .notDetermined
+    private var basalCalories: Double = 0
 
     // MARK: - Private Properties
 
@@ -63,7 +66,8 @@ final class HealthKitWorkoutManager: NSObject, ObservableObject {
         // Types to read
         let typesToRead: Set<HKObjectType> = [
             HKQuantityType.quantityType(forIdentifier: .heartRate)!,
-            HKQuantityType.quantityType(forIdentifier: .activeEnergyBurned)!
+            HKQuantityType.quantityType(forIdentifier: .activeEnergyBurned)!,
+            HKQuantityType.quantityType(forIdentifier: .basalEnergyBurned)!
         ]
 
         // Types to write (workout)
@@ -108,19 +112,26 @@ final class HealthKitWorkoutManager: NSObject, ObservableObject {
             liveBuilder?.delegate = self
 
             // Set data source for live workout data
-            liveBuilder?.dataSource = HKLiveWorkoutDataSource(
+            let dataSource = HKLiveWorkoutDataSource(
                 healthStore: healthStore,
                 workoutConfiguration: config
             )
+            if let basalType = HKQuantityType.quantityType(forIdentifier: .basalEnergyBurned) {
+                dataSource.enableCollection(for: basalType, predicate: nil)
+            }
+            liveBuilder?.dataSource = dataSource
 
             // Start the session
             let startDate = Date()
             session?.startActivity(with: startDate)
             try await liveBuilder?.beginCollection(at: startDate)
 
+            basalCalories = 0
+            activeCalories = 0
+            totalCalories = 0
+            heartRate = 0
             isSessionActive = true
             print("❤️ Workout session started")
-
         } catch {
             print("❤️ Failed to start workout session: \(error)")
             throw error
@@ -141,16 +152,51 @@ final class HealthKitWorkoutManager: NSObject, ObservableObject {
             try await builder.finishWorkout()
 
             print("❤️ Workout session ended")
-            self.session = nil
-            self.builder = nil
-            self.liveWorkoutBuilder = nil
-            isSessionActive = false
-            heartRate = 0
-            activeCalories = 0
-            heartRateHandlers.removeAll()
+            clearSessionState()
         } catch {
             print("❤️ Failed to end workout session: \(error)")
+            clearSessionState()
         }
+    }
+
+    /// AMA-2420 — discard an in-progress session without saving an HKWorkout.
+    func discardSession() async {
+        guard isSessionActive else {
+            print("❤️ No active session to discard")
+            return
+        }
+
+        session?.end()
+        if let liveBuilder = liveWorkoutBuilder {
+            liveBuilder.discardWorkout()
+        } else if let builder = builder {
+            // Test seam / non-live builders: end collection without finish.
+            do {
+                try await builder.endCollection(at: Date())
+            } catch {
+                print("❤️ Discard endCollection failed: \(error)")
+            }
+        }
+
+        print("❤️ Workout session discarded")
+        clearSessionState()
+    }
+
+    private func clearSessionState() {
+        session = nil
+        builder = nil
+        liveWorkoutBuilder = nil
+        isSessionActive = false
+        heartRate = 0
+        activeCalories = 0
+        basalCalories = 0
+        totalCalories = 0
+        heartRateHandlers.removeAll()
+    }
+
+    private func publishCalories() {
+        totalCalories = activeCalories + basalCalories
+        heartRateHandlers.values.forEach { $0(heartRate, activeCalories) }
     }
 
 #if DEBUG
@@ -190,8 +236,16 @@ final class HealthKitWorkoutManager: NSObject, ObservableObject {
             let unit = HKUnit.kilocalorie()
             if let value = statistics.sumQuantity()?.doubleValue(for: unit) {
                 activeCalories = value
-                print("❤️ Calories: \(Int(value)) kcal")
-                heartRateHandlers.values.forEach { $0(heartRate, activeCalories) }
+                print("❤️ Active cal: \(Int(value)) kcal")
+                publishCalories()
+            }
+
+        case HKQuantityType.quantityType(forIdentifier: .basalEnergyBurned):
+            let unit = HKUnit.kilocalorie()
+            if let value = statistics.sumQuantity()?.doubleValue(for: unit) {
+                basalCalories = value
+                print("❤️ Basal cal: \(Int(value)) kcal")
+                publishCalories()
             }
 
         default:

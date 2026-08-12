@@ -42,6 +42,21 @@ enum WatchActualsDraftBuilder {
             exercises = exercisesFromSetLogs(setLogs)
         }
 
+        // AMA-2420 passive free-capture — no set logs yet; seed a blank row for Fill in.
+        if exercises.isEmpty {
+            exercises = [
+                ExerciseActual(
+                    id: "exercise_1",
+                    name: "Exercise 1",
+                    planned: ExerciseActualPlanned(sets: 1, reps: 1, weightKg: nil, note: nil),
+                    confirmation: nil,
+                    actualSets: 1,
+                    actualReps: 1,
+                    actualWeightKg: nil
+                )
+            ]
+        }
+
         guard !exercises.isEmpty else { return nil }
 
         let formatter = DateFormatter()

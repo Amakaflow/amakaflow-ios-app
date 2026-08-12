@@ -90,7 +90,7 @@ struct TodayScheduleView: View {
         // Read epoch so WC flag sync rebuilds this section.
         if WatchStrengthAutoCaptureSettings.isEnabled, strengthAutoCaptureEpoch >= 0 {
             NavigationLink(
-                destination: StandaloneWorkoutExecutionView(workout: FreeformStrengthWorkout.make())
+                destination: PassiveStrengthSessionView()
             ) {
                 Label("Start strength", systemImage: "dumbbell.fill")
                     .font(.system(size: 12, weight: .semibold))

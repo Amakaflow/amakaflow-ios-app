@@ -187,12 +187,27 @@ final class WatchActualsDraftBuilderTests: XCTestCase {
         XCTAssertEqual(unwrapped.exercises[0].actualWeightKg, 105)
     }
 
-    func testMakeFillInSessionNilWhenNoSetLogs() {
-        let session = WatchActualsDraftBuilder.makeFillInSession(
-            summary: makeSummary(setLogs: nil),
-            libraryWorkout: nil
+    func testMakeFillInSessionSeedsBlankExerciseWhenSetLogsEmpty() throws {
+        let session = try XCTUnwrap(
+            WatchActualsDraftBuilder.makeFillInSession(
+                summary: makeSummary(setLogs: nil),
+                libraryWorkout: nil
+            )
         )
-        XCTAssertNil(session)
+        XCTAssertEqual(session.exercises.count, 1)
+        XCTAssertEqual(session.exercises[0].name, "Exercise 1")
+        XCTAssertNil(session.exercises[0].confirmation)
+    }
+
+    func testMakeFillInSessionSeedsBlankExerciseWhenSetLogsEmptyArray() throws {
+        let session = try XCTUnwrap(
+            WatchActualsDraftBuilder.makeFillInSession(
+                summary: makeSummary(setLogs: []),
+                libraryWorkout: nil
+            )
+        )
+        XCTAssertEqual(session.exercises.count, 1)
+        XCTAssertEqual(session.exercises[0].name, "Exercise 1")
     }
 
     func testMakeFillInSessionConvertsLbsToKg() throws {
