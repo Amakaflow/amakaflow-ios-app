@@ -302,7 +302,7 @@ extension WatchConnectivityManager: WCSessionDelegate {
                 switch activationState {
                 case .activated:
                     print("⌚️ WCSession activated successfully")
-                    syncExperimentalFlagsToWatch()
+                    self.syncExperimentalFlagsToWatch()
                     if !session.isWatchAppInstalled {
                         print("⌚️ Note: Watch app is not installed (this is normal during development)")
                     } else if !session.isPaired {
