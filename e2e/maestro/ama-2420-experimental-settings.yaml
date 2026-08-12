@@ -55,7 +55,20 @@ appId: com.myamaka.AmakaFlowCompanion
 - assertVisible: "Watch strength"
 - takeScreenshot: docs/ama-2420-dogfood/01-experimental-off
 - tapOn:
-    id: "settings_toggle_strength_auto_capture"
+    point: "88%,20%"
 - waitForAnimationToEnd:
-    timeout: 1000
-- takeScreenshot: docs/ama-2420-dogfood/02-experimental-on
+    timeout: 2500
+- takeScreenshot: docs/ama-2420-dogfood/02-experimental-toggled
+- tapOn:
+    point: "6%,11%"
+- waitForAnimationToEnd:
+    timeout: 1500
+- tapOn:
+    text: "Experimental"
+- waitForAnimationToEnd:
+    timeout: 2000
+- extendedWaitUntil:
+        visible:
+            id: "settings_toggle_strength_auto_capture"
+        timeout: 10000
+- takeScreenshot: docs/ama-2420-dogfood/03-experimental-persisted
