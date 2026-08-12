@@ -35,6 +35,30 @@ final class WatchActualsDraftBuilderTests: XCTestCase {
         XCTAssertEqual(session.exercises[0].confirmation, .asPlanned)
     }
 
+    func testMakeFillInSessionDoesNotMarkAsPlannedWithEmptyCompletedSets() throws {
+        let summary = makeSummary(setLogs: [
+            StandaloneSetLog(
+                exerciseName: "Press",
+                exerciseIndex: 0,
+                sets: [
+                    StandaloneSetEntry(
+                        setNumber: 1,
+                        weight: 40,
+                        unit: "kg",
+                        completed: false,
+                        detectionMethod: "autoConfirmed"
+                    )
+                ]
+            )
+        ])
+
+        let session = try XCTUnwrap(
+            WatchActualsDraftBuilder.makeFillInSession(summary: summary, libraryWorkout: nil)
+        )
+        // No completed sets → still builds a row, but must not vacuous-.asPlanned
+        XCTAssertNil(session.exercises[0].confirmation)
+    }
+
     func testLoadHintParsesKg() {
         let parsed = StandaloneLoadHint.parse("100 kg")
         XCTAssertEqual(parsed?.weight, 100)

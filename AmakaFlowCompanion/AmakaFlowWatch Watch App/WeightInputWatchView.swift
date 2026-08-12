@@ -23,14 +23,18 @@ struct WeightInputWatchView: View {
 
     @State private var weight: Double
     @State private var crownValue: Double = 0
+    /// Once the athlete turns the crown, AS PLANNED is disabled even if they return to prescribed.
+    @State private var hasManuallyAdjusted = false
 
     // Weight increment based on unit
     private var increment: Double {
         weightUnit == "kg" ? 2.5 : 5.0
     }
 
-    private var isAtPrescribedWeight: Bool {
-        guard allowCompleteAsPrescribed, let prescribed = prescribedWeight else { return false }
+    private var showsAsPlannedCTA: Bool {
+        guard allowCompleteAsPrescribed,
+              !hasManuallyAdjusted,
+              let prescribed = prescribedWeight else { return false }
         return abs(weight - prescribed) < 0.01
     }
 
@@ -104,7 +108,15 @@ struct WeightInputWatchView: View {
                 isHapticFeedbackEnabled: true
             )
             .onChange(of: crownValue) { _, newValue in
-                weight = max(0, newValue)
+                let clamped = max(0, newValue)
+                if let prescribed = prescribedWeight,
+                   abs(clamped - prescribed) >= 0.01 {
+                    hasManuallyAdjusted = true
+                } else if prescribedWeight == nil,
+                          abs(clamped - (suggestedWeight ?? 0)) >= 0.01 {
+                    hasManuallyAdjusted = true
+                }
+                weight = clamped
             }
 
             // Action buttons
@@ -122,9 +134,9 @@ struct WeightInputWatchView: View {
                 }
                 .buttonStyle(.plain)
 
-                // Primary: AS PLANNED when still at prescribed, else LOG
+                // Primary: AS PLANNED only before any crown edit; else LOG
                 Button {
-                    if isAtPrescribedWeight, let onCompleteAsPrescribed {
+                    if showsAsPlannedCTA, let onCompleteAsPrescribed {
                         onCompleteAsPrescribed()
                     } else {
                         let logWeight = weight > 0 ? weight : nil
@@ -134,7 +146,7 @@ struct WeightInputWatchView: View {
                     HStack(spacing: 4) {
                         Image(systemName: "checkmark")
                             .font(.system(size: 14, weight: .bold))
-                        Text(isAtPrescribedWeight ? "AS PLANNED" : "LOG")
+                        Text(showsAsPlannedCTA ? "AS PLANNED" : "LOG")
                             .font(.system(size: 12, weight: .bold))
                             .lineLimit(1)
                             .minimumScaleFactor(0.8)
@@ -147,7 +159,7 @@ struct WeightInputWatchView: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityIdentifier(
-                    isAtPrescribedWeight ? "af_watch_as_planned" : "af_watch_log_set"
+                    showsAsPlannedCTA ? "af_watch_as_planned" : "af_watch_log_set"
                 )
             }
         }

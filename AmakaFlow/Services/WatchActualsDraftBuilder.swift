@@ -72,7 +72,7 @@ enum WatchActualsDraftBuilder {
                     exercises[index].actualWeightKg = kilograms(weight: weight, unit: last.unit)
                 }
                 exercises[index].actualSets = max(completed.count, exercises[index].planned.sets)
-                if completed.allSatisfy({ $0.detectionMethod == "autoConfirmed" }) {
+                if isAutoConfirmedAsPlanned(completed) {
                     exercises[index].confirmation = .asPlanned
                 }
             }
@@ -94,14 +94,17 @@ enum WatchActualsDraftBuilder {
                     weightKg: weightKg,
                     note: nil
                 ),
-                confirmation: completed.allSatisfy({ $0.detectionMethod == "autoConfirmed" })
-                    ? .asPlanned
-                    : nil,
+                confirmation: isAutoConfirmedAsPlanned(completed) ? .asPlanned : nil,
                 actualSets: setCount,
                 actualReps: 1,
                 actualWeightKg: weightKg
             )
         }
+    }
+
+    /// Require ≥1 completed set; empty `allSatisfy` would otherwise be vacuously true.
+    private static func isAutoConfirmedAsPlanned(_ completed: [SetEntry]) -> Bool {
+        !completed.isEmpty && completed.allSatisfy { $0.detectionMethod == "autoConfirmed" }
     }
 
     private static func kilograms(weight: Double, unit: String?) -> Double? {
