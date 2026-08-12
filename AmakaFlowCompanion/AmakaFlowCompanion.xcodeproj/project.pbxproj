@@ -216,6 +216,7 @@
 		AMA2336MDLBLD001 /* WorkoutEnrichmentModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2336MDLREF001 /* WorkoutEnrichmentModels.swift */; };
 		AMA2423RECPREFSBLD /* WorkoutEnrichmentModels+RecoveryPrefs.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2423RECPREFSREF /* WorkoutEnrichmentModels+RecoveryPrefs.swift */; };
 		AMA2423MUTSTXBLD /* WorkoutEnrichmentMutations+StationTransition.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2423MUTSTXREF /* WorkoutEnrichmentMutations+StationTransition.swift */; };
+		AMA2423RECROWBLD /* EnrichmentRecoveryRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2423RECROWREF /* EnrichmentRecoveryRow.swift */; };
 		AMA2378V2MDLBLD001 /* WorkoutEnrichmentV2Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2378V2MDLREF001 /* WorkoutEnrichmentV2Models.swift */; };
 		AMA2378PLNAPBLD001 /* WorkoutEnrichmentPushPlanner+Application.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2378PLNAPREF001 /* WorkoutEnrichmentPushPlanner+Application.swift */; };
 		AMA2363MUTBLD001 /* WorkoutEnrichmentMutations.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2363MUTREF001 /* WorkoutEnrichmentMutations.swift */; };
@@ -1118,6 +1119,7 @@
 		AMA2336MDLREF001 /* WorkoutEnrichmentModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutEnrichmentModels.swift; path = ../AmakaFlow/Models/WorkoutEnrichmentModels.swift; sourceTree = SOURCE_ROOT; };
 		AMA2423RECPREFSREF /* WorkoutEnrichmentModels+RecoveryPrefs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "WorkoutEnrichmentModels+RecoveryPrefs.swift"; path = "../AmakaFlow/Models/WorkoutEnrichmentModels+RecoveryPrefs.swift"; sourceTree = SOURCE_ROOT; };
 		AMA2423MUTSTXREF /* WorkoutEnrichmentMutations+StationTransition.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "WorkoutEnrichmentMutations+StationTransition.swift"; path = "../AmakaFlow/Models/WorkoutEnrichmentMutations+StationTransition.swift"; sourceTree = SOURCE_ROOT; };
+		AMA2423RECROWREF /* EnrichmentRecoveryRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "EnrichmentRecoveryRow.swift"; path = "../AmakaFlow/Views/Components/EnrichmentRecoveryRow.swift"; sourceTree = SOURCE_ROOT; };
 		AMA2378V2MDLREF001 /* WorkoutEnrichmentV2Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutEnrichmentV2Models.swift; path = ../AmakaFlow/Models/WorkoutEnrichmentV2Models.swift; sourceTree = SOURCE_ROOT; };
 		AMA2378PLNAPREF001 /* WorkoutEnrichmentPushPlanner+Application.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "WorkoutEnrichmentPushPlanner+Application.swift"; path = "../AmakaFlow/Models/WorkoutEnrichmentPushPlanner+Application.swift"; sourceTree = SOURCE_ROOT; };
 		AMA2363MUTREF001 /* WorkoutEnrichmentMutations.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutEnrichmentMutations.swift; path = ../AmakaFlow/Models/WorkoutEnrichmentMutations.swift; sourceTree = SOURCE_ROOT; };
@@ -1939,6 +1941,7 @@
 				AMA2336MDLREF001 /* WorkoutEnrichmentModels.swift */,
 				AMA2423RECPREFSREF /* WorkoutEnrichmentModels+RecoveryPrefs.swift */,
 				AMA2423MUTSTXREF /* WorkoutEnrichmentMutations+StationTransition.swift */,
+				AMA2423RECROWREF /* EnrichmentRecoveryRow.swift */,
 				AMA2378V2MDLREF001 /* WorkoutEnrichmentV2Models.swift */,
 				AMA2378PLNAPREF001 /* WorkoutEnrichmentPushPlanner+Application.swift */,
 				AMA2363MUTREF001 /* WorkoutEnrichmentMutations.swift */,
@@ -3138,6 +3141,7 @@
 				AMA2336MDLBLD001 /* WorkoutEnrichmentModels.swift in Sources */,
 				AMA2423RECPREFSBLD /* WorkoutEnrichmentModels+RecoveryPrefs.swift in Sources */,
 				AMA2423MUTSTXBLD /* WorkoutEnrichmentMutations+StationTransition.swift in Sources */,
+				AMA2423RECROWBLD /* EnrichmentRecoveryRow.swift in Sources */,
 				AMA2378V2MDLBLD001 /* WorkoutEnrichmentV2Models.swift in Sources */,
 				AMA2378PLNAPBLD001 /* WorkoutEnrichmentPushPlanner+Application.swift in Sources */,
 				AMA2363MUTBLD001 /* WorkoutEnrichmentMutations.swift in Sources */,
