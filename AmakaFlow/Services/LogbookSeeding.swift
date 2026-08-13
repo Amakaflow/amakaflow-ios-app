@@ -91,8 +91,9 @@ enum LogbookSeeding {
 
         return planned.map { item in
             let key = ActualsGhostFeed.exerciseKey(forName: item.name)
+            let entryID = item.structureBlockIndex.map { "\(key)#\($0)" } ?? key
             let lastActual = try? ghostLookup?.latestActual(exerciseKey: key)
-            let loadPlan = loadPlanLookup?(key)
+            let loadPlan = loadPlanLookup?(entryID)
             let setCount = max(item.sets, loadPlan?.count ?? 0, 1)
             let sets: [SetActual] = (1...setCount).map { index in
                 if let target = loadPlan?.first(where: { $0.index == index }) {
@@ -120,7 +121,7 @@ enum LogbookSeeding {
             )
 
             return LogbookExerciseEntry(
-                id: key,
+                id: entryID,
                 name: item.name,
                 planned: plannedModel,
                 sets: sets,
@@ -151,13 +152,13 @@ enum LogbookSeeding {
             switch interval {
             case .reps(let sets, let reps, let name, let load, _, _):
                 let resolved = Workout.resolveLegacyLoadAndInstruction(from: load)
-                let kg = kilograms(from: resolved.load)
+                let weightKilograms = kilograms(from: resolved.load)
                 result.append(
                     PlannedItem(
                         name: name,
                         sets: max(sets ?? 1, 1),
                         reps: reps,
-                        weightKg: kg,
+                        weightKg: weightKilograms,
                         structureHeader: nil,
                         structureBlockIndex: blockIndex,
                         supersetPartner: nil

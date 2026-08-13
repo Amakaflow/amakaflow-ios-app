@@ -21,7 +21,7 @@ final class LogbookViewModel: ObservableObject {
     private let draftRepository: LogDraftRepository
     private let actualsRepository: ActualsRepository
     private let now: () -> Date
-    private var elapsedTimer: Timer?
+    nonisolated(unsafe) private var elapsedTimer: Timer?
 
     @Published private(set) var elapsedSeconds: TimeInterval = 0
 
@@ -168,11 +168,11 @@ final class LogbookViewModel: ObservableObject {
 
     func setNote(_ note: String) {
         draft.note = note
-        touch()
+        draft.lastEditedAt = now()
     }
 
     func selectRPE(_ value: Int) {
-        draft.rpe = value
+        draft.rpe = min(10, max(1, value))
         touch()
     }
 
@@ -182,45 +182,33 @@ final class LogbookViewModel: ObservableObject {
 
     /// Persist load-plan targets (unchecked) then open RPE step.
     func beginSave() {
+        persistDraft()
         persistLoadPlans()
         showRPE = true
     }
 
     /// Commit through the existing verified actuals pipeline.
     func saveVerified() throws {
-        guard let rpe = draft.rpe, (1...10).contains(rpe) else { return }
-        var session = LogbookRollup.fillInSession(from: draft, verified: false)
-        // Ensure every exercise with checked sets is confirmed; drop empty exercises' confirmation.
-        session.exercises = session.exercises.map { exercise in
-            var copy = exercise
-            if copy.actualSets > 0, copy.confirmation == nil {
-                copy.confirmation = .adjusted
-            }
-            // Exclude exercises with zero checked sets from the verified payload.
-            return copy
-        }.filter { $0.actualSets > 0 || $0.confirmation != nil }
-
-        // If after filtering nothing remains, keep at least rolled rows marked adjusted.
-        if session.exercises.isEmpty {
-            session = LogbookRollup.fillInSession(from: draft, verified: false)
-            session.exercises = session.exercises.map { exercise in
-                var copy = exercise
-                copy.confirmation = .adjusted
-                copy.actualSets = max(copy.actualSets, 0)
-                return copy
-            }
+        guard let rpe = draft.rpe, (1...10).contains(rpe) else {
+            throw ActualsRepositoryError.missingRPE
         }
-
-        session.rpe = rpe
-        session.verified = true
-        // Mark all confirmed for repository gate.
-        session.exercises = session.exercises.map { exercise in
+        var session = LogbookRollup.fillInSession(from: draft, verified: false)
+        session.exercises = session.exercises.compactMap { exercise in
+            guard exercise.actualSets > 0 else { return nil }
             var copy = exercise
             if copy.confirmation == nil {
                 copy.confirmation = .adjusted
             }
+            copy.sets = copy.sets.filter(\.isChecked)
             return copy
         }
+
+        guard !session.exercises.isEmpty else {
+            throw ActualsRepositoryError.unconfirmedRows(0)
+        }
+
+        session.rpe = rpe
+        session.verified = true
 
         try actualsRepository.saveVerifiedSession(session)
         try draftRepository.markCommitted(draftID: draft.id)
@@ -231,12 +219,11 @@ final class LogbookViewModel: ObservableObject {
 
     /// Timeout path: commit standalone + Undo toast.
     func commitStandaloneFromTimeout() throws {
-        draft.mode = .after
-        draft.state = .committed
         if draft.rpe == nil {
             draft.rpe = 7
         }
         try saveVerified()
+        draft.mode = .after
         undoToastVisible = true
     }
 

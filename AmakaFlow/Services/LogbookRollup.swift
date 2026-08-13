@@ -8,18 +8,19 @@
 import Foundation
 
 enum LogbookRollup {
+    struct Rollup: Equatable {
+        var actualSets: Int
+        var actualReps: Int
+        var actualWeightKg: Double?
+    }
+
     /// Derive exercise-level aggregates from checked sets. Unchecked targets excluded.
-    static func rollup(from sets: [SetActual], planned: ExerciseActualPlanned) -> (
-        actualSets: Int,
-        actualReps: Int,
-        actualWeightKg: Double?
-    ) {
+    static func rollup(from sets: [SetActual], planned: ExerciseActualPlanned) -> Rollup {
         let checked = sets.filter(\.isChecked).sorted { $0.index < $1.index }
-        guard !checked.isEmpty else {
-            return (0, planned.reps, nil)
+        guard let last = checked.last else {
+            return Rollup(actualSets: 0, actualReps: planned.reps, actualWeightKg: nil)
         }
-        let last = checked.last!
-        return (
+        return Rollup(
             actualSets: checked.count,
             actualReps: last.reps ?? planned.reps,
             actualWeightKg: last.weightKg ?? planned.weightKg
@@ -63,7 +64,7 @@ enum LogbookRollup {
             let matchesPlan =
                 rolled.actualSets == exercise.planned.sets
                 && rolled.actualReps == exercise.planned.reps
-                && rolled.actualWeightKg == exercise.planned.weightKg
+                && weightsMatch(rolled.actualWeightKg, exercise.planned.weightKg)
             exercise.confirmation = matchesPlan ? .asPlanned : .adjusted
         }
     }
@@ -75,7 +76,9 @@ enum LogbookRollup {
     ) -> [LogbookExerciseEntry] {
         session.exercises.map { exercise in
             let sets = expandSets(from: exercise)
-            let lastActual = try? ghostLookup?.latestActual(exerciseKey: exercise.id)
+            let lastActual = try? ghostLookup?.latestActual(
+                exerciseKey: ActualsGhostFeed.exerciseKey(forName: exercise.name)
+            )
             let ghosts = LogbookGhosts.ghosts(
                 setCount: sets.count,
                 planned: exercise.planned,
@@ -146,6 +149,17 @@ enum LogbookRollup {
     /// Actuals payload for save — checked sets only.
     static func actualsForSave(from entry: LogbookExerciseEntry) -> [SetActual] {
         entry.sets.filter(\.isChecked)
+    }
+
+    private static func weightsMatch(_ lhs: Double?, _ rhs: Double?) -> Bool {
+        switch (lhs, rhs) {
+        case (nil, nil):
+            return true
+        case (let left?, let right?):
+            return abs(left - right) < 0.001
+        default:
+            return false
+        }
     }
 
     private static func supersetPartner(

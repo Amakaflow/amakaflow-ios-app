@@ -38,7 +38,7 @@ struct LogbookWorkoutPickerView: View {
                             Text(workout.name)
                                 .ddDisplayText(15, weight: .bold)
                                 .foregroundColor(DailyDriver.foreground)
-                            Text("\(workout.exerciseCount) exercises · prefill from plan")
+                            Text("\(workout.exerciseCount) \(workout.exerciseCount == 1 ? "exercise" : "exercises") · prefill from plan")
                                 .font(.system(size: 12))
                                 .foregroundColor(DailyDriver.foregroundMuted)
                         }

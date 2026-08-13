@@ -51,7 +51,7 @@ enum LogbookReconciliation {
         }
 
         let matches = deviceSessions.filter { overlaps(draft: draft, device: $0, memory: memory) }
-        if let primary = matches.sorted(by: { $0.startDate < $1.startDate }).first {
+        if let primary = matches.min(by: { $0.startDate < $1.startDate }) {
             return .merged(sessionId: primary.id)
         }
 
@@ -91,14 +91,15 @@ enum LogbookReconciliation {
             .filter { !reconciledDraftIDs.contains($0.id) }
             // Pending companion drafts never land on Today.
             .filter { $0.mode != .companionPending && $0.state != .pending }
+            // Live drafts are counted in `liveCommitted` — do not also emit them here.
+            .filter { !($0.mode == .live && $0.state == .live) }
         // Only committed / live phone sessions that are not pending.
         let liveCommitted = pendingDrafts
             .filter { $0.state == .committed || ($0.mode == .live && $0.state == .live) }
             .filter { !reconciledDraftIDs.contains($0.id) }
             .map(\.id)
         // Reconciled drafts contribute only via their attached device session id.
-        return Array(Set(committedSessionIDs + liveCommitted)).sorted()
-            + pendingVisible.map(\.id)
+        return Array(Set(committedSessionIDs + liveCommitted + pendingVisible.map(\.id))).sorted()
     }
 
     /// True when a reconciled draft would incorrectly produce a second Today card.

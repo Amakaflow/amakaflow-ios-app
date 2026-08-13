@@ -89,7 +89,9 @@ struct CreateFlowSheetsModifier: ViewModifier {
                     workouts: logbookWorkouts,
                     onPick: { workout in
                         showLogbookPicker = false
-                        openLogbook(from: workout)
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                            openLogbook(from: workout)
+                        }
                     },
                     onClose: { showLogbookPicker = false }
                 )
@@ -173,6 +175,7 @@ struct CreateFlowSheetsModifier: ViewModifier {
             logbookWorkouts = try await APIService.shared.fetchWorkouts()
         } catch {
             logbookWorkouts = []
+            DDToastCenter.shared.error("Couldn't load workouts")
         }
         showLogbookPicker = true
     }
@@ -180,19 +183,20 @@ struct CreateFlowSheetsModifier: ViewModifier {
     private func openLogbook(from workout: Workout?) {
         let context = LogbookModeContext(
             phoneTrackerActive: false,
-            watchPlanActiveWindow: WatchConnectivityManager.shared.isWatchReachable,
+            watchPlanActiveWindow: false,
             existingSessionId: nil
         )
         let mode = LogbookModeInference.infer(context)
         let draft: LogDraft
         if let workout {
+            let loadPlanLookup: (String) -> [SetActual]? = { key in
+                try? LogDraftRepository().loadPlan(workoutId: workout.id, exerciseKey: key)
+            }
             draft = LogbookSeeding.draft(
                 from: workout,
                 mode: mode,
                 ghostLookup: ActualsRepository(),
-                loadPlanLookup: { key in
-                    try? LogDraftRepository().loadPlan(workoutId: workout.id, exerciseKey: key)
-                }
+                loadPlanLookup: loadPlanLookup
             )
         } else {
             draft = LogbookSeeding.blankDraft(mode: mode)

@@ -21,7 +21,7 @@ struct LogbookView: View {
                 VStack(alignment: .leading, spacing: 14) {
                     header
                     ForEach(viewModel.draft.entries) { entry in
-                        exerciseCard(entry)
+                        LogbookExerciseCardView(entry: entry, viewModel: viewModel)
                     }
                     notesCard
                 }
@@ -113,9 +113,109 @@ struct LogbookView: View {
         .padding(.top, 10)
     }
 
-    // MARK: - Exercise card
+    private var notesCard: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(LogbookCopy.notesPlaceholder)
+                .font(.system(size: 9, weight: .bold, design: .monospaced))
+                .foregroundColor(DailyDriver.foregroundDim)
+            TextField("Session note", text: $noteText, axis: .vertical)
+                .lineLimit(2...4)
+                .font(.system(size: 13))
+                .foregroundColor(DailyDriver.foreground)
+                .onChange(of: noteText) { _, value in
+                    viewModel.setNote(value)
+                }
+                .onSubmit {
+                    viewModel.persistDraft()
+                }
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .strokeBorder(style: StrokeStyle(lineWidth: 1, dash: [5, 4]))
+                .foregroundColor(DailyDriver.borderStrong)
+        )
+    }
 
-    private func exerciseCard(_ entry: LogbookExerciseEntry) -> some View {
+    private var saveCTA: some View {
+        Button {
+            viewModel.beginSave()
+        } label: {
+            Text(viewModel.saveCTATitle)
+                .ddDisplayText(14, weight: .bold)
+                .foregroundColor(viewModel.canProceedToRPE ? DailyDriver.ink : DailyDriver.foregroundDim)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 15)
+                .background(viewModel.canProceedToRPE ? DailyDriver.lime : DailyDriver.card2)
+                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .disabled(!viewModel.canProceedToRPE)
+        .accessibilityIdentifier(LogbookCopy.saveAccessibilityID)
+    }
+
+    private var logbookRPESheet: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(ActualsCopy.fillInRPEHeader)
+                .font(.system(size: 10, design: .monospaced))
+                .foregroundColor(DailyDriver.foregroundMuted)
+                .padding(.top, 20)
+
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 5), spacing: 8) {
+                ForEach(1...10, id: \.self) { value in
+                    Button {
+                        viewModel.selectRPE(value)
+                    } label: {
+                        Text("\(value)")
+                            .ddDisplayText(16, weight: .bold)
+                            .foregroundColor(
+                                viewModel.draft.rpe == value ? DailyDriver.ink : DailyDriver.foreground
+                            )
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 14)
+                            .background(viewModel.draft.rpe == value ? DailyDriver.lime : DailyDriver.card2)
+                            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier(ActualsCopy.fillInRPEAccessibilityID(value))
+                }
+            }
+
+            Button {
+                do {
+                    try viewModel.saveVerified()
+                    let session = LogbookRollup.fillInSession(from: viewModel.draft, verified: true)
+                    onSaved?(session)
+                } catch {
+                    DDToastCenter.shared.error(ActualsCopy.fillInSaveFailedTitle)
+                }
+            } label: {
+                Text(viewModel.draft.rpe.map { "Save session · RPE \($0)" } ?? "Pick RPE to save")
+                    .ddDisplayText(14, weight: .bold)
+                    .foregroundColor(viewModel.draft.rpe == nil ? DailyDriver.foregroundDim : DailyDriver.ink)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 15)
+                    .background(viewModel.draft.rpe == nil ? DailyDriver.card2 : DailyDriver.lime)
+                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            }
+            .buttonStyle(.plain)
+            .disabled(viewModel.draft.rpe == nil)
+            .padding(.top, 8)
+
+            Spacer()
+        }
+        .padding(.horizontal, 18)
+        .background(DailyDriver.screenBackground.ignoresSafeArea())
+        .preferredColorScheme(.dark)
+    }
+}
+
+struct LogbookExerciseCardView: View {
+    let entry: LogbookExerciseEntry
+    @ObservedObject var viewModel: LogbookViewModel
+
+    var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .firstTextBaseline) {
                 Text(entry.name)
@@ -286,99 +386,5 @@ struct LogbookView: View {
                 .foregroundColor(DailyDriver.foreground)
         }
         .frame(maxWidth: .infinity)
-    }
-
-    private var notesCard: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(LogbookCopy.notesPlaceholder)
-                .font(.system(size: 9, weight: .bold, design: .monospaced))
-                .foregroundColor(DailyDriver.foregroundDim)
-            TextField("Session note", text: $noteText, axis: .vertical)
-                .lineLimit(2...4)
-                .font(.system(size: 13))
-                .foregroundColor(DailyDriver.foreground)
-                .onChange(of: noteText) { _, value in
-                    viewModel.setNote(value)
-                }
-        }
-        .padding(14)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .strokeBorder(style: StrokeStyle(lineWidth: 1, dash: [5, 4]))
-                .foregroundColor(DailyDriver.borderStrong)
-        )
-    }
-
-    private var saveCTA: some View {
-        Button {
-            viewModel.beginSave()
-        } label: {
-            Text(viewModel.saveCTATitle)
-                .ddDisplayText(14, weight: .bold)
-                .foregroundColor(viewModel.canProceedToRPE ? DailyDriver.ink : DailyDriver.foregroundDim)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 15)
-                .background(viewModel.canProceedToRPE ? DailyDriver.lime : DailyDriver.card2)
-                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-        }
-        .buttonStyle(.plain)
-        .disabled(!viewModel.canProceedToRPE)
-        .accessibilityIdentifier(LogbookCopy.saveAccessibilityID)
-    }
-
-    private var logbookRPESheet: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text(ActualsCopy.fillInRPEHeader)
-                .font(.system(size: 10, design: .monospaced))
-                .foregroundColor(DailyDriver.foregroundMuted)
-                .padding(.top, 20)
-
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 5), spacing: 8) {
-                ForEach(1...10, id: \.self) { value in
-                    Button {
-                        viewModel.selectRPE(value)
-                    } label: {
-                        Text("\(value)")
-                            .ddDisplayText(16, weight: .bold)
-                            .foregroundColor(
-                                viewModel.draft.rpe == value ? DailyDriver.ink : DailyDriver.foreground
-                            )
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 14)
-                            .background(viewModel.draft.rpe == value ? DailyDriver.lime : DailyDriver.card2)
-                            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityIdentifier(ActualsCopy.fillInRPEAccessibilityID(value))
-                }
-            }
-
-            Button {
-                do {
-                    try viewModel.saveVerified()
-                    let session = LogbookRollup.fillInSession(from: viewModel.draft, verified: true)
-                    onSaved?(session)
-                } catch {
-                    DDToastCenter.shared.error(ActualsCopy.fillInSaveFailedTitle)
-                }
-            } label: {
-                Text(viewModel.draft.rpe.map { "Save session · RPE \($0)" } ?? "Pick RPE to save")
-                    .ddDisplayText(14, weight: .bold)
-                    .foregroundColor(viewModel.draft.rpe == nil ? DailyDriver.foregroundDim : DailyDriver.ink)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 15)
-                    .background(viewModel.draft.rpe == nil ? DailyDriver.card2 : DailyDriver.lime)
-                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-            }
-            .buttonStyle(.plain)
-            .disabled(viewModel.draft.rpe == nil)
-            .padding(.top, 8)
-
-            Spacer()
-        }
-        .padding(.horizontal, 18)
-        .background(DailyDriver.screenBackground.ignoresSafeArea())
-        .preferredColorScheme(.dark)
     }
 }

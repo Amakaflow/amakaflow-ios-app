@@ -199,7 +199,7 @@ final class ActualsRepository: @unchecked Sendable {
         try LocalActualsSetRow
             .filter(LocalActualsSetRow.Columns.exerciseRowId == exerciseRowId)
             .deleteAll(database)
-        for set in sets {
+        for set in sets where set.checkedAt != nil {
             var row = LocalActualsSetRow(
                 id: "\(exerciseRowId)_\(set.isWarmup ? "w" : "s")_\(set.index)",
                 exerciseRowId: exerciseRowId,

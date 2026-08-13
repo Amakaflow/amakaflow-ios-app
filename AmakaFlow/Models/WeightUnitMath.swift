@@ -57,6 +57,7 @@ enum WeightUnitMath {
     ) -> [Double] {
         let step = fine ? fineStep(for: unit) : coarseStep(for: unit)
         guard step > 0 else { return [0] }
+        guard min <= max else { return [] }
         var values: [Double] = []
         var current = min
         // Guard float accumulation by indexing.

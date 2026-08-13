@@ -110,6 +110,9 @@ struct LogbookWheelSheet: View {
         .onChange(of: viewModel.wheelFocus) { _, _ in
             syncFromFocus()
         }
+        .onChange(of: viewModel.weightUnit) { _, _ in
+            syncFromFocus()
+        }
     }
 
     private func headerLine(focused: (entry: LogbookExerciseEntry, set: SetActual)) -> some View {
@@ -160,9 +163,9 @@ struct LogbookWheelSheet: View {
     private func syncFromFocus() {
         guard let focused = viewModel.focusedSet() else { return }
         let ghost = viewModel.ghost(for: focused.entry.id, setIndex: focused.set.index)
-        let kg = focused.set.weightKg ?? ghost?.weightKg ?? focused.entry.planned.weightKg
+        let kilograms = focused.set.weightKg ?? ghost?.weightKg ?? focused.entry.planned.weightKg
         weightDisplay = WeightUnitMath.nearestWheelValue(
-            kg: kg,
+            kg: kilograms,
             unit: viewModel.weightUnit,
             fine: viewModel.fineSteps
         )

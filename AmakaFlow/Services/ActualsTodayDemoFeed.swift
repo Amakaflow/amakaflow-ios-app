@@ -392,8 +392,14 @@ final class ActualsTodayDemoFeed: ObservableObject {
             case .merged(let sessionId):
                 guard let device = recordings.first(where: { $0.id == sessionId }) else { continue }
                 let session = LogbookReconciliation.mergeDraft(draft, onto: device)
-                try? repository.upsertMatchedDraft(session)
-                try? draftRepo.markReconciled(draftID: draft.id, sessionID: sessionId)
+                do {
+                    try repository.upsertMatchedDraft(session)
+                    try draftRepo.markReconciled(draftID: draft.id, sessionID: sessionId)
+                } catch {
+                    actualsTodayDemoFeedLog.error(
+                        "Failed to reconcile draft \(draft.id, privacy: .public) onto \(sessionId, privacy: .public): \(error.localizedDescription, privacy: .public)"
+                    )
+                }
             case .timeoutCommit:
                 // Standalone commit is owned by LogbookViewModel (Undo toast).
                 break
@@ -426,6 +432,7 @@ final class ActualsTodayDemoFeed: ObservableObject {
                 sync.clear()
             }
             cards = Self.applyLocalOverlays(to: windowCards, repository: repository)
+            reconcilePendingLogDrafts(against: cards)
         } catch {
             isActive = false
             showMergeAsk = false
@@ -467,6 +474,7 @@ final class ActualsTodayDemoFeed: ObservableObject {
             }
             // Re-apply local match/verify so a Strava re-pull does not wipe Save state.
             cards = Self.applyLocalOverlays(to: windowCards, repository: repository)
+            reconcilePendingLogDrafts(against: cards)
             // Signature / wrote-Strava without a server verified row yet — mark
             // those Strava ids verified on our end so the next pull is durable.
             await ensureServerVerifiedForLinkedActivities(activities, client: client)

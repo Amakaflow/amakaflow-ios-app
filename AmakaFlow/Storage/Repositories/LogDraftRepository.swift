@@ -132,7 +132,7 @@ final class LogDraftRepository: @unchecked Sendable {
         guard let json = String(data: data, encoding: .utf8) else {
             throw LogDraftRepositoryError.encodeFailed
         }
-        let id = "\(workoutId)_\(exerciseKey)"
+        let id = Self.loadPlanID(workoutId: workoutId, exerciseKey: exerciseKey)
         try dbQueue.write { database in
             var row = LocalWorkoutLoadPlan(
                 id: id,
@@ -147,13 +147,18 @@ final class LogDraftRepository: @unchecked Sendable {
 
     func loadPlan(workoutId: String, exerciseKey: String) throws -> [SetActual]? {
         try dbQueue.read { database in
-            let id = "\(workoutId)_\(exerciseKey)"
+            let id = Self.loadPlanID(workoutId: workoutId, exerciseKey: exerciseKey)
             guard let row = try LocalWorkoutLoadPlan.fetchOne(database, key: id),
                   let data = row.payloadJson.data(using: .utf8) else {
                 return nil
             }
             return try decoder.decode([SetActual].self, from: data)
         }
+    }
+
+    /// Length-prefixed so `workoutId`/`exerciseKey` cannot collide across pairs.
+    private static func loadPlanID(workoutId: String, exerciseKey: String) -> String {
+        "\(workoutId.count):\(workoutId):\(exerciseKey)"
     }
 
     private func decode(_ row: LocalLogDraft) throws -> LogDraft {

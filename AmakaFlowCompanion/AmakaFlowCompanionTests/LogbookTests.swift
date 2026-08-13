@@ -79,6 +79,10 @@ final class LogbookTests: XCTestCase {
         }
     }
 
+    func testWheelValuesEmptyWhenMinExceedsMax() {
+        XCTAssertEqual(WeightUnitMath.wheelValues(unit: .kg, fine: false, min: 10, max: 0), [])
+    }
+
     func testStepsRespectedPerUnit() {
         XCTAssertEqual(WeightUnitMath.coarseStep(for: .kg), 2.5)
         XCTAssertEqual(WeightUnitMath.coarseStep(for: .lbs), 5)
@@ -275,6 +279,19 @@ final class LogbookTests: XCTestCase {
 
     // MARK: - Mode inference
 
+    func testTodayCardIDsDedupesLiveDraft() {
+        var live = sampleDraft()
+        live.id = "live_1"
+        live.mode = .live
+        live.state = .live
+        let cards = LogbookReconciliation.todayCardIDs(
+            committedSessionIDs: [],
+            pendingDrafts: [live],
+            reconciledDraftIDs: []
+        )
+        XCTAssertEqual(cards.filter { $0 == live.id }.count, 1)
+    }
+
     func testModeInference() {
         XCTAssertEqual(
             LogbookModeInference.infer(
@@ -388,6 +405,76 @@ final class LogbookTests: XCTestCase {
         XCTAssertEqual(saved?.verified, true)
         XCTAssertEqual(saved?.exercises.first?.sets.count, 2)
         XCTAssertEqual(saved?.exercises.first?.actualSets, 2)
+    }
+
+    func testVerifiedSaveExcludesUncheckedEditedSet() throws {
+        var draft = sampleDraft()
+        draft.entries[0].sets[0].weightKg = 40
+        draft.entries[0].sets[0].reps = 8
+        draft.entries[0].sets[0].checkedAt = fixedNow
+        draft.entries[0].sets[1].weightKg = 42.5
+        draft.entries[0].sets[1].reps = 6
+        draft.rpe = 8
+        let vm = LogbookViewModel(
+            draft: draft,
+            draftRepository: draftRepo,
+            actualsRepository: actualsRepo,
+            weightUnit: .kg,
+            now: { self.fixedNow }
+        )
+        vm.beginSave()
+        try vm.saveVerified()
+        let saved = try actualsRepo.fetchSession(id: draft.id)
+        XCTAssertEqual(saved?.exercises.first?.sets.count, 1)
+        XCTAssertEqual(saved?.exercises.first?.sets.first?.weightKg, 40)
+        XCTAssertEqual(saved?.exercises.first?.actualSets, 1)
+        let storedTargets = try draftRepo.loadPlan(workoutId: "w1", exerciseKey: "bench")
+        XCTAssertEqual(storedTargets?.count, 1)
+        XCTAssertEqual(storedTargets?.first?.weightKg, 42.5)
+        XCTAssertNil(storedTargets?.first?.checkedAt)
+    }
+
+    func testLoadPlanKeysDoNotCollideAcrossWorkoutExercisePairs() throws {
+        try draftRepo.saveLoadPlan(
+            workoutId: "ab",
+            exerciseKey: "c_d",
+            targets: [SetActual(index: 1, weightKg: 40, reps: 8)]
+        )
+        try draftRepo.saveLoadPlan(
+            workoutId: "ab_c",
+            exerciseKey: "d",
+            targets: [SetActual(index: 1, weightKg: 50, reps: 5)]
+        )
+        XCTAssertEqual(try draftRepo.loadPlan(workoutId: "ab", exerciseKey: "c_d")?.first?.weightKg, 40)
+        XCTAssertEqual(try draftRepo.loadPlan(workoutId: "ab_c", exerciseKey: "d")?.first?.weightKg, 50)
+    }
+
+    func testSaveVerifiedThrowsWhenRPEMissing() {
+        let vm = LogbookViewModel(
+            draft: sampleDraft(),
+            draftRepository: draftRepo,
+            actualsRepository: actualsRepo,
+            weightUnit: .kg,
+            now: { self.fixedNow }
+        )
+        XCTAssertThrowsError(try vm.saveVerified()) { error in
+            XCTAssertEqual(error as? ActualsRepositoryError, .missingRPE)
+        }
+    }
+
+    func testSaveVerifiedThrowsWhenNoCheckedSets() {
+        var draft = sampleDraft()
+        draft.rpe = 7
+        let vm = LogbookViewModel(
+            draft: draft,
+            draftRepository: draftRepo,
+            actualsRepository: actualsRepo,
+            weightUnit: .kg,
+            now: { self.fixedNow }
+        )
+        XCTAssertThrowsError(try vm.saveVerified()) { error in
+            XCTAssertEqual(error as? ActualsRepositoryError, .unconfirmedRows(0))
+        }
     }
 
     // MARK: - Helpers

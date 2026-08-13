@@ -72,6 +72,7 @@ struct ActualsFillInFlowView: View {
     }
 
     private func bootstrapLogbook() {
+        guard logbookVM == nil else { return }
         let draft = LogbookSeeding.draft(
             from: viewModel.session,
             mode: .after,

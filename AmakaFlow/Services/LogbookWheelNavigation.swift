@@ -21,15 +21,14 @@ enum LogbookWheelNavigation {
         let current = entries[exerciseIndex]
         if let nextInExercise = current.sets
             .filter({ !$0.isChecked && $0.index > focus.setIndex })
-            .sorted(by: { $0.index < $1.index })
-            .first {
+            .min(by: { $0.index < $1.index }) {
             return LogbookWheelFocus(exerciseID: current.id, setIndex: nextInExercise.index)
         }
 
         // Also consider unchecked sets at or before focus that were skipped? Ticket:
         // "advances to next unchecked set" — forward only within exercise, then next exercises.
         for later in entries.suffix(from: exerciseIndex + 1) {
-            if let first = later.sets.filter({ !$0.isChecked }).sorted(by: { $0.index < $1.index }).first {
+            if let first = later.sets.filter({ !$0.isChecked }).min(by: { $0.index < $1.index }) {
                 return LogbookWheelFocus(exerciseID: later.id, setIndex: first.index)
             }
         }

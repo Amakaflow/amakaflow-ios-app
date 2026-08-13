@@ -153,6 +153,20 @@ struct UnifiedWorkoutDetailView: View {
                     onBack: { showLogbook = false },
                     onSaved: { _ in showLogbook = false }
                 )
+            } else {
+                VStack(spacing: 12) {
+                    Text("Couldn't open the logbook.")
+                        .ddDisplayText(15, weight: .bold)
+                        .foregroundColor(DailyDriver.foreground)
+                        .multilineTextAlignment(.center)
+                    Button("Close") {
+                        showLogbook = false
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundColor(DailyDriver.lime)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(DailyDriver.screenBackground.ignoresSafeArea())
             }
         }
         .sheet(
@@ -192,7 +206,9 @@ struct UnifiedWorkoutDetailView: View {
                     onClose: { startFlowSheet = nil },
                     onLogPastSession: {
                         startFlowSheet = nil
-                        openLogbookForPastSession()
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                            openLogbookForPastSession()
+                        }
                     }
                 )
                 .task {
@@ -888,13 +904,14 @@ extension UnifiedWorkoutDetailView {
         )
         // Past session from library — companion-pending until saved (phone-only) or reconciled.
         let mode = LogbookModeInference.infer(context)
+        let loadPlanLookup: (String) -> [SetActual]? = { key in
+            try? LogDraftRepository().loadPlan(workoutId: workout.id, exerciseKey: key)
+        }
         let draft = LogbookSeeding.draft(
             from: workout,
             mode: mode,
             ghostLookup: ActualsRepository(),
-            loadPlanLookup: { key in
-                try? LogDraftRepository().loadPlan(workoutId: workout.id, exerciseKey: key)
-            }
+            loadPlanLookup: loadPlanLookup
         )
         let unit: WeightUnit = {
             if let raw = UserDefaults.standard.string(forKey: DefaultsKey.userWeightUnit.rawValue),

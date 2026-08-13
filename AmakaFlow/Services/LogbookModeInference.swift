@@ -18,7 +18,7 @@ struct LogbookModeContext: Equatable {
 }
 
 enum LogbookModeInference {
-    /// Precedence: after (existing session) > live (phone tracker) > companion-pending > after fallback.
+    /// Precedence: after (existing session) > live (phone tracker) > companion-pending fallback.
     static func infer(_ context: LogbookModeContext) -> LogbookMode {
         if let existing = context.existingSessionId, !existing.isEmpty {
             return .after
