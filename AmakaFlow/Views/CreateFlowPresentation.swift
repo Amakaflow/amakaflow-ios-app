@@ -13,6 +13,8 @@ enum CreateFlowPresentation: Identifiable, Equatable {
     case screenshot
     case knowledge
     case manualEditor
+    /// AMA-2426: logbook from ＋ Add sheet.
+    case logSession
 
     var id: String {
         switch self {
@@ -26,6 +28,8 @@ enum CreateFlowPresentation: Identifiable, Equatable {
             return "knowledge"
         case .manualEditor:
             return "manual-editor"
+        case .logSession:
+            return "log-session"
         }
     }
 }
@@ -58,6 +62,10 @@ struct CreateFlowSheetsModifier: ViewModifier {
     /// AMA-2389: From friends inbox (sheet, not a new top-level surface).
     @State private var showFriendsInbox = false
     @ObservedObject private var friendsStore = FriendsSharingStore.shared
+    /// AMA-2426: library workouts for Log a session picker.
+    @State private var logbookWorkouts: [Workout] = []
+    @State private var showLogbookPicker = false
+    @State private var logbookViewModel: LogbookViewModel?
 
     func body(content: Content) -> some View {
         content
@@ -75,6 +83,16 @@ struct CreateFlowSheetsModifier: ViewModifier {
                 }
                 .presentationDetents(friendsSheetDetents)
                 .presentationDragIndicator(.visible)
+            }
+            .sheet(isPresented: $showLogbookPicker) {
+                LogbookWorkoutPickerView(
+                    workouts: logbookWorkouts,
+                    onPick: { workout in
+                        showLogbookPicker = false
+                        openLogbook(from: workout)
+                    },
+                    onClose: { showLogbookPicker = false }
+                )
             }
             .fullScreenCover(item: $activeFlow) { flow in
                 switch flow {
@@ -101,6 +119,20 @@ struct CreateFlowSheetsModifier: ViewModifier {
                 case .manualEditor:
                     BuilderV3EntryView(onSaved: onLibraryReload)
                         .ddSuppressFloatingChrome()
+                case .logSession:
+                    if let logbookViewModel {
+                        LogbookView(
+                            viewModel: logbookViewModel,
+                            onBack: { activeFlow = nil },
+                            onSaved: { _ in
+                                activeFlow = nil
+                                onLibraryReload()
+                            }
+                        )
+                    } else {
+                        ProgressView()
+                            .task { openLogbook(from: nil) }
+                    }
                 }
             }
     }
@@ -130,7 +162,55 @@ struct CreateFlowSheetsModifier: ViewModifier {
             speakUnavailableAlert = true
         case .fromFriends:
             showFriendsInbox = true
+        case .logSession:
+            Task { await presentLogSessionPicker() }
         }
+    }
+
+    @MainActor
+    private func presentLogSessionPicker() async {
+        do {
+            logbookWorkouts = try await APIService.shared.fetchWorkouts()
+        } catch {
+            logbookWorkouts = []
+        }
+        showLogbookPicker = true
+    }
+
+    private func openLogbook(from workout: Workout?) {
+        let context = LogbookModeContext(
+            phoneTrackerActive: false,
+            watchPlanActiveWindow: WatchConnectivityManager.shared.isWatchReachable,
+            existingSessionId: nil
+        )
+        let mode = LogbookModeInference.infer(context)
+        let draft: LogDraft
+        if let workout {
+            draft = LogbookSeeding.draft(
+                from: workout,
+                mode: mode,
+                ghostLookup: ActualsRepository(),
+                loadPlanLookup: { key in
+                    try? LogDraftRepository().loadPlan(workoutId: workout.id, exerciseKey: key)
+                }
+            )
+        } else {
+            draft = LogbookSeeding.blankDraft(mode: mode)
+        }
+        let unit: WeightUnit = {
+            if let raw = UserDefaults.standard.string(forKey: DefaultsKey.userWeightUnit.rawValue),
+               let parsed = WeightUnit(rawValue: raw) {
+                return parsed
+            }
+            return .kg
+        }()
+        logbookViewModel = LogbookViewModel(
+            draft: draft,
+            draftRepository: LogDraftRepository(),
+            actualsRepository: ActualsRepository(),
+            weightUnit: unit
+        )
+        activeFlow = .logSession
     }
 }
 

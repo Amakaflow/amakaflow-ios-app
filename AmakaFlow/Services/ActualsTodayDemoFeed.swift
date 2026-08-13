@@ -355,7 +355,52 @@ final class ActualsTodayDemoFeed: ObservableObject {
             sync.clear()
         }
         cards = Self.applyLocalOverlays(to: deduped, repository: repository)
+        reconcilePendingLogDrafts(against: deduped)
         await ensureServerVerifiedForLinkedActivities(stravaActivities, client: stravaClient)
+    }
+
+    /// AMA-2426: attach companion log drafts to overlapping device sessions.
+    /// Pending drafts never become Today cards on their own.
+    func reconcilePendingLogDrafts(against cards: [ActualsTodayDemoCard]) {
+        let draftRepo = LogDraftRepository()
+        guard let drafts = try? draftRepo.fetchPendingCompanionDrafts(), !drafts.isEmpty else { return }
+        let recordings: [ActualsSourceRecording] = cards.compactMap { card in
+            if let session = card.session {
+                return session.primaryRecording
+            }
+            if let activity = card.activity {
+                return ActualsSourceRecording(
+                    id: card.id,
+                    provider: activity.provider,
+                    deviceKind: .watch,
+                    title: activity.title,
+                    startDate: activity.startDate,
+                    durationSeconds: activity.durationSeconds,
+                    distanceMeters: activity.distanceMeters,
+                    streamRichness: 3
+                )
+            }
+            return nil
+        }
+        for draft in drafts {
+            let outcome = LogbookReconciliation.reconcile(
+                draft: draft,
+                deviceSessions: recordings,
+                memory: mergeMemory
+            )
+            switch outcome {
+            case .merged(let sessionId):
+                guard let device = recordings.first(where: { $0.id == sessionId }) else { continue }
+                let session = LogbookReconciliation.mergeDraft(draft, onto: device)
+                try? repository.upsertMatchedDraft(session)
+                try? draftRepo.markReconciled(draftID: draft.id, sessionID: sessionId)
+            case .timeoutCommit:
+                // Standalone commit is owned by LogbookViewModel (Undo toast).
+                break
+            case .noOverlap, .lateTwinRequiresDuplicateFlow:
+                break
+            }
+        }
     }
 
     /// Replace Today cards with Apple Health workouts for the lookback window.

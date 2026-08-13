@@ -135,6 +135,7 @@ struct AppDatabase {
         V6ActualsStravaWriteBackMeta.register(into: &migrator)
         V7ActualsStructureBody.register(into: &migrator)
         V8ActualsExerciseStructure.register(into: &migrator)
+        V9Logbook.register(into: &migrator)
         return migrator
     }
 }

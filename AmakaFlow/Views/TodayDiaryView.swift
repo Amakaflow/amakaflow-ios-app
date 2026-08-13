@@ -573,7 +573,7 @@ struct TodayDiaryView: View {
                     actualsDemo.applyDecoration(cardID: cardID, state: state)
                 }
             }
-            ActualsFillInView(
+            ActualsFillInFlowView(
                 viewModel: viewModel,
                 onSaved: onSaved,
                 onBack: {

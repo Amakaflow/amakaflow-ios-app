@@ -62,6 +62,9 @@ struct UnifiedWorkoutDetailView: View {
     @State private var isSavingSport = false
     /// AMA-2395 — FROM THE CREATOR / NOTES expand toggle.
     @State private var creatorNoteExpanded = false
+    /// AMA-2426: Log a past session → logbook.
+    @State private var logbookViewModel: LogbookViewModel?
+    @State private var showLogbook = false
 
     @Environment(\.scenePhase) private var scenePhase
     private let handoffStore = GarminHandoffStateStore()
@@ -143,6 +146,15 @@ struct UnifiedWorkoutDetailView: View {
         .preferredColorScheme(.dark)
         .ddSuppressFloatingChrome()
         .navigationBarHidden(true)
+        .fullScreenCover(isPresented: $showLogbook) {
+            if let logbookViewModel {
+                LogbookView(
+                    viewModel: logbookViewModel,
+                    onBack: { showLogbook = false },
+                    onSaved: { _ in showLogbook = false }
+                )
+            }
+        }
         .sheet(
             item: $startFlowSheet,
             onDismiss: {
@@ -177,7 +189,11 @@ struct UnifiedWorkoutDetailView: View {
                         startFlowSheet = nil
                         showingAppleDeliveryPrefs = true
                     },
-                    onClose: { startFlowSheet = nil }
+                    onClose: { startFlowSheet = nil },
+                    onLogPastSession: {
+                        startFlowSheet = nil
+                        openLogbookForPastSession()
+                    }
                 )
                 .task {
                     await GarminCIQPairingStore.shared.refresh()
@@ -862,6 +878,38 @@ extension UnifiedWorkoutDetailView {
         } else {
             dismiss()
         }
+    }
+
+    fileprivate func openLogbookForPastSession() {
+        let context = LogbookModeContext(
+            phoneTrackerActive: false,
+            watchPlanActiveWindow: false,
+            existingSessionId: nil
+        )
+        // Past session from library — companion-pending until saved (phone-only) or reconciled.
+        let mode = LogbookModeInference.infer(context)
+        let draft = LogbookSeeding.draft(
+            from: workout,
+            mode: mode,
+            ghostLookup: ActualsRepository(),
+            loadPlanLookup: { key in
+                try? LogDraftRepository().loadPlan(workoutId: workout.id, exerciseKey: key)
+            }
+        )
+        let unit: WeightUnit = {
+            if let raw = UserDefaults.standard.string(forKey: DefaultsKey.userWeightUnit.rawValue),
+               let parsed = WeightUnit(rawValue: raw) {
+                return parsed
+            }
+            return .kg
+        }()
+        logbookViewModel = LogbookViewModel(
+            draft: draft,
+            draftRepository: LogDraftRepository(),
+            actualsRepository: ActualsRepository(),
+            weightUnit: unit
+        )
+        showLogbook = true
     }
 
     fileprivate func handleStartTapped() async {

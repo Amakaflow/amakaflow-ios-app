@@ -45,6 +45,8 @@ struct ExerciseActual: Identifiable, Equatable, Codable {
     var actualSets: Int
     var actualReps: Int
     var actualWeightKg: Double?
+    /// AMA-2426: per-set actuals. Empty means Quick-mode aggregates only.
+    var sets: [SetActual]
     /// Display header for the structure band (e.g. `TRI-SET · 3 ROUNDS`), shared with Strava.
     var structureHeader: String?
     /// Contiguous group index from the Library/editor blocks.
@@ -58,6 +60,7 @@ struct ExerciseActual: Identifiable, Equatable, Codable {
         actualSets: Int? = nil,
         actualReps: Int? = nil,
         actualWeightKg: Double? = nil,
+        sets: [SetActual] = [],
         structureHeader: String? = nil,
         structureBlockIndex: Int? = nil
     ) {
@@ -68,8 +71,29 @@ struct ExerciseActual: Identifiable, Equatable, Codable {
         self.actualSets = actualSets ?? planned.sets
         self.actualReps = actualReps ?? planned.reps
         self.actualWeightKg = actualWeightKg ?? planned.weightKg
+        self.sets = sets
         self.structureHeader = structureHeader
         self.structureBlockIndex = structureBlockIndex
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case id, name, planned, confirmation
+        case actualSets, actualReps, actualWeightKg, sets
+        case structureHeader, structureBlockIndex
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(String.self, forKey: .id)
+        name = try container.decode(String.self, forKey: .name)
+        planned = try container.decode(ExerciseActualPlanned.self, forKey: .planned)
+        confirmation = try container.decodeIfPresent(ExerciseActualConfirmation.self, forKey: .confirmation)
+        actualSets = try container.decode(Int.self, forKey: .actualSets)
+        actualReps = try container.decode(Int.self, forKey: .actualReps)
+        actualWeightKg = try container.decodeIfPresent(Double.self, forKey: .actualWeightKg)
+        sets = try container.decodeIfPresent([SetActual].self, forKey: .sets) ?? []
+        structureHeader = try container.decodeIfPresent(String.self, forKey: .structureHeader)
+        structureBlockIndex = try container.decodeIfPresent(Int.self, forKey: .structureBlockIndex)
     }
 
     var isConfirmed: Bool { confirmation != nil }

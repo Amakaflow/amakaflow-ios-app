@@ -416,3 +416,102 @@ struct LocalActualsExerciseRow: Codable, FetchableRecord, MutablePersistableReco
         case structureBlockIndex = "structure_block_index"
     }
 }
+
+// MARK: - AMA-2426 Logbook
+
+struct LocalLogDraft: Codable, FetchableRecord, MutablePersistableRecord, Identifiable, Equatable {
+    static let databaseTableName = "log_drafts"
+    static let persistenceConflictPolicy = PersistenceConflictPolicy(insert: .replace, update: .replace)
+
+    var id: String
+    var workoutId: String?
+    var title: String
+    var subtitle: String
+    var startedAt: Date
+    var lastEditedAt: Date
+    var state: String
+    var mode: String
+    var attachedSessionId: String?
+    var payloadJson: String
+    var note: String
+    var rpe: Int?
+    var reconciledSessionId: String?
+
+    enum Columns: String, ColumnExpression {
+        case id, title, subtitle, state, mode, note, rpe
+        case workoutId = "workout_id"
+        case startedAt = "started_at"
+        case lastEditedAt = "last_edited_at"
+        case attachedSessionId = "attached_session_id"
+        case payloadJson = "payload_json"
+        case reconciledSessionId = "reconciled_session_id"
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case id, title, subtitle, state, mode, note, rpe
+        case workoutId = "workout_id"
+        case startedAt = "started_at"
+        case lastEditedAt = "last_edited_at"
+        case attachedSessionId = "attached_session_id"
+        case payloadJson = "payload_json"
+        case reconciledSessionId = "reconciled_session_id"
+    }
+}
+
+struct LocalActualsSetRow: Codable, FetchableRecord, MutablePersistableRecord, Identifiable, Equatable {
+    static let databaseTableName = "actuals_set_rows"
+    static let persistenceConflictPolicy = PersistenceConflictPolicy(insert: .replace, update: .replace)
+
+    var id: String
+    var exerciseRowId: String
+    var setIndex: Int
+    var isWarmup: Bool
+    var weightKg: Double?
+    var reps: Int?
+    var checkedAt: Date?
+
+    enum Columns: String, ColumnExpression {
+        case id, reps
+        case exerciseRowId = "exercise_row_id"
+        case setIndex = "set_index"
+        case isWarmup = "is_warmup"
+        case weightKg = "weight_kg"
+        case checkedAt = "checked_at"
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case id, reps
+        case exerciseRowId = "exercise_row_id"
+        case setIndex = "set_index"
+        case isWarmup = "is_warmup"
+        case weightKg = "weight_kg"
+        case checkedAt = "checked_at"
+    }
+}
+
+struct LocalWorkoutLoadPlan: Codable, FetchableRecord, MutablePersistableRecord, Identifiable, Equatable {
+    static let databaseTableName = "workout_load_plans"
+    static let persistenceConflictPolicy = PersistenceConflictPolicy(insert: .replace, update: .replace)
+
+    var id: String
+    var workoutId: String
+    var exerciseKey: String
+    var payloadJson: String
+    var updatedAt: Date
+
+    enum Columns: String, ColumnExpression {
+        case id
+        case workoutId = "workout_id"
+        case exerciseKey = "exercise_key"
+        case payloadJson = "payload_json"
+        case updatedAt = "updated_at"
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case workoutId = "workout_id"
+        case exerciseKey = "exercise_key"
+        case payloadJson = "payload_json"
+        case updatedAt = "updated_at"
+    }
+}

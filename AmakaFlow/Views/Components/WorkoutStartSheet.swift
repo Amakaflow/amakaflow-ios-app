@@ -23,6 +23,8 @@ struct WorkoutStartSheet: View {
     /// AMA-2371: see `onEditGarminPrefs` — same Settings-only rationale.
     let onEditApplePrefs: () -> Void
     let onClose: () -> Void
+    /// AMA-2426: open logbook prefilled from this plan (under Start).
+    var onLogPastSession: (() -> Void)?
 
     @State private var selectedGym: WorkoutStartGym = .home
 
@@ -35,7 +37,8 @@ struct WorkoutStartSheet: View {
         onPairGarmin: @escaping () -> Void,
         onEditGarminPrefs: @escaping () -> Void = {},
         onEditApplePrefs: @escaping () -> Void = {},
-        onClose: @escaping () -> Void
+        onClose: @escaping () -> Void,
+        onLogPastSession: (() -> Void)? = nil
     ) {
         self.workout = workout
         self.garminPaired = garminPaired
@@ -45,6 +48,7 @@ struct WorkoutStartSheet: View {
         self.onEditGarminPrefs = onEditGarminPrefs
         self.onEditApplePrefs = onEditApplePrefs
         self.onClose = onClose
+        self.onLogPastSession = onLogPastSession
         _selectedGym = State(initialValue: initialGym == .unset ? .home : initialGym)
     }
 
@@ -91,6 +95,40 @@ struct WorkoutStartSheet: View {
 
                     WorkoutStartSettingsPointerFooter()
                         .padding(.top, 12)
+
+                    if let onLogPastSession {
+                        Button(action: onLogPastSession) {
+                            VStack(alignment: .leading, spacing: 4) {
+                                HStack {
+                                    Text(LogbookCopy.logPastSessionTitle)
+                                        .ddDisplayText(14, weight: .bold)
+                                        .foregroundColor(DailyDriver.foreground)
+                                    Spacer()
+                                    Text(LogbookCopy.newBadge)
+                                        .font(.system(size: 9, weight: .heavy, design: .monospaced))
+                                        .foregroundColor(DailyDriver.ink)
+                                        .padding(.horizontal, 7)
+                                        .padding(.vertical, 3)
+                                        .background(DailyDriver.lime)
+                                        .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
+                                }
+                                Text(LogbookCopy.logPastSessionSubtitle)
+                                    .font(.system(size: 12))
+                                    .foregroundColor(DailyDriver.foregroundMuted)
+                            }
+                            .padding(14)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(DailyDriver.card)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                    .stroke(DailyDriver.lime.opacity(0.7), lineWidth: 1.5)
+                            )
+                            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        }
+                        .buttonStyle(.plain)
+                        .padding(.top, 16)
+                        .accessibilityIdentifier(LogbookCopy.logPastAccessibilityID)
+                    }
 
                     unsetGymLink
                         .padding(.top, 10)
