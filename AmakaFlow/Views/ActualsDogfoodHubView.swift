@@ -5,6 +5,8 @@
 //  AMA-2387 DEBUG: simulator walkthrough — teach → connect → merge → map →
 //  fill-in → verified (no Clerk / live OAuth required).
 //  Launch: SIMCTL_CHILD_AMA2387_DEMO=true
+//  AMA-2426: SIMCTL_CHILD_AMA2426_DEMO=true (same hub + Logbook step)
+//  Optional: SIMCTL_CHILD_AMA2426_AUTORUN=true jumps straight into Logbook.
 //
 
 #if DEBUG
@@ -18,11 +20,13 @@ struct ActualsDogfoodHubView: View {
     @State private var path: [ActualsDogfoodRoute] = []
     @State private var mergeMemory = ActualsMergeMemory()
     @State private var fillInVM: ActualsFillInViewModel?
+    @State private var logbookVM: LogbookViewModel?
     @State private var statusLine = "Tap a step — or Run walkthrough"
 
     private let auth = StubActualsProviderAuth()
     private let healthKit = MockActualsHealthKitConnector(connectOutcomes: [.granted])
     private let repository: ActualsRepository
+    private let draftRepository: LogDraftRepository
 
     init() {
         let suite = "ama2387.dogfood.\(UUID().uuidString)"
@@ -37,6 +41,7 @@ struct ActualsDogfoodHubView: View {
             preconditionFailure("Dogfood test DB failed: \(error)")
         }
         repository = ActualsRepository(database: database)
+        draftRepository = LogDraftRepository(database: database)
     }
 
     var body: some View {
@@ -50,6 +55,11 @@ struct ActualsDogfoodHubView: View {
         .ddToastHost()
         .accessibilityIdentifier("af_actuals_dogfood_hub")
         .task {
+            // Optional: SIMCTL_CHILD_AMA2426_AUTORUN=true jumps straight into Logbook.
+            if UITestEnvironment.isTruthy("AMA2426_AUTORUN"), path.isEmpty {
+                open(.logbook)
+                return
+            }
             // Optional: SIMCTL_CHILD_AMA2387_AUTORUN=true jumps straight into teach.
             if UITestEnvironment.isTruthy("AMA2387_AUTORUN"), path.isEmpty {
                 runWalkthrough()
@@ -60,7 +70,7 @@ struct ActualsDogfoodHubView: View {
     private var menu: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
-                Text("AMA-2387 dogfood")
+                Text("AMA-2387 / 2426 dogfood")
                     .ddDisplayText(28, weight: .heavy)
                     .foregroundColor(DailyDriver.foreground)
 
@@ -81,6 +91,20 @@ struct ActualsDogfoodHubView: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityIdentifier("af_actuals_dogfood_walkthrough")
+
+                Button {
+                    open(.logbook)
+                } label: {
+                    Text("Mock Logbook fill-in ›")
+                        .ddDisplayText(15, weight: .bold)
+                        .foregroundColor(DailyDriver.ink)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .background(DailyDriver.amber)
+                        .clipShape(Capsule())
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("af_actuals_dogfood_logbook_cta")
 
                 Text("OR OPEN ONE STEP")
                     .font(.system(size: 8.5, design: .monospaced))
@@ -205,7 +229,8 @@ struct ActualsDogfoodHubView: View {
             )
         case .fillIn:
             if let fillInVM {
-                ActualsFillInView(
+                // Mode select → Quick or Set by set (AMA-2426).
+                ActualsFillInFlowView(
                     viewModel: fillInVM,
                     onSaved: { _ in
                         statusLine = "Saved verified — ghosts ready"
@@ -215,6 +240,21 @@ struct ActualsDogfoodHubView: View {
             } else {
                 Color.clear.onAppear {
                     prepareFillIn()
+                }
+            }
+        case .logbook:
+            if let logbookVM {
+                LogbookView(
+                    viewModel: logbookVM,
+                    onBack: { path.removeAll() },
+                    onSaved: { _ in
+                        statusLine = "Logbook saved verified — ghosts ready"
+                        path = [.verified]
+                    }
+                )
+            } else {
+                Color.clear.onAppear {
+                    prepareLogbook()
                 }
             }
         case .verified:
@@ -286,6 +326,9 @@ struct ActualsDogfoodHubView: View {
                 }
             }
         }
+        if route == .logbook {
+            prepareLogbook()
+        }
         path.append(route)
     }
 
@@ -297,6 +340,24 @@ struct ActualsDogfoodHubView: View {
         session.exercises[0].confirmation = .adjusted
         session.exercises[0].actualWeightKg = 90
         fillInVM = ActualsFillInViewModel(session: session, repository: repository)
+    }
+
+    private func prepareLogbook() {
+        let session = ActualsFillInSession.lowerBodyPosteriorSample(
+            id: "dogfood_log_\(UUID().uuidString.prefix(8))"
+        )
+        let draft = LogbookSeeding.draft(
+            from: session,
+            mode: .after,
+            ghostLookup: repository
+        )
+        logbookVM = LogbookViewModel(
+            draft: draft,
+            draftRepository: draftRepository,
+            actualsRepository: repository,
+            weightUnit: .kg
+        )
+        statusLine = "Logbook — tap cells for wheels, ✓ sets, then Save log"
     }
 
     private func seedVerifiedForGhosts() throws {
@@ -415,6 +476,7 @@ enum ActualsDogfoodRoute: String, CaseIterable, Identifiable, Hashable {
     case merged
     case map
     case fillIn
+    case logbook
     case verified
     case editorGhosts
 
@@ -427,7 +489,8 @@ enum ActualsDogfoodRoute: String, CaseIterable, Identifiable, Hashable {
         case .mergeAsk: return "3 · Merge ask"
         case .merged: return "4 · Merged detail"
         case .map: return "5 · Map to plan"
-        case .fillIn: return "6 · Fill-in actuals"
+        case .fillIn: return "6 · Fill-in (mode select → Quick / Logbook)"
+        case .logbook: return "6b · Logbook grid + wheels (mock)"
         case .verified: return "7 · Verified payoff"
         case .editorGhosts: return "8 · Editor ghosts"
         }

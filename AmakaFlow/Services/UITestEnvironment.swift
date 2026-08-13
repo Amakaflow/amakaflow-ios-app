@@ -131,8 +131,11 @@ class UITestEnvironment {
     }
 
     /// DEBUG visual host: AMA-2387 Actuals dogfood hub (no Clerk / live OAuth).
+    /// AMA-2426: `AMA2426_DEMO` opens the same hub (includes Logbook mock fill-in).
     var showActualsDogfoodHost: Bool {
-        Self.isTruthy("AMA2387_DEMO") || Self.isTruthy("UITEST_SHOW_ACTUALS_DOGFOOD")
+        Self.isTruthy("AMA2387_DEMO")
+            || Self.isTruthy("AMA2426_DEMO")
+            || Self.isTruthy("UITEST_SHOW_ACTUALS_DOGFOOD")
     }
 
     /// DEBUG: seed Actuals merge/map/fill-in cards on real Today (after connect or cold).
