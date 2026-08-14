@@ -38,12 +38,14 @@ enum LogbookRollup {
 
         let count = max(exercise.actualSets, exercise.planned.sets, 1)
         let checked = exercise.confirmation != nil
+        // Unconfirmed → empty target cells (ghosts show in LAST TIME / placeholders).
+        // Prefilling planned into KG/REPS made "Same as last time" look like a no-op.
         return (1...count).map { index in
             SetActual(
                 index: index,
                 isWarmup: false,
-                weightKg: exercise.actualWeightKg ?? exercise.planned.weightKg,
-                reps: exercise.actualReps,
+                weightKg: checked ? (exercise.actualWeightKg ?? exercise.planned.weightKg) : nil,
+                reps: checked ? exercise.actualReps : nil,
                 checkedAt: checked ? now : nil
             )
         }
@@ -109,7 +111,8 @@ enum LogbookRollup {
                 structureHeader: entry.structureHeader,
                 structureBlockIndex: entry.structureBlockIndex
             )
-            applySets(entry.sets, to: &exercise)
+            // Checked sets only — unchecked targets stay on the load plan, not history.
+            applySets(actualsForSave(from: entry), to: &exercise)
             // Target-pass: if nothing checked, leave unconfirmed so save gate can require checks
             // or caller marks confirmation when committing standalone with zero checks.
             if exercise.actualSets == 0 {
@@ -134,13 +137,24 @@ enum LogbookRollup {
     /// Persist unchecked targets as the workout's load plan (next ghosts), exclude from actuals.
     static func loadPlanTargets(from entry: LogbookExerciseEntry) -> [SetActual] {
         entry.sets
-            .filter { !$0.isChecked && ($0.weightKg != nil || $0.reps != nil) }
+            .filter {
+                !$0.isChecked && (
+                    $0.weightKg != nil
+                        || $0.reps != nil
+                        || $0.durationSeconds != nil
+                        || $0.calories != nil
+                        || $0.distanceMeters != nil
+                )
+            }
             .map {
                 SetActual(
                     index: $0.index,
                     isWarmup: $0.isWarmup,
                     weightKg: $0.weightKg,
                     reps: $0.reps,
+                    durationSeconds: $0.durationSeconds,
+                    calories: $0.calories,
+                    distanceMeters: $0.distanceMeters,
                     checkedAt: nil
                 )
             }

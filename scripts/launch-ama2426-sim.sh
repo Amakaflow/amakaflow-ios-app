@@ -5,10 +5,18 @@
 # Logbook grid + wheels — no Clerk / live OAuth required.
 #
 # Usage:
-#   ./scripts/launch-ama2426-sim.sh              # build + install + launch → Logbook
-#   ./scripts/launch-ama2426-sim.sh --hub        # land on dogfood menu (pick Logbook yourself)
+#   ./scripts/launch-ama2426-sim.sh              # build + install + launch → Logbook (after)
+#   ./scripts/launch-ama2426-sim.sh --live       # LIVE header + ticking elapsed (phone tracking feel)
+#   ./scripts/launch-ama2426-sim.sh --companion  # COMPANION · PENDING banner (beside-watch feel)
+#   ./scripts/launch-ama2426-sim.sh --hub        # land on dogfood menu (pick mode yourself)
 #   ./scripts/launch-ama2426-sim.sh --today      # Today rail with AMA2387 demo cards → Fill in ›
+#   ./scripts/launch-ama2426-sim.sh --boot-watch # also boot paired Watch sim (chrome only — see note)
 #   ./scripts/launch-ama2426-sim.sh --no-build   # install existing build/sim app + launch
+#
+# Watch Simulator note:
+#   WorkoutKit / native Workout app custom workouts do NOT run meaningfully on Watch
+#   Simulator — Apple requires a physical watch for scheduled sample workouts. --boot-watch
+#   only opens a paired watch for chrome/feel; use --companion on phone for the notepad UX.
 #
 set -euo pipefail
 
@@ -17,13 +25,17 @@ SIM_NAME="AF-2426-Logbook"
 BUNDLE_ID="com.myamaka.AmakaFlowCompanion"
 DERIVED_APP="$REPO_ROOT/build/sim/Build/Products/Debug-iphonesimulator/AmakaFlowCompanion.app"
 
-MODE="autorun"   # autorun | hub | today
+MODE="autorun"   # autorun | live | companion | hub | today
 NO_BUILD=0
+BOOT_WATCH=0
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --hub) MODE="hub"; shift ;;
+    --live) MODE="live"; shift ;;
+    --companion) MODE="companion"; shift ;;
     --today) MODE="today"; shift ;;
+    --boot-watch) BOOT_WATCH=1; shift ;;
     --no-build) NO_BUILD=1; shift ;;
     -h|--help)
       sed -n '3,/^set -/p' "$0" | sed 's/^# \{0,1\}//; /^set -/d'
@@ -68,6 +80,38 @@ xcrun simctl boot "$SIM_UDID" 2>/dev/null || true
 xcrun simctl bootstatus "$SIM_UDID" -b
 open -a Simulator --args -CurrentDeviceUDID "$SIM_UDID"
 
+if [[ "$BOOT_WATCH" == "1" ]]; then
+  # Prefer the first Watch UDID listed under an active pair; else any available Watch.
+  WATCH_UDID=$(
+    xcrun simctl list pairs |
+      awk '
+        /\(active/ { want=1; next }
+        want && /Watch:/ {
+          if (match($0, /\([0-9A-Fa-f-]{36}\)/)) {
+            print substr($0, RSTART+1, RLENGTH-2)
+            exit
+          }
+        }
+      ' || true
+  )
+  if [[ -z "$WATCH_UDID" ]]; then
+    WATCH_UDID=$(
+      xcrun simctl list devices available |
+        grep -F "Apple Watch" |
+        head -1 |
+        grep -oE '[0-9A-Fa-f-]{36}' |
+        head -1 || true
+    )
+  fi
+  if [[ -n "$WATCH_UDID" ]]; then
+    echo "[ama2426] booting Watch sim $WATCH_UDID (chrome only — no native WorkoutKit sample on sim)…"
+    xcrun simctl boot "$WATCH_UDID" 2>/dev/null || true
+    xcrun simctl bootstatus "$WATCH_UDID" -b || true
+  else
+    echo "[ama2426] WARN: no Watch simulator found to boot" >&2
+  fi
+fi
+
 if [[ "$NO_BUILD" != "1" ]]; then
   echo "[ama2426] building into build/sim…"
   cd "$REPO_ROOT/AmakaFlowCompanion"
@@ -99,16 +143,37 @@ xcrun simctl install "$SIM_UDID" "$APP"
 xcrun simctl terminate "$SIM_UDID" "$BUNDLE_ID" 2>/dev/null || true
 
 case "$MODE" in
-  autorun)
-    echo "[ama2426] launching dogfood hub → Logbook (AMA2426_AUTORUN)…"
-    SIMCTL_CHILD_AMA2426_DEMO=true \
-    SIMCTL_CHILD_AMA2426_AUTORUN=true \
-    SIMCTL_CHILD_UITEST_SKIP_ONBOARDING=true \
-    SIMCTL_CHILD_UITEST_SKIP_APPLE_WATCH=true \
-    SIMCTL_CHILD_UITEST_DISABLE_SENTRY=true \
-    xcrun simctl launch "$SIM_UDID" "$BUNDLE_ID"
+  autorun|live|companion)
+    EXTRA_ENV=()
+    case "$MODE" in
+      live)
+        echo "[ama2426] launching dogfood → LIVE logbook…"
+        EXTRA_ENV+=(SIMCTL_CHILD_AMA2426_LIVE=true)
+        ;;
+      companion)
+        echo "[ama2426] launching dogfood → COMPANION logbook…"
+        EXTRA_ENV+=(SIMCTL_CHILD_AMA2426_COMPANION=true)
+        ;;
+      *)
+        echo "[ama2426] launching dogfood hub → Logbook (AMA2426_AUTORUN)…"
+        ;;
+    esac
+    env \
+      SIMCTL_CHILD_AMA2426_DEMO=true \
+      SIMCTL_CHILD_AMA2426_AUTORUN=true \
+      "${EXTRA_ENV[@]+"${EXTRA_ENV[@]}"}" \
+      SIMCTL_CHILD_UITEST_SKIP_ONBOARDING=true \
+      SIMCTL_CHILD_UITEST_SKIP_APPLE_WATCH=true \
+      SIMCTL_CHILD_UITEST_DISABLE_SENTRY=true \
+      xcrun simctl launch "$SIM_UDID" "$BUNDLE_ID"
     echo "[ama2426] You should see the Logbook grid (lower-body sample)."
     echo "         Tap KG/REPS → wheels · ✓ sets · Save log → RPE → Verified."
+    if [[ "$MODE" == "companion" ]]; then
+      echo "         Header: COMPANION · PENDING (watch notepad — not on Today until reconcile)."
+      echo "         Native WorkoutKit sample workouts require a physical Apple Watch."
+    elif [[ "$MODE" == "live" ]]; then
+      echo "         Header: LIVE · mm:ss · LOGBOOK (phone tracking feel)."
+    fi
     ;;
   hub)
     echo "[ama2426] launching dogfood hub menu…"
@@ -117,7 +182,7 @@ case "$MODE" in
     SIMCTL_CHILD_UITEST_SKIP_APPLE_WATCH=true \
     SIMCTL_CHILD_UITEST_DISABLE_SENTRY=true \
     xcrun simctl launch "$SIM_UDID" "$BUNDLE_ID"
-    echo "[ama2426] Tap **Mock Logbook fill-in ›** (or step 6b)."
+    echo "[ama2426] Pick Live / Companion / Mock Logbook from the hub."
     ;;
   today)
     echo "[ama2426] launching Today with Actuals demo cards…"

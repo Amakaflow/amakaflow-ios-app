@@ -7,12 +7,26 @@
 
 import Foundation
 
+/// How an exercise is logged in the notebook.
+enum LogbookLoggingKind: String, Equatable, Codable {
+    /// SET · LAST TIME · KG · REPS · ✓
+    case strength
+    /// TIME / CAL (/ KM) strip — jump rope, bike cals, runs, etc.
+    case metric
+}
+
 /// One logged (or target) set. Weight is always canonical kilograms.
 struct SetActual: Identifiable, Equatable, Codable, Hashable {
     var index: Int
     var isWarmup: Bool
     var weightKg: Double?
     var reps: Int?
+    /// Timed stations (jump rope, intervals) — seconds.
+    var durationSeconds: Int?
+    /// Calorie stations (Assault Bike, etc.).
+    var calories: Int?
+    /// Distance stations — meters.
+    var distanceMeters: Double?
     /// Nil until the athlete checks ✓ — unchecked rows are targets, not history.
     var checkedAt: Date?
 
@@ -25,12 +39,18 @@ struct SetActual: Identifiable, Equatable, Codable, Hashable {
         isWarmup: Bool = false,
         weightKg: Double? = nil,
         reps: Int? = nil,
+        durationSeconds: Int? = nil,
+        calories: Int? = nil,
+        distanceMeters: Double? = nil,
         checkedAt: Date? = nil
     ) {
         self.index = index
         self.isWarmup = isWarmup
         self.weightKg = weightKg
         self.reps = reps
+        self.durationSeconds = durationSeconds
+        self.calories = calories
+        self.distanceMeters = distanceMeters
         self.checkedAt = checkedAt
     }
 }
@@ -39,11 +59,39 @@ struct SetActual: Identifiable, Equatable, Codable, Hashable {
 struct LogbookGhost: Equatable, Hashable, Codable {
     var weightKg: Double?
     var reps: Int?
+    var durationSeconds: Int?
+    var calories: Int?
+    var distanceMeters: Double?
     var source: ActualsGhostSource
 
-    var isEmpty: Bool { weightKg == nil && reps == nil }
+    init(
+        weightKg: Double? = nil,
+        reps: Int? = nil,
+        durationSeconds: Int? = nil,
+        calories: Int? = nil,
+        distanceMeters: Double? = nil,
+        source: ActualsGhostSource
+    ) {
+        self.weightKg = weightKg
+        self.reps = reps
+        self.durationSeconds = durationSeconds
+        self.calories = calories
+        self.distanceMeters = distanceMeters
+        self.source = source
+    }
+
+    var isEmpty: Bool {
+        weightKg == nil
+            && reps == nil
+            && durationSeconds == nil
+            && calories == nil
+            && distanceMeters == nil
+    }
 
     func displayLine(unit: WeightUnit) -> String {
+        if durationSeconds != nil || calories != nil || distanceMeters != nil {
+            return metricDisplayLine
+        }
         let weightText: String
         if let weightKg {
             weightText = WeightUnitMath.formatWeight(kg: weightKg, unit: unit)
@@ -52,6 +100,37 @@ struct LogbookGhost: Equatable, Hashable, Codable {
         }
         let repsText = reps.map(String.init) ?? "—"
         return "\(weightText) × \(repsText)"
+    }
+
+    var metricDisplayLine: String {
+        var parts: [String] = []
+        if let durationSeconds {
+            parts.append(LogbookMetricFormat.duration(durationSeconds))
+        }
+        if let calories {
+            parts.append("\(calories) CAL")
+        }
+        if let distanceMeters {
+            parts.append(LogbookMetricFormat.distanceKm(distanceMeters))
+        }
+        return parts.isEmpty ? "—" : parts.joined(separator: " · ")
+    }
+}
+
+enum LogbookMetricFormat {
+    static func duration(_ seconds: Int) -> String {
+        let clamped = max(0, seconds)
+        let minutes = clamped / 60
+        let secs = clamped % 60
+        return String(format: "%d:%02d", minutes, secs)
+    }
+
+    static func distanceKm(_ meters: Double) -> String {
+        let km = meters / 1000
+        if abs(km - km.rounded()) < 0.05 {
+            return "\(Int(km.rounded())) KM"
+        }
+        return String(format: "%.1f KM", km)
     }
 }
 
@@ -159,7 +238,12 @@ struct LogbookExerciseEntry: Identifiable, Equatable, Codable {
     var structureBlockIndex: Int?
     /// Partner name for SUPERSET · W/ X tag.
     var supersetPartner: String?
-    /// Cardio strip (TIME/KM/CAL/HR) when this entry is device-filled cardio.
+    /// Strength grid vs TIME/CAL metric strip.
+    var loggingKind: LogbookLoggingKind
+    var plannedDurationSeconds: Int?
+    var plannedCalories: Int?
+    var plannedDistanceMeters: Int?
+    /// Cardio strip (TIME/KM/CAL/HR) when device-filled — still editable unless noted.
     var cardioStrip: LogbookCardioStrip?
 
     init(
@@ -171,6 +255,10 @@ struct LogbookExerciseEntry: Identifiable, Equatable, Codable {
         structureHeader: String? = nil,
         structureBlockIndex: Int? = nil,
         supersetPartner: String? = nil,
+        loggingKind: LogbookLoggingKind = .strength,
+        plannedDurationSeconds: Int? = nil,
+        plannedCalories: Int? = nil,
+        plannedDistanceMeters: Int? = nil,
         cardioStrip: LogbookCardioStrip? = nil
     ) {
         self.id = id
@@ -181,11 +269,70 @@ struct LogbookExerciseEntry: Identifiable, Equatable, Codable {
         self.structureHeader = structureHeader
         self.structureBlockIndex = structureBlockIndex
         self.supersetPartner = supersetPartner
+        self.loggingKind = loggingKind
+        self.plannedDurationSeconds = plannedDurationSeconds
+        self.plannedCalories = plannedCalories
+        self.plannedDistanceMeters = plannedDistanceMeters
         self.cardioStrip = cardioStrip
     }
 
+    enum CodingKeys: String, CodingKey {
+        case id, name, planned, sets, ghosts
+        case structureHeader, structureBlockIndex, supersetPartner
+        case loggingKind, plannedDurationSeconds, plannedCalories, plannedDistanceMeters
+        case cardioStrip
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(String.self, forKey: .id)
+        name = try container.decode(String.self, forKey: .name)
+        planned = try container.decode(ExerciseActualPlanned.self, forKey: .planned)
+        sets = try container.decodeIfPresent([SetActual].self, forKey: .sets) ?? []
+        ghosts = try container.decodeIfPresent([LogbookGhost].self, forKey: .ghosts) ?? []
+        structureHeader = try container.decodeIfPresent(String.self, forKey: .structureHeader)
+        structureBlockIndex = try container.decodeIfPresent(Int.self, forKey: .structureBlockIndex)
+        supersetPartner = try container.decodeIfPresent(String.self, forKey: .supersetPartner)
+        loggingKind = try container.decodeIfPresent(LogbookLoggingKind.self, forKey: .loggingKind) ?? .strength
+        plannedDurationSeconds = try container.decodeIfPresent(Int.self, forKey: .plannedDurationSeconds)
+        plannedCalories = try container.decodeIfPresent(Int.self, forKey: .plannedCalories)
+        plannedDistanceMeters = try container.decodeIfPresent(Int.self, forKey: .plannedDistanceMeters)
+        cardioStrip = try container.decodeIfPresent(LogbookCardioStrip.self, forKey: .cardioStrip)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(name, forKey: .name)
+        try container.encode(planned, forKey: .planned)
+        try container.encode(sets, forKey: .sets)
+        try container.encode(ghosts, forKey: .ghosts)
+        try container.encodeIfPresent(structureHeader, forKey: .structureHeader)
+        try container.encodeIfPresent(structureBlockIndex, forKey: .structureBlockIndex)
+        try container.encodeIfPresent(supersetPartner, forKey: .supersetPartner)
+        try container.encode(loggingKind, forKey: .loggingKind)
+        try container.encodeIfPresent(plannedDurationSeconds, forKey: .plannedDurationSeconds)
+        try container.encodeIfPresent(plannedCalories, forKey: .plannedCalories)
+        try container.encodeIfPresent(plannedDistanceMeters, forKey: .plannedDistanceMeters)
+        try container.encodeIfPresent(cardioStrip, forKey: .cardioStrip)
+    }
+
+    var isMetric: Bool { loggingKind == .metric }
+
     var plannedLine: String {
-        "PLANNED \(planned.displayLine)"
+        if isMetric {
+            if let plannedDurationSeconds {
+                return "PLANNED \(LogbookMetricFormat.duration(plannedDurationSeconds))"
+            }
+            if let plannedCalories {
+                return "PLANNED \(plannedCalories) CAL"
+            }
+            if let plannedDistanceMeters {
+                return "PLANNED \(LogbookMetricFormat.distanceKm(Double(plannedDistanceMeters)))"
+            }
+            return "PLANNED TIME / CAL"
+        }
+        return "PLANNED \(planned.displayLine)"
     }
 
     var supersetTag: String? {
@@ -202,8 +349,20 @@ struct LogbookCardioStrip: Equatable, Codable {
     var sourceNote: String?
 }
 
+enum LogbookWheelMode: String, Equatable, Hashable, Codable {
+    case weightReps
+    case metric
+}
+
 /// Wheel sheet focus.
 struct LogbookWheelFocus: Equatable, Hashable {
     var exerciseID: String
     var setIndex: Int
+    var mode: LogbookWheelMode
+
+    init(exerciseID: String, setIndex: Int, mode: LogbookWheelMode = .weightReps) {
+        self.exerciseID = exerciseID
+        self.setIndex = setIndex
+        self.mode = mode
+    }
 }

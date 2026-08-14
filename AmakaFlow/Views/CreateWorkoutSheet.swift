@@ -15,7 +15,7 @@ enum CreateWorkoutDoor: Equatable {
     case manual
     /// AMA-2389: receive shared workouts from friends.
     case fromFriends
-    /// AMA-2426: notepad — already trained, log set by set.
+    /// AMA-2426: notepad — log sets during or after, set by set.
     case logSession
 }
 

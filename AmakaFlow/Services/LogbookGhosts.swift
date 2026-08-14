@@ -83,5 +83,23 @@ enum LogbookGhosts {
     static func copyGhost(into set: inout SetActual, ghost: LogbookGhost) {
         set.weightKg = ghost.weightKg
         set.reps = ghost.reps
+        set.durationSeconds = ghost.durationSeconds
+        set.calories = ghost.calories
+        set.distanceMeters = ghost.distanceMeters
+    }
+
+    static func metricGhost(
+        plannedDurationSeconds: Int?,
+        plannedCalories: Int?,
+        plannedDistanceMeters: Int?
+    ) -> LogbookGhost {
+        LogbookGhost(
+            weightKg: nil,
+            reps: nil,
+            durationSeconds: plannedDurationSeconds,
+            calories: plannedCalories,
+            distanceMeters: plannedDistanceMeters.map(Double.init),
+            source: .prescription
+        )
     }
 }

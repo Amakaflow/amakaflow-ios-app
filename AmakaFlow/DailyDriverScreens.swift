@@ -161,6 +161,29 @@ struct DDLibraryHeaderAddButton: View {
     }
 }
 
+/// AMA-2426: header Log — secondary + (not lime-filled) so it’s distinct from the Add FAB.
+struct DDHeaderLogButton: View {
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: "plus")
+                .font(.system(size: 17, weight: .bold))
+                .foregroundColor(DailyDriver.lime)
+                .frame(width: 38, height: 38)
+                .background(DailyDriver.card2, in: Circle())
+                .overlay(
+                    Circle()
+                        .stroke(DailyDriver.lime.opacity(0.55), lineWidth: 1.5)
+                )
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(LogbookCopy.logSessionTitle)
+        .accessibilityHint(LogbookCopy.logSessionSubtitle)
+        .accessibilityIdentifier(LogbookCopy.headerLogAccessibilityID)
+    }
+}
+
 // MARK: - Search + filter pills
 
 struct DDSearchField: View {

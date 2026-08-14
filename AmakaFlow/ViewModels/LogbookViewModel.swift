@@ -86,39 +86,40 @@ final class LogbookViewModel: ObservableObject {
         if draft.entries[eIdx].sets[sIdx].isChecked {
             draft.entries[eIdx].sets[sIdx].checkedAt = nil
         } else {
-            // Checking with empty cells copies ghost first.
-            if draft.entries[eIdx].sets[sIdx].weightKg == nil || draft.entries[eIdx].sets[sIdx].reps == nil {
+            let entry = draft.entries[eIdx]
+            let set = entry.sets[sIdx]
+            if entry.isMetric {
+                if set.durationSeconds == nil, set.calories == nil, set.distanceMeters == nil {
+                    copyGhost(exerciseID: exerciseID, setIndex: setIndex)
+                }
+            } else if set.weightKg == nil || set.reps == nil {
+                // Checking with empty cells copies ghost first.
                 copyGhost(exerciseID: exerciseID, setIndex: setIndex)
             }
             draft.entries[eIdx].sets[sIdx].checkedAt = now()
         }
         touch()
+        refreshMetricStrip(exerciseID: exerciseID)
     }
 
     func copyGhost(exerciseID: String, setIndex: Int) {
         guard let eIdx = draft.entries.firstIndex(where: { $0.id == exerciseID }),
-              let sIdx = draft.entries[eIdx].sets.firstIndex(where: { $0.index == setIndex }) else {
+              let sIdx = draft.entries[eIdx].sets.firstIndex(where: { $0.index == setIndex }),
+              let source = effectiveLastReference(exerciseID: exerciseID, setIndex: setIndex) else {
             return
         }
-        let ghosts = draft.entries[eIdx].ghosts
-        let ghost: LogbookGhost
-        if sIdx < ghosts.count {
-            ghost = ghosts[sIdx]
-        } else if let last = ghosts.last {
-            ghost = last
-        } else {
-            ghost = LogbookGhost(
-                weightKg: draft.entries[eIdx].planned.weightKg,
-                reps: draft.entries[eIdx].planned.reps,
-                source: .prescription
-            )
-        }
-        LogbookGhosts.copyGhost(into: &draft.entries[eIdx].sets[sIdx], ghost: ghost)
+        LogbookGhosts.copyGhost(into: &draft.entries[eIdx].sets[sIdx], ghost: source)
         touch()
     }
 
     func openWheel(exerciseID: String, setIndex: Int) {
-        wheelFocus = LogbookWheelFocus(exerciseID: exerciseID, setIndex: setIndex)
+        let mode: LogbookWheelMode = {
+            if let entry = draft.entries.first(where: { $0.id == exerciseID }), entry.isMetric {
+                return .metric
+            }
+            return .weightReps
+        }()
+        wheelFocus = LogbookWheelFocus(exerciseID: exerciseID, setIndex: setIndex, mode: mode)
         fineSteps = false
     }
 
@@ -129,22 +130,87 @@ final class LogbookViewModel: ObservableObject {
             return
         }
         let kg = WeightUnitMath.kilograms(fromDisplay: weightDisplay, unit: weightUnit)
-        draft.entries[eIdx].sets[sIdx].weightKg = kg
+        let ghost = ghost(for: focus.exerciseID, setIndex: focus.setIndex)
+        // Bodyweight / unloaded: wheel sits on 0 but storage stays nil when plan + ghost have no load.
+        if kg == 0,
+           draft.entries[eIdx].planned.weightKg == nil,
+           ghost?.weightKg == nil {
+            draft.entries[eIdx].sets[sIdx].weightKg = nil
+        } else {
+            draft.entries[eIdx].sets[sIdx].weightKg = kg
+        }
         draft.entries[eIdx].sets[sIdx].reps = reps
         touch()
-
         if advance {
-            if let next = LogbookWheelNavigation.nextUnchecked(after: focus, in: draft.entries) {
-                wheelFocus = next
-            } else {
-                wheelFocus = nil
-            }
+            advanceWheel(from: focus)
         }
     }
 
-    func sameAsLastTime() {
-        guard let focus = wheelFocus else { return }
-        copyGhost(exerciseID: focus.exerciseID, setIndex: focus.setIndex)
+    func applyMetric(durationSeconds: Int?, calories: Int?, distanceMeters: Double?, advance: Bool) {
+        guard let focus = wheelFocus,
+              let eIdx = draft.entries.firstIndex(where: { $0.id == focus.exerciseID }),
+              let sIdx = draft.entries[eIdx].sets.firstIndex(where: { $0.index == focus.setIndex }) else {
+            return
+        }
+        draft.entries[eIdx].sets[sIdx].durationSeconds = durationSeconds.flatMap { $0 > 0 ? $0 : nil }
+        draft.entries[eIdx].sets[sIdx].calories = calories.flatMap { $0 > 0 ? $0 : nil }
+        draft.entries[eIdx].sets[sIdx].distanceMeters = distanceMeters.flatMap { $0 > 0 ? $0 : nil }
+        touch()
+        refreshMetricStrip(exerciseID: focus.exerciseID)
+        if advance {
+            advanceWheel(from: focus)
+        }
+    }
+
+    /// Copies LAST TIME into the focused set. Returns the values applied (for wheel sync).
+    /// Prefer real history → previous filled set this session → prescription ghost.
+    @discardableResult
+    func sameAsLastTime() -> LogbookGhost? {
+        guard let focus = wheelFocus else { return nil }
+        guard let source = effectiveLastReference(
+            exerciseID: focus.exerciseID,
+            setIndex: focus.setIndex
+        ) else { return nil }
+        guard let eIdx = draft.entries.firstIndex(where: { $0.id == focus.exerciseID }),
+              let sIdx = draft.entries[eIdx].sets.firstIndex(where: { $0.index == focus.setIndex }) else {
+            return nil
+        }
+        LogbookGhosts.copyGhost(into: &draft.entries[eIdx].sets[sIdx], ghost: source)
+        touch()
+        refreshMetricStrip(exerciseID: focus.exerciseID)
+        return source
+    }
+
+    /// What "Same as last time" / LAST TIME should copy.
+    /// 1) Last verified actual  2) previous filled set in this exercise  3) prescription
+    func effectiveLastReference(exerciseID: String, setIndex: Int) -> LogbookGhost? {
+        guard let entry = draft.entries.first(where: { $0.id == exerciseID }) else { return nil }
+        if let historical = storedGhost(for: entry, setIndex: setIndex),
+           historical.source == .lastActual,
+           !historical.isEmpty {
+            return historical
+        }
+        if let previous = previousFilledSet(in: entry, before: setIndex) {
+            return LogbookGhost(
+                weightKg: previous.weightKg,
+                reps: previous.reps,
+                durationSeconds: previous.durationSeconds,
+                calories: previous.calories,
+                distanceMeters: previous.distanceMeters,
+                source: .lastActual
+            )
+        }
+        if let historical = storedGhost(for: entry, setIndex: setIndex), !historical.isEmpty {
+            return historical
+        }
+        return LogbookGhost(
+            weightKg: entry.planned.weightKg,
+            reps: entry.isMetric ? nil : entry.planned.reps,
+            durationSeconds: entry.plannedDurationSeconds,
+            calories: entry.plannedCalories,
+            distanceMeters: entry.plannedDistanceMeters.map(Double.init),
+            source: .prescription
+        )
     }
 
     func addSet(exerciseID: String) {
@@ -259,12 +325,31 @@ final class LogbookViewModel: ObservableObject {
     }
 
     func ghost(for exerciseID: String, setIndex: Int) -> LogbookGhost? {
-        guard let entry = draft.entries.first(where: { $0.id == exerciseID }) else { return nil }
+        effectiveLastReference(exerciseID: exerciseID, setIndex: setIndex)
+    }
+
+    private func storedGhost(for entry: LogbookExerciseEntry, setIndex: Int) -> LogbookGhost? {
         if let idx = entry.sets.firstIndex(where: { $0.index == setIndex }),
            idx < entry.ghosts.count {
             return entry.ghosts[idx]
         }
         return entry.ghosts.last
+    }
+
+    private func previousFilledSet(in entry: LogbookExerciseEntry, before setIndex: Int) -> SetActual? {
+        entry.sets
+            .filter { set in
+                set.index < setIndex
+                    && (
+                        set.weightKg != nil
+                            || set.reps != nil
+                            || set.durationSeconds != nil
+                            || set.calories != nil
+                            || set.distanceMeters != nil
+                    )
+            }
+            .sorted { $0.index < $1.index }
+            .last
     }
 
     func focusedSet() -> (entry: LogbookExerciseEntry, set: SetActual)? {
@@ -278,6 +363,46 @@ final class LogbookViewModel: ObservableObject {
 
     // MARK: - Private
 
+    private func advanceWheel(from focus: LogbookWheelFocus) {
+        if let next = LogbookWheelNavigation.nextUnchecked(after: focus, in: draft.entries) {
+            let mode: LogbookWheelMode = {
+                if let entry = draft.entries.first(where: { $0.id == next.exerciseID }), entry.isMetric {
+                    return .metric
+                }
+                return .weightReps
+            }()
+            wheelFocus = LogbookWheelFocus(
+                exerciseID: next.exerciseID,
+                setIndex: next.setIndex,
+                mode: mode
+            )
+        } else {
+            wheelFocus = nil
+        }
+    }
+
+    private func refreshMetricStrip(exerciseID: String) {
+        guard let eIdx = draft.entries.firstIndex(where: { $0.id == exerciseID }),
+              draft.entries[eIdx].isMetric,
+              let set = draft.entries[eIdx].sets.first else {
+            return
+        }
+        let ghost = draft.entries[eIdx].ghosts.first
+        let duration = set.durationSeconds ?? ghost?.durationSeconds ?? draft.entries[eIdx].plannedDurationSeconds
+        let calories = set.calories ?? ghost?.calories ?? draft.entries[eIdx].plannedCalories
+        let distance = set.distanceMeters
+            ?? ghost?.distanceMeters
+            ?? draft.entries[eIdx].plannedDistanceMeters.map(Double.init)
+        let existingNote = draft.entries[eIdx].cardioStrip?.sourceNote
+        draft.entries[eIdx].cardioStrip = LogbookCardioStrip(
+            timeText: duration.map(LogbookMetricFormat.duration),
+            distanceText: distance.map(LogbookMetricFormat.distanceKm),
+            caloriesText: calories.map { "\($0)" },
+            heartRateText: draft.entries[eIdx].cardioStrip?.heartRateText,
+            sourceNote: existingNote
+        )
+    }
+
     private func touch() {
         draft.lastEditedAt = now()
         persistDraft()
@@ -288,9 +413,11 @@ final class LogbookViewModel: ObservableObject {
         for entry in draft.entries {
             let targets = LogbookRollup.loadPlanTargets(from: entry)
             guard !targets.isEmpty else { continue }
+            // Name-based key so duplicate stations (two warm-up OHPs) share ghosts/plans.
+            let exerciseKey = ActualsGhostFeed.exerciseKey(forName: entry.name)
             try? draftRepository.saveLoadPlan(
                 workoutId: workoutId,
-                exerciseKey: entry.id,
+                exerciseKey: exerciseKey,
                 targets: targets
             )
         }

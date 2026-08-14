@@ -13,7 +13,7 @@ enum CreateFlowPresentation: Identifiable, Equatable {
     case screenshot
     case knowledge
     case manualEditor
-    /// AMA-2426: logbook from ＋ Add sheet.
+    /// AMA-2426: logbook from header Log or ＋ Add sheet.
     case logSession
 
     var id: String {
@@ -46,23 +46,35 @@ enum OpenCreateSheetKey: EnvironmentKey {
     static let defaultValue: () -> Void = {}
 }
 
+enum OpenLogSessionKey: EnvironmentKey {
+    static let defaultValue: () -> Void = {}
+}
+
 extension EnvironmentValues {
     var openCreateSheet: () -> Void {
         get { self[OpenCreateSheetKey.self] }
         set { self[OpenCreateSheetKey.self] = newValue }
+    }
+
+    /// AMA-2426: open Log sets picker (header Log on Today / Library).
+    var openLogSession: () -> Void {
+        get { self[OpenLogSessionKey.self] }
+        set { self[OpenLogSessionKey.self] = newValue }
     }
 }
 
 struct CreateFlowSheetsModifier: ViewModifier {
     @Binding var showCreateSheet: Bool
     @Binding var activeFlow: CreateFlowPresentation?
+    /// Bumped by `openLogSession` env to present the logbook picker.
+    @Binding var logSessionRequestID: UUID
     var onLibraryReload: () -> Void
 
     @State private var speakUnavailableAlert = false
     /// AMA-2389: From friends inbox (sheet, not a new top-level surface).
     @State private var showFriendsInbox = false
     @ObservedObject private var friendsStore = FriendsSharingStore.shared
-    /// AMA-2426: library workouts for Log a session picker.
+    /// AMA-2426: library workouts for Log sets picker.
     @State private var logbookWorkouts: [Workout] = []
     @State private var showLogbookPicker = false
     @State private var logbookViewModel: LogbookViewModel?
@@ -95,6 +107,9 @@ struct CreateFlowSheetsModifier: ViewModifier {
                     },
                     onClose: { showLogbookPicker = false }
                 )
+            }
+            .onChange(of: logSessionRequestID) { _, _ in
+                Task { await presentLogSessionPicker() }
             }
             .fullScreenCover(item: $activeFlow) { flow in
                 switch flow {
@@ -222,12 +237,14 @@ extension View {
     func createFlowSheets(
         showCreateSheet: Binding<Bool>,
         activeFlow: Binding<CreateFlowPresentation?>,
+        logSessionRequestID: Binding<UUID>,
         onLibraryReload: @escaping () -> Void = {}
     ) -> some View {
         modifier(
             CreateFlowSheetsModifier(
                 showCreateSheet: showCreateSheet,
                 activeFlow: activeFlow,
+                logSessionRequestID: logSessionRequestID,
                 onLibraryReload: onLibraryReload
             )
         )

@@ -62,7 +62,7 @@ struct UnifiedWorkoutDetailView: View {
     @State private var isSavingSport = false
     /// AMA-2395 — FROM THE CREATOR / NOTES expand toggle.
     @State private var creatorNoteExpanded = false
-    /// AMA-2426: Log a past session → logbook.
+    /// AMA-2426: Log sets (notepad) from Start — during or after, no device start.
     @State private var logbookViewModel: LogbookViewModel?
     @State private var showLogbook = false
 
@@ -707,6 +707,36 @@ struct UnifiedWorkoutDetailView: View {
                     .fixedSize(horizontal: false, vertical: true)
                     .accessibilityIdentifier("af_workout_detail_sent_card_body")
             }
+
+            if target == .apple {
+                Button {
+                    openLogbook(
+                        LogbookModeContext(
+                            phoneTrackerActive: false,
+                            watchPlanActiveWindow: true,
+                            existingSessionId: nil
+                        )
+                    )
+                } label: {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(LogbookCopy.logSetsBesideWatchTitle)
+                            .ddDisplayText(13, weight: .bold)
+                            .foregroundColor(DailyDriver.ink)
+                        Text(LogbookCopy.logSetsBesideWatchSubtitle)
+                            .font(.system(size: 10.5))
+                            .foregroundColor(DailyDriver.ink.opacity(0.75))
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 10)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(DailyDriver.lime)
+                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                }
+                .buttonStyle(.plain)
+                .padding(.top, 6)
+                .accessibilityIdentifier(LogbookCopy.logSetsBesideWatchAccessibilityID)
+            }
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
@@ -897,12 +927,17 @@ extension UnifiedWorkoutDetailView {
     }
 
     fileprivate func openLogbookForPastSession() {
-        let context = LogbookModeContext(
-            phoneTrackerActive: false,
-            watchPlanActiveWindow: false,
-            existingSessionId: nil
+        openLogbook(
+            LogbookModeContext(
+                phoneTrackerActive: false,
+                watchPlanActiveWindow: false,
+                existingSessionId: nil
+            )
         )
-        // Past session from library — companion-pending until saved (phone-only) or reconciled.
+    }
+
+    /// Shared door — mode inferred from phone tracker / watch plan / after.
+    fileprivate func openLogbook(_ context: LogbookModeContext) {
         let mode = LogbookModeInference.infer(context)
         let loadPlanLookup: (String) -> [SetActual]? = { key in
             try? LogDraftRepository().loadPlan(workoutId: workout.id, exerciseKey: key)
@@ -1308,7 +1343,7 @@ extension UnifiedWorkoutDetailView {
             startFlowSheet = nil
             WorkoutEngine.shared.start(workout: workout)
             showingWorkoutPlayer = true
-            handoffStatus = "Recording on Phone — stop anytime, then log sets"
+            handoffStatus = LogbookCopy.liveLoggingBanner
             sentCardTarget = nil
             lastAppleHandoffShowsManagePlans = false
         }

@@ -468,23 +468,30 @@ struct LocalActualsSetRow: Codable, FetchableRecord, MutablePersistableRecord, I
     var isWarmup: Bool
     var weightKg: Double?
     var reps: Int?
+    var durationSeconds: Int?
+    var calories: Int?
+    var distanceMeters: Double?
     var checkedAt: Date?
 
     enum Columns: String, ColumnExpression {
-        case id, reps
+        case id, reps, calories
         case exerciseRowId = "exercise_row_id"
         case setIndex = "set_index"
         case isWarmup = "is_warmup"
         case weightKg = "weight_kg"
+        case durationSeconds = "duration_seconds"
+        case distanceMeters = "distance_meters"
         case checkedAt = "checked_at"
     }
 
     enum CodingKeys: String, CodingKey {
-        case id, reps
+        case id, reps, calories
         case exerciseRowId = "exercise_row_id"
         case setIndex = "set_index"
         case isWarmup = "is_warmup"
         case weightKg = "weight_kg"
+        case durationSeconds = "duration_seconds"
+        case distanceMeters = "distance_meters"
         case checkedAt = "checked_at"
     }
 }

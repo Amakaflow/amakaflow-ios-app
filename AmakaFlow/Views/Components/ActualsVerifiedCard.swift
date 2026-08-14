@@ -53,6 +53,14 @@ struct ExerciseActualPlanDelta: Equatable {
 
 extension ExerciseActual {
     var actualDisplayLine: String {
+        // Logbook path: show every checked set (100×6 · 127.5×5 · 85×9), not one rollup weight.
+        let checked = sets.filter(\.isChecked).sorted { lhs, rhs in
+            if lhs.isWarmup != rhs.isWarmup { return lhs.isWarmup && !rhs.isWarmup }
+            return lhs.index < rhs.index
+        }
+        if !checked.isEmpty {
+            return Self.setBreakdownLine(checked)
+        }
         if let note = planned.note, !note.isEmpty, actualWeightKg == nil, planned.weightKg == nil {
             // Preserve note-style lines when weight wasn't tracked (e.g. split squat 2×20).
             if confirmation == .asPlanned || (actualSets == planned.sets && actualReps == planned.reps) {
@@ -67,6 +75,44 @@ extension ExerciseActual {
             return "\(actualSets) × \(actualReps) · \(kgText) KG"
         }
         return "\(actualSets) × \(actualReps)"
+    }
+
+    /// Per-set WHAT YOU DID line from logbook checks.
+    static func setBreakdownLine(_ sets: [SetActual]) -> String {
+        if sets.count == 1 {
+            let only = sets[0]
+            if only.durationSeconds != nil || only.calories != nil || only.distanceMeters != nil {
+                return LogbookGhost(
+                    durationSeconds: only.durationSeconds,
+                    calories: only.calories,
+                    distanceMeters: only.distanceMeters,
+                    source: .lastActual
+                ).metricDisplayLine
+            }
+        }
+        let parts = sets.map { set -> String in
+            let prefix = set.isWarmup ? "W " : ""
+            if let duration = set.durationSeconds, set.weightKg == nil, set.reps == nil {
+                var metric = LogbookMetricFormat.duration(duration)
+                if let calories = set.calories {
+                    metric += " · \(calories) CAL"
+                }
+                return prefix + metric
+            }
+            let weightText: String
+            if let kilograms = set.weightKg {
+                weightText = kilograms == floor(kilograms)
+                    ? "\(Int(kilograms))"
+                    : String(format: "%.1f", kilograms)
+            } else {
+                weightText = "—"
+            }
+            let repsText = set.reps.map(String.init) ?? "—"
+            return "\(prefix)\(weightText)×\(repsText)"
+        }
+        let joined = parts.joined(separator: " · ")
+        let hasWeight = sets.contains { $0.weightKg != nil }
+        return hasWeight ? "\(joined) KG" : joined
     }
 
     var planDelta: ExerciseActualPlanDelta {
@@ -246,6 +292,8 @@ struct ActualsVerifiedCard: View {
                 Text(row.actualLine)
                     .font(.system(size: 9, design: .monospaced))
                     .foregroundColor(DailyDriver.foregroundMuted)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .lineLimit(4)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
 

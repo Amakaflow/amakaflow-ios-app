@@ -17,6 +17,7 @@
 		AMA2426WHLBLD /* LogbookWheelNavigation.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2426WHLREF /* LogbookWheelNavigation.swift */; };
 		AMA2426SEDBLD /* LogbookSeeding.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2426SEDREF /* LogbookSeeding.swift */; };
 		AMA2426V9BLD /* V9_logbook.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2426V9REF /* V9_logbook.swift */; };
+		AMA2426V10BLD /* V10_logbook_metrics.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2426V10REF /* V10_logbook_metrics.swift */; };
 		AMA2426LDRBLD /* LogDraftRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2426LDRREF /* LogDraftRepository.swift */; };
 		AMA2426LVMBLD /* LogbookViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2426LVMREF /* LogbookViewModel.swift */; };
 		AMA2426AMSBLD /* ActualsModeSelectView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2426AMSREF /* ActualsModeSelectView.swift */; };
@@ -844,6 +845,7 @@
 		AMA2426WHLREF /* LogbookWheelNavigation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LogbookWheelNavigation.swift; path = ../AmakaFlow/Services/LogbookWheelNavigation.swift; sourceTree = SOURCE_ROOT; };
 		AMA2426SEDREF /* LogbookSeeding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LogbookSeeding.swift; path = ../AmakaFlow/Services/LogbookSeeding.swift; sourceTree = SOURCE_ROOT; };
 		AMA2426V9REF /* V9_logbook.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = V9_logbook.swift; path = ../AmakaFlow/Storage/Migrations/V9_logbook.swift; sourceTree = SOURCE_ROOT; };
+		AMA2426V10REF /* V10_logbook_metrics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = V10_logbook_metrics.swift; path = ../AmakaFlow/Storage/Migrations/V10_logbook_metrics.swift; sourceTree = SOURCE_ROOT; };
 		AMA2426LDRREF /* LogDraftRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LogDraftRepository.swift; path = ../AmakaFlow/Storage/Repositories/LogDraftRepository.swift; sourceTree = SOURCE_ROOT; };
 		AMA2426LVMREF /* LogbookViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LogbookViewModel.swift; path = ../AmakaFlow/ViewModels/LogbookViewModel.swift; sourceTree = SOURCE_ROOT; };
 		AMA2426AMSREF /* ActualsModeSelectView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActualsModeSelectView.swift; path = ../AmakaFlow/Views/Logbook/ActualsModeSelectView.swift; sourceTree = SOURCE_ROOT; };
@@ -2044,6 +2046,7 @@
 				AMA2396V7REF /* V7_actuals_structure_body.swift */,
 				AMA2396V8REF /* V8_actuals_exercise_structure.swift */,
 				AMA2426V9REF /* V9_logbook.swift */,
+				AMA2426V10REF /* V10_logbook_metrics.swift */,
 				AMA2396STRUCTREF /* StravaWorkoutStructureText.swift */,
 				AMA2396RESOLVERREF /* ActualsLibraryWorkoutResolver.swift */,
 				AMA2396HISTVIEWREF /* ActualsHistoryView.swift */,
@@ -3390,6 +3393,7 @@
 				AMA2426LVMBLD /* LogbookViewModel.swift in Sources */,
 				AMA2426LDRBLD /* LogDraftRepository.swift in Sources */,
 				AMA2426V9BLD /* V9_logbook.swift in Sources */,
+				AMA2426V10BLD /* V10_logbook_metrics.swift in Sources */,
 				AMA2426SEDBLD /* LogbookSeeding.swift in Sources */,
 				AMA2426WHLBLD /* LogbookWheelNavigation.swift in Sources */,
 				AMA2426RCNBLD /* LogbookReconciliation.swift in Sources */,

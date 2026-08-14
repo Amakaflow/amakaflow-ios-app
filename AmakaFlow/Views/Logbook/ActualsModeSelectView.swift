@@ -2,7 +2,7 @@
 //  ActualsModeSelectView.swift
 //  AmakaFlow
 //
-//  AMA-2426: "What you actually did" — Quick vs Set by set door (rig panel 4).
+//  AMA-2426: "Log your sets" — Quick vs Set by set door (rig panel 4).
 //
 
 import SwiftUI

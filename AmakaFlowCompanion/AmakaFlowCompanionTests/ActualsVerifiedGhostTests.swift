@@ -39,6 +39,25 @@ final class ActualsVerifiedGhostTests: XCTestCase {
         XCTAssertEqual(squat.actualDisplayLine, "3 × 5 · 90 KG")
     }
 
+    func testActualDisplayLineBreaksDownPerCheckedSet() {
+        let now = Date(timeIntervalSince1970: 1_700_000_000)
+        let squat = ExerciseActual(
+            id: "back_squat",
+            name: "Back squat",
+            planned: ExerciseActualPlanned(sets: 3, reps: 5, weightKg: 85),
+            confirmation: .adjusted,
+            actualSets: 3,
+            actualReps: 5,
+            actualWeightKg: 85,
+            sets: [
+                SetActual(index: 1, weightKg: 100, reps: 6, checkedAt: now),
+                SetActual(index: 2, weightKg: 127.5, reps: 5, checkedAt: now),
+                SetActual(index: 3, weightKg: 85, reps: 9, checkedAt: now)
+            ]
+        )
+        XCTAssertEqual(squat.actualDisplayLine, "100×6 · 127.5×5 · 85×9 KG")
+    }
+
     func testAsPlannedDelta() {
         let rdl = ExerciseActual(
             id: "rdl",

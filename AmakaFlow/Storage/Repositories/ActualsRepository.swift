@@ -207,6 +207,9 @@ final class ActualsRepository: @unchecked Sendable {
                 isWarmup: set.isWarmup,
                 weightKg: set.weightKg,
                 reps: set.reps,
+                durationSeconds: set.durationSeconds,
+                calories: set.calories,
+                distanceMeters: set.distanceMeters,
                 checkedAt: set.checkedAt
             )
             try row.insert(database)
@@ -224,6 +227,9 @@ final class ActualsRepository: @unchecked Sendable {
                 isWarmup: row.isWarmup,
                 weightKg: row.weightKg,
                 reps: row.reps,
+                durationSeconds: row.durationSeconds,
+                calories: row.calories,
+                distanceMeters: row.distanceMeters,
                 checkedAt: row.checkedAt
             )
         }

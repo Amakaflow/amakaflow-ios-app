@@ -59,6 +59,321 @@ final class LogbookTests: XCTestCase {
         XCTAssertNil(set.checkedAt)
     }
 
+    func testDuplicateExerciseNamesGetUniqueEntryIDsAndNextSetAdvances() {
+        let workout = Workout(
+            id: "dup_ohp",
+            name: "Max Muscle Growth",
+            sport: .strength,
+            duration: 3600,
+            blocks: [
+                Block(
+                    label: nil,
+                    structure: .superset,
+                    rounds: 1,
+                    exercises: [
+                        Exercise(
+                            name: "Warm-up · Barbell Overhead Press",
+                            canonicalName: nil,
+                            sets: 1,
+                            reps: "5",
+                            durationSeconds: nil,
+                            load: nil,
+                            restSeconds: nil,
+                            distance: nil,
+                            notes: nil,
+                            focus: nil,
+                            supersetGroup: 1
+                        ),
+                        Exercise(
+                            name: "Warm-up · Barbell Overhead Press",
+                            canonicalName: nil,
+                            sets: 1,
+                            reps: "5",
+                            durationSeconds: nil,
+                            load: nil,
+                            restSeconds: nil,
+                            distance: nil,
+                            notes: nil,
+                            focus: nil,
+                            supersetGroup: 1
+                        )
+                    ]
+                ),
+                Block(
+                    label: nil,
+                    structure: .straight,
+                    rounds: 3,
+                    exercises: [
+                        Exercise(
+                            name: "Barbell Overhead Press",
+                            canonicalName: nil,
+                            sets: nil,
+                            reps: "8",
+                            durationSeconds: nil,
+                            load: nil,
+                            restSeconds: 90,
+                            distance: nil,
+                            notes: nil,
+                            focus: nil,
+                            supersetGroup: nil
+                        )
+                    ]
+                )
+            ],
+            source: .manual
+        )
+        let entries = LogbookSeeding.entries(from: workout)
+        XCTAssertEqual(entries.count, 3)
+        XCTAssertNotEqual(entries[0].id, entries[1].id, "duplicate names must not share focus id")
+        XCTAssertEqual(Set(entries.map(\.id)).count, 3)
+
+        let focus = LogbookWheelFocus(exerciseID: entries[0].id, setIndex: 1)
+        let next = LogbookWheelNavigation.nextUnchecked(after: focus, in: entries)
+        XCTAssertEqual(next?.exerciseID, entries[1].id)
+        XCTAssertEqual(next?.setIndex, 1)
+
+        let afterSecond = LogbookWheelNavigation.nextUnchecked(
+            after: LogbookWheelFocus(exerciseID: entries[1].id, setIndex: 1),
+            in: entries
+        )
+        XCTAssertEqual(afterSecond?.exerciseID, entries[2].id)
+    }
+
+    func testCardioStationsSeedMetricTimeCalStrip() {
+        let workout = Workout(
+            id: "hyrox_lower",
+            name: "HYROX - Lower body",
+            sport: .strength,
+            duration: 3600,
+            blocks: [
+                Block(
+                    label: nil,
+                    structure: .straight,
+                    rounds: 1,
+                    exercises: [
+                        Exercise(
+                            name: "Jump Rope",
+                            canonicalName: nil,
+                            sets: nil,
+                            reps: "1",
+                            durationSeconds: nil,
+                            load: nil,
+                            restSeconds: nil,
+                            distance: nil,
+                            notes: nil,
+                            focus: nil,
+                            supersetGroup: nil
+                        )
+                    ]
+                ),
+                Block(
+                    label: nil,
+                    structure: .straight,
+                    rounds: 3,
+                    exercises: [
+                        Exercise(
+                            name: "Back Squat",
+                            canonicalName: nil,
+                            sets: nil,
+                            reps: "5",
+                            durationSeconds: nil,
+                            load: ExerciseLoad(value: 85, unit: "kg"),
+                            restSeconds: 90,
+                            distance: nil,
+                            notes: nil,
+                            focus: nil,
+                            supersetGroup: nil
+                        )
+                    ]
+                )
+            ],
+            source: .manual
+        )
+        let entries = LogbookSeeding.entries(from: workout)
+        XCTAssertEqual(entries.count, 2)
+        XCTAssertEqual(entries[0].loggingKind, .metric)
+        XCTAssertEqual(entries[0].sets.count, 1)
+        XCTAssertEqual(entries[0].plannedLine, "PLANNED TIME / CAL")
+        XCTAssertEqual(entries[1].loggingKind, .strength)
+        XCTAssertEqual(entries[1].planned.sets, 3)
+    }
+
+    func testTimedStationSeedsDuration() {
+        let workout = Workout(
+            id: "timed",
+            name: "Bike",
+            sport: .cycling,
+            duration: 600,
+            blocks: [
+                Block(
+                    label: nil,
+                    structure: .straight,
+                    rounds: 1,
+                    exercises: [
+                        Exercise(
+                            name: "Assault Bike",
+                            canonicalName: nil,
+                            sets: nil,
+                            reps: nil,
+                            durationSeconds: 90,
+                            load: nil,
+                            restSeconds: nil,
+                            distance: nil,
+                            notes: nil,
+                            focus: nil,
+                            supersetGroup: nil
+                        )
+                    ]
+                )
+            ],
+            source: .manual
+        )
+        let entries = LogbookSeeding.entries(from: workout)
+        XCTAssertEqual(entries[0].loggingKind, .metric)
+        XCTAssertEqual(entries[0].plannedDurationSeconds, 90)
+        XCTAssertEqual(entries[0].plannedLine, "PLANNED 1:30")
+    }
+
+    func testRoundsAsSetsSeedsLogbookRows() {
+        // Straight block, sets nil, rounds 6 → detail "6 ROUNDS" / "6 × 8".
+        let workout = Workout(
+            id: "upper_pump",
+            name: "Upper Body Pump Workout",
+            sport: .strength,
+            duration: 2400,
+            blocks: [
+                Block(
+                    label: "Warm-up",
+                    structure: .straight,
+                    rounds: 1,
+                    exercises: [
+                        Exercise(
+                            name: "Warm Up",
+                            canonicalName: nil,
+                            sets: nil,
+                            reps: nil,
+                            durationSeconds: 300,
+                            load: nil,
+                            restSeconds: nil,
+                            distance: nil,
+                            notes: nil,
+                            focus: nil,
+                            supersetGroup: nil
+                        )
+                    ]
+                ),
+                Block(
+                    label: nil,
+                    structure: .straight,
+                    rounds: 6,
+                    exercises: [
+                        Exercise(
+                            name: "Dumbbell Bench Press",
+                            canonicalName: nil,
+                            sets: nil,
+                            reps: "8",
+                            durationSeconds: nil,
+                            load: nil,
+                            restSeconds: 60,
+                            distance: nil,
+                            notes: nil,
+                            focus: nil,
+                            supersetGroup: nil
+                        )
+                    ]
+                ),
+                Block(
+                    label: nil,
+                    structure: .straight,
+                    rounds: 4,
+                    exercises: [
+                        Exercise(
+                            name: "One-Arm Dumbbell Row",
+                            canonicalName: nil,
+                            sets: nil,
+                            reps: "8",
+                            durationSeconds: nil,
+                            load: nil,
+                            restSeconds: 60,
+                            distance: nil,
+                            notes: nil,
+                            focus: nil,
+                            supersetGroup: nil
+                        )
+                    ]
+                )
+            ],
+            source: .manual
+        )
+        let entries = LogbookSeeding.entries(from: workout)
+        XCTAssertEqual(entries.count, 2, "warmup skipped; two lift blocks")
+        XCTAssertEqual(entries[0].name, "Dumbbell Bench Press")
+        XCTAssertEqual(entries[0].planned.sets, 6)
+        XCTAssertEqual(entries[0].sets.count, 6)
+        XCTAssertEqual(entries[0].planned.reps, 8)
+        XCTAssertEqual(entries[1].planned.sets, 4)
+        XCTAssertEqual(entries[1].sets.count, 4)
+    }
+
+    func testUnconfirmedExpandLeavesCellsEmpty() {
+        let exercise = ExerciseActual(
+            id: "rdl",
+            name: "Romanian deadlift",
+            planned: ExerciseActualPlanned(sets: 3, reps: 8, weightKg: 70)
+        )
+        let sets = LogbookRollup.expandSets(from: exercise, now: fixedNow)
+        XCTAssertEqual(sets.count, 3)
+        XCTAssertTrue(sets.allSatisfy { $0.weightKg == nil && $0.reps == nil && !$0.isChecked })
+    }
+
+    func testSameAsLastTimeCopiesGhostIntoFocusedSet() {
+        var draft = sampleDraft()
+        draft.entries[0].ghosts = [
+            LogbookGhost(weightKg: 42.5, reps: 6, source: .lastActual),
+            LogbookGhost(weightKg: 42.5, reps: 6, source: .lastActual)
+        ]
+        draft.entries[0].sets[0].weightKg = 100
+        draft.entries[0].sets[0].reps = 3
+        let vm = LogbookViewModel(
+            draft: draft,
+            draftRepository: draftRepo,
+            actualsRepository: actualsRepo,
+            weightUnit: .kg,
+            now: { self.fixedNow }
+        )
+        vm.openWheel(exerciseID: "bench", setIndex: 1)
+        let ghost = vm.sameAsLastTime()
+        XCTAssertEqual(ghost?.weightKg, 42.5)
+        XCTAssertEqual(ghost?.reps, 6)
+        XCTAssertEqual(vm.draft.entries[0].sets[0].weightKg, 42.5)
+        XCTAssertEqual(vm.draft.entries[0].sets[0].reps, 6)
+        XCTAssertNil(vm.draft.entries[0].sets[0].checkedAt, "Same as last must not auto-check")
+    }
+
+    func testSameAsLastTimeFallsBackToPreviousSetThisSession() {
+        var draft = sampleDraft()
+        // Prescription-only ghosts (no real history) — like Machine Pec Deck first log.
+        draft.entries[0].ghosts = [
+            LogbookGhost(weightKg: nil, reps: 1, source: .prescription),
+            LogbookGhost(weightKg: nil, reps: 1, source: .prescription)
+        ]
+        draft.entries[0].sets[0].weightKg = 7.5
+        draft.entries[0].sets[0].reps = 3
+        let vm = LogbookViewModel(
+            draft: draft,
+            draftRepository: draftRepo,
+            actualsRepository: actualsRepo,
+            weightUnit: .kg,
+            now: { self.fixedNow }
+        )
+        vm.openWheel(exerciseID: "bench", setIndex: 2)
+        let copied = vm.sameAsLastTime()
+        XCTAssertEqual(copied?.weightKg, 7.5)
+        XCTAssertEqual(copied?.reps, 3)
+        XCTAssertEqual(vm.draft.entries[0].sets[1].weightKg, 7.5)
+        XCTAssertEqual(vm.draft.entries[0].sets[1].reps, 3)
+    }
+
     func testGhostDisplayConvertsWithUnit() {
         let ghost = LogbookGhost(weightKg: 40, reps: 8, source: .lastActual)
         let kgLine = ghost.displayLine(unit: .kg)
@@ -384,6 +699,19 @@ final class LogbookTests: XCTestCase {
         XCTAssertEqual(vm.saveCTATitle, "Save log · 1 of 2 sets")
     }
 
+    func testFillInSessionKeepsPerSetWeightsForVerifiedLine() {
+        var draft = sampleDraft()
+        draft.entries[0].sets[0].weightKg = 100
+        draft.entries[0].sets[0].reps = 6
+        draft.entries[0].sets[0].checkedAt = fixedNow
+        draft.entries[0].sets[1].weightKg = 40
+        draft.entries[0].sets[1].reps = 8
+        draft.entries[0].sets[1].checkedAt = fixedNow
+        let session = LogbookRollup.fillInSession(from: draft, verified: true)
+        XCTAssertEqual(session.exercises[0].sets.count, 2)
+        XCTAssertEqual(session.exercises[0].actualDisplayLine, "100×6 · 40×8 KG")
+    }
+
     func testVerifiedSaveWithSetsPersistsRows() throws {
         var draft = sampleDraft()
         draft.entries[0].sets[0].weightKg = 40
@@ -428,7 +756,11 @@ final class LogbookTests: XCTestCase {
         XCTAssertEqual(saved?.exercises.first?.sets.count, 1)
         XCTAssertEqual(saved?.exercises.first?.sets.first?.weightKg, 40)
         XCTAssertEqual(saved?.exercises.first?.actualSets, 1)
-        let storedTargets = try draftRepo.loadPlan(workoutId: "w1", exerciseKey: "bench")
+        // Load plans are name-keyed (shared ghosts across duplicate stations).
+        let storedTargets = try draftRepo.loadPlan(
+            workoutId: "w1",
+            exerciseKey: ActualsGhostFeed.exerciseKey(forName: "Bench Press")
+        )
         XCTAssertEqual(storedTargets?.count, 1)
         XCTAssertEqual(storedTargets?.first?.weightKg, 42.5)
         XCTAssertNil(storedTargets?.first?.checkedAt)
