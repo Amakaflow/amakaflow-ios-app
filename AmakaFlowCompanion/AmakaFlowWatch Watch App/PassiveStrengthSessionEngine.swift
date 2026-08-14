@@ -9,7 +9,6 @@
 import Combine
 import Foundation
 import HealthKit
-import WatchConnectivity
 import WatchKit
 
 @MainActor
@@ -77,23 +76,9 @@ final class PassiveStrengthSessionEngine: ObservableObject {
         return max(0, Int(total))
     }
 
-    /// Resolve wire sport → display title (missing / unknown → Strength).
-    /// Explicit `other` / `hyrox` stay `.other`; unrecognized tokens fall back to Strength.
+    /// Resolve wire sport → Strength fallback for unknowns (AMA-2428).
     static nonisolated func resolvedSport(from raw: String?) -> WorkoutSport {
-        guard let raw else { return .strength }
-        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return .strength }
-        let parsed = WorkoutSport.parse(trimmed)
-        if parsed != .other { return parsed }
-        let token = trimmed
-            .lowercased()
-            .replacingOccurrences(of: "_", with: "")
-            .replacingOccurrences(of: "-", with: "")
-            .replacingOccurrences(of: " ", with: "")
-        if token == "other" || token == "hyrox" {
-            return .other
-        }
-        return .strength
+        WorkoutSport.resolveWireValue(raw)
     }
 
     deinit {
@@ -104,7 +89,7 @@ final class PassiveStrengthSessionEngine: ObservableObject {
     }
 
     func start(sessionID: String = FreeformStrengthWorkout.make().id, name: String = "Strength") async {
-        flushPendingSummariesIfNeeded()
+        _ = PassiveStrengthSummaryTransfer.flushPending()
         observeActivationIfNeeded()
 
         if isActive {
@@ -232,12 +217,11 @@ final class PassiveStrengthSessionEngine: ObservableObject {
     func confirmSportAndSync() -> Bool {
         guard phase == .ended, let endDate = workoutEndDate else { return summaryQueued }
         persistPendingSummary(endDate: endDate)
-        let transferredIDs = flushPendingSummariesIfNeeded()
+        let transferredIDs = PassiveStrengthSummaryTransfer.flushPending()
         if transferredIDs.contains(sessionID) {
             summaryQueued = true
             return true
         }
-        // Current summary was not transferred in the flush (failed or not present) — try once.
         summaryQueued = transferCurrentSummary(endDate: endDate)
         return summaryQueued
     }
@@ -289,7 +273,7 @@ final class PassiveStrengthSessionEngine: ObservableObject {
         if summaryQueued { return true }
         if phase == .ended, let endDate = workoutEndDate {
             persistPendingSummary(endDate: endDate)
-            let transferredIDs = flushPendingSummariesIfNeeded()
+            let transferredIDs = PassiveStrengthSummaryTransfer.flushPending()
             if transferredIDs.contains(sessionID) {
                 summaryQueued = true
                 return true
@@ -297,7 +281,7 @@ final class PassiveStrengthSessionEngine: ObservableObject {
             summaryQueued = transferCurrentSummary(endDate: endDate)
             return summaryQueued
         }
-        _ = flushPendingSummariesIfNeeded()
+        _ = PassiveStrengthSummaryTransfer.flushPending()
         summaryQueued = PassiveStrengthPendingSummaryStore.load().isEmpty
         return summaryQueued
     }
@@ -338,7 +322,7 @@ final class PassiveStrengthSessionEngine: ObservableObject {
         ) { [weak self] _ in
             Task { @MainActor [weak self] in
                 guard let self else { return }
-                let transferredIDs = self.flushPendingSummariesIfNeeded()
+                let transferredIDs = PassiveStrengthSummaryTransfer.flushPending()
                 if self.phase == .ended, !self.summaryQueued, transferredIDs.contains(self.sessionID) {
                     self.summaryQueued = true
                 }
@@ -346,106 +330,30 @@ final class PassiveStrengthSessionEngine: ObservableObject {
         }
     }
 
-    private func makeSummary(endDate: Date) -> StandaloneWorkoutSummary? {
-        guard let startDate = workoutStartDate else { return nil }
-
-        let avgHeartRate: Double? = averageHeartRateSamples.isEmpty
-            ? nil
-            : averageHeartRateSamples.reduce(0, +) / Double(averageHeartRateSamples.count)
-
-        return StandaloneWorkoutSummary(
-            workoutId: sessionID,
-            workoutName: selectedSport.displayName,
-            startDate: startDate,
-            endDate: endDate,
-            durationSeconds: max(0, elapsedSeconds),
-            totalCalories: totalCalories > 0 ? totalCalories : activeCalories,
-            averageHeartRate: avgHeartRate,
-            completedSteps: 0,
-            totalSteps: 0,
-            setLogs: nil,
-            sport: selectedSport.rawValue
-        )
-    }
-
-    /// Persist locally so force-quit before Done still has a draftable summary.
     private func persistPendingSummary(endDate: Date) {
-        guard let summary = makeSummary(endDate: endDate) else { return }
-        replacePendingSummary(summary)
+        guard let summary = currentSummary(endDate: endDate) else { return }
+        PassiveStrengthSummaryTransfer.persistPending(summary)
     }
 
     @discardableResult
     private func transferCurrentSummary(endDate: Date) -> Bool {
-        guard let summary = makeSummary(endDate: endDate) else { return false }
-        if transferSummary(summary) {
-            removePendingMatching(summary)
-            return true
-        }
-        replacePendingSummary(summary)
-        print("⌚️ Passive strength summary pending (no WCSession / encode failure)")
-        return false
+        guard let summary = currentSummary(endDate: endDate) else { return false }
+        return PassiveStrengthSummaryTransfer.transferCurrent(summary)
     }
 
-    private func replacePendingSummary(_ summary: StandaloneWorkoutSummary) {
-        var queue = PassiveStrengthPendingSummaryStore.load()
-        queue.removeAll { $0.workoutId == summary.workoutId }
-        PassiveStrengthPendingSummaryStore.save(queue)
-        PassiveStrengthPendingSummaryStore.enqueue(summary)
-    }
-
-    private func removePendingMatching(_ summary: StandaloneWorkoutSummary) {
-        var queue = PassiveStrengthPendingSummaryStore.load()
-        queue.removeAll {
-            $0.workoutId == summary.workoutId && $0.endDate == summary.endDate
-        }
-        PassiveStrengthPendingSummaryStore.save(queue)
-    }
-
-    /// Flush pending summaries. Returns workout IDs successfully transferred this pass
-    /// (queue may still retain failures for other IDs).
-    @discardableResult
-    private func flushPendingSummariesIfNeeded() -> Set<String> {
-        var queue = PassiveStrengthPendingSummaryStore.load()
-        guard !queue.isEmpty else { return [] }
-
-        PassiveStrengthPendingSummaryStore.pruneStale(&queue)
-
-        var remaining: [StandaloneWorkoutSummary] = []
-        var transferredIDs = Set<String>()
-        for summary in queue {
-            if transferSummary(summary) {
-                transferredIDs.insert(summary.workoutId)
-            } else {
-                remaining.append(summary)
-            }
-        }
-
-        PassiveStrengthPendingSummaryStore.save(remaining)
-        return transferredIDs
-    }
-
-    private func transferSummary(_ summary: StandaloneWorkoutSummary) -> Bool {
-        guard let session = WatchConnectivityBridge.shared.session else {
-            return false
-        }
-        guard session.activationState == .activated else {
-            print("⌚️ WCSession not activated yet — keeping pending summary")
-            return false
-        }
-        do {
-            let encoder = JSONEncoder()
-            encoder.dateEncodingStrategy = .iso8601
-            let data = try encoder.encode(summary)
-            guard let dict = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
-                return false
-            }
-            session.transferUserInfo(["action": "workoutSummary", "summary": dict])
-            print("⌚️ Passive strength summary queued (workoutId=\(summary.workoutId) sport=\(summary.sport ?? "nil"))")
-            return true
-        } catch {
-            print("⌚️ Failed to encode passive strength summary: \(error)")
-            return false
-        }
+    private func currentSummary(endDate: Date) -> StandaloneWorkoutSummary? {
+        PassiveStrengthSummaryTransfer.makeSummary(
+            from: PassiveStrengthSummaryTransfer.Snapshot(
+                sessionID: sessionID,
+                selectedSport: selectedSport,
+                startDate: workoutStartDate,
+                endDate: endDate,
+                elapsedSeconds: elapsedSeconds,
+                totalCalories: totalCalories,
+                activeCalories: activeCalories,
+                averageHeartRateSamples: averageHeartRateSamples
+            )
+        )
     }
 
     private func playHaptic(_ type: WKHapticType) {

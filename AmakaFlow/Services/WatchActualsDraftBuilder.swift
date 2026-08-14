@@ -82,32 +82,15 @@ enum WatchActualsDraftBuilder {
     }
 
     /// AMA-2428 — prefer wire `sport`; legacy names without sport default toward Strength.
-    /// Unrecognized nonblank wire values fall back to Strength (explicit `other` stays Other).
     static func resolvedSport(from summary: StandaloneWorkoutSummary) -> WorkoutSport {
         if let raw = summary.sport, !raw.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            return resolveWireSport(raw)
+            return WorkoutSport.resolveWireValue(raw)
         }
         let name = summary.workoutName.lowercased()
         if name.contains("strength") { return .strength }
         if name.contains("mixed") || name.contains("hybrid") { return .mixed }
         let parsed = WorkoutSport.parse(summary.workoutName)
         return parsed == .other ? .strength : parsed
-    }
-
-    static func resolveWireSport(_ raw: String) -> WorkoutSport {
-        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return .strength }
-        let parsed = WorkoutSport.parse(trimmed)
-        if parsed != .other { return parsed }
-        let token = trimmed
-            .lowercased()
-            .replacingOccurrences(of: "_", with: "")
-            .replacingOccurrences(of: "-", with: "")
-            .replacingOccurrences(of: " ", with: "")
-        if token == "other" || token == "hyrox" {
-            return .other
-        }
-        return .strength
     }
 
     static func draftTitle(summary: StandaloneWorkoutSummary, sport: WorkoutSport) -> String {
