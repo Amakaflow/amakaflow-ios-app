@@ -162,13 +162,30 @@ struct DDLibraryHeaderAddButton: View {
 }
 
 /// AMA-2426: header Log — secondary + (not lime-filled) so it’s distinct from the Add FAB.
-struct DDHeaderLogButton: View {
+struct DDHeaderCreateButton: View {
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
             Image(systemName: "plus")
                 .font(.system(size: 17, weight: .bold))
+                .foregroundColor(DailyDriver.ink)
+                .frame(width: 38, height: 38)
+                .background(DailyDriver.lime, in: Circle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Create workout")
+        .accessibilityIdentifier("af_header_create")
+    }
+}
+
+struct DDHeaderLogButton: View {
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: "square.and.pencil")
+                .font(.system(size: 15, weight: .bold))
                 .foregroundColor(DailyDriver.lime)
                 .frame(width: 38, height: 38)
                 .background(DailyDriver.card2, in: Circle())

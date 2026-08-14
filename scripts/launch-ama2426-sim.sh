@@ -115,6 +115,9 @@ fi
 if [[ "$NO_BUILD" != "1" ]]; then
   echo "[ama2426] building into build/sim…"
   cd "$REPO_ROOT/AmakaFlowCompanion"
+  BUILD_LOG="$(mktemp "${TMPDIR:-/tmp}/ama2426-sim-build.XXXXXX.log")"
+  set +e
+  set +o pipefail
   xcodebuild build \
     -project AmakaFlowCompanion.xcodeproj \
     -scheme AmakaFlowCompanion \
@@ -124,9 +127,11 @@ if [[ "$NO_BUILD" != "1" ]]; then
     CLERK_PUBLISHABLE_KEY_STAGING='pk_test_cnVsaW5nLW1pdGUtODQuY2xlcmsuYWNjb3VudHMuZGV2JA' \
     CLERK_PUBLISHABLE_KEY_PRODUCTION='pk_test_cnVsaW5nLW1pdGUtODQuY2xlcmsuYWNjb3VudHMuZGV2JA' \
     CLERK_PUBLISHABLE_KEY_DEV='pk_test_c29saWQtY2hpY2tlbi01MC5jbGVyay5hY2NvdW50cy5kZXYk' \
-    2>&1 | tee /tmp/ama2426-sim-build.log | grep -E "BUILD SUCCEEDED|BUILD FAILED|error:" | tail -20
-  if ! grep -q "BUILD SUCCEEDED" /tmp/ama2426-sim-build.log; then
-    echo "[ama2426] BUILD FAILED — see /tmp/ama2426-sim-build.log" >&2
+    2>&1 | tee "$BUILD_LOG" | grep -E "BUILD SUCCEEDED|BUILD FAILED|error:" | tail -20
+  set -o pipefail
+  set -e
+  if ! grep -q "BUILD SUCCEEDED" "$BUILD_LOG"; then
+    echo "[ama2426] BUILD FAILED — see $BUILD_LOG" >&2
     exit 1
   fi
 fi

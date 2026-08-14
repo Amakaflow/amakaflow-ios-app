@@ -363,9 +363,12 @@ enum LogbookSeeding {
         return max(1, block.rounds)
     }
 
+    /// Parsed rep target, or `0` for open / empty Rx (`N × OPEN`). Never drop the station.
     private static func logbookReps(for exercise: Exercise) -> Int? {
         let parsed = BlockToIntervalConverter.parseReps(exercise.reps)
-        return parsed > 0 ? parsed : nil
+        if parsed > 0 { return parsed }
+        // AMRAP / empty-reps / open — keep the row with no invented target.
+        return 0
     }
 
     private static func isWarmupOrCooldown(_ block: Block) -> Bool {

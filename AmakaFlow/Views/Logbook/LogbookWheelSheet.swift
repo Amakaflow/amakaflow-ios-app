@@ -26,7 +26,8 @@ struct LogbookWheelSheet: View {
 
     private var repsValues: [Int] { Array(1...40) }
     private var durationValues: [Int] { Array(stride(from: 0, through: 60 * 60, by: 5)) }
-    private var calorieValues: [Int] { Array(0...2000) }
+    /// Coarse calorie steps — same remount cost discipline as duration.
+    private var calorieValues: [Int] { Array(stride(from: 0, through: 2000, by: 5)) }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -290,6 +291,8 @@ struct LogbookWheelSheet: View {
                 ?? ghost?.calories
                 ?? focused.entry.plannedCalories
                 ?? 0
+            // Snap to 5-cal wheel steps.
+            calories = (calories / 5) * 5
         } else {
             let kilograms = focused.set.weightKg ?? ghost?.weightKg ?? focused.entry.planned.weightKg
             weightDisplay = WeightUnitMath.nearestWheelValue(
@@ -297,9 +300,10 @@ struct LogbookWheelSheet: View {
                 unit: viewModel.weightUnit,
                 fine: viewModel.fineSteps
             )
+            let plannedReps = focused.entry.planned.reps
             reps = focused.set.reps
                 ?? ghost?.reps
-                ?? focused.entry.planned.reps
+                ?? (plannedReps > 0 ? plannedReps : 1)
             reps = max(1, min(40, reps))
         }
         if remountPickers {

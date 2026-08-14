@@ -29,10 +29,10 @@ enum WeightUnitMath {
         }
     }
 
-    static func displayValue(kg: Double, unit: WeightUnit) -> Double {
+    static func displayValue(kg kilograms: Double, unit: WeightUnit) -> Double {
         switch unit {
-        case .kg: return kg
-        case .lbs: return kg * poundsPerKilogram
+        case .kg: return kilograms
+        case .lbs: return kilograms * poundsPerKilogram
         }
     }
 
@@ -59,11 +59,10 @@ enum WeightUnitMath {
         guard step > 0 else { return [0] }
         guard min <= max else { return [] }
         var values: [Double] = []
-        var current = min
         // Guard float accumulation by indexing.
         let count = Int(((max - min) / step).rounded(.down)) + 1
-        for i in 0..<count {
-            current = min + (Double(i) * step)
+        for index in 0..<count {
+            let current = min + (Double(index) * step)
             if current > max + 1e-9 { break }
             values.append(snap(current, step: step))
         }
@@ -71,17 +70,17 @@ enum WeightUnitMath {
     }
 
     static func nearestWheelValue(
-        kg: Double?,
+        kg kilograms: Double?,
         unit: WeightUnit,
         fine: Bool
     ) -> Double {
-        let display = displayValue(kg: kg ?? 0, unit: unit)
+        let display = displayValue(kg: kilograms ?? 0, unit: unit)
         let step = fine ? fineStep(for: unit) : coarseStep(for: unit)
         return snap(display, step: step)
     }
 
-    static func formatWeight(kg: Double, unit: WeightUnit) -> String {
-        let value = displayValue(kg: kg, unit: unit)
+    static func formatWeight(kg kilograms: Double, unit: WeightUnit) -> String {
+        let value = displayValue(kg: kilograms, unit: unit)
         if abs(value - value.rounded()) < 1e-9 {
             return "\(Int(value.rounded()))"
         }
@@ -107,10 +106,10 @@ enum WeightUnitMath {
         epsilon: Double = 1e-9
     ) -> Bool {
         let values = wheelValues(unit: .kg, fine: false, min: minKg, max: maxKg)
-        for kg in values {
-            let lb = displayValue(kg: kg, unit: .lbs)
-            let back = kilograms(fromDisplay: lb, unit: .lbs)
-            if abs(back - kg) > epsilon {
+        for valueKg in values {
+            let pounds = displayValue(kg: valueKg, unit: .lbs)
+            let back = kilograms(fromDisplay: pounds, unit: .lbs)
+            if abs(back - valueKg) > epsilon {
                 return false
             }
         }
@@ -122,4 +121,13 @@ extension WeightUnit {
     var logbookCoarseStep: Double { WeightUnitMath.coarseStep(for: self) }
     var logbookFineStep: Double { WeightUnitMath.fineStep(for: self) }
     var logbookLabel: String { WeightUnitMath.unitLabel(self) }
+
+    /// Settings preference — canonical storage stays kilograms.
+    static var stored: WeightUnit {
+        if let raw = UserDefaults.standard.string(forKey: DefaultsKey.userWeightUnit.rawValue),
+           let parsed = WeightUnit(rawValue: raw) {
+            return parsed
+        }
+        return .kg
+    }
 }

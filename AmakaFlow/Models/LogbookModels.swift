@@ -126,11 +126,11 @@ enum LogbookMetricFormat {
     }
 
     static func distanceKm(_ meters: Double) -> String {
-        let km = meters / 1000
-        if abs(km - km.rounded()) < 0.05 {
-            return "\(Int(km.rounded())) KM"
+        let kilometers = meters / 1000
+        if abs(kilometers - kilometers.rounded()) < 0.05 {
+            return "\(Int(kilometers.rounded())) KM"
         }
-        return String(format: "%.1f KM", km)
+        return String(format: "%.1f KM", kilometers)
     }
 }
 

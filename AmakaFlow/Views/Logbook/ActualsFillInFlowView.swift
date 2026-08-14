@@ -78,18 +78,11 @@ struct ActualsFillInFlowView: View {
             mode: .after,
             ghostLookup: ActualsRepository()
         )
-        let unit: WeightUnit = {
-            if let raw = UserDefaults.standard.string(forKey: DefaultsKey.userWeightUnit.rawValue),
-               let parsed = WeightUnit(rawValue: raw) {
-                return parsed
-            }
-            return .kg
-        }()
         logbookVM = LogbookViewModel(
             draft: draft,
             draftRepository: LogDraftRepository(),
             actualsRepository: ActualsRepository(),
-            weightUnit: unit
+            weightUnit: .stored
         )
     }
 }

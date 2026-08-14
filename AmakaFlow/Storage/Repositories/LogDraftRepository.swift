@@ -45,6 +45,12 @@ final class LogDraftRepository: @unchecked Sendable {
             throw LogDraftRepositoryError.encodeFailed
         }
         try dbQueue.write { database in
+            // Protect committed / reconciled rows from stale pending upserts.
+            // Undo is the only path that reopens a committed draft.
+            if let existing = try LocalLogDraft.fetchOne(database, key: mutable.id),
+               existing.state == LogDraftState.committed.rawValue {
+                return
+            }
             var row = LocalLogDraft(
                 id: mutable.id,
                 workoutId: mutable.workoutId,
@@ -69,6 +75,14 @@ final class LogDraftRepository: @unchecked Sendable {
             guard let row = try LocalLogDraft.fetchOne(database, key: id) else { return nil }
             return try decode(row)
         }
+    }
+
+    /// Newest open draft for a library workout (resume instead of seeding a twin).
+    func fetchOpenDraft(workoutId: String, mode: LogbookMode? = nil) throws -> LogDraft? {
+        try fetchOpenDrafts()
+            .filter { $0.workoutId == workoutId }
+            .filter { mode == nil || $0.mode == mode }
+            .first
     }
 
     /// Pending / live drafts only — never include committed (those are actuals sessions).

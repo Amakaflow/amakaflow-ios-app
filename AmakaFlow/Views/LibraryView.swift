@@ -217,6 +217,7 @@ extension LibraryView {
                             navigationPath.append(.onYourWatches)
                         }
                     }
+                    DDHeaderCreateButton(action: presentAddSheet)
                     DDHeaderLogButton(action: presentLogSession)
                 }
             }
@@ -309,6 +310,7 @@ extension LibraryView {
                             navigationPath.append(.onYourWatches)
                         }
                     }
+                    DDHeaderCreateButton(action: presentAddSheet)
                     DDHeaderLogButton(action: presentLogSession)
                 }
             }

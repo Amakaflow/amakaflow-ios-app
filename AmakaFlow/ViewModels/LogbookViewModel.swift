@@ -8,6 +8,13 @@
 import Foundation
 import Combine
 
+enum LogbookSaveResult: Equatable {
+    /// Phone / after / live — verified actuals written.
+    case verified(ActualsFillInSession)
+    /// Companion notepad saved; draft stays pending until reconcile / timeout.
+    case companionPendingPersisted
+}
+
 @MainActor
 final class LogbookViewModel: ObservableObject {
     @Published private(set) var draft: LogDraft
@@ -17,6 +24,8 @@ final class LogbookViewModel: ObservableObject {
     @Published var undoToastVisible: Bool = false
     @Published var weightUnit: WeightUnit
     @Published var fineSteps: Bool = false
+    /// Filtered checked-sets session published by the last successful verified save.
+    @Published private(set) var lastVerifiedSession: ActualsFillInSession?
 
     private let draftRepository: LogDraftRepository
     private let actualsRepository: ActualsRepository
@@ -271,10 +280,21 @@ final class LogbookViewModel: ObservableObject {
     }
 
     /// Commit through the existing verified actuals pipeline.
-    func saveVerified() throws {
+    /// Companion-pending drafts persist only — reconcile / timeout create actuals.
+    @discardableResult
+    func saveVerified() throws -> LogbookSaveResult {
         guard let rpe = draft.rpe, (1...10).contains(rpe) else {
             throw ActualsRepositoryError.missingRPE
         }
+
+        // Companion notepad beside watch: keep draft pending for merge.
+        if draft.mode == .companionPending {
+            persistDraft()
+            persistLoadPlans()
+            showRPE = false
+            return .companionPendingPersisted
+        }
+
         var session = LogbookRollup.fillInSession(from: draft, verified: false)
         session.exercises = session.exercises.compactMap { exercise in
             guard exercise.actualSets > 0 else { return nil }
@@ -296,8 +316,10 @@ final class LogbookViewModel: ObservableObject {
         try actualsRepository.saveVerifiedSession(session)
         try draftRepository.markCommitted(draftID: draft.id)
         draft.state = .committed
+        lastVerifiedSession = session
         showVerifiedPayoff = true
         showRPE = false
+        return .verified(session)
     }
 
     /// Timeout path: commit standalone + Undo toast.

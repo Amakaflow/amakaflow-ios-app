@@ -65,6 +65,8 @@ struct UnifiedWorkoutDetailView: View {
     /// AMA-2426: Log sets (notepad) from Start — during or after, no device start.
     @State private var logbookViewModel: LogbookViewModel?
     @State private var showLogbook = false
+    /// Open logbook after the start sheet finishes dismissing (avoids cover/sheet race).
+    @State private var pendingOpenPastSessionLogbook = false
 
     @Environment(\.scenePhase) private var scenePhase
     private let handoffStore = GarminHandoffStateStore()
@@ -172,6 +174,11 @@ struct UnifiedWorkoutDetailView: View {
         .sheet(
             item: $startFlowSheet,
             onDismiss: {
+                if pendingOpenPastSessionLogbook {
+                    pendingOpenPastSessionLogbook = false
+                    openLogbookForPastSession()
+                    return
+                }
                 // AMA-2365 — Cancel / swipe-dismiss of Apple preview undoes enrich.
                 // Confirm clears `appleEnrichmentReset` before dismissing so this is a no-op.
                 guard appleEnrichmentReset != nil else { return }
@@ -205,10 +212,8 @@ struct UnifiedWorkoutDetailView: View {
                     },
                     onClose: { startFlowSheet = nil },
                     onLogPastSession: {
+                        pendingOpenPastSessionLogbook = true
                         startFlowSheet = nil
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
-                            openLogbookForPastSession()
-                        }
                     }
                 )
                 .task {
@@ -939,27 +944,24 @@ extension UnifiedWorkoutDetailView {
     /// Shared door — mode inferred from phone tracker / watch plan / after.
     fileprivate func openLogbook(_ context: LogbookModeContext) {
         let mode = LogbookModeInference.infer(context)
-        let loadPlanLookup: (String) -> [SetActual]? = { key in
-            try? LogDraftRepository().loadPlan(workoutId: workout.id, exerciseKey: key)
-        }
-        let draft = LogbookSeeding.draft(
-            from: workout,
-            mode: mode,
-            ghostLookup: ActualsRepository(),
-            loadPlanLookup: loadPlanLookup
-        )
-        let unit: WeightUnit = {
-            if let raw = UserDefaults.standard.string(forKey: DefaultsKey.userWeightUnit.rawValue),
-               let parsed = WeightUnit(rawValue: raw) {
-                return parsed
+        let draftRepo = LogDraftRepository()
+        let draft: LogDraft
+        if let existing = try? draftRepo.fetchOpenDraft(workoutId: workout.id, mode: mode) {
+            draft = existing
+        } else {
+            draft = LogbookSeeding.draft(
+                from: workout,
+                mode: mode,
+                ghostLookup: ActualsRepository()
+            ) { key in
+                try? draftRepo.loadPlan(workoutId: workout.id, exerciseKey: key)
             }
-            return .kg
-        }()
+        }
         logbookViewModel = LogbookViewModel(
             draft: draft,
-            draftRepository: LogDraftRepository(),
+            draftRepository: draftRepo,
             actualsRepository: ActualsRepository(),
-            weightUnit: unit
+            weightUnit: .stored
         )
         showLogbook = true
     }

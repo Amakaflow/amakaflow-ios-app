@@ -28,11 +28,12 @@ struct ExerciseActualPlanned: Equatable, Codable {
             }
             return "\(sets) × \(reps) · \(note)"
         }
+        let repsLabel = reps > 0 ? "\(reps)" : "OPEN"
         if let kilograms = weightKg {
             let kgText = kilograms == floor(kilograms) ? "\(Int(kilograms))" : String(format: "%.1f", kilograms)
-            return "\(sets) × \(reps) · \(kgText) KG"
+            return "\(sets) × \(repsLabel) · \(kgText) KG"
         }
-        return "\(sets) × \(reps)"
+        return "\(sets) × \(repsLabel)"
     }
 }
 

@@ -202,32 +202,28 @@ struct CreateFlowSheetsModifier: ViewModifier {
             existingSessionId: nil
         )
         let mode = LogbookModeInference.infer(context)
+        let draftRepo = LogDraftRepository()
         let draft: LogDraft
         if let workout {
-            let loadPlanLookup: (String) -> [SetActual]? = { key in
-                try? LogDraftRepository().loadPlan(workoutId: workout.id, exerciseKey: key)
+            if let existing = try? draftRepo.fetchOpenDraft(workoutId: workout.id, mode: mode) {
+                draft = existing
+            } else {
+                draft = LogbookSeeding.draft(
+                    from: workout,
+                    mode: mode,
+                    ghostLookup: ActualsRepository()
+                ) { key in
+                    try? draftRepo.loadPlan(workoutId: workout.id, exerciseKey: key)
+                }
             }
-            draft = LogbookSeeding.draft(
-                from: workout,
-                mode: mode,
-                ghostLookup: ActualsRepository(),
-                loadPlanLookup: loadPlanLookup
-            )
         } else {
             draft = LogbookSeeding.blankDraft(mode: mode)
         }
-        let unit: WeightUnit = {
-            if let raw = UserDefaults.standard.string(forKey: DefaultsKey.userWeightUnit.rawValue),
-               let parsed = WeightUnit(rawValue: raw) {
-                return parsed
-            }
-            return .kg
-        }()
         logbookViewModel = LogbookViewModel(
             draft: draft,
-            draftRepository: LogDraftRepository(),
+            draftRepository: draftRepo,
             actualsRepository: ActualsRepository(),
-            weightUnit: unit
+            weightUnit: .stored
         )
         activeFlow = .logSession
     }

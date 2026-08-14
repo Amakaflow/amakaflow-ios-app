@@ -381,6 +381,8 @@ final class LogbookTests: XCTestCase {
         XCTAssertTrue(kgLine.contains("40"))
         XCTAssertNotEqual(kgLine, lbLine)
         XCTAssertTrue(lbLine.contains("× 8"))
+        let expectedPounds = WeightUnitMath.formatWeight(kg: 40, unit: .lbs)
+        XCTAssertTrue(lbLine.contains(expectedPounds), "expected \(expectedPounds) in \(lbLine)")
     }
 
     // MARK: - Units
@@ -527,6 +529,33 @@ final class LogbookTests: XCTestCase {
             draft: draft,
             deviceSessions: [device],
             now: fixedNow
+        )
+        XCTAssertEqual(outcome, .noOverlap)
+    }
+
+    func testReconcileRespectsKeepBothMemory() {
+        var draft = sampleDraft()
+        draft.mode = .companionPending
+        draft.state = .pending
+        draft.startedAt = fixedNow
+        draft.lastEditedAt = fixedNow
+        let device = ActualsSourceRecording(
+            id: "hk_keep_both",
+            provider: .appleHealth,
+            deviceKind: .watch,
+            title: "Strength",
+            startDate: fixedNow.addingTimeInterval(30),
+            durationSeconds: 3600,
+            streamRichness: 5
+        )
+        let draftRecording = LogbookReconciliation.sourceRecording(for: draft)
+        var memory = ActualsMergeMemory()
+        ActualsMergeClassifier.applyKeepBoth(draftRecording, device, memory: &memory)
+        let outcome = LogbookReconciliation.reconcile(
+            draft: draft,
+            deviceSessions: [device],
+            now: fixedNow,
+            memory: memory
         )
         XCTAssertEqual(outcome, .noOverlap)
     }
@@ -807,6 +836,82 @@ final class LogbookTests: XCTestCase {
         XCTAssertThrowsError(try vm.saveVerified()) { error in
             XCTAssertEqual(error as? ActualsRepositoryError, .unconfirmedRows(0))
         }
+    }
+
+    func testCompanionPendingSavePersistsDraftWithoutVerifiedActuals() throws {
+        var draft = sampleDraft()
+        draft.mode = .companionPending
+        draft.state = .pending
+        draft.entries[0].sets[0].weightKg = 40
+        draft.entries[0].sets[0].reps = 8
+        draft.entries[0].sets[0].checkedAt = fixedNow
+        draft.rpe = 8
+        try draftRepo.upsert(draft)
+        let vm = LogbookViewModel(
+            draft: draft,
+            draftRepository: draftRepo,
+            actualsRepository: actualsRepo,
+            weightUnit: .kg,
+            now: { self.fixedNow }
+        )
+        let result = try vm.saveVerified()
+        XCTAssertEqual(result, .companionPendingPersisted)
+        XCTAssertNil(try actualsRepo.fetchSession(id: draft.id))
+        let pending = try draftRepo.fetchPendingCompanionDrafts()
+        XCTAssertTrue(pending.contains { $0.id == draft.id })
+        XCTAssertEqual(vm.draft.state, .pending)
+        XCTAssertFalse(vm.showVerifiedPayoff)
+    }
+
+    func testOpenRepStationsSeedAsOpenTarget() {
+        let workout = Workout(
+            id: "amrap_open",
+            name: "AMRAP open",
+            sport: .strength,
+            duration: 1200,
+            blocks: [
+                Block(
+                    label: nil,
+                    structure: .straight,
+                    rounds: 3,
+                    exercises: [
+                        Exercise(
+                            name: "Pull-ups",
+                            canonicalName: nil,
+                            sets: 3,
+                            reps: nil,
+                            durationSeconds: nil,
+                            load: nil,
+                            restSeconds: nil,
+                            distance: nil,
+                            notes: nil,
+                            focus: nil,
+                            supersetGroup: nil
+                        )
+                    ]
+                )
+            ],
+            source: .manual
+        )
+        let entries = LogbookSeeding.entries(from: workout)
+        XCTAssertEqual(entries.count, 1)
+        XCTAssertEqual(entries[0].planned.reps, 0)
+        XCTAssertTrue(entries[0].plannedLine.contains("OPEN"))
+        XCTAssertEqual(entries[0].sets.count, 3)
+    }
+
+    func testUpsertDoesNotClobberCommittedDraft() throws {
+        var draft = sampleDraft()
+        draft.state = .pending
+        try draftRepo.upsert(draft)
+        try draftRepo.markCommitted(draftID: draft.id)
+        var stale = draft
+        stale.state = .pending
+        stale.note = "stale overwrite"
+        try draftRepo.upsert(stale)
+        let loaded = try draftRepo.fetch(id: draft.id)
+        XCTAssertEqual(loaded?.state, .committed)
+        XCTAssertNotEqual(loaded?.note, Optional("stale overwrite"))
     }
 
     // MARK: - Helpers

@@ -72,27 +72,26 @@ struct LogbookView: View {
             logbookRPESheet
         }
         .fullScreenCover(isPresented: $viewModel.showVerifiedPayoff) {
-            let session = LogbookRollup.fillInSession(from: viewModel.draft, verified: true)
-            ActualsVerifiedView(session: session)
+            if let session = viewModel.lastVerifiedSession {
+                ActualsVerifiedView(session: session)
+            }
         }
         .onAppear {
             noteText = viewModel.draft.note
             // Settings unit — live convert display, never rewrite canonical kg.
-            let stored = UserDefaults.standard.string(forKey: DefaultsKey.userWeightUnit.rawValue)
-            if let raw = stored, let unit = WeightUnit(rawValue: raw) {
-                viewModel.setWeightUnit(unit)
-            }
+            viewModel.setWeightUnit(WeightUnit.stored)
         }
         .onReceive(NotificationCenter.default.publisher(for: UserDefaults.didChangeNotification)) { _ in
-            let stored = UserDefaults.standard.string(forKey: DefaultsKey.userWeightUnit.rawValue)
-            if let raw = stored, let unit = WeightUnit(rawValue: raw) {
-                viewModel.setWeightUnit(unit)
-            }
+            viewModel.setWeightUnit(WeightUnit.stored)
         }
         .overlay(alignment: .bottom) {
             if viewModel.undoToastVisible {
                 Button(LogbookCopy.undoTimeoutToast) {
-                    try? viewModel.undoTimeoutCommit()
+                    do {
+                        try viewModel.undoTimeoutCommit()
+                    } catch {
+                        DDToastCenter.shared.error(ActualsCopy.fillInSaveFailedTitle)
+                    }
                 }
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundColor(DailyDriver.ink)
@@ -224,7 +223,7 @@ struct LogbookView: View {
             }
 
             Button {
-                viewModel.copyGhost(exerciseID: entry.id, setIndex: set.index)
+                viewModel.copyGhost(exerciseID: entry.id, setIndex: set.index, isWarmup: set.isWarmup)
             } label: {
                 Text(ghost?.displayLine(unit: viewModel.weightUnit) ?? "—")
                     .font(.system(size: 12, design: .monospaced))
@@ -501,9 +500,13 @@ struct LogbookView: View {
 
             Button {
                 do {
-                    try viewModel.saveVerified()
-                    let session = LogbookRollup.fillInSession(from: viewModel.draft, verified: true)
-                    onSaved?(session)
+                    switch try viewModel.saveVerified() {
+                    case .verified(let session):
+                        onSaved?(session)
+                    case .companionPendingPersisted:
+                        // Draft stays pending for watch reconcile — dismiss notepad.
+                        if let onBack { onBack() } else { dismiss() }
+                    }
                 } catch {
                     DDToastCenter.shared.error(ActualsCopy.fillInSaveFailedTitle)
                 }

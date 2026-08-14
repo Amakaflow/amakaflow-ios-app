@@ -364,6 +364,7 @@ final class ActualsTodayDemoFeed: ObservableObject {
     func reconcilePendingLogDrafts(against cards: [ActualsTodayDemoCard]) {
         let draftRepo = LogDraftRepository()
         guard let drafts = try? draftRepo.fetchPendingCompanionDrafts(), !drafts.isEmpty else { return }
+        var didMerge = false
         let recordings: [ActualsSourceRecording] = cards.compactMap { card in
             if let session = card.session, let primary = session.primaryRecording {
                 return primary
@@ -407,6 +408,7 @@ final class ActualsTodayDemoFeed: ObservableObject {
                     try repository.upsertMatchedDraft(session)
                     do {
                         try draftRepo.markReconciled(draftID: draft.id, sessionID: sessionId)
+                        didMerge = true
                     } catch {
                         // Matched session is durable; leave draft pending so a later
                         // refresh can finish the link instead of silently hiding it.
@@ -425,6 +427,10 @@ final class ActualsTodayDemoFeed: ObservableObject {
             case .noOverlap, .lateTwinRequiresDuplicateFlow:
                 break
             }
+        }
+        if didMerge {
+            reapplyLocalOverlays()
+            NotificationCenter.default.post(name: .actualsLocalSessionsDidChange, object: nil)
         }
     }
 

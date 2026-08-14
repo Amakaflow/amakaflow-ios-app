@@ -4,6 +4,12 @@
 //
 //  AMA-2426: "Log your sets" — Quick vs Set by set door (rig panel 4).
 //
+//  Typography / chrome: fixed-size system + ddDisplayText match
+//  `rig-actuals-panels.jpg` (no standalone mode-select handoff). Dynamic Type
+//  is intentionally not used here so the panel stays aligned with that asset;
+//  card radius 14 / hairline 1 follow documented tokens; NEW badge 4pt radius
+//  and 1.5pt lime stroke are panel-specific accents from the same reference.
+//
 
 import SwiftUI
 

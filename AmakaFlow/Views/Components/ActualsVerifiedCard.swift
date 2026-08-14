@@ -92,12 +92,16 @@ extension ExerciseActual {
         }
         let parts = sets.map { set -> String in
             let prefix = set.isWarmup ? "W " : ""
-            if let duration = set.durationSeconds, set.weightKg == nil, set.reps == nil {
-                var metric = LogbookMetricFormat.duration(duration)
-                if let calories = set.calories {
-                    metric += " · \(calories) CAL"
-                }
-                return prefix + metric
+            let hasMetric = set.durationSeconds != nil
+                || set.calories != nil
+                || set.distanceMeters != nil
+            if hasMetric, set.weightKg == nil, set.reps == nil {
+                return prefix + LogbookGhost(
+                    durationSeconds: set.durationSeconds,
+                    calories: set.calories,
+                    distanceMeters: set.distanceMeters,
+                    source: .lastActual
+                ).metricDisplayLine
             }
             let weightText: String
             if let kilograms = set.weightKg {

@@ -186,10 +186,24 @@ struct WorkoutPlayerView: View {
                     onBack: { showLogbook = false },
                     onSaved: { _ in showLogbook = false }
                 )
+            } else {
+                VStack(spacing: 12) {
+                    Text("Couldn't open the logbook.")
+                        .ddDisplayText(15, weight: .bold)
+                        .foregroundColor(DailyDriver.foreground)
+                        .multilineTextAlignment(.center)
+                    Button("Close") {
+                        showLogbook = false
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundColor(DailyDriver.lime)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(DailyDriver.screenBackground.ignoresSafeArea())
             }
         }
         .safeAreaInset(edge: .bottom) {
-            if (engine.phase == .running || engine.phase == .paused), engine.workout != nil {
+            if engine.phase == .running || engine.phase == .paused, engine.workout != nil {
                 Button {
                     openLiveLogbook()
                 } label: {
@@ -533,26 +547,24 @@ struct WorkoutPlayerView: View {
     /// Phone follow-along notepad — mode is always `.live` while the player is tracking.
     private func openLiveLogbook() {
         guard let workout = engine.workout else { return }
-        let draft = LogbookSeeding.draft(
-            from: workout,
-            mode: .live,
-            ghostLookup: ActualsRepository(),
-            loadPlanLookup: { key in
-                try? LogDraftRepository().loadPlan(workoutId: workout.id, exerciseKey: key)
+        let draftRepo = LogDraftRepository()
+        let draft: LogDraft
+        if let existing = try? draftRepo.fetchOpenDraft(workoutId: workout.id, mode: .live) {
+            draft = existing
+        } else {
+            draft = LogbookSeeding.draft(
+                from: workout,
+                mode: .live,
+                ghostLookup: ActualsRepository()
+            ) { key in
+                try? draftRepo.loadPlan(workoutId: workout.id, exerciseKey: key)
             }
-        )
-        let unit: WeightUnit = {
-            if let raw = UserDefaults.standard.string(forKey: DefaultsKey.userWeightUnit.rawValue),
-               let parsed = WeightUnit(rawValue: raw) {
-                return parsed
-            }
-            return .kg
-        }()
+        }
         logbookViewModel = LogbookViewModel(
             draft: draft,
-            draftRepository: LogDraftRepository(),
+            draftRepository: draftRepo,
             actualsRepository: ActualsRepository(),
-            weightUnit: unit
+            weightUnit: .stored
         )
         showLogbook = true
     }
