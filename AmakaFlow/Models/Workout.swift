@@ -308,6 +308,11 @@ enum WorkoutSport: String, Codable, CaseIterable, Identifiable, Hashable {
         [.strength, .conditioning, .cardio, .running, .cycling, .swimming, .mobility, .mixed]
     }
 
+    /// AMA-2428 — Watch passive free-capture “What was this?” list order (Strength + Mixed first).
+    static var passiveSessionPickerOptions: [WorkoutSport] {
+        [.strength, .mixed, .conditioning, .cardio, .running, .cycling, .swimming, .mobility, .other]
+    }
+
     init(from decoder: Decoder) throws {
         let container = try decoder.singleValueContainer()
         let rawValue = try container.decode(String.self)

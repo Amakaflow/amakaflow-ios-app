@@ -3,6 +3,7 @@
 //  AmakaFlowWatch Watch App
 //
 //  AMA-2420 — passive free-capture UI: metrics + swipe Pause/End/Discard.
+//  AMA-2428 — stacked HR/Active metrics + post-end scrollable sport picker.
 //
 
 import SwiftUI
@@ -88,7 +89,7 @@ struct PassiveStrengthSessionView: View {
     private var metricsView: some View {
         ScrollView {
             VStack(spacing: 8) {
-                Text("Strength")
+                Text(engine.sessionDisplayName)
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundColor(.secondary)
 
@@ -98,25 +99,22 @@ struct PassiveStrengthSessionView: View {
                     .foregroundColor(engine.phase == .paused ? .orange : .primary)
                     .accessibilityIdentifier("af_watch_passive_strength_elapsed")
 
-                HStack(spacing: 10) {
-                    metricPill(
+                VStack(spacing: 6) {
+                    metricRow(
                         icon: "heart.fill",
                         iconColor: .red,
                         value: engine.heartRate > 0 ? "\(Int(engine.heartRate))" : "--",
                         label: "HR"
                     )
-                    metricPill(
+                    .accessibilityIdentifier("af_watch_passive_strength_hr")
+
+                    metricRow(
                         icon: "flame.fill",
                         iconColor: .orange,
                         value: "\(Int(engine.activeCalories))",
                         label: "Active"
                     )
-                    metricPill(
-                        icon: "flame",
-                        iconColor: .yellow,
-                        value: "\(Int(engine.totalCalories))",
-                        label: "Total"
-                    )
+                    .accessibilityIdentifier("af_watch_passive_strength_active")
                 }
 
                 if engine.phase == .paused {
@@ -135,29 +133,34 @@ struct PassiveStrengthSessionView: View {
         }
     }
 
-    private func metricPill(
+    private func metricRow(
         icon: String,
         iconColor: Color,
         value: String,
         label: String
     ) -> some View {
-        VStack(spacing: 2) {
-            HStack(spacing: 3) {
-                Image(systemName: icon)
-                    .font(.system(size: 11))
-                    .foregroundColor(iconColor)
-                Text(value)
-                    .font(.system(size: 14, weight: .bold, design: .rounded))
-                    .monospacedDigit()
-            }
+        HStack(spacing: 8) {
+            Image(systemName: icon)
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundColor(iconColor)
+                .frame(width: 22)
+
+            Text(value)
+                .font(.system(size: 26, weight: .bold, design: .rounded))
+                .monospacedDigit()
+                .foregroundColor(.primary)
+
+            Spacer(minLength: 4)
+
             Text(label)
-                .font(.system(size: 9, weight: .medium))
+                .font(.system(size: 13, weight: .semibold))
                 .foregroundColor(.secondary)
         }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 6)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .background(Color.white.opacity(0.08))
-        .cornerRadius(8)
+        .cornerRadius(10)
     }
 
     // MARK: - Swipe controls
@@ -167,6 +170,13 @@ struct PassiveStrengthSessionView: View {
             Text("Swipe right to go back")
                 .font(.system(size: 10))
                 .foregroundColor(.secondary)
+
+            if engine.totalCalories > 0 || engine.activeCalories > 0 {
+                Text("\(Int(engine.totalCalories)) total cal")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(.secondary)
+                    .accessibilityIdentifier("af_watch_passive_strength_total")
+            }
 
             Button {
                 engine.togglePlayPause()
@@ -226,53 +236,101 @@ struct PassiveStrengthSessionView: View {
         .background(Color.black.opacity(0.95))
     }
 
-    // MARK: - Complete
+    // MARK: - Complete + sport picker
 
     private var completeView: some View {
-        VStack(spacing: 10) {
-            Image(systemName: engine.summaryQueued ? "checkmark.circle.fill" : "exclamationmark.circle.fill")
-                .font(.system(size: 44))
-                .foregroundColor(engine.summaryQueued ? .green : .orange)
+        ScrollView {
+            VStack(spacing: 8) {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 28))
+                    .foregroundColor(.green)
 
-            Text(engine.summaryQueued ? "Saved" : "Saved on Watch")
-                .font(.title3)
-                .fontWeight(.bold)
+                Text("Saved")
+                    .font(.system(size: 15, weight: .bold))
 
-            Text(engine.formattedElapsedTime)
-                .font(.headline)
-                .monospacedDigit()
+                Text(engine.formattedElapsedTime)
+                    .font(.system(size: 16, weight: .semibold, design: .rounded))
+                    .monospacedDigit()
 
-            if engine.activeCalories > 0 || engine.totalCalories > 0 {
-                Text("\(Int(engine.activeCalories)) active · \(Int(engine.totalCalories)) total")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
-
-            if engine.summaryQueued {
-                Text("Fill in on iPhone Today")
-                    .font(.system(size: 11))
-                    .foregroundColor(.secondary)
-                    .multilineTextAlignment(.center)
-            } else {
-                Text("iPhone sync pending — open AmakaFlow nearby")
-                    .font(.system(size: 11))
-                    .foregroundColor(.secondary)
-                    .multilineTextAlignment(.center)
-
-                Button("Retry sync") {
-                    _ = engine.retrySummarySync()
+                if engine.activeCalories > 0 || engine.totalCalories > 0 {
+                    Text("\(Int(engine.activeCalories)) active · \(Int(engine.totalCalories)) total")
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
                 }
-                .buttonStyle(.bordered)
-                .accessibilityIdentifier("af_watch_passive_strength_retry_sync")
-            }
 
-            Button("Done") {
-                engine.reset()
-                dismiss()
+                Text("What was this?")
+                    .font(.system(size: 13, weight: .semibold))
+                    .padding(.top, 4)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                Text("Scroll for more")
+                    .font(.system(size: 10))
+                    .foregroundColor(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                VStack(spacing: 4) {
+                    ForEach(WorkoutSport.passiveSessionPickerOptions) { sport in
+                        Button {
+                            engine.selectSport(sport)
+                        } label: {
+                            HStack {
+                                Text(sport.displayName)
+                                    .font(.system(size: 14, weight: .semibold))
+                                    .foregroundColor(.primary)
+                                Spacer()
+                                if engine.selectedSport == sport {
+                                    Image(systemName: "checkmark")
+                                        .font(.system(size: 12, weight: .bold))
+                                        .foregroundColor(.green)
+                                }
+                            }
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 10)
+                            .background(
+                                engine.selectedSport == sport
+                                    ? Color.white.opacity(0.16)
+                                    : Color.white.opacity(0.06)
+                            )
+                            .cornerRadius(8)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityIdentifier("af_watch_passive_sport_\(sport.rawValue)")
+                    }
+                }
+
+                if engine.summaryQueued {
+                    Text("Fill in on iPhone Today")
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.top, 4)
+                } else {
+                    Text("Tap Done to sync to iPhone")
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.top, 4)
+                }
+
+                Button("Done") {
+                    _ = engine.confirmSportAndSync()
+                    engine.reset()
+                    dismiss()
+                }
+                .buttonStyle(.borderedProminent)
+                .accessibilityIdentifier("af_watch_passive_strength_done")
+                .padding(.top, 4)
+
+                if !engine.summaryQueued {
+                    Button("Retry sync") {
+                        _ = engine.retrySummarySync()
+                    }
+                    .buttonStyle(.bordered)
+                    .accessibilityIdentifier("af_watch_passive_strength_retry_sync")
+                }
             }
-            .buttonStyle(.borderedProminent)
-            .accessibilityIdentifier("af_watch_passive_strength_done")
+            .padding(.horizontal, 4)
+            .padding(.vertical, 6)
         }
-        .padding()
     }
 }

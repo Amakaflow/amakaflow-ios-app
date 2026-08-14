@@ -156,6 +156,8 @@ public struct StandaloneWorkoutSummary: Codable {
     public let totalSteps: Int
     /// AMA-2420 Phase 2 — crown-logged sets from standalone Watch strength.
     public let setLogs: [StandaloneSetLog]?
+    /// AMA-2428 — `WorkoutSport.rawValue` chosen after End (optional for older pending payloads).
+    public let sport: String?
 
     public init(
         workoutId: String,
@@ -167,7 +169,8 @@ public struct StandaloneWorkoutSummary: Codable {
         averageHeartRate: Double?,
         completedSteps: Int,
         totalSteps: Int,
-        setLogs: [StandaloneSetLog]? = nil
+        setLogs: [StandaloneSetLog]? = nil,
+        sport: String? = nil
     ) {
         self.workoutId = workoutId
         self.workoutName = workoutName
@@ -179,6 +182,7 @@ public struct StandaloneWorkoutSummary: Codable {
         self.completedSteps = completedSteps
         self.totalSteps = totalSteps
         self.setLogs = setLogs
+        self.sport = sport
     }
 }
 

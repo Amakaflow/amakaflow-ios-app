@@ -68,13 +68,37 @@ enum WatchActualsDraftBuilder {
         formatter.dateFormat = "EEE HH:mm"
         let when = formatter.string(from: summary.endDate).uppercased()
 
+        let sport = resolvedSport(from: summary)
+        let title = draftTitle(summary: summary, sport: sport)
+
         return ActualsFillInSession(
             id: draftID(for: summary),
-            title: summary.workoutName,
+            title: title,
             subtitle: "APPLE WATCH · \(when)",
             exercises: exercises,
-            verified: false
+            verified: false,
+            sport: sport
         )
+    }
+
+    /// AMA-2428 — prefer wire `sport`; legacy names without sport default toward Strength.
+    static func resolvedSport(from summary: StandaloneWorkoutSummary) -> WorkoutSport {
+        if let raw = summary.sport, !raw.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return WorkoutSport.parse(raw)
+        }
+        let name = summary.workoutName.lowercased()
+        if name.contains("strength") { return .strength }
+        if name.contains("mixed") || name.contains("hybrid") { return .mixed }
+        let parsed = WorkoutSport.parse(summary.workoutName)
+        return parsed == .other ? .strength : parsed
+    }
+
+    static func draftTitle(summary: StandaloneWorkoutSummary, sport: WorkoutSport) -> String {
+        if summary.sport != nil {
+            return sport.displayName
+        }
+        let trimmed = summary.workoutName.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? sport.displayName : trimmed
     }
 
     private static func overlay(setLogs: [SetLog], onto exercises: inout [ExerciseActual]) {

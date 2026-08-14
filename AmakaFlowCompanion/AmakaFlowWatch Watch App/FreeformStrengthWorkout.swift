@@ -3,6 +3,7 @@
 //  AmakaFlowWatch Watch App
 //
 //  AMA-2420 — open strength recording without a DayState / Fitness plan.
+//  AMA-2428 — starts as Strength; athlete may reclassify after End on passive UI.
 //
 
 import Foundation

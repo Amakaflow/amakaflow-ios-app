@@ -200,6 +200,43 @@ final class WatchActualsDraftBuilderTests: XCTestCase {
         XCTAssertFalse(session.verified)
     }
 
+    func testMakeFillInSessionUsesSportForTitleWhenPresent() throws {
+        let summary = StandaloneWorkoutSummary(
+            workoutId: "watch-sport-1",
+            workoutName: "Strength",
+            startDate: Date(timeIntervalSince1970: 1_700_000_000),
+            endDate: Date(timeIntervalSince1970: 1_700_003_600),
+            durationSeconds: 3600,
+            totalCalories: 200,
+            averageHeartRate: 130,
+            completedSteps: 0,
+            totalSteps: 0,
+            setLogs: nil,
+            sport: WorkoutSport.mixed.rawValue
+        )
+        let session = try XCTUnwrap(
+            WatchActualsDraftBuilder.makeFillInSession(summary: summary, libraryWorkout: nil)
+        )
+        XCTAssertEqual(session.title, "Mixed")
+        XCTAssertEqual(session.sport, .mixed)
+    }
+
+    func testMakeFillInSessionDefaultsMissingSportToStrength() throws {
+        let session = try XCTUnwrap(
+            WatchActualsDraftBuilder.makeFillInSession(
+                summary: makeSummary(setLogs: nil),
+                libraryWorkout: nil
+            )
+        )
+        XCTAssertEqual(session.title, "Watch Strength")
+        XCTAssertEqual(session.sport, .strength)
+    }
+
+    func testResolvedSportFromLegacyWatchStrengthName() {
+        let summary = makeSummary(setLogs: nil)
+        XCTAssertEqual(WatchActualsDraftBuilder.resolvedSport(from: summary), .strength)
+    }
+
     func testMakeFillInSessionSeedsBlankExerciseWhenSetLogsEmptyArray() throws {
         let session = try XCTUnwrap(
             WatchActualsDraftBuilder.makeFillInSession(
