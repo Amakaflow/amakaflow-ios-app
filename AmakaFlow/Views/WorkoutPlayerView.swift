@@ -7,7 +7,8 @@
 
 import SwiftUI
 
-struct WorkoutPlayerView: View {
+// swiftlint:disable file_length
+struct WorkoutPlayerView: View { // swiftlint:disable:this type_body_length
     @ObservedObject var engine = WorkoutEngine.shared
     @ObservedObject var watchManager = WatchConnectivityManager.shared
     @ObservedObject var garminManager = GarminConnectManager.shared
@@ -20,6 +21,9 @@ struct WorkoutPlayerView: View {
     @State private var pausedForEndConfirmation = false
     @State private var showRPEFeedback = false  // AMA-1266: Show RPE prompt after completion
     @State private var showSwapSheet = false
+    /// AMA-2426: live set-by-set logbook while phone is tracking.
+    @State private var showLogbook = false
+    @State private var logbookViewModel: LogbookViewModel?
 
     var body: some View {
         ZStack {
@@ -174,6 +178,59 @@ struct WorkoutPlayerView: View {
                     engine.pause()
                 }
                 engine.swapActiveWorkout(with: swappedWorkout)
+            }
+        }
+        .fullScreenCover(isPresented: $showLogbook) {
+            if let logbookViewModel {
+                LogbookView(
+                    viewModel: logbookViewModel,
+                    onBack: { showLogbook = false },
+                    onSaved: { _ in showLogbook = false }
+                )
+            } else {
+                VStack(spacing: 12) {
+                    Text("Couldn't open the logbook.")
+                        .ddDisplayText(15, weight: .bold)
+                        .foregroundColor(DailyDriver.foreground)
+                        .multilineTextAlignment(.center)
+                    Button("Close") {
+                        showLogbook = false
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundColor(DailyDriver.lime)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(DailyDriver.screenBackground.ignoresSafeArea())
+            }
+        }
+        .safeAreaInset(edge: .bottom) {
+            if engine.phase == .running || engine.phase == .paused, engine.workout != nil {
+                Button {
+                    openLiveLogbook()
+                } label: {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(LogbookCopy.logSetsLiveTitle)
+                                .ddDisplayText(14, weight: .bold)
+                                .foregroundColor(DailyDriver.ink)
+                            Text(LogbookCopy.logSetsLiveSubtitle)
+                                .font(.system(size: 11))
+                                .foregroundColor(DailyDriver.ink.opacity(0.75))
+                        }
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundColor(DailyDriver.ink)
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 14)
+                    .background(DailyDriver.lime)
+                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                }
+                .buttonStyle(.plain)
+                .padding(.horizontal, 14)
+                .padding(.bottom, 8)
+                .accessibilityIdentifier(LogbookCopy.logSetsLiveAccessibilityID)
             }
         }
         .onChange(of: engine.phase) { oldPhase, newPhase in
@@ -484,6 +541,33 @@ struct WorkoutPlayerView: View {
         } else {
             return Theme.Colors.surfaceElevated
         }
+    }
+
+    // MARK: - Live logbook (AMA-2426)
+
+    /// Phone follow-along notepad — mode is always `.live` while the player is tracking.
+    private func openLiveLogbook() {
+        guard let workout = engine.workout else { return }
+        let draftRepo = LogDraftRepository()
+        let draft: LogDraft
+        if let existing = try? draftRepo.fetchOpenDraft(workoutId: workout.id, mode: .live) {
+            draft = existing
+        } else {
+            draft = LogbookSeeding.draft(
+                from: workout,
+                mode: .live,
+                ghostLookup: ActualsRepository()
+            ) { key in
+                try? draftRepo.loadPlan(workoutId: workout.id, exerciseKey: key)
+            }
+        }
+        logbookViewModel = LogbookViewModel(
+            draft: draft,
+            draftRepository: draftRepo,
+            actualsRepository: ActualsRepository(),
+            weightUnit: .stored
+        )
+        showLogbook = true
     }
 
     // MARK: - Heart Rate Helpers

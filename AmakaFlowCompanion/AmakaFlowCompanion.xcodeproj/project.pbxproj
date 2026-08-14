@@ -7,6 +7,25 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		AMA2426MODBLD /* LogbookModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2426MODREF /* LogbookModels.swift */; };
+		AMA2426WUMBLD /* WeightUnitMath.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2426WUMREF /* WeightUnitMath.swift */; };
+		AMA2426CPYBLD /* LogbookCopy.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2426CPYREF /* LogbookCopy.swift */; };
+		AMA2426GHSBLD /* LogbookGhosts.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2426GHSREF /* LogbookGhosts.swift */; };
+		AMA2426MDIBLD /* LogbookModeInference.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2426MDIREF /* LogbookModeInference.swift */; };
+		AMA2426RLPBLD /* LogbookRollup.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2426RLPREF /* LogbookRollup.swift */; };
+		AMA2426RCNBLD /* LogbookReconciliation.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2426RCNREF /* LogbookReconciliation.swift */; };
+		AMA2426WHLBLD /* LogbookWheelNavigation.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2426WHLREF /* LogbookWheelNavigation.swift */; };
+		AMA2426SEDBLD /* LogbookSeeding.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2426SEDREF /* LogbookSeeding.swift */; };
+		AMA2426V9BLD /* V9_logbook.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2426V9REF /* V9_logbook.swift */; };
+		AMA2426V10BLD /* V10_logbook_metrics.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2426V10REF /* V10_logbook_metrics.swift */; };
+		AMA2426LDRBLD /* LogDraftRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2426LDRREF /* LogDraftRepository.swift */; };
+		AMA2426LVMBLD /* LogbookViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2426LVMREF /* LogbookViewModel.swift */; };
+		AMA2426AMSBLD /* ActualsModeSelectView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2426AMSREF /* ActualsModeSelectView.swift */; };
+		AMA2426LWSBLD /* LogbookWheelSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2426LWSREF /* LogbookWheelSheet.swift */; };
+		AMA2426LBVBLD /* LogbookView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2426LBVREF /* LogbookView.swift */; };
+		AMA2426AFFBLD /* ActualsFillInFlowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2426AFFREF /* ActualsFillInFlowView.swift */; };
+		AMA2426LWPBLD /* LogbookWorkoutPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2426LWPREF /* LogbookWorkoutPickerView.swift */; };
+		AMA2426TSTBLD /* LogbookTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2426TSTREF /* LogbookTests.swift */; };
 		AMA2408SECTSACCBLD /* WorkoutKitPlanStepSummary+SectionAccumulator.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2408SECTSACCREF /* WorkoutKitPlanStepSummary+SectionAccumulator.swift */; };
 		AMA2408PUSHPREVBLD /* WorkoutEnrichmentPushSheet+Previews.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2408PUSHPREVREF /* WorkoutEnrichmentPushSheet+Previews.swift */; };
 		AMA2408REVEALBLD /* AppleWatchPreviewReveal.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2408REVEALREF /* AppleWatchPreviewReveal.swift */; };
@@ -816,6 +835,25 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		AMA2426MODREF /* LogbookModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LogbookModels.swift; path = ../AmakaFlow/Models/LogbookModels.swift; sourceTree = SOURCE_ROOT; };
+		AMA2426WUMREF /* WeightUnitMath.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WeightUnitMath.swift; path = ../AmakaFlow/Models/WeightUnitMath.swift; sourceTree = SOURCE_ROOT; };
+		AMA2426CPYREF /* LogbookCopy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LogbookCopy.swift; path = ../AmakaFlow/Models/LogbookCopy.swift; sourceTree = SOURCE_ROOT; };
+		AMA2426GHSREF /* LogbookGhosts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LogbookGhosts.swift; path = ../AmakaFlow/Services/LogbookGhosts.swift; sourceTree = SOURCE_ROOT; };
+		AMA2426MDIREF /* LogbookModeInference.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LogbookModeInference.swift; path = ../AmakaFlow/Services/LogbookModeInference.swift; sourceTree = SOURCE_ROOT; };
+		AMA2426RLPREF /* LogbookRollup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LogbookRollup.swift; path = ../AmakaFlow/Services/LogbookRollup.swift; sourceTree = SOURCE_ROOT; };
+		AMA2426RCNREF /* LogbookReconciliation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LogbookReconciliation.swift; path = ../AmakaFlow/Services/LogbookReconciliation.swift; sourceTree = SOURCE_ROOT; };
+		AMA2426WHLREF /* LogbookWheelNavigation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LogbookWheelNavigation.swift; path = ../AmakaFlow/Services/LogbookWheelNavigation.swift; sourceTree = SOURCE_ROOT; };
+		AMA2426SEDREF /* LogbookSeeding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LogbookSeeding.swift; path = ../AmakaFlow/Services/LogbookSeeding.swift; sourceTree = SOURCE_ROOT; };
+		AMA2426V9REF /* V9_logbook.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = V9_logbook.swift; path = ../AmakaFlow/Storage/Migrations/V9_logbook.swift; sourceTree = SOURCE_ROOT; };
+		AMA2426V10REF /* V10_logbook_metrics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = V10_logbook_metrics.swift; path = ../AmakaFlow/Storage/Migrations/V10_logbook_metrics.swift; sourceTree = SOURCE_ROOT; };
+		AMA2426LDRREF /* LogDraftRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LogDraftRepository.swift; path = ../AmakaFlow/Storage/Repositories/LogDraftRepository.swift; sourceTree = SOURCE_ROOT; };
+		AMA2426LVMREF /* LogbookViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LogbookViewModel.swift; path = ../AmakaFlow/ViewModels/LogbookViewModel.swift; sourceTree = SOURCE_ROOT; };
+		AMA2426AMSREF /* ActualsModeSelectView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActualsModeSelectView.swift; path = ../AmakaFlow/Views/Logbook/ActualsModeSelectView.swift; sourceTree = SOURCE_ROOT; };
+		AMA2426LWSREF /* LogbookWheelSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LogbookWheelSheet.swift; path = ../AmakaFlow/Views/Logbook/LogbookWheelSheet.swift; sourceTree = SOURCE_ROOT; };
+		AMA2426LBVREF /* LogbookView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LogbookView.swift; path = ../AmakaFlow/Views/Logbook/LogbookView.swift; sourceTree = SOURCE_ROOT; };
+		AMA2426AFFREF /* ActualsFillInFlowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActualsFillInFlowView.swift; path = ../AmakaFlow/Views/Logbook/ActualsFillInFlowView.swift; sourceTree = SOURCE_ROOT; };
+		AMA2426LWPREF /* LogbookWorkoutPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LogbookWorkoutPickerView.swift; path = ../AmakaFlow/Views/Logbook/LogbookWorkoutPickerView.swift; sourceTree = SOURCE_ROOT; };
+		AMA2426TSTREF /* LogbookTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LogbookTests.swift; path = AmakaFlowCompanionTests/LogbookTests.swift; sourceTree = "<group>"; };
 		AMA2408SECTSACCREF /* WorkoutKitPlanStepSummary+SectionAccumulator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "WorkoutKitPlanStepSummary+SectionAccumulator.swift"; path = "../AmakaFlow/Models/WorkoutKitPlanStepSummary+SectionAccumulator.swift"; sourceTree = SOURCE_ROOT; };
 		AMA2408PUSHPREVREF /* WorkoutEnrichmentPushSheet+Previews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "WorkoutEnrichmentPushSheet+Previews.swift"; path = "../AmakaFlow/Views/Components/WorkoutEnrichmentPushSheet+Previews.swift"; sourceTree = SOURCE_ROOT; };
 		AMA2408REVEALREF /* AppleWatchPreviewReveal.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppleWatchPreviewReveal.swift; path = ../AmakaFlow/Views/AppleWatchPreviewReveal.swift; sourceTree = SOURCE_ROOT; };
@@ -1686,6 +1724,19 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		AMA2426GRP /* Logbook */ = {
+			isa = PBXGroup;
+			children = (
+				AMA2426AMSREF /* ActualsModeSelectView.swift */,
+				AMA2426LWSREF /* LogbookWheelSheet.swift */,
+				AMA2426LBVREF /* LogbookView.swift */,
+				AMA2426AFFREF /* ActualsFillInFlowView.swift */,
+				AMA2426LWPREF /* LogbookWorkoutPickerView.swift */,
+			);
+			path = Logbook;
+			name = Logbook;
+			sourceTree = "<group>";
+		};
 		AK00SHARE003 /* AmakaFlowShare */ = {
 			isa = PBXGroup;
 			children = (
@@ -1761,6 +1812,9 @@
 				AMA2387SYNCREF /* ActualsSyncProgress.swift */,
 				AMA2387SESSREF /* ActualsSessionModels.swift */,
 				AMA2387EXACREF /* ExerciseActual.swift */,
+				AMA2426CPYREF /* LogbookCopy.swift */,
+				AMA2426WUMREF /* WeightUnitMath.swift */,
+				AMA2426MODREF /* LogbookModels.swift */,
 				WATCHTITLEREF /* WatchWorkoutTitlePolicy.swift */,
 				AMA2375MODLREF /* OnYourWatchesModels.swift */,
 				AMA2367REPLREF /* IncompleteScheduleReplacing.swift */,
@@ -1773,6 +1827,7 @@
 				AMA2387V4REF /* V4_actuals_sessions.swift */,
 				AMA2376REPREFO /* WorkoutCollectionsRepository.swift */,
 				AMA2387AREPOREF /* ActualsRepository.swift */,
+				AMA2426LDRREF /* LogDraftRepository.swift */,
 				A87B639F1BA04DF8A5301F4C /* UserDefaultsAcceptedMigration.swift */,
 				AMA1791LOCALRECREF /* LocalRecords.swift */,
 				AMA1791ACCEPTREPOREF /* AcceptedSuggestionsRepository.swift */,
@@ -1972,7 +2027,9 @@
 				AMA2387MRGDREF /* ActualsMergedDetailView.swift */,
 				AMA2387MAPVREF /* ActualsMapToPlanView.swift */,
 				AMA2387FILLVREF /* ActualsFillInView.swift */,
+				AMA2426GRP /* Logbook */,
 				AMA2387FILLVMREF /* ActualsFillInViewModel.swift */,
+				AMA2426LVMREF /* LogbookViewModel.swift */,
 				AMA2387VERCREF /* ActualsVerifiedCard.swift */,
 				AMA2387VERVREF /* ActualsVerifiedView.swift */,
 				AMA2405CNTVREF /* ActualsCountedDetailView.swift */,
@@ -1988,6 +2045,8 @@
 				AMA2396V6REF /* V6_actuals_strava_writeback_meta.swift */,
 				AMA2396V7REF /* V7_actuals_structure_body.swift */,
 				AMA2396V8REF /* V8_actuals_exercise_structure.swift */,
+				AMA2426V9REF /* V9_logbook.swift */,
+				AMA2426V10REF /* V10_logbook_metrics.swift */,
 				AMA2396STRUCTREF /* StravaWorkoutStructureText.swift */,
 				AMA2396RESOLVERREF /* ActualsLibraryWorkoutResolver.swift */,
 				AMA2396HISTVIEWREF /* ActualsHistoryView.swift */,
@@ -2079,6 +2138,12 @@
 				AMA435SACCSVCREF /* SuggestionAcceptanceService.swift */,
 				AMA446WCMODREF /* WorkoutCompletionModule.swift */,
 				AMA2420DRAFTREF /* WatchActualsDraftBuilder.swift */,
+				AMA2426SEDREF /* LogbookSeeding.swift */,
+				AMA2426WHLREF /* LogbookWheelNavigation.swift */,
+				AMA2426RCNREF /* LogbookReconciliation.swift */,
+				AMA2426RLPREF /* LogbookRollup.swift */,
+				AMA2426MDIREF /* LogbookModeInference.swift */,
+				AMA2426GHSREF /* LogbookGhosts.swift */,
 				AMA2291DETREF /* WorkoutLibraryDetailStore.swift */,
 				AMA2285PENDREF /* PendingShareImportCoordinator.swift */,
 				AMA2297PSTEREF /* LibraryPasteRouter.swift */,
@@ -2379,6 +2444,7 @@
 				AMA2360PREFTESTREF /* AppleWatchDeliveryPrefsTests.swift */,
 				AMA2420TSTREF /* StrengthAutoCaptureSettingsTests.swift */,
 				AMA2420P2TSTREF /* WatchActualsDraftBuilderTests.swift */,
+				AMA2426TSTREF /* LogbookTests.swift */,
 				AMA2381HEROTESTREF /* UnifiedWorkoutDetailViewHeroTests.swift */,
 				AMA2316PREFTESTREF /* GarminWatchDisplayPrefsTests.swift */,
 				AMA2336TESTREF /* WorkoutEnrichmentModelsTests.swift */,
@@ -3319,6 +3385,24 @@
 				AMA435SACCSVCA /* SuggestionAcceptanceService.swift in Sources */,
 				AMA446WCMODBLD /* WorkoutCompletionModule.swift in Sources */,
 				AMA2420DRAFTBLD /* WatchActualsDraftBuilder.swift in Sources */,
+				AMA2426LWPBLD /* LogbookWorkoutPickerView.swift in Sources */,
+				AMA2426AFFBLD /* ActualsFillInFlowView.swift in Sources */,
+				AMA2426LBVBLD /* LogbookView.swift in Sources */,
+				AMA2426LWSBLD /* LogbookWheelSheet.swift in Sources */,
+				AMA2426AMSBLD /* ActualsModeSelectView.swift in Sources */,
+				AMA2426LVMBLD /* LogbookViewModel.swift in Sources */,
+				AMA2426LDRBLD /* LogDraftRepository.swift in Sources */,
+				AMA2426V9BLD /* V9_logbook.swift in Sources */,
+				AMA2426V10BLD /* V10_logbook_metrics.swift in Sources */,
+				AMA2426SEDBLD /* LogbookSeeding.swift in Sources */,
+				AMA2426WHLBLD /* LogbookWheelNavigation.swift in Sources */,
+				AMA2426RCNBLD /* LogbookReconciliation.swift in Sources */,
+				AMA2426RLPBLD /* LogbookRollup.swift in Sources */,
+				AMA2426MDIBLD /* LogbookModeInference.swift in Sources */,
+				AMA2426GHSBLD /* LogbookGhosts.swift in Sources */,
+				AMA2426CPYBLD /* LogbookCopy.swift in Sources */,
+				AMA2426WUMBLD /* WeightUnitMath.swift in Sources */,
+				AMA2426MODBLD /* LogbookModels.swift in Sources */,
 				AK00NUT002B /* NutritionViewModel.swift in Sources */,
 				AK00NUT003B /* NutritionDashboardCard.swift in Sources */,
 				AK00NUT004B /* ProteinTrackerView.swift in Sources */,
@@ -3420,6 +3504,7 @@
 				AMA2360PREFTESTBLD /* AppleWatchDeliveryPrefsTests.swift in Sources */,
 				AMA2420TSTBLD /* StrengthAutoCaptureSettingsTests.swift in Sources */,
 				AMA2420P2TSTBLD /* WatchActualsDraftBuilderTests.swift in Sources */,
+				AMA2426TSTBLD /* LogbookTests.swift in Sources */,
 				AMA2381HEROTESTBLD /* UnifiedWorkoutDetailViewHeroTests.swift in Sources */,
 				AMA2316PREFTESTBLD /* GarminWatchDisplayPrefsTests.swift in Sources */,
 				AMA2336TESTBLD /* WorkoutEnrichmentModelsTests.swift in Sources */,

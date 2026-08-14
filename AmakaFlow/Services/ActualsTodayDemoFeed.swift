@@ -355,7 +355,83 @@ final class ActualsTodayDemoFeed: ObservableObject {
             sync.clear()
         }
         cards = Self.applyLocalOverlays(to: deduped, repository: repository)
+        reconcilePendingLogDrafts(against: deduped)
         await ensureServerVerifiedForLinkedActivities(stravaActivities, client: stravaClient)
+    }
+
+    /// AMA-2426: attach companion log drafts to overlapping device sessions.
+    /// Pending drafts never become Today cards on their own.
+    func reconcilePendingLogDrafts(against cards: [ActualsTodayDemoCard]) { // swiftlint:disable:this cyclomatic_complexity
+        let draftRepo = LogDraftRepository()
+        guard let drafts = try? draftRepo.fetchPendingCompanionDrafts(), !drafts.isEmpty else { return }
+        var didMerge = false
+        let recordings: [ActualsSourceRecording] = cards.compactMap { card in
+            if let session = card.session, let primary = session.primaryRecording {
+                return primary
+            }
+            if let activity = card.activity {
+                let deviceKind: ActualsDeviceKind = {
+                    switch activity.provider {
+                    case .appleHealth, .garmin: return .watch
+                    case .strava: return .phone
+                    }
+                }()
+                var richness = 0
+                if activity.avgHR != nil { richness += 3 }
+                if activity.calories != nil { richness += 2 }
+                if activity.distanceMeters != nil { richness += 1 }
+                if activity.provider == .appleHealth { richness += 1 }
+                return ActualsSourceRecording(
+                    id: card.id,
+                    provider: activity.provider,
+                    deviceKind: deviceKind,
+                    title: activity.title,
+                    startDate: activity.startDate,
+                    durationSeconds: activity.durationSeconds,
+                    distanceMeters: activity.distanceMeters,
+                    streamRichness: richness
+                )
+            }
+            return nil
+        }
+        for draft in drafts {
+            let outcome = LogbookReconciliation.reconcile(
+                draft: draft,
+                deviceSessions: recordings,
+                memory: mergeMemory
+            )
+            switch outcome {
+            case .merged(let sessionId):
+                guard let device = recordings.first(where: { $0.id == sessionId }) else { continue }
+                let session = LogbookReconciliation.mergeDraft(draft, onto: device)
+                do {
+                    try repository.upsertMatchedDraft(session)
+                    do {
+                        try draftRepo.markReconciled(draftID: draft.id, sessionID: sessionId)
+                        didMerge = true
+                    } catch {
+                        // Matched session is durable; leave draft pending so a later
+                        // refresh can finish the link instead of silently hiding it.
+                        actualsTodayDemoFeedLog.error(
+                            "Matched draft \(draft.id, privacy: .public) but markReconciled failed: \(error.localizedDescription, privacy: .public)"
+                        )
+                    }
+                } catch {
+                    actualsTodayDemoFeedLog.error(
+                        "Failed to reconcile draft \(draft.id, privacy: .public) onto \(sessionId, privacy: .public): \(error.localizedDescription, privacy: .public)"
+                    )
+                }
+            case .timeoutCommit:
+                // Standalone commit is owned by LogbookViewModel (Undo toast).
+                break
+            case .noOverlap, .lateTwinRequiresDuplicateFlow:
+                break
+            }
+        }
+        if didMerge {
+            reapplyLocalOverlays()
+            NotificationCenter.default.post(name: .actualsLocalSessionsDidChange, object: nil)
+        }
     }
 
     /// Replace Today cards with Apple Health workouts for the lookback window.
@@ -381,6 +457,7 @@ final class ActualsTodayDemoFeed: ObservableObject {
                 sync.clear()
             }
             cards = Self.applyLocalOverlays(to: windowCards, repository: repository)
+            reconcilePendingLogDrafts(against: cards)
         } catch {
             isActive = false
             showMergeAsk = false
@@ -422,6 +499,7 @@ final class ActualsTodayDemoFeed: ObservableObject {
             }
             // Re-apply local match/verify so a Strava re-pull does not wipe Save state.
             cards = Self.applyLocalOverlays(to: windowCards, repository: repository)
+            reconcilePendingLogDrafts(against: cards)
             // Signature / wrote-Strava without a server verified row yet — mark
             // those Strava ids verified on our end so the next pull is durable.
             await ensureServerVerifiedForLinkedActivities(activities, client: client)

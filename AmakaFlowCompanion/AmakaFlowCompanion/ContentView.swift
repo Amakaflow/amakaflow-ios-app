@@ -107,6 +107,7 @@ struct ContentView: View {
     @State private var profilePath = NavigationPath()
     @State private var showCreateSheet = false
     @State private var activeCreateFlow: CreateFlowPresentation?
+    @State private var logSessionRequestID = UUID()
     @State private var suppressFloatingChrome = false
     @State private var resetTokens: [AFTab: UUID] = Dictionary(
         uniqueKeysWithValues: AFTab.allCases.map { ($0, UUID()) }
@@ -150,9 +151,13 @@ struct ContentView: View {
         .preferredColorScheme(.dark)
         .onPreferenceChange(SuppressDDChromeKey.self) { suppressFloatingChrome = $0 }
         .environment(\.openCreateSheet, openCreateEntry)
+        .environment(\.openLogSession) {
+            logSessionRequestID = UUID()
+        }
         .createFlowSheets(
             showCreateSheet: $showCreateSheet,
             activeFlow: $activeCreateFlow,
+            logSessionRequestID: $logSessionRequestID,
             onLibraryReload: notifyLibraryReload
         )
         .tint(DailyDriver.lime)

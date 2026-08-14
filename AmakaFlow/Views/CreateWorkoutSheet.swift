@@ -15,6 +15,8 @@ enum CreateWorkoutDoor: Equatable {
     case manual
     /// AMA-2389: receive shared workouts from friends.
     case fromFriends
+    /// AMA-2426: notepad — log sets during or after, set by set.
+    case logSession
 }
 
 struct CreateWorkoutSheet: View {
@@ -66,6 +68,26 @@ struct CreateWorkoutSheet: View {
                     dismissThen { onSelect(.manual) }
                 }
                 .accessibilityIdentifier("create_door_manual")
+
+                // AMA-2426: after Build from scratch — ONE new row.
+                DDDoorRow(
+                    icon: "book.closed.fill",
+                    iconBackground: DailyDriver.lime,
+                    iconForeground: DailyDriver.ink,
+                    title: LogbookCopy.logSessionTitle,
+                    subtitle: LogbookCopy.logSessionSubtitle
+                ) {
+                    dismissThen { onSelect(.logSession) }
+                } trailing: {
+                    Text(LogbookCopy.newBadge)
+                        .font(.system(size: 9, weight: .heavy, design: .monospaced))
+                        .foregroundColor(DailyDriver.ink)
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 3)
+                        .background(DailyDriver.lime)
+                        .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
+                }
+                .accessibilityIdentifier(LogbookCopy.logSessionAccessibilityID)
 
                 // AMA-2389: after Build from scratch (placement table).
                 DDDoorRow(

@@ -654,7 +654,7 @@ struct ActualsHistoryView: View {
                 session: session,
                 repository: ActualsRepository()
             )
-            ActualsFillInView(
+            ActualsFillInFlowView(
                 viewModel: fillInVM,
                 onSaved: { saved in
                     viewModel.markVerified(saved: saved, cardID: route.cardID)

@@ -13,6 +13,8 @@ enum CreateFlowPresentation: Identifiable, Equatable {
     case screenshot
     case knowledge
     case manualEditor
+    /// AMA-2426: logbook from header Log or ＋ Add sheet.
+    case logSession
 
     var id: String {
         switch self {
@@ -26,6 +28,8 @@ enum CreateFlowPresentation: Identifiable, Equatable {
             return "knowledge"
         case .manualEditor:
             return "manual-editor"
+        case .logSession:
+            return "log-session"
         }
     }
 }
@@ -42,22 +46,38 @@ enum OpenCreateSheetKey: EnvironmentKey {
     static let defaultValue: () -> Void = {}
 }
 
+enum OpenLogSessionKey: EnvironmentKey {
+    static let defaultValue: () -> Void = {}
+}
+
 extension EnvironmentValues {
     var openCreateSheet: () -> Void {
         get { self[OpenCreateSheetKey.self] }
         set { self[OpenCreateSheetKey.self] = newValue }
+    }
+
+    /// AMA-2426: open Log sets picker (header Log on Today / Library).
+    var openLogSession: () -> Void {
+        get { self[OpenLogSessionKey.self] }
+        set { self[OpenLogSessionKey.self] = newValue }
     }
 }
 
 struct CreateFlowSheetsModifier: ViewModifier {
     @Binding var showCreateSheet: Bool
     @Binding var activeFlow: CreateFlowPresentation?
+    /// Bumped by `openLogSession` env to present the logbook picker.
+    @Binding var logSessionRequestID: UUID
     var onLibraryReload: () -> Void
 
     @State private var speakUnavailableAlert = false
     /// AMA-2389: From friends inbox (sheet, not a new top-level surface).
     @State private var showFriendsInbox = false
     @ObservedObject private var friendsStore = FriendsSharingStore.shared
+    /// AMA-2426: library workouts for Log sets picker.
+    @State private var logbookWorkouts: [Workout] = []
+    @State private var showLogbookPicker = false
+    @State private var logbookViewModel: LogbookViewModel?
 
     func body(content: Content) -> some View {
         content
@@ -75,6 +95,21 @@ struct CreateFlowSheetsModifier: ViewModifier {
                 }
                 .presentationDetents(friendsSheetDetents)
                 .presentationDragIndicator(.visible)
+            }
+            .sheet(isPresented: $showLogbookPicker) {
+                LogbookWorkoutPickerView(
+                    workouts: logbookWorkouts,
+                    onPick: { workout in
+                        showLogbookPicker = false
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                            openLogbook(from: workout)
+                        }
+                    },
+                    onClose: { showLogbookPicker = false }
+                )
+            }
+            .onChange(of: logSessionRequestID) { _, _ in
+                Task { await presentLogSessionPicker() }
             }
             .fullScreenCover(item: $activeFlow) { flow in
                 switch flow {
@@ -101,6 +136,20 @@ struct CreateFlowSheetsModifier: ViewModifier {
                 case .manualEditor:
                     BuilderV3EntryView(onSaved: onLibraryReload)
                         .ddSuppressFloatingChrome()
+                case .logSession:
+                    if let logbookViewModel {
+                        LogbookView(
+                            viewModel: logbookViewModel,
+                            onBack: { activeFlow = nil },
+                            onSaved: { _ in
+                                activeFlow = nil
+                                onLibraryReload()
+                            }
+                        )
+                    } else {
+                        ProgressView()
+                            .task { openLogbook(from: nil) }
+                    }
                 }
             }
     }
@@ -130,7 +179,53 @@ struct CreateFlowSheetsModifier: ViewModifier {
             speakUnavailableAlert = true
         case .fromFriends:
             showFriendsInbox = true
+        case .logSession:
+            Task { await presentLogSessionPicker() }
         }
+    }
+
+    @MainActor
+    private func presentLogSessionPicker() async {
+        do {
+            logbookWorkouts = try await APIService.shared.fetchWorkouts()
+            showLogbookPicker = true
+        } catch {
+            logbookWorkouts = []
+            DDToastCenter.shared.error("Couldn't load workouts — try again")
+        }
+    }
+
+    private func openLogbook(from workout: Workout?) {
+        let context = LogbookModeContext(
+            phoneTrackerActive: false,
+            watchPlanActiveWindow: false,
+            existingSessionId: nil
+        )
+        let mode = LogbookModeInference.infer(context)
+        let draftRepo = LogDraftRepository()
+        let draft: LogDraft
+        if let workout {
+            if let existing = try? draftRepo.fetchOpenDraft(workoutId: workout.id, mode: mode) {
+                draft = existing
+            } else {
+                draft = LogbookSeeding.draft(
+                    from: workout,
+                    mode: mode,
+                    ghostLookup: ActualsRepository()
+                ) { key in
+                    try? draftRepo.loadPlan(workoutId: workout.id, exerciseKey: key)
+                }
+            }
+        } else {
+            draft = LogbookSeeding.blankDraft(mode: mode)
+        }
+        logbookViewModel = LogbookViewModel(
+            draft: draft,
+            draftRepository: draftRepo,
+            actualsRepository: ActualsRepository(),
+            weightUnit: .stored
+        )
+        activeFlow = .logSession
     }
 }
 
@@ -138,12 +233,14 @@ extension View {
     func createFlowSheets(
         showCreateSheet: Binding<Bool>,
         activeFlow: Binding<CreateFlowPresentation?>,
+        logSessionRequestID: Binding<UUID>,
         onLibraryReload: @escaping () -> Void = {}
     ) -> some View {
         modifier(
             CreateFlowSheetsModifier(
                 showCreateSheet: showCreateSheet,
                 activeFlow: activeFlow,
+                logSessionRequestID: logSessionRequestID,
                 onLibraryReload: onLibraryReload
             )
         )

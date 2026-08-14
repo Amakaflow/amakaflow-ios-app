@@ -5,12 +5,15 @@
 //  AMA-2387 DEBUG: simulator walkthrough — teach → connect → merge → map →
 //  fill-in → verified (no Clerk / live OAuth required).
 //  Launch: SIMCTL_CHILD_AMA2387_DEMO=true
+//  AMA-2426: SIMCTL_CHILD_AMA2426_DEMO=true (same hub + Logbook step)
+//  Optional: SIMCTL_CHILD_AMA2426_AUTORUN=true jumps straight into Logbook.
 //
 
 #if DEBUG
 import SwiftUI
 
 // Visual host for Actuals flow dogfood on Simulator.
+// swiftlint:disable file_length
 // swiftlint:disable:next type_body_length
 struct ActualsDogfoodHubView: View {
     @StateObject private var sourceStore: ActualsSourceConnectionStore
@@ -18,11 +21,13 @@ struct ActualsDogfoodHubView: View {
     @State private var path: [ActualsDogfoodRoute] = []
     @State private var mergeMemory = ActualsMergeMemory()
     @State private var fillInVM: ActualsFillInViewModel?
+    @State private var logbookVM: LogbookViewModel?
     @State private var statusLine = "Tap a step — or Run walkthrough"
 
     private let auth = StubActualsProviderAuth()
     private let healthKit = MockActualsHealthKitConnector(connectOutcomes: [.granted])
     private let repository: ActualsRepository
+    private let draftRepository: LogDraftRepository
 
     init() {
         let suite = "ama2387.dogfood.\(UUID().uuidString)"
@@ -37,6 +42,7 @@ struct ActualsDogfoodHubView: View {
             preconditionFailure("Dogfood test DB failed: \(error)")
         }
         repository = ActualsRepository(database: database)
+        draftRepository = LogDraftRepository(database: database)
     }
 
     var body: some View {
@@ -50,6 +56,17 @@ struct ActualsDogfoodHubView: View {
         .ddToastHost()
         .accessibilityIdentifier("af_actuals_dogfood_hub")
         .task {
+            // Optional: SIMCTL_CHILD_AMA2426_AUTORUN=true jumps straight into Logbook.
+            if UITestEnvironment.isTruthy("AMA2426_AUTORUN"), path.isEmpty {
+                if UITestEnvironment.isTruthy("AMA2426_LIVE") {
+                    open(.logbookLive)
+                } else if UITestEnvironment.isTruthy("AMA2426_COMPANION") {
+                    open(.logbookCompanion)
+                } else {
+                    open(.logbook)
+                }
+                return
+            }
             // Optional: SIMCTL_CHILD_AMA2387_AUTORUN=true jumps straight into teach.
             if UITestEnvironment.isTruthy("AMA2387_AUTORUN"), path.isEmpty {
                 runWalkthrough()
@@ -60,7 +77,7 @@ struct ActualsDogfoodHubView: View {
     private var menu: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
-                Text("AMA-2387 dogfood")
+                Text("AMA-2387 / 2426 dogfood")
                     .ddDisplayText(28, weight: .heavy)
                     .foregroundColor(DailyDriver.foreground)
 
@@ -81,6 +98,51 @@ struct ActualsDogfoodHubView: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityIdentifier("af_actuals_dogfood_walkthrough")
+
+                Button {
+                    open(.logbook)
+                } label: {
+                    Text("Mock Logbook fill-in ›")
+                        .ddDisplayText(15, weight: .bold)
+                        .foregroundColor(DailyDriver.ink)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .background(DailyDriver.amber)
+                        .clipShape(Capsule())
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("af_actuals_dogfood_logbook_cta")
+
+                Button {
+                    open(.logbookLive)
+                } label: {
+                    Text("Live logbook (phone tracking) ›")
+                        .ddDisplayText(15, weight: .bold)
+                        .foregroundColor(DailyDriver.ink)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .background(DailyDriver.lime)
+                        .clipShape(Capsule())
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("af_actuals_dogfood_logbook_live_cta")
+
+                Button {
+                    open(.logbookCompanion)
+                } label: {
+                    Text("Companion beside watch ›")
+                        .ddDisplayText(15, weight: .bold)
+                        .foregroundColor(DailyDriver.foreground)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .background(DailyDriver.card)
+                        .overlay(
+                            Capsule().stroke(DailyDriver.lime.opacity(0.55), lineWidth: 1)
+                        )
+                        .clipShape(Capsule())
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("af_actuals_dogfood_logbook_companion_cta")
 
                 Text("OR OPEN ONE STEP")
                     .font(.system(size: 8.5, design: .monospaced))
@@ -120,7 +182,7 @@ struct ActualsDogfoodHubView: View {
     }
 
     @ViewBuilder
-    // swiftlint:disable:next cyclomatic_complexity
+    // swiftlint:disable:next cyclomatic_complexity function_body_length
     private func destination(for route: ActualsDogfoodRoute) -> some View {
         switch route {
         case .teach:
@@ -205,7 +267,8 @@ struct ActualsDogfoodHubView: View {
             )
         case .fillIn:
             if let fillInVM {
-                ActualsFillInView(
+                // Mode select → Quick or Set by set (AMA-2426).
+                ActualsFillInFlowView(
                     viewModel: fillInVM,
                     onSaved: { _ in
                         statusLine = "Saved verified — ghosts ready"
@@ -215,6 +278,21 @@ struct ActualsDogfoodHubView: View {
             } else {
                 Color.clear.onAppear {
                     prepareFillIn()
+                }
+            }
+        case .logbook, .logbookLive, .logbookCompanion:
+            if let logbookVM {
+                LogbookView(
+                    viewModel: logbookVM,
+                    onBack: { path.removeAll() },
+                    onSaved: { _ in
+                        statusLine = "Logbook saved verified — ghosts ready"
+                        path = [.verified]
+                    }
+                )
+            } else {
+                Color.clear.onAppear {
+                    prepareLogbook(mode: mode(for: route))
                 }
             }
         case .verified:
@@ -286,7 +364,18 @@ struct ActualsDogfoodHubView: View {
                 }
             }
         }
+        if route == .logbook || route == .logbookLive || route == .logbookCompanion {
+            prepareLogbook(mode: mode(for: route))
+        }
         path.append(route)
+    }
+
+    private func mode(for route: ActualsDogfoodRoute) -> LogbookMode {
+        switch route {
+        case .logbookLive: return .live
+        case .logbookCompanion: return .companionPending
+        default: return .after
+        }
     }
 
     private func prepareFillIn() {
@@ -297,6 +386,53 @@ struct ActualsDogfoodHubView: View {
         session.exercises[0].confirmation = .adjusted
         session.exercises[0].actualWeightKg = 90
         fillInVM = ActualsFillInViewModel(session: session, repository: repository)
+    }
+
+    private func prepareLogbook(mode: LogbookMode = .after) {
+        // Prior verified session → LAST TIME differs from plan so Same as last time is obvious.
+        try? seedLogbookGhostHistory()
+        let session = ActualsFillInSession.lowerBodyPosteriorSample(
+            id: "dogfood_log_\(UUID().uuidString.prefix(8))"
+        )
+        let draft = LogbookSeeding.draft(
+            from: session,
+            mode: mode,
+            ghostLookup: repository
+        )
+        logbookVM = LogbookViewModel(
+            draft: draft,
+            draftRepository: draftRepository,
+            actualsRepository: repository,
+            weightUnit: .kg
+        )
+        switch mode {
+        case .live:
+            statusLine = "LIVE — elapsed header ticks; Log sets feel while phone tracks"
+        case .companionPending:
+            statusLine = "COMPANION — pending banner; notepad beside watch (no live Workout channel)"
+        case .after:
+            statusLine = "Logbook — tap cells for wheels, ✓ sets, then Save log"
+        }
+    }
+
+    /// Distinct last-time loads (not the prescription) for dogfood Same as last time.
+    private func seedLogbookGhostHistory() throws {
+        var prior = ActualsFillInSession.lowerBodyPosteriorSample(id: "dogfood_logbook_ghosts")
+        prior.exercises[0].confirmation = .adjusted
+        prior.exercises[0].actualWeightKg = 100
+        prior.exercises[0].actualReps = 6
+        prior.exercises[1].confirmation = .adjusted
+        prior.exercises[1].actualWeightKg = 72.5
+        prior.exercises[1].actualReps = 8
+        prior.exercises[2].confirmation = .adjusted
+        prior.exercises[2].actualWeightKg = 20
+        prior.exercises[2].actualReps = 10
+        prior.exercises[3].confirmation = .adjusted
+        prior.exercises[3].actualWeightKg = nil
+        prior.exercises[3].actualReps = 6
+        prior.rpe = 7
+        prior.verified = true
+        try repository.saveVerifiedSession(prior)
     }
 
     private func seedVerifiedForGhosts() throws {
@@ -396,12 +532,32 @@ struct ActualsDogfoodHubView: View {
     }
 
     private static func verifiedSampleSession() -> ActualsFillInSession {
+        let checkedAt = Date()
         var session = ActualsFillInSession.lowerBodyPosteriorSample()
+        // Per-set logbook payload — WHAT YOU DID lists each weight×reps, not one rollup.
         session.exercises[0].confirmation = .adjusted
         session.exercises[0].actualWeightKg = 90
-        for index in 1..<session.exercises.count {
-            session.exercises[index].confirmation = .asPlanned
-        }
+        session.exercises[0].sets = [
+            SetActual(index: 1, weightKg: 100, reps: 6, checkedAt: checkedAt),
+            SetActual(index: 2, weightKg: 127.5, reps: 5, checkedAt: checkedAt),
+            SetActual(index: 3, weightKg: 90, reps: 5, checkedAt: checkedAt)
+        ]
+        session.exercises[1].confirmation = .asPlanned
+        session.exercises[1].sets = [
+            SetActual(index: 1, weightKg: 70, reps: 8, checkedAt: checkedAt),
+            SetActual(index: 2, weightKg: 70, reps: 8, checkedAt: checkedAt),
+            SetActual(index: 3, weightKg: 70, reps: 8, checkedAt: checkedAt)
+        ]
+        session.exercises[2].confirmation = .asPlanned
+        session.exercises[2].sets = [
+            SetActual(index: 1, weightKg: 20, reps: 10, checkedAt: checkedAt),
+            SetActual(index: 2, weightKg: 20, reps: 10, checkedAt: checkedAt)
+        ]
+        session.exercises[3].confirmation = .asPlanned
+        session.exercises[3].sets = [
+            SetActual(index: 1, reps: 6, checkedAt: checkedAt),
+            SetActual(index: 2, reps: 6, checkedAt: checkedAt)
+        ]
         session.rpe = 8
         session.verified = true
         return session
@@ -415,6 +571,9 @@ enum ActualsDogfoodRoute: String, CaseIterable, Identifiable, Hashable {
     case merged
     case map
     case fillIn
+    case logbook
+    case logbookLive
+    case logbookCompanion
     case verified
     case editorGhosts
 
@@ -427,7 +586,10 @@ enum ActualsDogfoodRoute: String, CaseIterable, Identifiable, Hashable {
         case .mergeAsk: return "3 · Merge ask"
         case .merged: return "4 · Merged detail"
         case .map: return "5 · Map to plan"
-        case .fillIn: return "6 · Fill-in actuals"
+        case .fillIn: return "6 · Fill-in (mode select → Quick / Logbook)"
+        case .logbook: return "6b · Logbook grid + wheels (after)"
+        case .logbookLive: return "6c · Live logbook (phone tracking)"
+        case .logbookCompanion: return "6d · Companion beside watch"
         case .verified: return "7 · Verified payoff"
         case .editorGhosts: return "8 · Editor ghosts"
         }

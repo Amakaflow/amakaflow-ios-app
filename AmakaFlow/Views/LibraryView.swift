@@ -12,6 +12,7 @@ import SwiftUI
 struct LibraryView: View {
     @StateObject var viewModel: LibraryViewModel
     @Environment(\.openCreateSheet) private var openCreateSheet
+    @Environment(\.openLogSession) private var openLogSession
     @State private var searchText = ""
     @State private var sourceFilter: DDPlatform = .all
     @State private var pendingDelete: LibraryListEntry?
@@ -188,6 +189,10 @@ extension LibraryView {
     fileprivate func presentAddSheet() {
         openCreateSheet()
     }
+
+    fileprivate func presentLogSession() {
+        openLogSession()
+    }
 }
 
 extension LibraryView {
@@ -212,7 +217,8 @@ extension LibraryView {
                             navigationPath.append(.onYourWatches)
                         }
                     }
-                    DDLibraryHeaderAddButton(action: presentAddSheet)
+                    DDHeaderCreateButton(action: presentAddSheet)
+                    DDHeaderLogButton(action: presentLogSession)
                 }
             }
 
@@ -304,7 +310,8 @@ extension LibraryView {
                             navigationPath.append(.onYourWatches)
                         }
                     }
-                    DDLibraryHeaderAddButton(action: presentAddSheet)
+                    DDHeaderCreateButton(action: presentAddSheet)
+                    DDHeaderLogButton(action: presentLogSession)
                 }
             }
 

@@ -19,7 +19,7 @@ struct ActualsGhostActual: Equatable {
     var weightKg: Double?
 }
 
-enum ActualsGhostSource: Equatable {
+enum ActualsGhostSource: String, Equatable, Codable {
     case lastActual
     case prescription
 }

@@ -9,6 +9,7 @@
 import Foundation
 import GRDB
 
+// swiftlint:disable file_length
 enum ActualsRepositoryError: LocalizedError, Equatable {
     case notReadyForVerifiedSave
     case missingRPE
@@ -26,6 +27,7 @@ enum ActualsRepositoryError: LocalizedError, Equatable {
     }
 }
 
+// swiftlint:disable:next type_body_length
 final class ActualsRepository: @unchecked Sendable {
     private let dbQueue: DatabaseQueue
     private let now: () -> Date
@@ -83,8 +85,9 @@ final class ActualsRepository: @unchecked Sendable {
                 guard let confirmation = exercise.confirmation else {
                     throw ActualsRepositoryError.unconfirmedRows(1)
                 }
+                let rowId = "\(session.id)_\(exercise.id)"
                 var row = LocalActualsExerciseRow(
-                    id: "\(session.id)_\(exercise.id)",
+                    id: rowId,
                     sessionId: session.id,
                     exerciseKey: exercise.id,
                     name: exercise.name,
@@ -101,6 +104,7 @@ final class ActualsRepository: @unchecked Sendable {
                     structureBlockIndex: exercise.structureBlockIndex
                 )
                 try row.insert(database)
+                try Self.replaceSetRows(exerciseRowId: rowId, sets: exercise.sets, database: database)
             }
         }
     }
@@ -165,8 +169,9 @@ final class ActualsRepository: @unchecked Sendable {
                 .deleteAll(database)
 
             for (index, exercise) in session.exercises.enumerated() {
+                let rowId = "\(session.id)_\(exercise.id)"
                 var row = LocalActualsExerciseRow(
-                    id: "\(session.id)_\(exercise.id)",
+                    id: rowId,
                     sessionId: session.id,
                     exerciseKey: exercise.id,
                     name: exercise.name,
@@ -183,7 +188,52 @@ final class ActualsRepository: @unchecked Sendable {
                     structureBlockIndex: exercise.structureBlockIndex
                 )
                 try row.insert(database)
+                try Self.replaceSetRows(exerciseRowId: rowId, sets: exercise.sets, database: database)
             }
+        }
+    }
+
+    private static func replaceSetRows(
+        exerciseRowId: String,
+        sets: [SetActual],
+        database: Database
+    ) throws {
+        try LocalActualsSetRow
+            .filter(LocalActualsSetRow.Columns.exerciseRowId == exerciseRowId)
+            .deleteAll(database)
+        for set in sets where set.checkedAt != nil {
+            var row = LocalActualsSetRow(
+                id: "\(exerciseRowId)_\(set.isWarmup ? "w" : "s")_\(set.index)",
+                exerciseRowId: exerciseRowId,
+                setIndex: set.index,
+                isWarmup: set.isWarmup,
+                weightKg: set.weightKg,
+                reps: set.reps,
+                durationSeconds: set.durationSeconds,
+                calories: set.calories,
+                distanceMeters: set.distanceMeters,
+                checkedAt: set.checkedAt
+            )
+            try row.insert(database)
+        }
+    }
+
+    private static func loadSets(exerciseRowId: String, database: Database) throws -> [SetActual] {
+        let rows = try LocalActualsSetRow
+            .filter(LocalActualsSetRow.Columns.exerciseRowId == exerciseRowId)
+            .order(LocalActualsSetRow.Columns.setIndex.asc)
+            .fetchAll(database)
+        return rows.map { row in
+            SetActual(
+                index: row.setIndex,
+                isWarmup: row.isWarmup,
+                weightKg: row.weightKg,
+                reps: row.reps,
+                durationSeconds: row.durationSeconds,
+                calories: row.calories,
+                distanceMeters: row.distanceMeters,
+                checkedAt: row.checkedAt
+            )
         }
     }
 
@@ -195,8 +245,9 @@ final class ActualsRepository: @unchecked Sendable {
             .filter(LocalActualsExerciseRow.Columns.sessionId == id)
             .order(LocalActualsExerciseRow.Columns.position.asc)
             .fetchAll(database)
-        let exercises: [ExerciseActual] = rows.map { row in
-            ExerciseActual(
+        let exercises: [ExerciseActual] = try rows.map { row in
+            let sets = try loadSets(exerciseRowId: row.id, database: database)
+            return ExerciseActual(
                 id: row.exerciseKey,
                 name: row.name,
                 planned: ExerciseActualPlanned(
@@ -209,6 +260,7 @@ final class ActualsRepository: @unchecked Sendable {
                 actualSets: row.actualSets,
                 actualReps: row.actualReps,
                 actualWeightKg: row.actualWeightKg,
+                sets: sets,
                 structureHeader: row.structureHeader,
                 structureBlockIndex: row.structureBlockIndex
             )
@@ -365,8 +417,9 @@ extension ActualsRepository {
                 .deleteAll(database)
 
             for (index, exercise) in session.exercises.enumerated() {
+                let rowId = "\(session.id)_\(exercise.id)"
                 var row = LocalActualsExerciseRow(
-                    id: "\(session.id)_\(exercise.id)",
+                    id: rowId,
                     sessionId: session.id,
                     exerciseKey: exercise.id,
                     name: exercise.name,
@@ -383,6 +436,7 @@ extension ActualsRepository {
                     structureBlockIndex: exercise.structureBlockIndex
                 )
                 try row.insert(database)
+                try Self.replaceSetRows(exerciseRowId: rowId, sets: exercise.sets, database: database)
             }
         }
     }

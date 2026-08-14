@@ -14,6 +14,7 @@ import SwiftUI
 
 // swiftlint:disable:next type_body_length
 struct TodayDiaryView: View {
+    @Environment(\.openLogSession) private var openLogSession
     @StateObject private var historyViewModel = ActivityHistoryViewModel()
     @ObservedObject private var watchConnectivity = WatchConnectivityManager.shared
     @ObservedObject private var actualsSources = ActualsSourceConnectionStore.shared
@@ -573,7 +574,7 @@ struct TodayDiaryView: View {
                     actualsDemo.applyDecoration(cardID: cardID, state: state)
                 }
             }
-            ActualsFillInView(
+            ActualsFillInFlowView(
                 viewModel: viewModel,
                 onSaved: onSaved,
                 onBack: {
@@ -838,28 +839,32 @@ struct TodayDiaryView: View {
                 .foregroundColor(DailyDriver.foreground)
                 .accessibilityIdentifier("af_today_title")
             Spacer(minLength: 0)
-            if !isViewingToday {
-                Button {
-                    syncScrubberToToday()
-                } label: {
-                    Text(ActualsCopy.historyJumpToday)
-                        .ddDisplayText(12, weight: .bold)
-                        .foregroundColor(DailyDriver.lime)
+            HStack(spacing: 10) {
+                if !isViewingToday {
+                    Button {
+                        syncScrubberToToday()
+                    } label: {
+                        Text(ActualsCopy.historyJumpToday)
+                            .ddDisplayText(12, weight: .bold)
+                            .foregroundColor(DailyDriver.lime)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("af_today_jump_today")
+                } else {
+                    NavigationLink {
+                        TodayOnYourWatchesView()
+                            .ddSuppressFloatingChrome()
+                    } label: {
+                        DDWatchReadinessPill(
+                            isConnected: watchConnected || usesTodayFixture || showsActualsDemoRail,
+                            batteryPercent: usesTodayFixture ? DDDeviceFixture.batteryPercent : nil
+                        )
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("af_today_watch_pill")
                 }
-                .buttonStyle(.plain)
-                .accessibilityIdentifier("af_today_jump_today")
-            } else {
-                NavigationLink {
-                    TodayOnYourWatchesView()
-                        .ddSuppressFloatingChrome()
-                } label: {
-                    DDWatchReadinessPill(
-                        isConnected: watchConnected || usesTodayFixture || showsActualsDemoRail,
-                        batteryPercent: usesTodayFixture ? DDDeviceFixture.batteryPercent : nil
-                    )
-                }
-                .buttonStyle(.plain)
-                .accessibilityIdentifier("af_today_watch_pill")
+                // Same order as Library: watches (or jump) then Log — Log is rightmost.
+                DDHeaderLogButton(action: openLogSession)
             }
         }
         .padding(.horizontal, 18)

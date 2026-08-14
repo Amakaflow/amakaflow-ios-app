@@ -62,6 +62,11 @@ struct UnifiedWorkoutDetailView: View {
     @State private var isSavingSport = false
     /// AMA-2395 — FROM THE CREATOR / NOTES expand toggle.
     @State private var creatorNoteExpanded = false
+    /// AMA-2426: Log sets (notepad) from Start — during or after, no device start.
+    @State private var logbookViewModel: LogbookViewModel?
+    @State private var showLogbook = false
+    /// Open logbook after the start sheet finishes dismissing (avoids cover/sheet race).
+    @State private var pendingOpenPastSessionLogbook = false
 
     @Environment(\.scenePhase) private var scenePhase
     private let handoffStore = GarminHandoffStateStore()
@@ -143,9 +148,37 @@ struct UnifiedWorkoutDetailView: View {
         .preferredColorScheme(.dark)
         .ddSuppressFloatingChrome()
         .navigationBarHidden(true)
+        .fullScreenCover(isPresented: $showLogbook) {
+            if let logbookViewModel {
+                LogbookView(
+                    viewModel: logbookViewModel,
+                    onBack: { showLogbook = false },
+                    onSaved: { _ in showLogbook = false }
+                )
+            } else {
+                VStack(spacing: 12) {
+                    Text("Couldn't open the logbook.")
+                        .ddDisplayText(15, weight: .bold)
+                        .foregroundColor(DailyDriver.foreground)
+                        .multilineTextAlignment(.center)
+                    Button("Close") {
+                        showLogbook = false
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundColor(DailyDriver.lime)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(DailyDriver.screenBackground.ignoresSafeArea())
+            }
+        }
         .sheet(
             item: $startFlowSheet,
             onDismiss: {
+                if pendingOpenPastSessionLogbook {
+                    pendingOpenPastSessionLogbook = false
+                    openLogbookForPastSession()
+                    return
+                }
                 // AMA-2365 — Cancel / swipe-dismiss of Apple preview undoes enrich.
                 // Confirm clears `appleEnrichmentReset` before dismissing so this is a no-op.
                 guard appleEnrichmentReset != nil else { return }
@@ -177,7 +210,11 @@ struct UnifiedWorkoutDetailView: View {
                         startFlowSheet = nil
                         showingAppleDeliveryPrefs = true
                     },
-                    onClose: { startFlowSheet = nil }
+                    onClose: { startFlowSheet = nil },
+                    onLogPastSession: {
+                        pendingOpenPastSessionLogbook = true
+                        startFlowSheet = nil
+                    }
                 )
                 .task {
                     await GarminCIQPairingStore.shared.refresh()
@@ -675,6 +712,36 @@ struct UnifiedWorkoutDetailView: View {
                     .fixedSize(horizontal: false, vertical: true)
                     .accessibilityIdentifier("af_workout_detail_sent_card_body")
             }
+
+            if target == .apple {
+                Button {
+                    openLogbook(
+                        LogbookModeContext(
+                            phoneTrackerActive: false,
+                            watchPlanActiveWindow: true,
+                            existingSessionId: nil
+                        )
+                    )
+                } label: {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(LogbookCopy.logSetsBesideWatchTitle)
+                            .ddDisplayText(13, weight: .bold)
+                            .foregroundColor(DailyDriver.ink)
+                        Text(LogbookCopy.logSetsBesideWatchSubtitle)
+                            .font(.system(size: 10.5))
+                            .foregroundColor(DailyDriver.ink.opacity(0.75))
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 10)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(DailyDriver.lime)
+                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                }
+                .buttonStyle(.plain)
+                .padding(.top, 6)
+                .accessibilityIdentifier(LogbookCopy.logSetsBesideWatchAccessibilityID)
+            }
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
@@ -862,6 +929,41 @@ extension UnifiedWorkoutDetailView {
         } else {
             dismiss()
         }
+    }
+
+    fileprivate func openLogbookForPastSession() {
+        openLogbook(
+            LogbookModeContext(
+                phoneTrackerActive: false,
+                watchPlanActiveWindow: false,
+                existingSessionId: nil
+            )
+        )
+    }
+
+    /// Shared door — mode inferred from phone tracker / watch plan / after.
+    fileprivate func openLogbook(_ context: LogbookModeContext) {
+        let mode = LogbookModeInference.infer(context)
+        let draftRepo = LogDraftRepository()
+        let draft: LogDraft
+        if let existing = try? draftRepo.fetchOpenDraft(workoutId: workout.id, mode: mode) {
+            draft = existing
+        } else {
+            draft = LogbookSeeding.draft(
+                from: workout,
+                mode: mode,
+                ghostLookup: ActualsRepository()
+            ) { key in
+                try? draftRepo.loadPlan(workoutId: workout.id, exerciseKey: key)
+            }
+        }
+        logbookViewModel = LogbookViewModel(
+            draft: draft,
+            draftRepository: draftRepo,
+            actualsRepository: ActualsRepository(),
+            weightUnit: .stored
+        )
+        showLogbook = true
     }
 
     fileprivate func handleStartTapped() async {
@@ -1243,7 +1345,7 @@ extension UnifiedWorkoutDetailView {
             startFlowSheet = nil
             WorkoutEngine.shared.start(workout: workout)
             showingWorkoutPlayer = true
-            handoffStatus = "Recording on Phone — stop anytime, then log sets"
+            handoffStatus = LogbookCopy.liveLoggingBanner
             sentCardTarget = nil
             lastAppleHandoffShowsManagePlans = false
         }
