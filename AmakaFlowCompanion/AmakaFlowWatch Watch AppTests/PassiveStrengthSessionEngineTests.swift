@@ -3,6 +3,7 @@
 //  AmakaFlowWatch Watch AppTests
 //
 //  AMA-2420 — passive free-capture elapsed formatting helpers.
+//  AMA-2428 — sport resolution + summary Codable.
 //
 
 @testable import AmakaFlowWatch_Watch_App
@@ -43,11 +44,75 @@ struct PassiveStrengthSessionEngineTests {
         #expect(!engine.isActive)
         #expect(!engine.summaryQueued)
         #expect(!engine.healthCaptureFailed)
+        #expect(engine.selectedSport == .strength)
+        #expect(engine.sessionDisplayName == "Strength")
     }
 
     @Test func freeformIDStillMarksPassiveSessions() {
         let workout = FreeformStrengthWorkout.make(uniqueSuffix: "passive")
         #expect(FreeformStrengthWorkout.isFreeformID(workout.id))
         #expect(workout.id.contains("passive"))
+    }
+
+    @Test func resolvedSportDefaultsMissingToStrength() {
+        #expect(PassiveStrengthSessionEngine.resolvedSport(from: nil) == .strength)
+        #expect(PassiveStrengthSessionEngine.resolvedSport(from: "  ") == .strength)
+        #expect(PassiveStrengthSessionEngine.resolvedSport(from: "mixed") == .mixed)
+        #expect(PassiveStrengthSessionEngine.resolvedSport(from: "ride") == .cycling)
+        #expect(PassiveStrengthSessionEngine.resolvedSport(from: "other") == .other)
+        #expect(PassiveStrengthSessionEngine.resolvedSport(from: "new-sport") == .strength)
+    }
+
+    @Test func passivePickerPutsStrengthAndMixedFirst() {
+        let options = WorkoutSport.passiveSessionPickerOptions
+        #expect(options.first == .strength)
+        #expect(options.dropFirst().first == .mixed)
+        #expect(options.contains(.other))
+        #expect(options.count == WorkoutSport.allCases.count)
+    }
+
+    @Test func summarySportRoundTripsThroughCodable() throws {
+        let original = StandaloneWorkoutSummary(
+            workoutId: "id-1",
+            workoutName: "Mixed",
+            startDate: Date(timeIntervalSince1970: 100),
+            endDate: Date(timeIntervalSince1970: 200),
+            durationSeconds: 100,
+            totalCalories: 50,
+            averageHeartRate: 120,
+            completedSteps: 0,
+            totalSteps: 0,
+            setLogs: nil,
+            sport: WorkoutSport.mixed.rawValue
+        )
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        let data = try encoder.encode(original)
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        let decoded = try decoder.decode(StandaloneWorkoutSummary.self, from: data)
+        #expect(decoded.sport == "mixed")
+        #expect(decoded.workoutName == "Mixed")
+    }
+
+    @Test func legacySummaryWithoutSportStillDecodes() throws {
+        let json = Data("""
+        {
+          "workoutId": "legacy",
+          "workoutName": "Strength",
+          "startDate": "2026-08-12T12:00:00Z",
+          "endDate": "2026-08-12T12:40:00Z",
+          "durationSeconds": 2400,
+          "totalCalories": 100,
+          "averageHeartRate": 110,
+          "completedSteps": 0,
+          "totalSteps": 0
+        }
+        """.utf8)
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        let decoded = try decoder.decode(StandaloneWorkoutSummary.self, from: json)
+        #expect(decoded.sport == nil)
+        #expect(PassiveStrengthSessionEngine.resolvedSport(from: decoded.sport) == .strength)
     }
 }

@@ -98,6 +98,8 @@ struct ActualsFillInSession: Equatable {
     var stravaIsRace: Bool
     /// Full Library/structure text for Strava (rounds + every step + emoji).
     var structureBody: String?
+    /// AMA-2428 — Watch/passive session sport when known (`WorkoutSport`).
+    var sport: WorkoutSport?
 
     init(
         id: String,
@@ -111,7 +113,8 @@ struct ActualsFillInSession: Equatable {
         stravaCurrentDescription: String? = nil,
         stravaRecordingApp: String? = nil,
         stravaIsRace: Bool = false,
-        structureBody: String? = nil
+        structureBody: String? = nil,
+        sport: WorkoutSport? = nil
     ) {
         self.id = id
         self.title = title
@@ -125,6 +128,7 @@ struct ActualsFillInSession: Equatable {
         self.stravaRecordingApp = stravaRecordingApp
         self.stravaIsRace = stravaIsRace
         self.structureBody = structureBody
+        self.sport = sport
         // Recover TRI-SET / SUPERSET bands for sessions saved before per-row structure.
         self.exercises = StravaWorkoutStructureText.stampingStructureHeaders(
             onto: exercises,

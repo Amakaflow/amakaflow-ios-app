@@ -303,9 +303,33 @@ enum WorkoutSport: String, Codable, CaseIterable, Identifiable, Hashable {
         }
     }
 
+    /// AMA-2428 — missing / blank / unrecognized wire values → Strength.
+    /// Explicit `other` / `hyrox` stay `.other`.
+    static func resolveWireValue(_ raw: String?) -> WorkoutSport {
+        guard let raw else { return .strength }
+        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return .strength }
+        let parsed = parse(trimmed)
+        if parsed != .other { return parsed }
+        let token = trimmed
+            .lowercased()
+            .replacingOccurrences(of: "_", with: "")
+            .replacingOccurrences(of: "-", with: "")
+            .replacingOccurrences(of: " ", with: "")
+        if token == "other" || token == "hyrox" {
+            return .other
+        }
+        return .strength
+    }
+
     /// Choices offered by the editable type chip sheet.
     static var pickerOptions: [WorkoutSport] {
         [.strength, .conditioning, .cardio, .running, .cycling, .swimming, .mobility, .mixed]
+    }
+
+    /// AMA-2428 — Watch passive free-capture “What was this?” list order (Strength + Mixed first).
+    static var passiveSessionPickerOptions: [WorkoutSport] {
+        [.strength, .mixed, .conditioning, .cardio, .running, .cycling, .swimming, .mobility, .other]
     }
 
     init(from decoder: Decoder) throws {
