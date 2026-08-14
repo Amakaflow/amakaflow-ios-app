@@ -13,6 +13,7 @@
 import SwiftUI
 
 // Visual host for Actuals flow dogfood on Simulator.
+// swiftlint:disable file_length
 // swiftlint:disable:next type_body_length
 struct ActualsDogfoodHubView: View {
     @StateObject private var sourceStore: ActualsSourceConnectionStore
@@ -181,7 +182,7 @@ struct ActualsDogfoodHubView: View {
     }
 
     @ViewBuilder
-    // swiftlint:disable:next cyclomatic_complexity
+    // swiftlint:disable:next cyclomatic_complexity function_body_length
     private func destination(for route: ActualsDogfoodRoute) -> some View {
         switch route {
         case .teach:

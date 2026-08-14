@@ -7,7 +7,7 @@
 
 import Foundation
 
-enum LogbookSeeding {
+enum LogbookSeeding { // swiftlint:disable:this type_body_length
     /// Prefill from a Library workout's blocks (rounds-as-sets when `sets` is nil).
     static func draft(
         from workout: Workout,
@@ -251,6 +251,7 @@ enum LogbookSeeding {
         return result
     }
 
+    // swiftlint:disable:next function_parameter_count
     private static func stationItem(
         exercise: Exercise,
         block: Block,
@@ -311,6 +312,7 @@ enum LogbookSeeding {
         )
     }
 
+    // swiftlint:disable:next function_parameter_count
     private static func uniqueEntryID(
         preferred: String,
         ghostKey: String,
@@ -338,8 +340,8 @@ enum LogbookSeeding {
     private static func isMetricStation(_ exercise: Exercise) -> Bool {
         if exercise.durationSeconds != nil { return true }
         if let distance = exercise.distance, distance > 0 { return true }
-        let rx = PrescriptionFormatter.effective(from: exercise)
-        switch rx.primary {
+        let prescription = PrescriptionFormatter.effective(from: exercise)
+        switch prescription.primary {
         case .duration, .distance, .calories:
             return true
         case .reps, .repsRange, .open, .none:

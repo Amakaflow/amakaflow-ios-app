@@ -7,6 +7,7 @@
 
 import SwiftUI
 
+// swiftlint:disable file_length
 // swiftlint:disable:next type_body_length
 struct LogbookView: View {
     @ObservedObject var viewModel: LogbookViewModel
@@ -372,8 +373,8 @@ struct LogbookView: View {
                         }
                     }
                 }
-                if let hr = entry.cardioStrip?.heartRateText {
-                    metricTapCell(label: LogbookCopy.columnHr, value: hr, focused: false, action: nil)
+                if let heartRate = entry.cardioStrip?.heartRateText {
+                    metricTapCell(label: LogbookCopy.columnHr, value: heartRate, focused: false, action: nil)
                 }
                 Button {
                     if let set {

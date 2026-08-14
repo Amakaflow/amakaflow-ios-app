@@ -5,8 +5,8 @@
 //  AMA-2426: notebook logbook state — grid edits, wheels, save → RPE pipeline.
 //
 
-import Foundation
 import Combine
+import Foundation
 
 enum LogbookSaveResult: Equatable {
     /// Phone / after / live — verified actuals written.
@@ -16,7 +16,7 @@ enum LogbookSaveResult: Equatable {
 }
 
 @MainActor
-final class LogbookViewModel: ObservableObject {
+final class LogbookViewModel: ObservableObject { // swiftlint:disable:this type_body_length
     @Published private(set) var draft: LogDraft
     @Published var wheelFocus: LogbookWheelFocus?
     @Published var showRPE: Bool = false
@@ -72,13 +72,13 @@ final class LogbookViewModel: ObservableObject {
 
     private var formattedElapsed: String {
         let total = Int(elapsedSeconds)
-        let h = total / 3600
-        let m = (total % 3600) / 60
-        let s = total % 60
-        if h > 0 {
-            return String(format: "%d:%02d:%02d", h, m, s)
+        let hours = total / 3600
+        let minutes = (total % 3600) / 60
+        let seconds = total % 60
+        if hours > 0 {
+            return String(format: "%d:%02d:%02d", hours, minutes, seconds)
         }
-        return String(format: "%d:%02d", m, s)
+        return String(format: "%d:%02d", minutes, seconds)
     }
 
     // MARK: - Mutations
@@ -241,7 +241,7 @@ final class LogbookViewModel: ObservableObject {
 
     func addSet(exerciseID: String) {
         guard let eIdx = draft.entries.firstIndex(where: { $0.id == exerciseID }) else { return }
-        let previous = draft.entries[eIdx].sets.filter { !$0.isWarmup }.max(by: { $0.index < $1.index })
+        let previous = draft.entries[eIdx].sets.filter { !$0.isWarmup }.max { $0.index < $1.index }
         let nextIndex = (previous?.index ?? 0) + 1
         var newSet = SetActual(
             index: nextIndex,
@@ -387,8 +387,7 @@ final class LogbookViewModel: ObservableObject {
                             || set.distanceMeters != nil
                     )
             }
-            .sorted { $0.index < $1.index }
-            .last
+            .max { $0.index < $1.index }
     }
 
     func focusedSet() -> (entry: LogbookExerciseEntry, set: SetActual)? {

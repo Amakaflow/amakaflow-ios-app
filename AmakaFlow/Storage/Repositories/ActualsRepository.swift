@@ -9,6 +9,7 @@
 import Foundation
 import GRDB
 
+// swiftlint:disable file_length
 enum ActualsRepositoryError: LocalizedError, Equatable {
     case notReadyForVerifiedSave
     case missingRPE
@@ -26,6 +27,7 @@ enum ActualsRepositoryError: LocalizedError, Equatable {
     }
 }
 
+// swiftlint:disable:next type_body_length
 final class ActualsRepository: @unchecked Sendable {
     private let dbQueue: DatabaseQueue
     private let now: () -> Date

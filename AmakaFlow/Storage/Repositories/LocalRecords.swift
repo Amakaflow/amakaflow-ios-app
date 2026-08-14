@@ -6,6 +6,7 @@
 import Foundation
 import GRDB
 
+// swiftlint:disable file_length
 enum SyncQueueStatus: String, Codable, CaseIterable {
     case pending
     case inFlight = "in_flight"

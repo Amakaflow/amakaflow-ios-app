@@ -7,7 +7,8 @@
 
 import SwiftUI
 
-struct WorkoutPlayerView: View {
+// swiftlint:disable file_length
+struct WorkoutPlayerView: View { // swiftlint:disable:this type_body_length
     @ObservedObject var engine = WorkoutEngine.shared
     @ObservedObject var watchManager = WatchConnectivityManager.shared
     @ObservedObject var garminManager = GarminConnectManager.shared

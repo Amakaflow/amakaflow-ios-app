@@ -361,7 +361,7 @@ final class ActualsTodayDemoFeed: ObservableObject {
 
     /// AMA-2426: attach companion log drafts to overlapping device sessions.
     /// Pending drafts never become Today cards on their own.
-    func reconcilePendingLogDrafts(against cards: [ActualsTodayDemoCard]) {
+    func reconcilePendingLogDrafts(against cards: [ActualsTodayDemoCard]) { // swiftlint:disable:this cyclomatic_complexity
         let draftRepo = LogDraftRepository()
         guard let drafts = try? draftRepo.fetchPendingCompanionDrafts(), !drafts.isEmpty else { return }
         var didMerge = false
