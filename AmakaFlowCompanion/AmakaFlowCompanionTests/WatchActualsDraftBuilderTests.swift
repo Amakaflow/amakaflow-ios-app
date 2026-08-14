@@ -232,6 +232,27 @@ final class WatchActualsDraftBuilderTests: XCTestCase {
         XCTAssertEqual(session.sport, .strength)
     }
 
+    func testMakeFillInSessionUnknownSportFallsBackToStrength() throws {
+        let summary = StandaloneWorkoutSummary(
+            workoutId: "watch-sport-unknown",
+            workoutName: "Strength",
+            startDate: Date(timeIntervalSince1970: 1_700_000_000),
+            endDate: Date(timeIntervalSince1970: 1_700_003_600),
+            durationSeconds: 3600,
+            totalCalories: 200,
+            averageHeartRate: 130,
+            completedSteps: 0,
+            totalSteps: 0,
+            setLogs: nil,
+            sport: "new-sport"
+        )
+        let session = try XCTUnwrap(
+            WatchActualsDraftBuilder.makeFillInSession(summary: summary, libraryWorkout: nil)
+        )
+        XCTAssertEqual(session.title, "Strength")
+        XCTAssertEqual(session.sport, .strength)
+    }
+
     func testResolvedSportFromLegacyWatchStrengthName() {
         let summary = makeSummary(setLogs: nil)
         XCTAssertEqual(WatchActualsDraftBuilder.resolvedSport(from: summary), .strength)

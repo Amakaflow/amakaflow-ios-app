@@ -59,6 +59,8 @@ struct PassiveStrengthSessionEngineTests {
         #expect(PassiveStrengthSessionEngine.resolvedSport(from: "  ") == .strength)
         #expect(PassiveStrengthSessionEngine.resolvedSport(from: "mixed") == .mixed)
         #expect(PassiveStrengthSessionEngine.resolvedSport(from: "ride") == .cycling)
+        #expect(PassiveStrengthSessionEngine.resolvedSport(from: "other") == .other)
+        #expect(PassiveStrengthSessionEngine.resolvedSport(from: "new-sport") == .strength)
     }
 
     @Test func passivePickerPutsStrengthAndMixedFirst() {
@@ -94,7 +96,7 @@ struct PassiveStrengthSessionEngineTests {
     }
 
     @Test func legacySummaryWithoutSportStillDecodes() throws {
-        let json = """
+        let json = Data("""
         {
           "workoutId": "legacy",
           "workoutName": "Strength",
@@ -106,7 +108,7 @@ struct PassiveStrengthSessionEngineTests {
           "completedSteps": 0,
           "totalSteps": 0
         }
-        """.data(using: .utf8)!
+        """.utf8)
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
         let decoded = try decoder.decode(StandaloneWorkoutSummary.self, from: json)

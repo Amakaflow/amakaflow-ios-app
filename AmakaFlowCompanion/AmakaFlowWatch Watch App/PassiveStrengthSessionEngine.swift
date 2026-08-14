@@ -78,11 +78,22 @@ final class PassiveStrengthSessionEngine: ObservableObject {
     }
 
     /// Resolve wire sport → display title (missing / unknown → Strength).
+    /// Explicit `other` / `hyrox` stay `.other`; unrecognized tokens fall back to Strength.
     static nonisolated func resolvedSport(from raw: String?) -> WorkoutSport {
-        guard let raw, !raw.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            return .strength
+        guard let raw else { return .strength }
+        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return .strength }
+        let parsed = WorkoutSport.parse(trimmed)
+        if parsed != .other { return parsed }
+        let token = trimmed
+            .lowercased()
+            .replacingOccurrences(of: "_", with: "")
+            .replacingOccurrences(of: "-", with: "")
+            .replacingOccurrences(of: " ", with: "")
+        if token == "other" || token == "hyrox" {
+            return .other
         }
-        return WorkoutSport.parse(raw)
+        return .strength
     }
 
     deinit {
@@ -221,7 +232,13 @@ final class PassiveStrengthSessionEngine: ObservableObject {
     func confirmSportAndSync() -> Bool {
         guard phase == .ended, let endDate = workoutEndDate else { return summaryQueued }
         persistPendingSummary(endDate: endDate)
-        summaryQueued = flushPendingSummariesIfNeeded() || transferCurrentSummary(endDate: endDate)
+        let transferredIDs = flushPendingSummariesIfNeeded()
+        if transferredIDs.contains(sessionID) {
+            summaryQueued = true
+            return true
+        }
+        // Current summary was not transferred in the flush (failed or not present) — try once.
+        summaryQueued = transferCurrentSummary(endDate: endDate)
         return summaryQueued
     }
 
@@ -272,10 +289,17 @@ final class PassiveStrengthSessionEngine: ObservableObject {
         if summaryQueued { return true }
         if phase == .ended, let endDate = workoutEndDate {
             persistPendingSummary(endDate: endDate)
+            let transferredIDs = flushPendingSummariesIfNeeded()
+            if transferredIDs.contains(sessionID) {
+                summaryQueued = true
+                return true
+            }
+            summaryQueued = transferCurrentSummary(endDate: endDate)
+            return summaryQueued
         }
-        let queued = flushPendingSummariesIfNeeded()
-        summaryQueued = queued
-        return queued
+        _ = flushPendingSummariesIfNeeded()
+        summaryQueued = PassiveStrengthPendingSummaryStore.load().isEmpty
+        return summaryQueued
     }
 
     private func startElapsedTimer() {
@@ -314,7 +338,8 @@ final class PassiveStrengthSessionEngine: ObservableObject {
         ) { [weak self] _ in
             Task { @MainActor [weak self] in
                 guard let self else { return }
-                if self.flushPendingSummariesIfNeeded(), self.phase == .ended, !self.summaryQueued {
+                let transferredIDs = self.flushPendingSummariesIfNeeded()
+                if self.phase == .ended, !self.summaryQueued, transferredIDs.contains(self.sessionID) {
                     self.summaryQueued = true
                 }
             }
@@ -376,25 +401,27 @@ final class PassiveStrengthSessionEngine: ObservableObject {
         PassiveStrengthPendingSummaryStore.save(queue)
     }
 
+    /// Flush pending summaries. Returns workout IDs successfully transferred this pass
+    /// (queue may still retain failures for other IDs).
     @discardableResult
-    private func flushPendingSummariesIfNeeded() -> Bool {
+    private func flushPendingSummariesIfNeeded() -> Set<String> {
         var queue = PassiveStrengthPendingSummaryStore.load()
-        guard !queue.isEmpty else { return false }
+        guard !queue.isEmpty else { return [] }
 
         PassiveStrengthPendingSummaryStore.pruneStale(&queue)
 
         var remaining: [StandaloneWorkoutSummary] = []
-        var anyTransferred = false
+        var transferredIDs = Set<String>()
         for summary in queue {
             if transferSummary(summary) {
-                anyTransferred = true
+                transferredIDs.insert(summary.workoutId)
             } else {
                 remaining.append(summary)
             }
         }
 
         PassiveStrengthPendingSummaryStore.save(remaining)
-        return anyTransferred && remaining.isEmpty
+        return transferredIDs
     }
 
     private func transferSummary(_ summary: StandaloneWorkoutSummary) -> Bool {

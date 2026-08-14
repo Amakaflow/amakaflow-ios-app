@@ -313,9 +313,10 @@ struct PassiveStrengthSessionView: View {
                 }
 
                 Button("Done") {
-                    _ = engine.confirmSportAndSync()
-                    engine.reset()
-                    dismiss()
+                    if engine.confirmSportAndSync() {
+                        engine.reset()
+                        dismiss()
+                    }
                 }
                 .buttonStyle(.borderedProminent)
                 .accessibilityIdentifier("af_watch_passive_strength_done")
