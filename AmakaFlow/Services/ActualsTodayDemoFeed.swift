@@ -365,19 +365,30 @@ final class ActualsTodayDemoFeed: ObservableObject {
         let draftRepo = LogDraftRepository()
         guard let drafts = try? draftRepo.fetchPendingCompanionDrafts(), !drafts.isEmpty else { return }
         let recordings: [ActualsSourceRecording] = cards.compactMap { card in
-            if let session = card.session {
-                return session.primaryRecording
+            if let session = card.session, let primary = session.primaryRecording {
+                return primary
             }
             if let activity = card.activity {
+                let deviceKind: ActualsDeviceKind = {
+                    switch activity.provider {
+                    case .appleHealth, .garmin: return .watch
+                    case .strava: return .phone
+                    }
+                }()
+                var richness = 0
+                if activity.avgHR != nil { richness += 3 }
+                if activity.calories != nil { richness += 2 }
+                if activity.distanceMeters != nil { richness += 1 }
+                if activity.provider == .appleHealth { richness += 1 }
                 return ActualsSourceRecording(
                     id: card.id,
                     provider: activity.provider,
-                    deviceKind: .watch,
+                    deviceKind: deviceKind,
                     title: activity.title,
                     startDate: activity.startDate,
                     durationSeconds: activity.durationSeconds,
                     distanceMeters: activity.distanceMeters,
-                    streamRichness: 3
+                    streamRichness: richness
                 )
             }
             return nil
@@ -394,7 +405,15 @@ final class ActualsTodayDemoFeed: ObservableObject {
                 let session = LogbookReconciliation.mergeDraft(draft, onto: device)
                 do {
                     try repository.upsertMatchedDraft(session)
-                    try draftRepo.markReconciled(draftID: draft.id, sessionID: sessionId)
+                    do {
+                        try draftRepo.markReconciled(draftID: draft.id, sessionID: sessionId)
+                    } catch {
+                        // Matched session is durable; leave draft pending so a later
+                        // refresh can finish the link instead of silently hiding it.
+                        actualsTodayDemoFeedLog.error(
+                            "Matched draft \(draft.id, privacy: .public) but markReconciled failed: \(error.localizedDescription, privacy: .public)"
+                        )
+                    }
                 } catch {
                     actualsTodayDemoFeedLog.error(
                         "Failed to reconcile draft \(draft.id, privacy: .public) onto \(sessionId, privacy: .public): \(error.localizedDescription, privacy: .public)"

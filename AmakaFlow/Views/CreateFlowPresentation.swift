@@ -188,11 +188,11 @@ struct CreateFlowSheetsModifier: ViewModifier {
     private func presentLogSessionPicker() async {
         do {
             logbookWorkouts = try await APIService.shared.fetchWorkouts()
+            showLogbookPicker = true
         } catch {
             logbookWorkouts = []
-            DDToastCenter.shared.error("Couldn't load workouts")
+            DDToastCenter.shared.error("Couldn't load workouts — try again")
         }
-        showLogbookPicker = true
     }
 
     private func openLogbook(from workout: Workout?) {

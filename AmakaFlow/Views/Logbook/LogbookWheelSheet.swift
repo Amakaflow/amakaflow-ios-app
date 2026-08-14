@@ -67,6 +67,10 @@ struct LogbookWheelSheet: View {
                     .frame(height: 36)
                     .allowsHitTesting(false)
             }
+            .onChange(of: viewModel.weightUnit) { _, _ in
+                guard !isMetric else { return }
+                recenterWeight()
+            }
 
             if isMetric {
                 Text("TIME · CAL — leave one blank if you only track one")
@@ -287,9 +291,9 @@ struct LogbookWheelSheet: View {
                 ?? focused.entry.plannedCalories
                 ?? 0
         } else {
-            let kg = focused.set.weightKg ?? ghost?.weightKg ?? focused.entry.planned.weightKg
+            let kilograms = focused.set.weightKg ?? ghost?.weightKg ?? focused.entry.planned.weightKg
             weightDisplay = WeightUnitMath.nearestWheelValue(
-                kg: kg,
+                kg: kilograms,
                 unit: viewModel.weightUnit,
                 fine: viewModel.fineSteps
             )

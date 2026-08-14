@@ -7,6 +7,7 @@
 
 import SwiftUI
 
+// swiftlint:disable:next type_body_length
 struct LogbookView: View {
     @ObservedObject var viewModel: LogbookViewModel
     var onBack: (() -> Void)?
@@ -161,7 +162,11 @@ struct LogbookView: View {
                 columnHeader
                 ForEach(entry.sets) { set in
                     setRow(entry: entry, set: set)
-                        .id(Self.setAnchorID(exerciseID: entry.id, setIndex: set.index))
+                        .id(Self.setAnchorID(
+                            exerciseID: entry.id,
+                            setIndex: set.index,
+                            isWarmup: set.isWarmup
+                        ))
                 }
                 Button {
                     viewModel.addSet(exerciseID: entry.id)
@@ -204,6 +209,7 @@ struct LogbookView: View {
         let ghost = viewModel.ghost(for: entry.id, setIndex: set.index)
         let focused = viewModel.wheelFocus?.exerciseID == entry.id
             && viewModel.wheelFocus?.setIndex == set.index
+            && viewModel.wheelFocus?.isWarmup == set.isWarmup
         return HStack(spacing: 0) {
             if set.isWarmup {
                 Text("W")
@@ -232,7 +238,7 @@ struct LogbookView: View {
                 ghost: ghost.flatMap { $0.weightKg.map { WeightUnitMath.formatWeight(kg: $0, unit: viewModel.weightUnit) } },
                 width: 52
             ) {
-                viewModel.openWheel(exerciseID: entry.id, setIndex: set.index)
+                viewModel.openWheel(exerciseID: entry.id, setIndex: set.index, isWarmup: set.isWarmup)
             }
 
             cellButton(
@@ -240,11 +246,11 @@ struct LogbookView: View {
                 ghost: ghost.flatMap { $0.reps.map(String.init) },
                 width: 44
             ) {
-                viewModel.openWheel(exerciseID: entry.id, setIndex: set.index)
+                viewModel.openWheel(exerciseID: entry.id, setIndex: set.index, isWarmup: set.isWarmup)
             }
 
             Button {
-                viewModel.toggleCheck(exerciseID: entry.id, setIndex: set.index)
+                viewModel.toggleCheck(exerciseID: entry.id, setIndex: set.index, isWarmup: set.isWarmup)
             } label: {
                 ZStack {
                     Circle()
@@ -277,8 +283,8 @@ struct LogbookView: View {
         .accessibilityAddTraits(focused ? .isSelected : [])
     }
 
-    private static func setAnchorID(exerciseID: String, setIndex: Int) -> String {
-        "logbook_set_\(exerciseID)_\(setIndex)"
+    private static func setAnchorID(exerciseID: String, setIndex: Int, isWarmup: Bool) -> String {
+        "logbook_set_\(exerciseID)_\(setIndex)_\(isWarmup ? "w" : "s")"
     }
 
     private func scrollToFocusedSet(
@@ -286,7 +292,11 @@ struct LogbookView: View {
         focus: LogbookWheelFocus,
         delay: TimeInterval
     ) {
-        let anchor = Self.setAnchorID(exerciseID: focus.exerciseID, setIndex: focus.setIndex)
+        let anchor = Self.setAnchorID(
+            exerciseID: focus.exerciseID,
+            setIndex: focus.setIndex,
+            isWarmup: focus.isWarmup
+        )
         // One park only — same screen slot every Next set › (not .top then mid).
         DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
             withAnimation(.easeInOut(duration: 0.2)) {
@@ -340,7 +350,7 @@ struct LogbookView: View {
                     focused: focused
                 ) {
                     if let set {
-                        viewModel.openWheel(exerciseID: entry.id, setIndex: set.index)
+                        viewModel.openWheel(exerciseID: entry.id, setIndex: set.index, isWarmup: set.isWarmup)
                     }
                 }
                 metricTapCell(
@@ -349,7 +359,7 @@ struct LogbookView: View {
                     focused: focused
                 ) {
                     if let set {
-                        viewModel.openWheel(exerciseID: entry.id, setIndex: set.index)
+                        viewModel.openWheel(exerciseID: entry.id, setIndex: set.index, isWarmup: set.isWarmup)
                     }
                 }
                 if distance != nil || entry.plannedDistanceMeters != nil {
@@ -359,7 +369,7 @@ struct LogbookView: View {
                         focused: focused
                     ) {
                         if let set {
-                            viewModel.openWheel(exerciseID: entry.id, setIndex: set.index)
+                            viewModel.openWheel(exerciseID: entry.id, setIndex: set.index, isWarmup: set.isWarmup)
                         }
                     }
                 }
@@ -368,7 +378,7 @@ struct LogbookView: View {
                 }
                 Button {
                     if let set {
-                        viewModel.toggleCheck(exerciseID: entry.id, setIndex: set.index)
+                        viewModel.toggleCheck(exerciseID: entry.id, setIndex: set.index, isWarmup: set.isWarmup)
                     }
                 } label: {
                     ZStack {
@@ -394,7 +404,9 @@ struct LogbookView: View {
                 RoundedRectangle(cornerRadius: 8, style: .continuous)
                     .fill(focused ? DailyDriver.lime.opacity(0.14) : Color.clear)
             )
-            .id(set.map { Self.setAnchorID(exerciseID: entry.id, setIndex: $0.index) })
+            .id(set.map {
+                Self.setAnchorID(exerciseID: entry.id, setIndex: $0.index, isWarmup: $0.isWarmup)
+            })
         }
     }
 

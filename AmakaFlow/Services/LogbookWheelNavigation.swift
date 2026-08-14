@@ -20,18 +20,38 @@ enum LogbookWheelNavigation {
 
         let current = entries[exerciseIndex]
         if let nextInExercise = current.sets
-            .filter({ !$0.isChecked && $0.index > focus.setIndex })
-            .min(by: { $0.index < $1.index }) {
-            return LogbookWheelFocus(exerciseID: current.id, setIndex: nextInExercise.index)
+            .filter({ !$0.isChecked && comesAfter($0, focus: focus) })
+            .min(by: setOrder) {
+            return makeFocus(for: nextInExercise, exerciseID: current.id)
         }
 
-        // Also consider unchecked sets at or before focus that were skipped? Ticket:
-        // "advances to next unchecked set" — forward only within exercise, then next exercises.
         for later in entries.suffix(from: exerciseIndex + 1) {
-            if let first = later.sets.filter({ !$0.isChecked }).min(by: { $0.index < $1.index }) {
-                return LogbookWheelFocus(exerciseID: later.id, setIndex: first.index)
+            if let first = later.sets.filter({ !$0.isChecked }).min(by: setOrder) {
+                return makeFocus(for: first, exerciseID: later.id)
             }
         }
         return nil
+    }
+
+    private static func comesAfter(_ set: SetActual, focus: LogbookWheelFocus) -> Bool {
+        if set.index > focus.setIndex { return true }
+        // Same index: warmup → working is still "next".
+        if set.index == focus.setIndex, focus.isWarmup, !set.isWarmup {
+            return true
+        }
+        return false
+    }
+
+    private static func setOrder(_ lhs: SetActual, _ rhs: SetActual) -> Bool {
+        if lhs.index != rhs.index { return lhs.index < rhs.index }
+        return lhs.isWarmup && !rhs.isWarmup
+    }
+
+    private static func makeFocus(for set: SetActual, exerciseID: String) -> LogbookWheelFocus {
+        LogbookWheelFocus(
+            exerciseID: exerciseID,
+            setIndex: set.index,
+            isWarmup: set.isWarmup
+        )
     }
 }

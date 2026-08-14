@@ -354,15 +354,22 @@ enum LogbookWheelMode: String, Equatable, Hashable, Codable {
     case metric
 }
 
-/// Wheel sheet focus.
+/// Wheel sheet focus — index alone is not enough when a warmup and working set share a slot.
 struct LogbookWheelFocus: Equatable, Hashable {
     var exerciseID: String
     var setIndex: Int
+    var isWarmup: Bool
     var mode: LogbookWheelMode
 
-    init(exerciseID: String, setIndex: Int, mode: LogbookWheelMode = .weightReps) {
+    init(
+        exerciseID: String,
+        setIndex: Int,
+        isWarmup: Bool = false,
+        mode: LogbookWheelMode = .weightReps
+    ) {
         self.exerciseID = exerciseID
         self.setIndex = setIndex
+        self.isWarmup = isWarmup
         self.mode = mode
     }
 }

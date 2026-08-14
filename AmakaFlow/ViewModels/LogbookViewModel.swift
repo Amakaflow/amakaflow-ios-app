@@ -78,9 +78,9 @@ final class LogbookViewModel: ObservableObject {
         weightUnit = unit
     }
 
-    func toggleCheck(exerciseID: String, setIndex: Int) {
+    func toggleCheck(exerciseID: String, setIndex: Int, isWarmup: Bool = false) {
         guard let eIdx = draft.entries.firstIndex(where: { $0.id == exerciseID }),
-              let sIdx = draft.entries[eIdx].sets.firstIndex(where: { $0.index == setIndex }) else {
+              let sIdx = setRowIndex(in: draft.entries[eIdx], setIndex: setIndex, isWarmup: isWarmup) else {
             return
         }
         if draft.entries[eIdx].sets[sIdx].isChecked {
@@ -90,11 +90,11 @@ final class LogbookViewModel: ObservableObject {
             let set = entry.sets[sIdx]
             if entry.isMetric {
                 if set.durationSeconds == nil, set.calories == nil, set.distanceMeters == nil {
-                    copyGhost(exerciseID: exerciseID, setIndex: setIndex)
+                    copyGhost(exerciseID: exerciseID, setIndex: setIndex, isWarmup: isWarmup)
                 }
             } else if set.weightKg == nil || set.reps == nil {
                 // Checking with empty cells copies ghost first.
-                copyGhost(exerciseID: exerciseID, setIndex: setIndex)
+                copyGhost(exerciseID: exerciseID, setIndex: setIndex, isWarmup: isWarmup)
             }
             draft.entries[eIdx].sets[sIdx].checkedAt = now()
         }
@@ -102,9 +102,9 @@ final class LogbookViewModel: ObservableObject {
         refreshMetricStrip(exerciseID: exerciseID)
     }
 
-    func copyGhost(exerciseID: String, setIndex: Int) {
+    func copyGhost(exerciseID: String, setIndex: Int, isWarmup: Bool = false) {
         guard let eIdx = draft.entries.firstIndex(where: { $0.id == exerciseID }),
-              let sIdx = draft.entries[eIdx].sets.firstIndex(where: { $0.index == setIndex }),
+              let sIdx = setRowIndex(in: draft.entries[eIdx], setIndex: setIndex, isWarmup: isWarmup),
               let source = effectiveLastReference(exerciseID: exerciseID, setIndex: setIndex) else {
             return
         }
@@ -112,32 +112,41 @@ final class LogbookViewModel: ObservableObject {
         touch()
     }
 
-    func openWheel(exerciseID: String, setIndex: Int) {
+    func openWheel(exerciseID: String, setIndex: Int, isWarmup: Bool = false) {
         let mode: LogbookWheelMode = {
             if let entry = draft.entries.first(where: { $0.id == exerciseID }), entry.isMetric {
                 return .metric
             }
             return .weightReps
         }()
-        wheelFocus = LogbookWheelFocus(exerciseID: exerciseID, setIndex: setIndex, mode: mode)
+        wheelFocus = LogbookWheelFocus(
+            exerciseID: exerciseID,
+            setIndex: setIndex,
+            isWarmup: isWarmup,
+            mode: mode
+        )
         fineSteps = false
     }
 
     func applyWheel(weightDisplay: Double, reps: Int, advance: Bool) {
         guard let focus = wheelFocus,
               let eIdx = draft.entries.firstIndex(where: { $0.id == focus.exerciseID }),
-              let sIdx = draft.entries[eIdx].sets.firstIndex(where: { $0.index == focus.setIndex }) else {
+              let sIdx = setRowIndex(
+                in: draft.entries[eIdx],
+                setIndex: focus.setIndex,
+                isWarmup: focus.isWarmup
+              ) else {
             return
         }
-        let kg = WeightUnitMath.kilograms(fromDisplay: weightDisplay, unit: weightUnit)
+        let kilograms = WeightUnitMath.kilograms(fromDisplay: weightDisplay, unit: weightUnit)
         let ghost = ghost(for: focus.exerciseID, setIndex: focus.setIndex)
         // Bodyweight / unloaded: wheel sits on 0 but storage stays nil when plan + ghost have no load.
-        if kg == 0,
+        if kilograms == 0,
            draft.entries[eIdx].planned.weightKg == nil,
            ghost?.weightKg == nil {
             draft.entries[eIdx].sets[sIdx].weightKg = nil
         } else {
-            draft.entries[eIdx].sets[sIdx].weightKg = kg
+            draft.entries[eIdx].sets[sIdx].weightKg = kilograms
         }
         draft.entries[eIdx].sets[sIdx].reps = reps
         touch()
@@ -149,7 +158,11 @@ final class LogbookViewModel: ObservableObject {
     func applyMetric(durationSeconds: Int?, calories: Int?, distanceMeters: Double?, advance: Bool) {
         guard let focus = wheelFocus,
               let eIdx = draft.entries.firstIndex(where: { $0.id == focus.exerciseID }),
-              let sIdx = draft.entries[eIdx].sets.firstIndex(where: { $0.index == focus.setIndex }) else {
+              let sIdx = setRowIndex(
+                in: draft.entries[eIdx],
+                setIndex: focus.setIndex,
+                isWarmup: focus.isWarmup
+              ) else {
             return
         }
         draft.entries[eIdx].sets[sIdx].durationSeconds = durationSeconds.flatMap { $0 > 0 ? $0 : nil }
@@ -172,7 +185,11 @@ final class LogbookViewModel: ObservableObject {
             setIndex: focus.setIndex
         ) else { return nil }
         guard let eIdx = draft.entries.firstIndex(where: { $0.id == focus.exerciseID }),
-              let sIdx = draft.entries[eIdx].sets.firstIndex(where: { $0.index == focus.setIndex }) else {
+              let sIdx = setRowIndex(
+                in: draft.entries[eIdx],
+                setIndex: focus.setIndex,
+                isWarmup: focus.isWarmup
+              ) else {
             return nil
         }
         LogbookGhosts.copyGhost(into: &draft.entries[eIdx].sets[sIdx], ghost: source)
@@ -355,13 +372,23 @@ final class LogbookViewModel: ObservableObject {
     func focusedSet() -> (entry: LogbookExerciseEntry, set: SetActual)? {
         guard let focus = wheelFocus,
               let entry = draft.entries.first(where: { $0.id == focus.exerciseID }),
-              let set = entry.sets.first(where: { $0.index == focus.setIndex }) else {
+              let set = entry.sets.first(where: {
+                  $0.index == focus.setIndex && $0.isWarmup == focus.isWarmup
+              }) else {
             return nil
         }
         return (entry, set)
     }
 
     // MARK: - Private
+
+    private func setRowIndex(
+        in entry: LogbookExerciseEntry,
+        setIndex: Int,
+        isWarmup: Bool
+    ) -> Int? {
+        entry.sets.firstIndex { $0.index == setIndex && $0.isWarmup == isWarmup }
+    }
 
     private func advanceWheel(from focus: LogbookWheelFocus) {
         if let next = LogbookWheelNavigation.nextUnchecked(after: focus, in: draft.entries) {
@@ -374,6 +401,7 @@ final class LogbookViewModel: ObservableObject {
             wheelFocus = LogbookWheelFocus(
                 exerciseID: next.exerciseID,
                 setIndex: next.setIndex,
+                isWarmup: next.isWarmup,
                 mode: mode
             )
         } else {

@@ -113,10 +113,12 @@ enum LogbookReconciliation {
 
     static func sourceRecording(for draft: LogDraft) -> ActualsSourceRecording {
         let duration = max(draft.activeWindow.duration, 60)
+        // Companion drafts sit beside a watch plan; live/after are phone notepad.
+        let deviceKind: ActualsDeviceKind = draft.mode == .companionPending ? .watch : .phone
         return ActualsSourceRecording(
             id: draft.id,
             provider: .appleHealth,
-            deviceKind: .phone,
+            deviceKind: deviceKind,
             title: draft.title,
             startDate: draft.startedAt,
             durationSeconds: duration,

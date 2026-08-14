@@ -31,7 +31,6 @@ enum LogbookCopy {
 
     static let columnSet = "SET"
     static let columnLast = "LAST TIME"
-    static let columnKg = "KG"
     static let columnReps = "REPS"
 
     static let sameAsLast = "Same as last time"
