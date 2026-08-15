@@ -96,8 +96,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/Amakaflow/workoutkit-sync",
       "state" : {
-        "revision" : "f106deadb82f9bdc7c9ee0aff8c0397bdd86d46e",
-        "version" : "1.5.0"
+        "revision" : "0611a26cc79331bc6226c3242e32883317f5d06e",
+        "version" : "1.6.0"
       }
     },
     {
