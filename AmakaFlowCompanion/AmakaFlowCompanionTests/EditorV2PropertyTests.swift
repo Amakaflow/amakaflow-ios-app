@@ -128,7 +128,7 @@ final class EditorV2PropertyTests: XCTestCase {
         }
         
         for exercise in session.exercises.values {
-            if let groupKey = exercise.groupKey {
+            if let groupKey = exercise.value.groupKey {
                 if session.groups[groupKey] == nil {
                     violations.append("I1: Unresolved group reference: \(groupKey)")
                 }

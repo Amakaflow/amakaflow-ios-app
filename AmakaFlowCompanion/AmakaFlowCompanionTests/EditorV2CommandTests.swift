@@ -199,7 +199,7 @@ final class EditorV2CommandTests: XCTestCase {
         let result = session.apply(.replaceExercise(ex1.id, with: "Front Squat"))
         
         XCTAssertEqual(result, .applied)
-        XCTAssertEqual(session.exercises[0].name, "Front Squat")
+        XCTAssertEqual(session.exercises.values.first!.name, "Front Squat")
     }
     
     func testUpdatePrescription_updatesExercise() {
@@ -215,8 +215,8 @@ final class EditorV2CommandTests: XCTestCase {
         let result = session.apply(.updatePrescription(ex1.id, updated))
         
         XCTAssertEqual(result, .applied)
-        XCTAssertEqual(session.exercises[0].sets, 5)
-        XCTAssertEqual(session.exercises[0].reps, 5)
+        XCTAssertEqual(session.exercises.values.first!.sets, 5)
+        XCTAssertEqual(session.exercises.values.first!.reps, 5)
     }
     
     func testPairSuperset_createsNewGroup() {
@@ -270,7 +270,7 @@ final class EditorV2CommandTests: XCTestCase {
         let result = session.apply(.removeFromGroup(ex1.id))
         
         XCTAssertEqual(result, .applied)
-        XCTAssertNil(session.exercises[0].groupKey)
+        XCTAssertNil(session.exercises.values.first!.groupKey)
     }
     
     func testSwitchGroupType_changesTypeAndConfig() {
@@ -326,7 +326,7 @@ final class EditorV2CommandTests: XCTestCase {
         
         XCTAssertEqual(result, .applied)
         XCTAssertNil(session.groups[groupKey])
-        XCTAssertTrue(session.exercises.allSatisfy { $0.groupKey == nil })
+        XCTAssertTrue(session.exercises.allSatisfy { $0.value.groupKey == nil })
     }
     
     func testUngroup_clearsFormatGroupKey() {
@@ -410,7 +410,7 @@ final class EditorV2CommandTests: XCTestCase {
         let result = session.apply(.addSet(ex1.id))
         
         XCTAssertEqual(result, .applied)
-        XCTAssertEqual(session.exercises[0].sets, 4)
+        XCTAssertEqual(session.exercises.values.first!.sets, 4)
     }
     
     // MARK: - Invariant tests
