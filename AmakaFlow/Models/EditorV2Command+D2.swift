@@ -7,8 +7,6 @@
 
 import Foundation
 
-// swiftlint:disable file_length
-
 extension EditorV2Session {
     // swiftlint:disable:next cyclomatic_complexity function_body_length
     mutating func applyD2(_ command: EditorCommand) -> ApplyResult {
@@ -68,8 +66,8 @@ extension EditorV2Session {
             }
             
             // Remove from order
-            order.removeAll { row in
-                if case .loose(id) = row { return true }
+            order.removeAll {
+                if case .loose(id) = $0 { return true }
                 return false
             }
             
@@ -100,11 +98,9 @@ extension EditorV2Session {
             
             // Find target's group if any
             var targetGroupKey: String?
-            for (key, group) in groups {
-                if group.memberIDs.contains(targetID) {
-                    targetGroupKey = key
-                    break
-                }
+            for (key, group) in groups where group.memberIDs.contains(targetID) {
+                targetGroupKey = key
+                break
             }
             
             var key: String
@@ -142,8 +138,8 @@ extension EditorV2Session {
                 groups[groupKey]?.memberIDs.removeAll { $0 == sourceID }
             }
             // Remove from order
-            order.removeAll { row in
-                if case .loose(sourceID) = row { return true }
+            order.removeAll {
+                if case .loose(sourceID) = $0 { return true }
                 return false
             }
             
@@ -163,7 +159,7 @@ extension EditorV2Session {
             
             // Find and remove from group
             var foundGroupKey: String?
-            for key in groups.keys {
+            for key in groups.keys where groups[key]?.memberIDs.contains(exerciseID) == true {
                 if let idx = groups[key]?.memberIDs.firstIndex(of: exerciseID) {
                     groups[key]?.memberIDs.remove(at: idx)
                     foundGroupKey = key
@@ -271,7 +267,7 @@ extension EditorV2Session {
             exercises = [:]
             return .applied
             
-        case .move(let fromID, to: let toIndex):
+        case .move(let fromID, let toIndex):
             // Find and remove from current position
             var removed: EditorV2Row?
             
@@ -283,7 +279,7 @@ extension EditorV2Session {
                 removed = order.remove(at: idx)
             } else {
                 // Find in groups
-                for (key, group) in groups {
+                for (key, group) in groups where group.memberIDs.contains(fromID) {
                     if let memberIdx = group.memberIDs.firstIndex(of: fromID) {
                         groups[key]?.memberIDs.remove(at: memberIdx)
                         // If last member and not format group, remove group from order
