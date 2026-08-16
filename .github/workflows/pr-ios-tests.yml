@@ -506,7 +506,7 @@ jobs:
             --screenshot-path /tmp/cold-launch-${{ strategy.job-index }}.png
 
       - name: Upload evidence screenshot
-        if: always() && steps.create-sim.outputs.skipped != 'true'
+        if: ${{ always() && steps.create-sim.outputs.skipped != 'true' }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: cold-launch-evidence-${{ strategy.job-index }}
@@ -515,7 +515,7 @@ jobs:
           if-no-files-found: warn
 
       - name: Tear down sim
-        if: always() && steps.create-sim.outputs.skipped != 'true'
+        if: ${{ always() && steps.create-sim.outputs.skipped != 'true' }}
         env:
           UDID: ${{ steps.create-sim.outputs.udid }}
         run: |
@@ -682,7 +682,7 @@ jobs:
           exit 0
 
       - name: Upload Maestro output
-        if: always()
+        if: ${{ always() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: maestro-output
@@ -693,7 +693,7 @@ jobs:
           if-no-files-found: ignore
 
       - name: Upload CJ-01 L4 evidence screenshots
-        if: always()
+        if: ${{ always() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: cj01-l4-evidence
@@ -704,7 +704,7 @@ jobs:
           if-no-files-found: ignore
 
       - name: Upload CJ-01 L4 JUnit report
-        if: always()
+        if: ${{ always() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: cj01-l4-junit
