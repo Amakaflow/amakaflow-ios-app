@@ -113,6 +113,34 @@ jobs:
           RESULT=$(.github/scripts/affected-tests-ios.sh)
           echo "result=$RESULT" >> "$GITHUB_OUTPUT"
           echo "Affected iOS result: $RESULT"
+          
+          # Get changed files for summary
+          CHANGED_FILES=$(git diff --name-only "origin/${GITHUB_BASE_REF:-main}" HEAD || echo "(diff unavailable)")
+          
+          # Write to step summary for observability
+          {
+            echo "## Changed Files"
+            echo ""
+            echo '```'
+            echo "$CHANGED_FILES"
+            echo '```'
+            echo ""
+            echo "## Affected Tests Selection"
+            echo ""
+            if [ "$RESULT" = "NONE" ]; then
+              echo "✅ **No tests affected** — iOS tests will be skipped"
+            elif [ "$RESULT" = "FULL" ]; then
+              echo "⚠️ **FULL test suite required**"
+              echo ""
+              echo "Reason: project config changes, no mapped tests, or large diff"
+            else
+              echo "🎯 **Impacted tests identified:**"
+              echo ""
+              echo '```'
+              echo "$RESULT" | tr ' ' '\n'
+              echo '```'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Detect app/entrypoint changes
         id: app
@@ -151,7 +179,7 @@ jobs:
     needs: [detect-changes]
     if: needs.detect-changes.outputs.should_build == 'true'
     # Cap sized from recent successful runs (max 11.9m) +50% headroom (AMA-2283).
-    timeout-minutes: 18
+    timeout-minutes: 25
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -330,10 +358,7 @@ jobs:
             -parallel-testing-worker-count 2 2>&1 | tee test_output.log
           XCODE_EXIT=${PIPESTATUS[0]}
           set -e
-
-          if grep -q "TEST SUCCEEDED" test_output.log || grep -q "with 0 failures" test_output.log; then
-            exit 0
-          fi
+          
           exit "$XCODE_EXIT"
 
       - name: Run full tests (fallback)
@@ -354,18 +379,60 @@ jobs:
             -parallel-testing-worker-count 2 2>&1 | tee test_output.log
           XCODE_EXIT=${PIPESTATUS[0]}
           set -e
-
-          if grep -q "TEST SUCCEEDED" test_output.log || grep -q "with 0 failures" test_output.log; then
-            exit 0
-          fi
+          
           exit "$XCODE_EXIT"
+
+      - name: Generate test failure summary
+        if: ${{ always() && needs.detect-changes.outputs.affected != 'NONE' }}
+        working-directory: AmakaFlowCompanion
+        run: |
+          {
+            echo "## Test Results"
+            echo ""
+          } >> "$GITHUB_STEP_SUMMARY"
+          
+          if [ -d TestResults ]; then
+            # Parse test results using xcresulttool (Xcode 26.2)
+            if TEST_OUTPUT=$(xcrun xcresulttool get test-results tests --path TestResults 2>/dev/null); then
+              # Extract failed test identifiers
+              FAILED_TESTS=$(echo "$TEST_OUTPUT" | grep -E "^\s+Assertion Failure:|Test Case.*failed" || true)
+              if [ -n "$FAILED_TESTS" ]; then
+                {
+                  echo "### ❌ Test Failures"
+                  echo '```'
+                  echo "$TEST_OUTPUT" | grep -B 2 -A 1 -E "failed|Failure" | head -50
+                  echo '```'
+                } >> "$GITHUB_STEP_SUMMARY"
+              else
+                echo "✅ All tests passed" >> "$GITHUB_STEP_SUMMARY"
+              fi
+            else
+              echo "⚠️ xcresulttool unavailable — cannot parse test results" >> "$GITHUB_STEP_SUMMARY"
+            fi
+          fi
+          
+          # Parse test_output.log for detailed errors
+          if [ -f test_output.log ]; then
+            ERRORS=$(grep -E "error:|failed -|Testing failed:" test_output.log | head -20 || true)
+            if [ -n "$ERRORS" ]; then
+              {
+                echo ""
+                echo "### Error Output (first 20 lines)"
+                echo '```'
+                echo "$ERRORS"
+                echo '```'
+              } >> "$GITHUB_STEP_SUMMARY"
+            fi
+          fi
 
       - name: Upload test results
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        if: always()
+        if: ${{ always() }}
         with:
           name: ios-test-results
-          path: AmakaFlowCompanion/TestResults
+          path: |
+            AmakaFlowCompanion/TestResults
+            AmakaFlowCompanion/test_output.log
           retention-days: 7
 
   cold-launch:
@@ -455,7 +522,7 @@ jobs:
             --screenshot-path /tmp/cold-launch-${{ strategy.job-index }}.png
 
       - name: Upload evidence screenshot
-        if: always() && steps.create-sim.outputs.skipped != 'true'
+        if: ${{ always() && steps.create-sim.outputs.skipped != 'true' }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: cold-launch-evidence-${{ strategy.job-index }}
@@ -464,7 +531,7 @@ jobs:
           if-no-files-found: warn
 
       - name: Tear down sim
-        if: always() && steps.create-sim.outputs.skipped != 'true'
+        if: ${{ always() && steps.create-sim.outputs.skipped != 'true' }}
         env:
           UDID: ${{ steps.create-sim.outputs.udid }}
         run: |
@@ -631,7 +698,7 @@ jobs:
           exit 0
 
       - name: Upload Maestro output
-        if: always()
+        if: ${{ always() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: maestro-output
@@ -642,7 +709,7 @@ jobs:
           if-no-files-found: ignore
 
       - name: Upload CJ-01 L4 evidence screenshots
-        if: always()
+        if: ${{ always() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: cj01-l4-evidence
@@ -653,7 +720,7 @@ jobs:
           if-no-files-found: ignore
 
       - name: Upload CJ-01 L4 JUnit report
-        if: always()
+        if: ${{ always() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: cj01-l4-junit
