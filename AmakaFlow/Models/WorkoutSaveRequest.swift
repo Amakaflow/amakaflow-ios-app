@@ -104,8 +104,8 @@ struct WorkoutSaveRequest: Codable {
         }
     }
 
-    /// AMA-2343 A+D: map Block.structure / rounds display contract → ADR-017 type.
     // swiftlint:disable cyclomatic_complexity
+    /// AMA-2343 A+D: map Block.structure / rounds display contract → ADR-017 type.
     private static func persistType(from block: Block) -> String? {
         switch block.structure {
         case .circuit:
