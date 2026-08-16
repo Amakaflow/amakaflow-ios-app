@@ -59,7 +59,7 @@ extension EditorV2Session {
                 let timeCapSec: Int? = block.timeCapSec
                 let capMinutes: Int? = {
                     guard let seconds = timeCapSec, seconds > 0 else { return nil }
-                    return max(1, seconds / 60)
+                    max(1, seconds / 60)
                 }()
                 
                 // Determine rounds (AMRAP/for-time use cap as duration, not round count)

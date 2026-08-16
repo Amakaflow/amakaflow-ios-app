@@ -367,7 +367,7 @@ extension EditorV2Session {
         if !keys.isEmpty {
             exercises.removeAll {
                 guard let groupKey = $0.groupKey else { return false }
-                return keys.contains(groupKey)
+                keys.contains(groupKey)
             }
             for key in keys {
                 groups.removeValue(forKey: key)

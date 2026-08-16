@@ -645,13 +645,13 @@ extension EditorV2Session {
         for row in order.reversed() {
             switch row {
             case .loose(let id):
-                if let ex = exercises[id], ex.name == name {
-                    return ex
+                if let exercise = exercises[id], exercise.name == name {
+                    return exercise
                 }
             case .group(let key):
                 if let group = groups[key], let lastID = group.memberIDs.last,
-                   let ex = exercises[lastID], ex.name == name {
-                    return ex
+                   let exercise = exercises[lastID], exercise.name == name {
+                    return exercise
                 }
             }
         }

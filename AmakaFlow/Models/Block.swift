@@ -46,6 +46,7 @@ struct Block: Codable, Hashable, Identifiable {
         // id is excluded — generated locally, not in API JSON
     }
 
+    // swiftlint:disable:next function_parameter_count
     init(
         label: String?,
         structure: BlockStructure = .straight,
