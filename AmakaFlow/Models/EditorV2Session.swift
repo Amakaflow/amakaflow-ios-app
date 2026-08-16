@@ -437,25 +437,7 @@ extension EditorV2Session {
         _ = apply(.reorder(fromOffsets: fromOffsets, toOffset: toOffset))
     }
     
-    mutating func replaceExercise(_ id: String, with name: String) {
-        _ = apply(.replaceExercise(id, with: name))
-    }
-    
-    mutating func removeExercise(_ id: String) {
-        _ = apply(.removeExercise(id))
-    }
-    
-    mutating func addSet(to id: String) {
-        _ = apply(.addSet(id))
-    }
-    
     mutating func switchGroupType(_ key: String, to type: EditorV2GroupType) {
         _ = apply(.switchGroupType(key, type))
-    }
-    
-    mutating func updateExercise(_ id: String, patch: (inout EditorV2Exercise) -> Void) {
-        guard var exercise = exercises[id] else { return }
-        patch(&exercise)
-        _ = apply(.updatePrescription(id, exercise))
     }
 }
