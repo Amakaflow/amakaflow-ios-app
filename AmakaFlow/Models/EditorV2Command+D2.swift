@@ -63,7 +63,10 @@ extension EditorV2Session {
             
             // Remove from any group's memberIDs
             for key in groups.keys {
-                groups[key]?.memberIDs.removeAll { $0 == id }
+                if var group = groups[key] {
+                    group.memberIDs.removeAll { $0 == id }
+                    groups[key] = group
+                }
             }
             
             // Remove from order
@@ -136,7 +139,10 @@ extension EditorV2Session {
             // Remove source from its current location
             // First remove from any group
             for groupKey in groups.keys {
-                groups[groupKey]?.memberIDs.removeAll { $0 == sourceID }
+                if var group = groups[groupKey] {
+                    group.memberIDs.removeAll { $0 == sourceID }
+                    groups[groupKey] = group
+                }
             }
             // Remove from order
             order.removeAll {
@@ -151,9 +157,15 @@ extension EditorV2Session {
                 groups[key]?.memberIDs.append(sourceID)
             }
             
-            // Update groupKey fields
-            exercises[sourceID]?.groupKey = key
-            exercises[targetID]?.groupKey = key
+            // Update groupKey fields (will be synced again in normalize)
+            if var sourceEx = exercises[sourceID] {
+                sourceEx.groupKey = key
+                exercises[sourceID] = sourceEx
+            }
+            if var targetEx = exercises[targetID] {
+                targetEx.groupKey = key
+                exercises[targetID] = targetEx
+            }
             
             return .applied
             
@@ -186,8 +198,11 @@ extension EditorV2Session {
                 order.append(.loose(exerciseID))
             }
             
-            // Clear groupKey field
-            exercises[exerciseID]?.groupKey = nil
+            // Clear groupKey field (will be synced again in normalize)
+            if var exercise = exercises[exerciseID] {
+                exercise.groupKey = nil
+                exercises[exerciseID] = exercise
+            }
             
             return .applied
             
@@ -230,8 +245,11 @@ extension EditorV2Session {
                 order.remove(at: groupIdx)
                 for (idx, memberID) in group.memberIDs.enumerated() {
                     order.insert(.loose(memberID), at: groupIdx + idx)
-                    // Clear groupKey field
-                    exercises[memberID]?.groupKey = nil
+                    // Clear groupKey field (will be synced again in normalize)
+                    if var exercise = exercises[memberID] {
+                        exercise.groupKey = nil
+                        exercises[memberID] = exercise
+                    }
                 }
             }
             
@@ -466,7 +484,9 @@ extension EditorV2Session {
             let autoNames: Set<String> = ["Superset", "Tri-set", "Tri-sets", "Giant set"]
             if autoNames.contains(group.name) || group.name.isEmpty {
                 let newName = group.displayName(memberCount: memberCount)
-                groups[key]?.name = newName
+                var updatedGroup = group
+                updatedGroup.name = newName
+                groups[key] = updatedGroup
             }
         }
     }

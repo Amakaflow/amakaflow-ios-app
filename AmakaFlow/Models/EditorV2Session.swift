@@ -289,7 +289,10 @@ extension EditorV2Session {
     /// Save path — stable ids for tombstones written after this save.
     mutating func mintMissingExerciseIDs() {
         for id in exercises.keys where exercises[id]?.exerciseId == nil {
-            exercises[id]?.exerciseId = WorkoutEnrichmentMutations.mintExerciseId()
+            if var exercise = exercises[id] {
+                exercise.exerciseId = WorkoutEnrichmentMutations.mintExerciseId()
+                exercises[id] = exercise
+            }
         }
     }
 
