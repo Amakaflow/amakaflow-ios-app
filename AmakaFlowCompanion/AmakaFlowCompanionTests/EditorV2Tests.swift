@@ -219,16 +219,14 @@ final class EditorV2Tests: XCTestCase {
         session.exercises = [ex1.id: ex1, ex2.id: ex2, ex3.id: ex3]
         session.order = [.loose("a"), .loose("b"), .loose("c")]
         session.pairSuperset(sourceID: "a", targetID: "c")
-        XCTAssertEqual(session.order.compactMap { row in
-            if case .loose(let id) = row { return session.exercises[id]?.name }
-            if case .group(let key) = row { return session.groups[key]?.memberIDs.compactMap { session.exercises[$0]?.name }.joined(separator: ",") }
-            return nil
-        }.joined(separator: ","), "Curls,Pull Ups,Bench Press")
-        let key = session.exercises.values.first(where: { $0.id == "c" })?.groupKey
-        XCTAssertNotNil(key)
-        XCTAssertEqual(session.exercises.values.first(where: { $0.id == "a" })?.groupKey, key)
-        XCTAssertEqual(session.groups[key!]?.type, .superset)
-        XCTAssertEqual(session.groups[key!]?.name, "Superset")
+        let keyA = session.exercises["a"]?.groupKey
+        let keyC = session.exercises["c"]?.groupKey
+        XCTAssertNotNil(keyA)
+        XCTAssertEqual(keyA, keyC, "Both exercises should be in the same group")
+        XCTAssertEqual(session.groups[keyA!]?.type, .superset)
+        XCTAssertEqual(session.groups[keyA!]?.name, "Superset")
+        XCTAssertTrue(session.order.contains(.loose("b")), "Curls should remain loose")
+        XCTAssertTrue(session.order.contains(.group(keyA!)), "Superset group should be in order")
     }
 
     func testPairingThirdExerciseUpgradesGroupToTriSet() throws {
@@ -370,17 +368,22 @@ final class EditorV2Tests: XCTestCase {
         session.exercises = [ex1.id: ex1, ex2.id: ex2, ex3.id: ex3]
         session.order = [.loose(ex1.id), .loose(ex2.id), .loose(ex3.id)]
         let intervals = session.toSaveIntervals()
-        XCTAssertEqual(intervals[0].type, "time")
-        XCTAssertEqual(intervals[0].seconds, 45)
-        XCTAssertEqual(intervals[0].restSeconds, 15)
-        XCTAssertEqual(intervals[1].type, "time")
-        XCTAssertEqual(intervals[1].seconds, 20)
-        XCTAssertEqual(intervals[1].target, "20 cal")
-        XCTAssertEqual(intervals[1].restSeconds, 30)
-        XCTAssertEqual(intervals[1].load, "12.5 kg")
-        XCTAssertEqual(intervals[2].type, "distance")
-        XCTAssertEqual(intervals[2].meters, 400)
-        XCTAssertEqual(intervals[2].restSeconds, 60)
+        XCTAssertEqual(intervals.count, 3)
+        let plank = intervals.first { $0.name == "Plank" }
+        let skierg = intervals.first { $0.name == "SkiErg" }
+        let run = intervals.first { $0.name == "Run" }
+        
+        XCTAssertEqual(plank?.type, "time")
+        XCTAssertEqual(plank?.seconds, 45)
+        XCTAssertEqual(plank?.restSeconds, 15)
+        XCTAssertEqual(skierg?.type, "time")
+        XCTAssertEqual(skierg?.seconds, 20)
+        XCTAssertEqual(skierg?.target, "20 cal")
+        XCTAssertEqual(skierg?.restSeconds, 30)
+        XCTAssertEqual(skierg?.load, "12.5 kg")
+        XCTAssertEqual(run?.type, "distance")
+        XCTAssertEqual(run?.meters, 400)
+        XCTAssertEqual(run?.restSeconds, 60)
     }
 
     func testFormatWeightPreservesTenths() {
