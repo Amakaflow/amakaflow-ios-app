@@ -10,8 +10,8 @@ reviews:
   auto_review:
     enabled: true
     drafts: false
-  auto_incremental_review: true
-  auto_pause_after_reviewed_commits: 2
+    auto_incremental_review: true
+    auto_pause_after_reviewed_commits: 2
   request_changes_workflow: false
   high_level_summary: true
   # AMA-2439: disable autofix to prevent agent ping-pong (same as amakaflow-docs #74)
