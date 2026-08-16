@@ -354,19 +354,19 @@ jobs:
           exit "$XCODE_EXIT"
 
       - name: Generate test failure summary
-        if: always() && needs.detect-changes.outputs.affected != 'NONE'
+        if: ${{ always() && needs.detect-changes.outputs.affected != 'NONE' }}
         working-directory: AmakaFlowCompanion
         run: |
           echo "## Test Results" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           
-          if [ -d TestResults.xcresult ]; then
+          if [ -d TestResults ]; then
             # Extract failures from xcresult
-            FAILURES=$(xcrun xcresulttool get test-results summary --path TestResults.xcresult 2>/dev/null | grep -E "failed|error" || true)
+            FAILURES=$(xcrun xcresulttool get test-results summary --path TestResults 2>/dev/null | grep -E "failed|error" || true)
             if [ -n "$FAILURES" ]; then
               echo "### ❌ Test Failures" >> "$GITHUB_STEP_SUMMARY"
               echo '```' >> "$GITHUB_STEP_SUMMARY"
-              xcrun xcresulttool get test-results summary --path TestResults.xcresult 2>/dev/null || echo "xcresulttool summary unavailable" >> "$GITHUB_STEP_SUMMARY"
+              xcrun xcresulttool get test-results summary --path TestResults 2>/dev/null || echo "xcresulttool summary unavailable" >> "$GITHUB_STEP_SUMMARY"
               echo '```' >> "$GITHUB_STEP_SUMMARY"
             else
               echo "✅ All tests passed" >> "$GITHUB_STEP_SUMMARY"
@@ -411,11 +411,11 @@ jobs:
 
       - name: Upload test results
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        if: always()
+        if: ${{ always() }}
         with:
           name: ios-test-results
           path: |
-            AmakaFlowCompanion/TestResults.xcresult
+            AmakaFlowCompanion/TestResults
             AmakaFlowCompanion/test_output.log
           retention-days: 7
 

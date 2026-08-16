@@ -53,13 +53,29 @@ ios-test-editorv2:
     xcrun simctl shutdown all || true
     xcrun simctl boot "$SIM_NAME" || true
     
+    # Discover all EditorV2*Tests.swift files and build -only-testing args
+    ONLY_FLAGS=()
+    while IFS= read -r test_file; do
+        if [ -f "$test_file" ]; then
+            test_class=$(basename "$test_file" .swift)
+            ONLY_FLAGS+=("-only-testing:AmakaFlowCompanionTests/${test_class}")
+        fi
+    done < <(find AmakaFlowCompanion/AmakaFlowCompanionTests -name "EditorV2*Tests.swift" -type f 2>/dev/null || true)
+    
+    if [ ${#ONLY_FLAGS[@]} -eq 0 ]; then
+        echo "ERROR: No EditorV2*Tests.swift files found"
+        exit 1
+    fi
+    
+    echo "Running ${#ONLY_FLAGS[@]} EditorV2 test class(es)"
+    
     xcodebuild test-without-building \
         -project {{ project }} \
         -scheme {{ scheme }} \
         -destination "platform=iOS Simulator,name=$SIM_NAME" \
         -derivedDataPath {{ derived_data }} \
         -clonedSourcePackagesDirPath {{ spm_dir }} \
-        -only-testing:AmakaFlowCompanionTests/EditorV2Tests \
+        "${ONLY_FLAGS[@]}" \
         -resultBundlePath TestResults \
         -enableCodeCoverage NO \
         -parallel-testing-enabled YES \
