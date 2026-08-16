@@ -159,7 +159,6 @@ struct EditorV2Group: Equatable, Identifiable, Sendable {
     /// Never the presence test — that stays block `type`.
     var enrichmentKind: EnrichmentKind?
 
-    // swiftlint:disable:next function_parameter_count
     init(
         id: String = UUID().uuidString,
         type: EditorV2GroupType,
