@@ -428,9 +428,12 @@ extension EditorV2Session {
                         looseIDsInNewOrder.insert(memberID)
                     }
                 } else {
-                    newOrder.append(row)
                     if case .loose(let id) = row {
+                        guard !looseIDsInNewOrder.contains(id) else { continue }
+                        newOrder.append(row)
                         looseIDsInNewOrder.insert(id)
+                    } else {
+                        newOrder.append(row)
                     }
                 }
             }
