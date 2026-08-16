@@ -50,8 +50,8 @@ struct EditorV2Session: Equatable, Sendable {
             case .group(let key):
                 guard let group = groups[key] else { continue }
                 let members = group.memberIDs.compactMap { exercises[$0] }
-                // Include empty groups if they're the format group (pinned for building)
-                guard !members.isEmpty || key == formatGroupKey else { continue }
+                // Skip empty groups - canvas uses formatGroupKey directly for insertion slot
+                guard !members.isEmpty else { continue }
                 result.append(
                     EditorV2Run(
                         id: key,
