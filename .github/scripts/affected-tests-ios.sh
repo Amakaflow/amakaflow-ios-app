@@ -70,10 +70,20 @@ else
   # impacted tests were skipped even for Swift changes (AMA-2283). In CI,
   # HEAD_REF is the PR merge ref, so base-tip..HEAD is exactly the PR's
   # changes. If the diff fails outright, fail CLOSED with a FULL run.
-  if ! CHANGED=$(git diff --name-only "${BASE_REF}" "${HEAD_REF}"); then
+  #
+  # --name-status instead of --name-only (AMA-2442): name-only collapses a
+  # rename to its NEW path only, so renaming FooTests.swift (or moving a
+  # source out of a target dir) looked like an ordinary edit of the new
+  # path and the old path's rules never fired. Expand renames/copies into
+  # BOTH paths so each side is evaluated.
+  if ! CHANGED_STATUS=$(git diff --name-status "${BASE_REF}" "${HEAD_REF}"); then
     echo "FULL"
     exit 0
   fi
+  CHANGED=$(echo "$CHANGED_STATUS" | awk -F'\t' '
+    /^[RC]/ { print $2; print $3; next }
+    { print $2 }
+  ')
 fi
 
 # Check for non-file-ref project changes (scheme, build settings, etc.)
@@ -84,12 +94,13 @@ if echo "$CHANGED" | grep -E -q '(Package\.swift|Package\.resolved|\.xcworkspace
 fi
 
 # Non-Swift risk files (AMA-2442 Bug 2): entitlements, Info.plist, xcconfig,
-# asset catalogs, and bundled app resources cannot be mapped to specific test
-# classes, and previously fell through to NONE — zero tests ran for changes
-# that absolutely can break the app. Promote to FULL. Docs/README still
-# reach NONE via the IOS_CHANGED check below.
+# asset catalogs, and bundled app resources (localizations, fonts, images,
+# storyboards/xibs, Core Data models, ML models) cannot be mapped to specific
+# test classes, and previously fell through to NONE — zero tests ran for
+# changes that absolutely can break the app. Promote to FULL. Docs/README
+# still reach NONE via the IOS_CHANGED check below.
 if echo "$CHANGED" | grep -E -q \
-  '(\.entitlements$|Info\.plist$|\.xcconfig$|\.xcassets/|^(AmakaFlow|AmakaFlowCompanion/AmakaFlowCompanion)/.*\.(json|strings|xcstrings|stringsdict|ttf|otf)$)'; then
+  '(\.entitlements$|Info\.plist$|\.xcconfig$|\.xcassets/|\.xcdatamodeld/|\.storyboard$|\.xib$|^(AmakaFlow|AmakaFlowCompanion/AmakaFlowCompanion)/.*\.(json|strings|xcstrings|stringsdict|ttf|otf|png|jpe?g|pdf|svg|gif|heic|mlmodel|mlpackage)$)'; then
   echo "FULL"
   exit 0
 fi

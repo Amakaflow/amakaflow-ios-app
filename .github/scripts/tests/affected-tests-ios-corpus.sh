@@ -97,6 +97,14 @@ check test_file_never_dropped_beside_mapped_source \
 check test_file_deleted_or_renamed_full "FULL" \
   "AmakaFlowCompanion/AmakaFlowCompanionTests/EditorV2ZzzTests.swift"
 
+# A rename reaches the script as BOTH paths (the git-mode --name-status
+# parser expands R records; hermetic mode injects both sides directly).
+# The old path no longer exists on disk -> FULL, even though the new path
+# is a valid self-selecting test file.
+check test_file_renamed_full "FULL" \
+  "AmakaFlowCompanion/AmakaFlowCompanionTests/EditorV2OldNameTests.swift" \
+  "AmakaFlowCompanion/AmakaFlowCompanionTests/EditorV2CommandTests.swift"
+
 check test_helper_full "FULL" \
   "AmakaFlowCompanion/AmakaFlowCompanionTests/TestHelpers.swift"
 
@@ -118,6 +126,15 @@ check asset_catalog_full "FULL" \
 
 check app_resource_full "FULL" \
   "AmakaFlow/Resources/Localizable.xcstrings"
+
+check app_image_full "FULL" \
+  "AmakaFlow/Resources/onboarding-hero.png"
+
+check storyboard_full "FULL" \
+  "AmakaFlowCompanion/AmakaFlowCompanion/Base.lproj/LaunchScreen.storyboard"
+
+check core_data_model_full "FULL" \
+  "AmakaFlowCompanion/AmakaFlowCompanion/AmakaFlow.xcdatamodeld/AmakaFlow.xcdatamodel/contents"
 
 # --- AMA-2442: pbxproj-only must not silently skip tests --------------------
 check pbxproj_only_full "FULL" \
