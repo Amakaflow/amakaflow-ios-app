@@ -111,6 +111,7 @@ final class EditorV2CommandTests: XCTestCase {
             memberIDs: [ex1.id, ex2.id, ex3.id]
         )
         session.exercises = [ex1.id: ex1, ex2.id: ex2, ex3.id: ex3]
+        session.order = [.group(groupKey)]
         session.order = [.loose(ex1.id), .loose(ex2.id), .loose(ex3.id)]
         session.order = [.group(groupKey)]
         
@@ -241,13 +242,12 @@ final class EditorV2CommandTests: XCTestCase {
     func testPairSuperset_joinsExistingSupersetGroup() {
         var session = EditorV2Session()
         let ssKey = "ss1"
-        session.groups[ssKey] = EditorV2Group(id: ssKey, type: .superset)
-        
-        let ex1 = EditorV2Exercise(name: "A", groupKey: ssKey)
-        let ex2 = EditorV2Exercise(name: "B", groupKey: ssKey)
+        let ex1 = EditorV2Exercise(name: "A")
+        let ex2 = EditorV2Exercise(name: "B")
         let ex3 = EditorV2Exercise(name: "C")
         session.exercises = [ex1.id: ex1, ex2.id: ex2, ex3.id: ex3]
-        session.order = [.loose(ex1.id), .loose(ex2.id), .loose(ex3.id)]
+        session.groups[ssKey] = EditorV2Group(id: ssKey, type: .superset, memberIDs: [ex1.id, ex2.id])
+        session.order = [.group(ssKey), .loose(ex3.id)]
         
         let result = session.apply(.pairSuperset(source: ex3.id, target: ex1.id))
         
@@ -276,7 +276,10 @@ final class EditorV2CommandTests: XCTestCase {
     func testSwitchGroupType_changesTypeAndConfig() {
         var session = EditorV2Session()
         let groupKey = "g1"
-        session.groups[groupKey] = EditorV2Group(id: groupKey, type: .circuit, name: "Circuit")
+        let ex = EditorV2Exercise(name: "Bench")
+        session.exercises = [ex.id: ex]
+        session.groups[groupKey] = EditorV2Group(id: groupKey, type: .circuit, name: "Circuit", memberIDs: [ex.id])
+        session.order = [.group(groupKey)]
         
         let result = session.apply(.switchGroupType(groupKey, .emom))
         
@@ -289,7 +292,10 @@ final class EditorV2CommandTests: XCTestCase {
     func testSwitchGroupType_keepsCustomName() {
         var session = EditorV2Session()
         let groupKey = "g1"
-        session.groups[groupKey] = EditorV2Group(id: groupKey, type: .circuit, name: "My Special Block")
+        let ex = EditorV2Exercise(name: "Bench")
+        session.exercises = [ex.id: ex]
+        session.groups[groupKey] = EditorV2Group(id: groupKey, type: .circuit, name: "My Special Block", memberIDs: [ex.id])
+        session.order = [.group(groupKey)]
         
         let result = session.apply(.switchGroupType(groupKey, .emom))
         
@@ -301,7 +307,10 @@ final class EditorV2CommandTests: XCTestCase {
     func testUpdateGroupConfig_updatesConfig() {
         var session = EditorV2Session()
         let groupKey = "g1"
-        session.groups[groupKey] = EditorV2Group(id: groupKey, type: .emom)
+        let ex = EditorV2Exercise(name: "Bench")
+        session.exercises = [ex.id: ex]
+        session.groups[groupKey] = EditorV2Group(id: groupKey, type: .emom, memberIDs: [ex.id])
+        session.order = [.group(groupKey)]
         
         var newConfig = EditorV2GroupConfig()
         newConfig.rounds = 20
@@ -344,12 +353,11 @@ final class EditorV2CommandTests: XCTestCase {
     func testDeleteGroup_removesMembers() {
         var session = EditorV2Session()
         let groupKey = "g1"
-        session.groups[groupKey] = EditorV2Group(id: groupKey, type: .circuit)
-        
-        let ex1 = EditorV2Exercise(name: "A", groupKey: groupKey)
-        let ex2 = EditorV2Exercise(name: "B", groupKey: groupKey)
+        let ex1 = EditorV2Exercise(name: "A")
+        let ex2 = EditorV2Exercise(name: "B")
         session.exercises = [ex1.id: ex1, ex2.id: ex2]
-        session.order = [.loose(ex1.id), .loose(ex2.id)]
+        session.groups[groupKey] = EditorV2Group(id: groupKey, type: .circuit, memberIDs: [ex1.id, ex2.id])
+        session.order = [.group(groupKey)]
         
         let result = session.apply(.deleteGroup(groupKey))
         
@@ -419,13 +427,13 @@ final class EditorV2CommandTests: XCTestCase {
         var session = EditorV2Session()
         let id = "dup"
         let ex1 = EditorV2Exercise(id: id, name: "A")
-        let ex2 = EditorV2Exercise(id: id, name: "B")
-        session.exercises = [ex1.id: ex1, ex2.id: ex2]
-        session.order = [.loose(ex1.id), .loose(ex2.id)]
+        session.exercises = [id: ex1]
+        // Manually create invalid state: same ID appears twice in order
+        session.order = [.loose(id), .loose(id)]
         
-        // Validation should fail
-        // (Note: normal apply prevents this, but we're testing the validator)
-        XCTAssertEqual(session.exercises.count, 2)
+        // Validation should reject duplicate in order
+        let result = session.apply(.addSet(id))  // Any command to trigger validation
+        XCTAssertNotEqual(result, .applied)
     }
     
     func testValidate_rejectsUnresolvedGroupReferences() {
