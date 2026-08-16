@@ -68,7 +68,7 @@ final class EditorV2PropertyTests: XCTestCase {
             
         case 1:
             // removeExercise
-            if let ex = session.exercises.values.randomElement() {
+            if let ex = Array(session.exercises.values).randomElement(using: &rng) {
                 return .removeExercise(ex.id)
             }
             return .addExercises(names: ["Fallback"], into: nil)
@@ -83,7 +83,7 @@ final class EditorV2PropertyTests: XCTestCase {
             
         case 3:
             // removeFromGroup
-            if let ex = session.exercises.values.first(where: { $0.groupKey != nil }) {
+            if let ex = Array(session.exercises.values).first(where: { $0.groupKey != nil }) {
                 return .removeFromGroup(ex.id)
             }
             return .addExercises(names: ["Test"], into: nil)
@@ -99,7 +99,7 @@ final class EditorV2PropertyTests: XCTestCase {
             
         case 5:
             // addSet
-            if let ex = session.exercises.values.randomElement() {
+            if let ex = Array(session.exercises.values).randomElement(using: &rng) {
                 return .addSet(ex.id)
             }
             return .addExercises(names: ["Test"], into: nil)

@@ -288,15 +288,24 @@ extension EditorV2Session {
     private mutating func removeSoftSection(type: EditorV2GroupType, kind: EnrichmentKind) {
         let keys = Set(groups.filter { $0.value.type == type }.keys)
         if !keys.isEmpty {
-            exercises = exercises.filter {
-                guard let groupKey = $0.value.groupKey else { return true }
-                return !keys.contains(groupKey)
-            }
+            // Remove exercises that are members of these groups
             for key in keys {
+                if let group = groups[key] {
+                    for memberID in group.memberIDs {
+                        exercises.removeValue(forKey: memberID)
+                    }
+                }
                 groups.removeValue(forKey: key)
                 if formatGroupKey == key {
                     formatGroupKey = nil
                 }
+            }
+            // Remove groups from order
+            order.removeAll { row in
+                if case .group(let key) = row {
+                    return keys.contains(key)
+                }
+                return false
             }
         }
         WorkoutEnrichmentMutations.appendTombstone(&enrichmentTombstones, kind: kind)
