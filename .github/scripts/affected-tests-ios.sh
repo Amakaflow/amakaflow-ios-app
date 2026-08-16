@@ -21,34 +21,69 @@
 #   project.pbxproj (file-ref only) + EditorV2*.swift → mapped tests (NOT FULL)
 #   project.pbxproj (scheme change) → FULL
 #
+# Safety rules (AMA-2442):
+#   FooTests.swift changed            → FooTests ALWAYS selected (never dropped
+#                                       because a sibling source also mapped)
+#   test helper / fixture changed     → FULL (shared by unknown tests)
+#   entitlements / Info.plist /
+#   xcconfig / xcassets / resources   → FULL (cannot be mapped, must not skip)
+#   project.pbxproj with no mappable
+#   Swift sources                     → FULL (was NONE — build-settings edits
+#                                       skipped tests entirely)
+#
 # Usage:
 #   ./affected-tests-ios.sh [base_ref] [head_ref]
+#
+# Test seams (used by .github/scripts/tests/affected-tests-ios-corpus.sh):
+#   AFFECTED_TESTS_CHANGED_FILES  newline-separated changed files (skips git)
+#   AFFECTED_TESTS_TEST_DIR       fixture dir standing in for the test target
 #
 # Part of AMA-339: CI Optimization
 # Updated for AMA-553: watchOS test coverage
 # Updated for AMA-2439: smarter pbxproj handling + prefix-based test mapping
+# Updated for AMA-2442: selection safety rules + hermetic test seams
 
 set -euo pipefail
 
 BASE_REF="${1:-origin/${GITHUB_BASE_REF:-main}}"
 HEAD_REF="${2:-HEAD}"
 
-# Fetch only the base branch tip — a targeted shallow fetch avoids pulling
-# full history (and the ~10k deleted design-bundle blobs from AMA-2103).
-# In CI the workflow already ran `git fetch --depth=1 origin $GITHUB_BASE_REF`
-# before invoking this script; the fetch here is a no-op in that case and a
-# safety net for standalone local runs.
-git fetch --no-tags --depth=1 origin "${GITHUB_BASE_REF:-main}" >/dev/null 2>&1 || true
+# The on-disk test target dir; overridable so the corpus test can run the
+# mapping logic against fixture files without depending on repo layout.
+TEST_DIR="${AFFECTED_TESTS_TEST_DIR:-AmakaFlowCompanion/AmakaFlowCompanionTests}"
 
-# Two-dot diff against the base tip. The previous three-dot form required a
-# merge base, which a depth-1 CI clone lacks ("fatal: no merge base") — the
-# `|| true` then silently yielded an empty diff and NONE on every PR, so
-# impacted tests were skipped even for Swift changes (AMA-2283). In CI,
-# HEAD_REF is the PR merge ref, so base-tip..HEAD is exactly the PR's
-# changes. If the diff fails outright, fail CLOSED with a FULL run.
-if ! CHANGED=$(git diff --name-only "${BASE_REF}" "${HEAD_REF}"); then
-  echo "FULL"
-  exit 0
+if [[ -n "${AFFECTED_TESTS_CHANGED_FILES:-}" ]]; then
+  # Hermetic mode (AMA-2442): the corpus test injects the changed-file list
+  # directly — no git required.
+  CHANGED="$AFFECTED_TESTS_CHANGED_FILES"
+else
+  # Fetch only the base branch tip — a targeted shallow fetch avoids pulling
+  # full history (and the ~10k deleted design-bundle blobs from AMA-2103).
+  # In CI the workflow already ran `git fetch --depth=1 origin $GITHUB_BASE_REF`
+  # before invoking this script; the fetch here is a no-op in that case and a
+  # safety net for standalone local runs.
+  git fetch --no-tags --depth=1 origin "${GITHUB_BASE_REF:-main}" >/dev/null 2>&1 || true
+
+  # Two-dot diff against the base tip. The previous three-dot form required a
+  # merge base, which a depth-1 CI clone lacks ("fatal: no merge base") — the
+  # `|| true` then silently yielded an empty diff and NONE on every PR, so
+  # impacted tests were skipped even for Swift changes (AMA-2283). In CI,
+  # HEAD_REF is the PR merge ref, so base-tip..HEAD is exactly the PR's
+  # changes. If the diff fails outright, fail CLOSED with a FULL run.
+  #
+  # --name-status instead of --name-only (AMA-2442): name-only collapses a
+  # rename to its NEW path only, so renaming FooTests.swift (or moving a
+  # source out of a target dir) looked like an ordinary edit of the new
+  # path and the old path's rules never fired. Expand renames/copies into
+  # BOTH paths so each side is evaluated.
+  if ! CHANGED_STATUS=$(git diff --name-status -M "${BASE_REF}" "${HEAD_REF}"); then
+    echo "FULL"
+    exit 0
+  fi
+  CHANGED=$(echo "$CHANGED_STATUS" | awk -F'\t' '
+    /^[RC]/ { print $2; print $3; next }
+    { print $2 }
+  ')
 fi
 
 # Check for non-file-ref project changes (scheme, build settings, etc.)
@@ -57,6 +92,42 @@ if echo "$CHANGED" | grep -E -q '(Package\.swift|Package\.resolved|\.xcworkspace
   echo "FULL"
   exit 0
 fi
+
+# Non-Swift risk files (AMA-2442 Bug 2): entitlements, Info.plist, xcconfig,
+# asset catalogs, and bundled app resources (localizations, fonts, images,
+# storyboards/xibs, Core Data models, ML models) cannot be mapped to specific
+# test classes, and previously fell through to NONE — zero tests ran for
+# changes that absolutely can break the app. Promote to FULL. Docs/README
+# still reach NONE via the IOS_CHANGED check below.
+if echo "$CHANGED" | grep -E -q \
+  '(\.entitlements$|Info\.plist$|\.xcconfig$|\.xcassets/|\.xcdatamodeld/|\.mlpackage/|\.storyboard$|\.xib$|^(AmakaFlow|AmakaFlowCompanion/AmakaFlowCompanion)/.*\.(json|strings|xcstrings|stringsdict|ttf|otf|png|jpe?g|pdf|svg|gif|heic|mlmodel|mlpackage)$)'; then
+  echo "FULL"
+  exit 0
+fi
+
+# Test-target hygiene (AMA-2442 Bug 1): changes under the test target dir.
+#   - FooTests.swift that still exists  -> selects ITSELF (collected below,
+#     before source mapping, so it can never be dropped just because a
+#     sibling source also mapped)
+#   - FooTests.swift deleted/renamed    -> FULL (can't run a missing class;
+#     renames must revalidate the suite)
+#   - anything else (helpers, fixtures) -> FULL (shared by unknown tests)
+TEST_DIR_PREFIX="AmakaFlowCompanion/AmakaFlowCompanionTests/"
+SELF_SELECTED=()
+while IFS= read -r f; do
+  [[ "$f" == "$TEST_DIR_PREFIX"* ]] || continue
+  if [[ "$f" == *Tests.swift ]]; then
+    if [[ -f "$TEST_DIR/$(basename "$f")" ]]; then
+      SELF_SELECTED+=("AmakaFlowCompanionTests/$(basename "$f" .swift)")
+    else
+      echo "FULL"
+      exit 0
+    fi
+  else
+    echo "FULL"
+    exit 0
+  fi
+done <<< "$CHANGED"
 
 # If .xcodeproj/ changed, inspect whether it's ONLY file-ref additions/removals.
 # A pbxproj change that only adds/removes file refs (no build settings, no
@@ -93,17 +164,28 @@ if echo "$CHANGED" | grep -E -q '^AmakaFlowCompanion/(AmakaFlowWatch Watch App|A
   WATCH_CHANGED=true
 fi
 
-# If neither iOS nor watchOS sources changed, skip tests
+# If neither iOS nor watchOS sources changed, skip tests — UNLESS the
+# project file changed. A pbxproj edit with no mappable Swift sources
+# (build settings, target membership, linker flags…) previously returned
+# NONE and skipped the required test job entirely (AMA-2442).
 if [[ "$IOS_CHANGED" == "false" && "$WATCH_CHANGED" == "false" ]]; then
-  echo "NONE"
+  if [[ "$XCODEPROJ_CHANGED" == "true" ]]; then
+    echo "FULL"
+  else
+    echo "NONE"
+  fi
   exit 0
 fi
 
 # Map changed Swift source files -> expected test class candidates
 # AMA-2439: use prefix-based mapping so EditorV2Command+D2.swift maps to
 # EditorV2CommandTests, EditorV2PropertyTests, etc., not just exact basename match.
+# Seed with the self-selected test classes (AMA-2442 Bug 1) so a directly
+# changed test file is ALWAYS in the selection.
 TEST_PATTERNS=()
-TEST_DIR="AmakaFlowCompanion/AmakaFlowCompanionTests"
+if [[ ${#SELF_SELECTED[@]} -gt 0 ]]; then
+  TEST_PATTERNS+=("${SELF_SELECTED[@]}")
+fi
 
 # iOS source -> iOS test mapping
 while IFS= read -r f; do
@@ -185,7 +267,7 @@ done <<< "$CHANGED"
 
 # Remove duplicates
 if [[ ${#TEST_PATTERNS[@]} -gt 0 ]]; then
-  UNIQUE_TESTS=($(printf "%s\n" "${TEST_PATTERNS[@]}" | sort -u))
+  mapfile -t UNIQUE_TESTS < <(printf "%s\n" "${TEST_PATTERNS[@]}" | sort -u)
 else
   UNIQUE_TESTS=()
 fi
