@@ -419,13 +419,19 @@ extension EditorV2Session {
             guard let group = groups[key] else { continue }
             // Replace group references with loose members, keep loose members as-is
             var newOrder: [EditorV2Row] = []
+            var looseIDsInNewOrder: Set<String> = []
             for row in order {
                 if case .group(key) = row {
                     for memberID in group.memberIDs {
+                        guard !looseIDsInNewOrder.contains(memberID) else { continue }
                         newOrder.append(.loose(memberID))
+                        looseIDsInNewOrder.insert(memberID)
                     }
                 } else {
                     newOrder.append(row)
+                    if case .loose(let id) = row {
+                        looseIDsInNewOrder.insert(id)
+                    }
                 }
             }
             order = newOrder
@@ -440,12 +446,21 @@ extension EditorV2Session {
     private mutating func repairOrderCoverageD2() {
         // Ensure every declared group appears once on the canvas order.
         var presentGroupKeys = Set<String>()
+        var looseIDs = Set<String>()
         for row in order {
             if case .group(let key) = row {
                 presentGroupKeys.insert(key)
+            } else if case .loose(let id) = row {
+                looseIDs.insert(id)
             }
         }
         for key in groups.keys.sorted() where !presentGroupKeys.contains(key) {
+            // If any member already appears as loose, this is a split shape.
+            // Leave it for repairSplitGroupsD2 instead of re-inserting the group row.
+            if let group = groups[key],
+               group.memberIDs.contains(where: { looseIDs.contains($0) }) {
+                continue
+            }
             order.append(.group(key))
         }
 
