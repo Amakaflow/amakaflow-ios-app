@@ -378,7 +378,7 @@ extension EditorV2Session {
         for key in keysToUngroup {
             guard let group = groups[key] else { continue }
             // Replace all group references with loose exercises
-            var newOrder: [EditorV2Session.Row] = []
+            var newOrder: [EditorV2Row] = []
             for row in order {
                 if case .group(key) = row {
                     for memberID in group.memberIDs {
