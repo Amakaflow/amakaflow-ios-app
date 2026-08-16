@@ -115,21 +115,23 @@ jobs:
           echo "Affected iOS result: $RESULT"
           
           # Write to step summary for observability
-          echo "## Affected Tests Selection" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          if [ "$RESULT" = "NONE" ]; then
-            echo "✅ **No tests affected** — iOS tests will be skipped" >> "$GITHUB_STEP_SUMMARY"
-          elif [ "$RESULT" = "FULL" ]; then
-            echo "⚠️ **FULL test suite required**" >> "$GITHUB_STEP_SUMMARY"
-            echo "" >> "$GITHUB_STEP_SUMMARY"
-            echo "Reason: project config changes, no mapped tests, or large diff" >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo "🎯 **Impacted tests identified:**" >> "$GITHUB_STEP_SUMMARY"
-            echo "" >> "$GITHUB_STEP_SUMMARY"
-            echo '```' >> "$GITHUB_STEP_SUMMARY"
-            echo "$RESULT" | tr ' ' '\n' >> "$GITHUB_STEP_SUMMARY"
-            echo '```' >> "$GITHUB_STEP_SUMMARY"
-          fi
+          {
+            echo "## Affected Tests Selection"
+            echo ""
+            if [ "$RESULT" = "NONE" ]; then
+              echo "✅ **No tests affected** — iOS tests will be skipped"
+            elif [ "$RESULT" = "FULL" ]; then
+              echo "⚠️ **FULL test suite required**"
+              echo ""
+              echo "Reason: project config changes, no mapped tests, or large diff"
+            else
+              echo "🎯 **Impacted tests identified:**"
+              echo ""
+              echo '```'
+              echo "$RESULT" | tr ' ' '\n'
+              echo '```'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Detect app/entrypoint changes
         id: app
@@ -357,17 +359,21 @@ jobs:
         if: ${{ always() && needs.detect-changes.outputs.affected != 'NONE' }}
         working-directory: AmakaFlowCompanion
         run: |
-          echo "## Test Results" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
+          {
+            echo "## Test Results"
+            echo ""
+          } >> "$GITHUB_STEP_SUMMARY"
           
           if [ -d TestResults ]; then
             # Extract failures from xcresult
             FAILURES=$(xcrun xcresulttool get test-results summary --path TestResults 2>/dev/null | grep -E "failed|error" || true)
             if [ -n "$FAILURES" ]; then
-              echo "### ❌ Test Failures" >> "$GITHUB_STEP_SUMMARY"
-              echo '```' >> "$GITHUB_STEP_SUMMARY"
-              xcrun xcresulttool get test-results summary --path TestResults 2>/dev/null || echo "xcresulttool summary unavailable" >> "$GITHUB_STEP_SUMMARY"
-              echo '```' >> "$GITHUB_STEP_SUMMARY"
+              {
+                echo "### ❌ Test Failures"
+                echo '```'
+                xcrun xcresulttool get test-results summary --path TestResults 2>/dev/null || echo "xcresulttool summary unavailable"
+                echo '```'
+              } >> "$GITHUB_STEP_SUMMARY"
             else
               echo "✅ All tests passed" >> "$GITHUB_STEP_SUMMARY"
             fi
@@ -377,11 +383,13 @@ jobs:
           if [ -f test_output.log ]; then
             ERRORS=$(grep -E "error:|failed -" test_output.log | head -20 || true)
             if [ -n "$ERRORS" ]; then
-              echo "" >> "$GITHUB_STEP_SUMMARY"
-              echo "### Error Output (first 20 lines)" >> "$GITHUB_STEP_SUMMARY"
-              echo '```' >> "$GITHUB_STEP_SUMMARY"
-              echo "$ERRORS" >> "$GITHUB_STEP_SUMMARY"
-              echo '```' >> "$GITHUB_STEP_SUMMARY"
+              {
+                echo ""
+                echo "### Error Output (first 20 lines)"
+                echo '```'
+                echo "$ERRORS"
+                echo '```'
+              } >> "$GITHUB_STEP_SUMMARY"
             fi
           fi
 
