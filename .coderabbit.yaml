@@ -5,14 +5,19 @@ language: "en-US"
 
 reviews:
   profile: "assertive"
-  # AMA-1592: disable auto-review to eliminate CodeRabbit ping-pong on every push.
-  # Trigger a review explicitly with `@coderabbitai review` or add the `review-ready` label.
-  # Max 2 reviews per PR total (see memory: coderabbit-one-pass-per-batch.md).
+  # AMA-1592: at least 2 real reviews; pause after 2; a 3rd only via
+  # `@coderabbitai review` if many real issues remain. Never on every push.
   auto_review:
-    enabled: false
+    enabled: true
     drafts: false
+  auto_incremental_review: true
+  auto_pause_after_reviewed_commits: 2
   request_changes_workflow: false
   high_level_summary: true
+  # AMA-2439: disable autofix to prevent agent ping-pong (same as amakaflow-docs #74)
+  finishing_touches:
+    autofix:
+      enabled: false
   # AMA: CodeRabbit is for CODE only. Doc-only PRs must not consume CR credits.
   path_filters:
     - "!**/*.md"

@@ -76,6 +76,8 @@ Additional preflight jobs (`Lint Info.plist…`, `No .shared singletons…`) run
 
 **Baseline:** docs-only PR wall time ~20–24 s (ubuntu + skipped macOS). Typical code PR macOS wall time ≤10 min (build + impacted tests).
 
+**Parallelism (AMA-2439):** SwiftLint runs in parallel with the build — lint-red PRs still produce compile errors, so agents on Linux VMs can get xcodebuild feedback without waiting for lint to green. Impacted test selection uses prefix-based mapping so `EditorV2Command+D2.swift` changes map to `EditorV2CommandTests` without forcing FULL.
+
 ---
 
 ## How to cut a TestFlight build

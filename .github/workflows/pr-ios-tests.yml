@@ -50,8 +50,8 @@ env:
   MAESTRO_VERSION: "2.6.1"
 
 jobs:
-  # SwiftLint on ubuntu (cheap, fast) — gates all macOS jobs so style/obvious
-  # failures never reach a 10x-billed runner (#327).
+  # SwiftLint on ubuntu (cheap, fast) — runs in parallel with build to catch
+  # style issues without blocking compile feedback (AMA-2439).
   lint:
     name: SwiftLint
     runs-on: ubuntu-latest
@@ -148,7 +148,7 @@ jobs:
   build:
     name: Build Debug-sim .app
     runs-on: macos-15
-    needs: [detect-changes, lint]
+    needs: [detect-changes]
     if: needs.detect-changes.outputs.should_build == 'true'
     # Cap sized from recent successful runs (max 11.9m) +50% headroom (AMA-2283).
     timeout-minutes: 18
