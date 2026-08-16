@@ -870,6 +870,7 @@ enum DDWorkoutDisplayGrouping {
         return format ?? ""
     }
 
+    // swiftlint:disable cyclomatic_complexity
     private static func formatDescriptor(for block: Block) -> String? {
         let rounds = max(1, block.rounds)
         switch block.structure {
@@ -897,6 +898,7 @@ enum DDWorkoutDisplayGrouping {
             return nil
         }
     }
+    // swiftlint:enable cyclomatic_complexity
 
     private static func accent(for block: Block) -> Color {
         if isWarmupOrCooldown(block) {
