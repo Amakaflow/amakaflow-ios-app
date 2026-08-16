@@ -96,6 +96,9 @@ struct BlockSectionView: View {
         case .amrap: return .red
         case .emom: return .purple
         case .tabata: return .pink
+        case .warmup: return .yellow
+        case .cooldown: return .cyan
+        case .fortime: return .red
         }
     }
 }
