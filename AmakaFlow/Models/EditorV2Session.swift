@@ -179,6 +179,55 @@ extension EditorV2Session {
         removeSoftSection(type: .cooldown, kind: .cooldown)
     }
 
+    /// Warm-up sets are a sibling list — `sets: Int` is untouched. Strength shapes only.
+    @discardableResult
+    mutating func addDefaultWarmupSets(
+        to id: String,
+        rows: [WarmupSetRow],
+        clearingTombstone: Bool = false
+    ) -> Bool {
+        guard !rows.isEmpty, var exercise = exercises[id] else { return false }
+        guard exercise.sets != nil else { return false }
+        guard exercise.warmupSets.isEmpty else { return false }
+        let exerciseId = exercise.exerciseId ?? WorkoutEnrichmentMutations.mintExerciseId()
+        if clearingTombstone {
+            clearEnrichmentTombstone(.exerciseWarmupSets, exerciseId: exerciseId)
+        }
+        guard !WorkoutEnrichmentPresence.isTombstoned(
+            .exerciseWarmupSets,
+            exerciseId: exerciseId,
+            tombstones: enrichmentTombstones
+        ) else { return false }
+        exercise.exerciseId = exerciseId
+        exercise.warmupSets = rows
+        exercises[id] = exercise
+        return true
+    }
+
+    /// Per-exercise tombstone keys off `exercise_id` (rename-safe), so mint when missing.
+    @discardableResult
+    mutating func removeWarmupSets(from id: String) -> String? {
+        guard var exercise = exercises[id] else { return nil }
+        let exerciseId = exercise.exerciseId ?? WorkoutEnrichmentMutations.mintExerciseId()
+        exercise.exerciseId = exerciseId
+        exercise.warmupSets = []
+        exercises[id] = exercise
+        WorkoutEnrichmentMutations.appendTombstone(
+            &enrichmentTombstones,
+            kind: .exerciseWarmupSets,
+            exerciseId: exerciseId
+        )
+        enrichmentTombstonesDirty = true
+        return exerciseId
+    }
+
+    /// Save path — stable ids for tombstones written after this save.
+    mutating func mintMissingExerciseIDs() {
+        for id in exercises.keys where exercises[id]?.exerciseId == nil {
+            exercises[id]?.exerciseId = WorkoutEnrichmentMutations.mintExerciseId()
+        }
+    }
+
     /// Push-sheet apply of a tombstoned kind: caller clears, then enrich runs.
     mutating func clearEnrichmentTombstone(_ kind: EnrichmentKind, exerciseId: String? = nil) {
         WorkoutEnrichmentMutations.clearTombstone(
