@@ -4,6 +4,7 @@
 //
 //  AMA-2438 P2 — D2 command implementations for declared membership model.
 //
+// swiftlint:disable file_length
 
 import Foundation
 
