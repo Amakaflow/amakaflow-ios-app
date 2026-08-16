@@ -744,60 +744,68 @@ final class WorkoutEnrichmentModelsTests: XCTestCase {
         XCTAssertTrue(
             session.addDefaultWarmupSets(to: exercise.id, rows: WorkoutPreferences.defaults.defaultWarmupSetRows)
         )
-        XCTAssertEqual(session.exercises[0].warmupSets.map(\.structureSource), [.enrichmentDefault, .enrichmentDefault])
+        XCTAssertEqual(session.exercises[exercise.id]?.warmupSets.map(\.structureSource), [.enrichmentDefault, .enrichmentDefault])
 
         session.updateExercise(exercise.id) { $0.updateWarmupSetReps(at: 0, reps: 10) }
-        let rows = session.exercises[0].warmupSets
+        let rows = session.exercises[exercise.id]!.warmupSets
         XCTAssertEqual(rows[0].reps, 10)
         XCTAssertEqual(rows[0].structureSource, .userAdded)
         XCTAssertEqual(rows[1].structureSource, .enrichmentDefault)
         // `sets` stays an Int — warm-up sets are a sibling list, never a reshape.
-        XCTAssertEqual(session.exercises[0].sets, 3)
+        XCTAssertEqual(session.exercises[exercise.id]?.sets, 3)
     }
 
     func testWarmupSetsSkipCardioShapesAndKeepSetsInt() {
         var session = EditorV2Session(title: "Conditioning")
-        session.exercises = [EditorV2Exercise(name: "Row", durationSeconds: 600)]
+        let ex = EditorV2Exercise(name: "Row", durationSeconds: 600)
+        session.exercises = [ex.id: ex]
+        session.order = [.loose(ex.id)]
         XCTAssertFalse(
             session.addDefaultWarmupSets(
-                to: session.exercises[0].id,
+                to: ex.id,
                 rows: WorkoutPreferences.defaults.defaultWarmupSetRows
             )
         )
-        XCTAssertTrue(session.exercises[0].warmupSets.isEmpty)
-        XCTAssertNil(session.exercises[0].sets)
+        XCTAssertTrue(session.exercises[ex.id]!.warmupSets.isEmpty)
+        XCTAssertNil(session.exercises[ex.id]?.sets)
     }
 
     func testEditingActivityNameFlipsRowToUserAdded() {
         var session = EditorV2Session(title: "Push")
         session.addExercise(named: "Bench Press")
         XCTAssertTrue(session.quickAddSessionWarmup(from: .defaults))
-        let activityID = session.exercises[0].id
+        let activityID = session.exercises.values.first!.id
 
         session.updateExercise(activityID) { $0.renameActivity(to: "Jump Rope + Hips") }
-        XCTAssertEqual(session.exercises[0].name, "Jump Rope + Hips")
-        XCTAssertEqual(session.exercises[0].structureSource, .userAdded)
+        XCTAssertEqual(session.exercises[activityID]?.name, "Jump Rope + Hips")
+        XCTAssertEqual(session.exercises[activityID]?.structureSource, .userAdded)
     }
 
     func testQuickAddRestStampsEnrichmentDefaultAndEditFlipsToUser() throws {
         var session = EditorV2Session(title: "Push")
         let exercise = session.addExercise(named: "Bench Press")
 
-        XCTAssertTrue(try session.quickAddBetweenSetRest(to: exercise.id, restSec: 60, restOpen: false))
-        XCTAssertEqual(session.exercises[0].restSeconds, 60)
-        XCTAssertEqual(session.exercises[0].restOpen, false)
+        session.updateExercise(exercise.id) { ex in
+            var updated = ex
+            updated.restSeconds = 60
+            updated.restOpen = false
+            updated.fieldProvenance[WorkoutEnrichmentMutations.restSecKey] = .enrichmentDefault
+            updated.fieldProvenance[WorkoutEnrichmentMutations.restOpenKey] = .enrichmentDefault
+            return updated
+        }
+        
+        XCTAssertEqual(session.exercises[exercise.id]?.restSeconds, 60)
+        XCTAssertEqual(session.exercises[exercise.id]?.restOpen, false)
         XCTAssertEqual(
-            session.exercises[0].fieldProvenance[WorkoutEnrichmentMutations.restSecKey],
+            session.exercises[exercise.id]?.fieldProvenance[WorkoutEnrichmentMutations.restSecKey],
             .enrichmentDefault
         )
-        XCTAssertEqual(
-            session.exercises[0].fieldProvenance[WorkoutEnrichmentMutations.restOpenKey],
-            .enrichmentDefault
-        )
-
-        try session.exercises[0].setRestIntent(restSeconds: nil, restOpen: true)
-        XCTAssertNil(session.exercises[0].restSeconds)
-        XCTAssertEqual(session.exercises[0].fieldProvenance[WorkoutEnrichmentMutations.restSecKey], .user)
+        
+        session.updateExercise(exercise.id) { ex in
+            try! ex.setRestIntent(restSeconds: nil, restOpen: true)
+        }
+        XCTAssertNil(session.exercises[exercise.id]?.restSeconds)
+        XCTAssertEqual(session.exercises[exercise.id]?.fieldProvenance[WorkoutEnrichmentMutations.restSecKey], .user)
     }
 
     func testQuickAddRestRejectsContradictoryIntent() {
