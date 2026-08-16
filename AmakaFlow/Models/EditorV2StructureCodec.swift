@@ -135,7 +135,6 @@ extension EditorV2Session {
         }
     }
     
-    // swiftlint:disable:next large_tuple
     private static func parseNameAndLetter(_ label: String?, type: EditorV2GroupType) -> (String?, String?) {
         guard let label = label, type == .superset else { return (label, nil) }
         

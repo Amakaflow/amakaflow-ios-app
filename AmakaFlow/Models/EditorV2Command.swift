@@ -19,7 +19,7 @@ enum EditorCommand: Equatable, Sendable {
     case ungroup(String)
     case deleteGroup(String)
     case addBlock(EditorV2GroupType)
-    case move(String, to: Int)
+    case move(String, Int)
     case reorder(fromOffsets: IndexSet, toOffset: Int)
     case quickAddSoftSection(EnrichmentKind)
     case removeSoftSection(EditorV2GroupType, EnrichmentKind)
@@ -365,8 +365,8 @@ extension EditorV2Session {
     private mutating func removeSoftSectionInternal(type: EditorV2GroupType, kind: EnrichmentKind) {
         let keys = Set(groups.filter { $0.value.type == type }.keys)
         if !keys.isEmpty {
-            exercises.removeAll { exercise in
-                guard let groupKey = exercise.groupKey else { return false }
+            exercises.removeAll {
+                guard let groupKey = $0.groupKey else { return false }
                 return keys.contains(groupKey)
             }
             for key in keys {

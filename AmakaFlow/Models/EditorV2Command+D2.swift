@@ -239,7 +239,7 @@ extension EditorV2Session {
             }
             
             // Remove from order
-            order.removeAll { row in
+            order.removeAll {
                 if case .group(key) = $0 { return true }
                 return false
             }
@@ -284,7 +284,7 @@ extension EditorV2Session {
                         groups[key]?.memberIDs.remove(at: memberIdx)
                         // If last member and not format group, remove group from order
                         if group.memberIDs.count == 1 && key != formatGroupKey {
-                            order.removeAll { row in
+                            order.removeAll {
                                 if case .group(key) = $0 { return true }
                                 return false
                             }
@@ -356,7 +356,7 @@ extension EditorV2Session {
         
         for key in keysToRemove {
             groups.removeValue(forKey: key)
-            order.removeAll { row in
+            order.removeAll {
                 if case .group(key) = $0 { return true }
                 return false
             }

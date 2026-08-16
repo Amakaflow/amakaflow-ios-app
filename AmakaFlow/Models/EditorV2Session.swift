@@ -555,8 +555,8 @@ extension EditorV2Session {
     private mutating func removeSoftSection(type: EditorV2GroupType, kind: EnrichmentKind) {
         let keys = Set(groups.filter { $0.value.type == type }.keys)
         if !keys.isEmpty {
-            exercises.removeAll { exercise in
-                guard let groupKey = exercise.groupKey else { return false }
+            exercises.removeAll {
+                guard let groupKey = $0.groupKey else { return false }
                 return keys.contains(groupKey)
             }
             for key in keys {
