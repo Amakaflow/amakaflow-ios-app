@@ -150,6 +150,10 @@ extension EditorV2Session {
                 groups[key]?.memberIDs.append(sourceID)
             }
             
+            // Update groupKey fields
+            exercises[sourceID]?.groupKey = key
+            exercises[targetID]?.groupKey = key
+            
             return .applied
             
         case .removeFromGroup(let exerciseID):
@@ -180,6 +184,9 @@ extension EditorV2Session {
             } else {
                 order.append(.loose(exerciseID))
             }
+            
+            // Clear groupKey field
+            exercises[exerciseID]?.groupKey = nil
             
             return .applied
             
@@ -219,6 +226,8 @@ extension EditorV2Session {
                 order.remove(at: groupIdx)
                 for (idx, memberID) in group.memberIDs.enumerated() {
                     order.insert(.loose(memberID), at: groupIdx + idx)
+                    // Clear groupKey field
+                    exercises[memberID]?.groupKey = nil
                 }
             }
             
@@ -342,8 +351,22 @@ extension EditorV2Session {
 
 extension EditorV2Session {
     mutating func normalizeD2() {
+        syncGroupKeyFieldsD2()
         pruneEmptyGroupsD2()
         refreshSupersetLabelsD2()
+    }
+    
+    private mutating func syncGroupKeyFieldsD2() {
+        // Clear all groupKey fields first
+        for id in exercises.keys {
+            exercises[id]?.groupKey = nil
+        }
+        // Set groupKey for all members
+        for (key, group) in groups {
+            for memberID in group.memberIDs {
+                exercises[memberID]?.groupKey = key
+            }
+        }
     }
     
     private mutating func pruneEmptyGroupsD2() {
