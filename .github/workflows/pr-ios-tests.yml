@@ -113,6 +113,23 @@ jobs:
           RESULT=$(.github/scripts/affected-tests-ios.sh)
           echo "result=$RESULT" >> "$GITHUB_OUTPUT"
           echo "Affected iOS result: $RESULT"
+          
+          # Write to step summary for observability
+          echo "## Affected Tests Selection" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          if [ "$RESULT" = "NONE" ]; then
+            echo "✅ **No tests affected** — iOS tests will be skipped" >> "$GITHUB_STEP_SUMMARY"
+          elif [ "$RESULT" = "FULL" ]; then
+            echo "⚠️ **FULL test suite required**" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "Reason: project config changes, no mapped tests, or large diff" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "🎯 **Impacted tests identified:**" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+            echo "$RESULT" | tr ' ' '\n' >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+          fi
 
       - name: Detect app/entrypoint changes
         id: app
@@ -336,6 +353,38 @@ jobs:
           fi
           exit "$XCODE_EXIT"
 
+      - name: Generate test failure summary
+        if: always() && needs.detect-changes.outputs.affected != 'NONE'
+        working-directory: AmakaFlowCompanion
+        run: |
+          echo "## Test Results" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          
+          if [ -d TestResults.xcresult ]; then
+            # Extract failures from xcresult
+            FAILURES=$(xcrun xcresulttool get test-results summary --path TestResults.xcresult 2>/dev/null | grep -E "failed|error" || true)
+            if [ -n "$FAILURES" ]; then
+              echo "### ❌ Test Failures" >> "$GITHUB_STEP_SUMMARY"
+              echo '```' >> "$GITHUB_STEP_SUMMARY"
+              xcrun xcresulttool get test-results summary --path TestResults.xcresult 2>/dev/null || echo "xcresulttool summary unavailable" >> "$GITHUB_STEP_SUMMARY"
+              echo '```' >> "$GITHUB_STEP_SUMMARY"
+            else
+              echo "✅ All tests passed" >> "$GITHUB_STEP_SUMMARY"
+            fi
+          fi
+          
+          # Parse test_output.log for detailed errors
+          if [ -f test_output.log ]; then
+            ERRORS=$(grep -E "error:|failed -" test_output.log | head -20 || true)
+            if [ -n "$ERRORS" ]; then
+              echo "" >> "$GITHUB_STEP_SUMMARY"
+              echo "### Error Output (first 20 lines)" >> "$GITHUB_STEP_SUMMARY"
+              echo '```' >> "$GITHUB_STEP_SUMMARY"
+              echo "$ERRORS" >> "$GITHUB_STEP_SUMMARY"
+              echo '```' >> "$GITHUB_STEP_SUMMARY"
+            fi
+          fi
+
       - name: Run full tests (fallback)
         if: needs.detect-changes.outputs.affected == 'FULL'
         working-directory: AmakaFlowCompanion
@@ -365,7 +414,9 @@ jobs:
         if: always()
         with:
           name: ios-test-results
-          path: AmakaFlowCompanion/TestResults
+          path: |
+            AmakaFlowCompanion/TestResults.xcresult
+            AmakaFlowCompanion/test_output.log
           retention-days: 7
 
   cold-launch:

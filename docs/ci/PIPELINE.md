@@ -74,9 +74,52 @@ These job names must stay stable (CI-3); renaming breaks branch protection.
 
 Additional preflight jobs (`Lint Info.plist…`, `No .shared singletons…`) run on code-affecting PRs but are not in the required-seven set.
 
-**Baseline:** docs-only PR wall time ~20–24 s (ubuntu + skipped macOS). Typical code PR macOS wall time ≤10 min (build + impacted tests).
+**Baseline:** docs-only PR wall time ~20–24 s (ubuntu + skipped macOS).
 
 **Parallelism (AMA-2439):** SwiftLint runs in parallel with the build — lint-red PRs still produce compile errors, so agents on Linux VMs can get xcodebuild feedback without waiting for lint to green. Impacted test selection uses prefix-based mapping so `EditorV2Command+D2.swift` changes map to `EditorV2CommandTests` without forcing FULL.
+
+---
+
+## Local development (just recipes)
+
+The repository includes a `justfile` at the root with five recipes for local macOS development. Linux agents cannot run these.
+
+**Pre-push protocol (local agents):**
+
+1. Complete a coherent batch of changes
+2. Run `just ios-build` — fast feedback on compile errors (minutes)
+3. Run nearest tests (e.g. `just ios-test-editorv2` or `just ios-test-impacted`)
+4. Run `just ios-lint` — style does not stop compile; fix violations before push
+5. One push per question answered
+
+**Available recipes:**
+
+| Recipe | What it does |
+|--------|--------------|
+| `just ios-build` | `build-for-testing` Debug-sim with persistent DerivedData + Clerk stubs |
+| `just ios-test-editorv2` | Run EditorV2 tests only (`-only-testing:AmakaFlowCompanionTests/EditorV2Tests`) |
+| `just ios-test-impacted` | Run `.github/scripts/affected-tests-ios.sh` against `origin/main...HEAD` and test those; FULL or NONE handled |
+| `just ios-test-full` | Run full unit suite (`-only-testing:AmakaFlowCompanionTests`) |
+| `just ios-lint` | SwiftLint strict mode with baseline (same as CI) |
+
+All recipes wrap the same project/scheme/scripts that CI uses. DerivedData persists locally under `AmakaFlowCompanion/DerivedData` for fast incremental builds.
+
+**Keep `cancel-in-progress` effective:** One PR push should answer one question. Stack changes locally and push coherent batches; rapid-fire pushes cancel in-flight CI runs and waste runner minutes.
+
+---
+
+## Pipeline SLAs
+
+Four tiers of feedback speed:
+
+| Tier | What | Target | Notes |
+|------|------|--------|-------|
+| **Local fast feedback** | `just` recipes on developer Mac | Minutes | Compile + nearest tests + lint; no PR required |
+| **PR default** | Build + impacted tests + preflight | Variable | Depends on change size; impacted selection targets &lt;10 min for typical changes |
+| **Full suite** | Label-gated / uncertain / main+nightly | Not this PR | Tracked separately; always runs on `main` via TestFlight pipeline |
+| **Release** | TestFlight upload | ~9–12 min archive+upload | What-to-Test + tag +1–2 min |
+
+The goal is to catch most issues at the **local fast feedback** tier before pushing, so the **PR default** tier confirms rather than discovers problems.
 
 ---
 
