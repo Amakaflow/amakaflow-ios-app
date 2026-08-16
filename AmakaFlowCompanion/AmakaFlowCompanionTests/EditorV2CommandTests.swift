@@ -104,15 +104,13 @@ final class EditorV2CommandTests: XCTestCase {
         let ex2 = EditorV2Exercise(name: "B")
         let ex3 = EditorV2Exercise(name: "C")
         
+        session.exercises = [ex1.id: ex1, ex2.id: ex2, ex3.id: ex3]
         session.groups[groupKey] = EditorV2Group(
             id: groupKey,
             type: .superset,
             name: "Tri-set",
             memberIDs: [ex1.id, ex2.id, ex3.id]
         )
-        session.exercises = [ex1.id: ex1, ex2.id: ex2, ex3.id: ex3]
-        session.order = [.group(groupKey)]
-        session.order = [.loose(ex1.id), .loose(ex2.id), .loose(ex3.id)]
         session.order = [.group(groupKey)]
         
         let result = session.apply(.switchGroupType(groupKey, .emom))
@@ -216,8 +214,8 @@ final class EditorV2CommandTests: XCTestCase {
         let result = session.apply(.updatePrescription(ex1.id, updated))
         
         XCTAssertEqual(result, .applied)
-        XCTAssertEqual(session.exercises.values.first!.sets, 5)
-        XCTAssertEqual(session.exercises.values.first!.reps, 5)
+        XCTAssertEqual(session.exercises[ex1.id]?.sets, 5)
+        XCTAssertEqual(session.exercises[ex1.id]?.reps, 5)
     }
     
     func testPairSuperset_createsNewGroup() {
@@ -428,11 +426,16 @@ final class EditorV2CommandTests: XCTestCase {
         let id = "dup"
         let ex1 = EditorV2Exercise(id: id, name: "A")
         session.exercises = [id: ex1]
-        // Manually create invalid state: same ID appears twice in order
-        session.order = [.loose(id), .loose(id)]
+        session.order = [.loose(id)]
         
-        // Validation should reject duplicate in order
-        let result = session.apply(.addSet(id))  // Any command to trigger validation
+        // Try to create a duplicate by adding the same exercise twice
+        // This should be rejected by validation
+        let ex2 = EditorV2Exercise(id: id, name: "B")
+        session.exercises[id] = ex2
+        session.order.append(.loose(id))
+        
+        // Any command should reject this invalid state
+        let result = session.apply(.addSet(id))
         XCTAssertNotEqual(result, .applied)
     }
     
