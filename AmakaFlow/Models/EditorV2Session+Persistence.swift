@@ -61,8 +61,11 @@ extension EditorV2Session {
             flatBuffer = []
         }
 
-        for run in runs {
-            if let key = run.groupKey, let group = groups[key] {
+        for row in order {
+            switch row {
+            case .group(let key):
+                guard let group = groups[key] else { continue }
+                let members = group.memberIDs.compactMap { exercises[$0] }
                 flushFlat()
                 let restSec: Int? = {
                     switch group.type {
@@ -99,7 +102,7 @@ extension EditorV2Session {
                         return group.metaLine
                     case .superset:
                         // AMA-2438 D3: use derived display name
-                        return group.displayName(memberCount: run.exercises.count)
+                        return group.displayName(memberCount: members.count)
                     default:
                         return group.name
                     }
@@ -108,7 +111,7 @@ extension EditorV2Session {
                     SocialImportBlock(
                         label: label,
                         rounds: max(1, rounds),
-                        exercises: run.exercises.map(\.asSocialImportExercise),
+                        exercises: members.map(\.asSocialImportExercise),
                         type: group.type.structureBlockType.rawValue,
                         restSec: restSec,
                         timeCapSec: timeCapSec,
@@ -116,8 +119,9 @@ extension EditorV2Session {
                         enrichmentKind: group.enrichmentKind?.rawValue
                     )
                 )
-            } else {
-                flatBuffer.append(contentsOf: run.exercises.map(\.asSocialImportExercise))
+            case .loose(let id):
+                guard let exercise = exercises[id] else { continue }
+                flatBuffer.append(exercise.asSocialImportExercise)
             }
         }
         flushFlat()
