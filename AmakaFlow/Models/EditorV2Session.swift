@@ -634,3 +634,140 @@ extension EditorV2Session {
         )
     }
 }
+
+// MARK: - Compatibility methods for tests (wrap commands)
+
+extension EditorV2Session {
+    @discardableResult
+    mutating func addExercise(named name: String) -> EditorV2Exercise {
+        _ = apply(.addExercises(names: [name], into: nil))
+        // Find the newly added exercise
+        for row in order.reversed() {
+            switch row {
+            case .loose(let id):
+                if let ex = exercises[id], ex.name == name {
+                    return ex
+                }
+            case .group(let key):
+                if let group = groups[key], let lastID = group.memberIDs.last,
+                   let ex = exercises[lastID], ex.name == name {
+                    return ex
+                }
+            }
+        }
+        fatalError("Exercise not found after add")
+    }
+    
+    @discardableResult
+    mutating func startFormat(_ type: EditorV2GroupType) -> String {
+        _ = apply(.addBlock(type))
+        return "fmt"
+    }
+    
+    mutating func beginNextSupersetGroup(preferredName: String? = nil) -> String {
+        let key = "ss\(UUID().uuidString)"
+        let letter = nextSupersetLetter()
+        groups[key] = EditorV2Group(
+            id: key,
+            type: .superset,
+            name: preferredName ?? "Superset",
+            letter: letter,
+            config: EditorV2GroupType.superset.defaultConfig,
+            memberIDs: [],
+            structureSource: .userConfirmed
+        )
+        formatGroupKey = key
+        order.append(.group(key))
+        return key
+    }
+    
+    private func nextSupersetLetter() -> String {
+        let letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        let usedLetters = Set(groups.values.compactMap(\.letter))
+        for letter in letters {
+            let str = String(letter)
+            if !usedLetters.contains(str) {
+                return str
+            }
+        }
+        return "A"
+    }
+    
+    mutating func updateGroup(_ key: String, patch: (inout EditorV2Group) -> Void) {
+        guard var group = groups[key] else { return }
+        patch(&group)
+        groups[key] = group
+    }
+    
+    mutating func ungroup(_ key: String) {
+        _ = apply(.ungroup(key))
+    }
+    
+    mutating func discardAndRepinSupersetGroup(_ key: String) -> String? {
+        guard let group = groups[key], group.type == .superset else { return nil }
+        let preferredName: String = {
+            if group.name.localizedCaseInsensitiveContains("tri") { return "Tri-set" }
+            let trimmed = group.name.trimmingCharacters(in: .whitespacesAndNewlines)
+            return trimmed.isEmpty ? "Superset" : trimmed
+        }()
+        _ = apply(.deleteGroup(key))
+        return beginNextSupersetGroup(preferredName: preferredName)
+    }
+    
+    mutating func focusFormatGroup(_ key: String) {
+        guard groups[key] != nil else { return }
+        formatGroupKey = key
+    }
+    
+    mutating func removeFromSuperset(_ exerciseID: String) {
+        _ = apply(.removeFromGroup(exerciseID))
+    }
+    
+    mutating func pairSuperset(sourceID: String, targetID: String) {
+        _ = apply(.pairSuperset(source: sourceID, target: targetID))
+    }
+    
+    mutating func moveExercise(from fromID: String, to toID: String) {
+        // Find toID's position in order
+        var toIndex = 0
+        for (idx, row) in order.enumerated() {
+            switch row {
+            case .loose(let id) where id == toID:
+                toIndex = idx
+            case .group(let key):
+                if let group = groups[key], group.memberIDs.contains(toID) {
+                    toIndex = idx
+                }
+            default:
+                break
+            }
+        }
+        _ = apply(.move(fromID, to: toIndex))
+    }
+    
+    mutating func reorder(fromOffsets: IndexSet, toOffset: Int) {
+        _ = apply(.reorder(fromOffsets: fromOffsets, toOffset: toOffset))
+    }
+    
+    mutating func replaceExercise(_ id: String, with name: String) {
+        _ = apply(.replaceExercise(id, with: name))
+    }
+    
+    mutating func removeExercise(_ id: String) {
+        _ = apply(.removeExercise(id))
+    }
+    
+    mutating func addSet(to id: String) {
+        _ = apply(.addSet(to: id))
+    }
+    
+    mutating func switchGroupType(_ key: String, to type: EditorV2GroupType) {
+        _ = apply(.switchGroupType(key, type))
+    }
+    
+    mutating func updateExercise(_ id: String, patch: (inout EditorV2Exercise) -> Void) {
+        guard var exercise = exercises[id] else { return }
+        patch(&exercise)
+        _ = apply(.updatePrescription(id, exercise))
+    }
+}

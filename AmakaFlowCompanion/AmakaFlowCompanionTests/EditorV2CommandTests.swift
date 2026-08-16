@@ -13,61 +13,74 @@ final class EditorV2CommandTests: XCTestCase {
     // MARK: - Audit regressions (expected-fail until P2)
     
     func testPairTargetInsideCircuit_shouldNotRipOut() {
-        XCTExpectFailure("AMA-2438: pair target inside circuit rips it out", strict: false)
+        // AMA-2438 P2: D2 now rejects ripping target from non-superset group
         
         var session = EditorV2Session()
         let circuitKey = "c1"
-        session.groups[circuitKey] = EditorV2Group(id: circuitKey, type: .circuit)
+        session.groups[circuitKey] = EditorV2Group(
+            id: circuitKey,
+            type: .circuit,
+            memberIDs: []
+        )
         
-        let ex1 = EditorV2Exercise(name: "Burpees", groupKey: circuitKey)
-        let ex2 = EditorV2Exercise(name: "Ski", groupKey: circuitKey)
-        let ex3 = EditorV2Exercise(name: "Row", groupKey: nil)
-        session.exercises = [ex1, ex2, ex3]
+        let ex1 = EditorV2Exercise(name: "Burpees")
+        let ex2 = EditorV2Exercise(name: "Ski")
+        let ex3 = EditorV2Exercise(name: "Row")
+        
+        session.exercises = [ex1.id: ex1, ex2.id: ex2, ex3.id: ex3]
+        session.groups[circuitKey]?.memberIDs = [ex1.id, ex2.id]
+        session.order = [.group(circuitKey), .loose(ex3.id)]
         
         let result = session.apply(.pairSuperset(source: ex3.id, target: ex1.id))
-        XCTAssertEqual(result, .applied)
         
-        // ex1 should NOT be ripped out of the circuit
-        XCTAssertEqual(session.exercises.first(where: { $0.id == ex1.id })?.groupKey, circuitKey)
+        // Should be rejected because target is in a circuit
+        XCTAssertEqual(result, .rejected(.invalidGroupMembership))
         XCTAssertNotNil(session.groups[circuitKey])
     }
     
     func testPairSourceMidGroup_shouldRepairContiguity() {
-        XCTExpectFailure("AMA-2438: pair from mid-group breaks contiguity", strict: false)
+        // AMA-2438 P2: D2 declared membership handles this correctly (removes from memberIDs)
         
         var session = EditorV2Session()
         let ssKey = "ss1"
-        session.groups[ssKey] = EditorV2Group(id: ssKey, type: .superset)
+        let ex1 = EditorV2Exercise(name: "A")
+        let ex2 = EditorV2Exercise(name: "B")
+        let ex3 = EditorV2Exercise(name: "C")
+        let ex4 = EditorV2Exercise(name: "D")
         
-        let ex1 = EditorV2Exercise(name: "A", groupKey: ssKey)
-        let ex2 = EditorV2Exercise(name: "B", groupKey: ssKey)
-        let ex3 = EditorV2Exercise(name: "C", groupKey: ssKey)
-        let ex4 = EditorV2Exercise(name: "D", groupKey: nil)
-        session.exercises = [ex1, ex2, ex3, ex4]
+        session.groups[ssKey] = EditorV2Group(
+            id: ssKey,
+            type: .superset,
+            memberIDs: [ex1.id, ex2.id, ex3.id]
+        )
+        session.exercises = [ex1.id: ex1, ex2.id: ex2, ex3.id: ex3, ex4.id: ex4]
+        session.order = [.group(ssKey), .loose(ex4.id)]
         
         // Pair ex2 out of the group
         let result = session.apply(.pairSuperset(source: ex2.id, target: ex4.id))
         XCTAssertEqual(result, .applied)
         
-        // Old group should either be repaired (ex1, ex3 stay grouped) or all ungrouped
-        let ex1After = session.exercises.first(where: { $0.id == ex1.id })
-        let ex3After = session.exercises.first(where: { $0.id == ex3.id })
-        
-        // They should be consistent (both in group or both loose)
-        XCTAssertEqual(ex1After?.groupKey, ex3After?.groupKey)
+        // Old group should still have ex1 and ex3
+        XCTAssertEqual(session.groups[ssKey]?.memberIDs, [ex1.id, ex3.id])
     }
     
     func testRemoveTriSetMember_labelMustShrinkToSuperset() {
-        XCTExpectFailure("AMA-2438: tri-set label doesn't shrink on removal", strict: false)
+        // AMA-2438 P2: D3 derived labels now handle this automatically via normalizeD2
         
         var session = EditorV2Session()
         let ssKey = "ss1"
-        session.groups[ssKey] = EditorV2Group(id: ssKey, type: .superset, name: "Tri-set")
+        let ex1 = EditorV2Exercise(name: "A")
+        let ex2 = EditorV2Exercise(name: "B")
+        let ex3 = EditorV2Exercise(name: "C")
         
-        let ex1 = EditorV2Exercise(name: "A", groupKey: ssKey)
-        let ex2 = EditorV2Exercise(name: "B", groupKey: ssKey)
-        let ex3 = EditorV2Exercise(name: "C", groupKey: ssKey)
-        session.exercises = [ex1, ex2, ex3]
+        session.groups[ssKey] = EditorV2Group(
+            id: ssKey,
+            type: .superset,
+            name: "Tri-set",
+            memberIDs: [ex1.id, ex2.id, ex3.id]
+        )
+        session.exercises = [ex1.id: ex1, ex2.id: ex2, ex3.id: ex3]
+        session.order = [.group(ssKey)]
         
         XCTAssertEqual(session.groups[ssKey]?.name, "Tri-set")
         
@@ -75,21 +88,27 @@ final class EditorV2CommandTests: XCTestCase {
         let result = session.apply(.removeExercise(ex3.id))
         XCTAssertEqual(result, .applied)
         
-        // Label must shrink back to Superset
+        // Label must shrink back to Superset (normalizeD2 updates it)
         XCTAssertEqual(session.groups[ssKey]?.name, "Superset")
     }
     
     func testSwitchTriSetToEMOM_labelMustNotSurvive() {
-        XCTExpectFailure("AMA-2438: Tri-set label survives type switch", strict: false)
+        // AMA-2438 P2: switchGroupType now resets name to type.label for auto-labeled groups
         
         var session = EditorV2Session()
         let groupKey = "g1"
-        session.groups[groupKey] = EditorV2Group(id: groupKey, type: .superset, name: "Tri-set")
+        let ex1 = EditorV2Exercise(name: "A")
+        let ex2 = EditorV2Exercise(name: "B")
+        let ex3 = EditorV2Exercise(name: "C")
         
-        let ex1 = EditorV2Exercise(name: "A", groupKey: groupKey)
-        let ex2 = EditorV2Exercise(name: "B", groupKey: groupKey)
-        let ex3 = EditorV2Exercise(name: "C", groupKey: groupKey)
-        session.exercises = [ex1, ex2, ex3]
+        session.groups[groupKey] = EditorV2Group(
+            id: groupKey,
+            type: .superset,
+            name: "Tri-set",
+            memberIDs: [ex1.id, ex2.id, ex3.id]
+        )
+        session.exercises = [ex1.id: ex1, ex2.id: ex2, ex3.id: ex3]
+        session.order = [.group(groupKey)]
         
         let result = session.apply(.switchGroupType(groupKey, .emom))
         XCTAssertEqual(result, .applied)
@@ -101,25 +120,28 @@ final class EditorV2CommandTests: XCTestCase {
     }
     
     func testSheetCommitDoesNotClobber() {
-        XCTExpectFailure("AMA-2438: sheet commit from stale @State clobbers", strict: false)
+        // AMA-2438 P2: updatePrescription replaces the entire exercise, so stale state still clobbers
+        // This is a UI architecture issue (need field-level mutations), not a model bug
+        XCTExpectFailure("UI architecture: sheet @State captures stale copy", strict: false)
         
         var session = EditorV2Session()
         let ex1 = EditorV2Exercise(name: "Squat", sets: 3, reps: 10)
-        session.exercises = [ex1]
+        session.exercises = [ex1.id: ex1]
+        session.order = [.loose(ex1.id)]
         
         // Simulate: user opens sheet with ex1 state, then another action modifies it
         var staleEx1 = ex1
         
         // Background modification while sheet is open
         _ = session.apply(.addSet(to: ex1.id))
-        XCTAssertEqual(session.exercises.first?.sets, 4)
+        XCTAssertEqual(session.exercises[ex1.id]?.sets, 4)
         
         // Now sheet commits stale state
         staleEx1.reps = 12
         _ = session.apply(.updatePrescription(ex1.id, staleEx1))
         
         // Sets should still be 4, not clobbered back to 3
-        XCTAssertEqual(session.exercises.first?.sets, 4)
+        XCTAssertEqual(session.exercises[ex1.id]?.sets, 4)
     }
     
     // MARK: - Basic command tests
@@ -130,14 +152,15 @@ final class EditorV2CommandTests: XCTestCase {
         
         XCTAssertEqual(result, .applied)
         XCTAssertEqual(session.exercises.count, 2)
-        XCTAssertEqual(session.exercises[0].name, "Squat")
-        XCTAssertEqual(session.exercises[1].name, "Bench")
+        XCTAssertTrue(session.exercises.values.contains(where: { $0.name == "Squat" }))
+        XCTAssertTrue(session.exercises.values.contains(where: { $0.name == "Bench" }))
     }
     
     func testRemoveExercise_removesFromList() {
         var session = EditorV2Session()
         let ex1 = EditorV2Exercise(name: "Squat")
-        session.exercises = [ex1]
+        session.exercises = [ex1.id: ex1]
+        session.order = [.loose(ex1.id)]
         
         let result = session.apply(.removeExercise(ex1.id))
         
