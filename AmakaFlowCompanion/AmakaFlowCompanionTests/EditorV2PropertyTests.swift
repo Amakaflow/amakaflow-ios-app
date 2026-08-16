@@ -108,10 +108,10 @@ final class EditorV2PropertyTests: XCTestCase {
             return .addExercises(names: ["Test"], into: nil)
             
         case 6:
-            // reorder
-            if session.exercises.count >= 2 {
-                let idx = Int.random(in: 0..<session.exercises.count, using: &rng)
-                let toIdx = Int.random(in: 0...session.exercises.count, using: &rng)
+            // reorder - operates on order array, not exercises
+            if session.order.count >= 2 {
+                let idx = Int.random(in: 0..<session.order.count, using: &rng)
+                let toIdx = Int.random(in: 0...session.order.count, using: &rng)
                 return .reorder(fromOffsets: IndexSet(integer: idx), toOffset: toIdx)
             }
             return .addExercises(names: ["Test"], into: nil)

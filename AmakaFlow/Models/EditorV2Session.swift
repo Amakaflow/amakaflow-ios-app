@@ -50,7 +50,8 @@ struct EditorV2Session: Equatable, Sendable {
             case .group(let key):
                 guard let group = groups[key] else { continue }
                 let members = group.memberIDs.compactMap { exercises[$0] }
-                guard !members.isEmpty else { continue }
+                // Include empty groups if they're the format group (pinned for building)
+                guard !members.isEmpty || key == formatGroupKey else { continue }
                 result.append(
                     EditorV2Run(
                         id: key,

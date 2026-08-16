@@ -282,18 +282,35 @@ final class EditorV2Tests: XCTestCase {
     }
 
     func testReorderClearsSplitGroupKeys() {
-        let exA = EditorV2Exercise(id: "a", name: "A", sets: 3, reps: 10, groupKey: "ss1")
-        let exB = EditorV2Exercise(id: "b", name: "B", sets: 3, reps: 10, groupKey: "ss1")
+        // D2: order is [Row], not flat exercises. Test that moving a loose exercise
+        // into a position that would "split" a group causes the group to ungroup.
+        let exA = EditorV2Exercise(id: "a", name: "A", sets: 3, reps: 10)
+        let exB = EditorV2Exercise(id: "b", name: "B", sets: 3, reps: 10)
         let exC = EditorV2Exercise(id: "c", name: "C", sets: 3, reps: 10)
         var session = EditorV2Session()
         session.exercises = [exA.id: exA, exB.id: exB, exC.id: exC]
-        session.groups["ss1"] = EditorV2Group(id: "ss1", type: .superset, memberIDs: ["a", "b"])
-        session.order = [.group("ss1"), .loose("c")]
-
-        // Move C between A and B → splits the superset.
-        session.reorder(fromOffsets: IndexSet(integer: 2), toOffset: 1)
+        
+        // Create a superset of A and B
+        session.pairSuperset(sourceID: "b", targetID: "a")
+        let key = session.exercises.values.first(where: { $0.id == "a" })?.groupKey
+        XCTAssertNotNil(key)
+        
+        // D2 order has 2 items: group and loose C
+        XCTAssertEqual(session.order.count, 2)
+        
+        // Reorder at order level is valid (move group vs loose)
+        // But test the split-detection in normalize: manually corrupt then apply a command
+        guard let groupKey = key else { XCTFail(); return }
+        
+        // Manually split the group in order (this is what a buggy reorder might do)
+        session.order = [.loose("a"), .loose("c"), .loose("b")]
+        
+        // Any command triggers normalize which should detect and fix the split
+        _ = session.apply(.addSet("a"))
+        
+        // After normalize, split groups should be ungrouped
         XCTAssertTrue(session.exercises.values.allSatisfy { $0.groupKey == nil })
-        XCTAssertNil(session.groups["ss1"])
+        XCTAssertNil(session.groups[groupKey])
     }
 
     // MARK: - Persistence round-trip
