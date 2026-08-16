@@ -362,25 +362,38 @@ extension EditorV2Session {
     }
     
     private mutating func repairSplitGroupsD2() {
-        // If a group's members are not all together in order, ungroup them
-        var groupPositions: [String: [Int]] = [:]
+        // Detect groups whose members are split across order (appear as loose when they should be in group)
+        var keysToUngroup: Set<String> = []
         
+        // Check 1: Group appears multiple times in order
+        var groupPositions: [String: [Int]] = [:]
         for (idx, row) in order.enumerated() {
             if case .group(let key) = row {
                 groupPositions[key, default: []].append(idx)
             }
         }
-        
-        // Groups that appear more than once in order are split
-        var keysToUngroup: [String] = []
         for (key, positions) in groupPositions where positions.count > 1 {
-            keysToUngroup.append(key)
+            keysToUngroup.insert(key)
         }
         
-        // Ungroup split groups
+        // Check 2: Group members appear as loose when group exists in order
+        var looseIDs: Set<String> = []
+        for row in order {
+            if case .loose(let id) = row {
+                looseIDs.insert(id)
+            }
+        }
+        for (key, group) in groups {
+            for memberID in group.memberIDs where looseIDs.contains(memberID) {
+                keysToUngroup.insert(key)
+                break
+            }
+        }
+        
+        // Ungroup all split groups
         for key in keysToUngroup {
             guard let group = groups[key] else { continue }
-            // Replace all group references with loose exercises
+            // Replace group references with loose members, keep loose members as-is
             var newOrder: [EditorV2Row] = []
             for row in order {
                 if case .group(key) = row {
