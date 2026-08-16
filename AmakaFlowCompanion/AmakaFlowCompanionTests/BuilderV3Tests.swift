@@ -102,8 +102,8 @@ final class BuilderV3Tests: XCTestCase {
 
     func testPushSeedSeedsFixedStarterNamesWithDefaultPrescription() {
         let session = BuilderV3TypeRegistry.makeEditorSession(for: BuilderV3TypeRegistry.push)
-        XCTAssertEqual(session.exercises.map(\.name), ["Bench Press", "Overhead Press", "Triceps Pushdown"])
-        for exercise in session.exercises {
+        XCTAssertEqual(Set(session.exercises.values.map(\.name)), Set(["Bench Press", "Overhead Press", "Triceps Pushdown"]))
+        for exercise in session.exercises.values {
             XCTAssertEqual(exercise.sets, 3)
             XCTAssertEqual(exercise.reps, 10)
             XCTAssertEqual(exercise.restSeconds, 60)
@@ -113,16 +113,16 @@ final class BuilderV3Tests: XCTestCase {
 
     func testPullLegsFullBodySeedsUseFixedStarters() {
         XCTAssertEqual(
-            BuilderV3TypeRegistry.makeEditorSession(for: BuilderV3TypeRegistry.pull).exercises.map(\.name),
-            ["Deadlift", "Barbell Row", "Lat Pulldown"]
+            Set(BuilderV3TypeRegistry.makeEditorSession(for: BuilderV3TypeRegistry.pull).exercises.values.map(\.name)),
+            Set(["Deadlift", "Barbell Row", "Lat Pulldown"])
         )
         XCTAssertEqual(
-            BuilderV3TypeRegistry.makeEditorSession(for: BuilderV3TypeRegistry.legs).exercises.map(\.name),
-            ["Back Squat", "Romanian Deadlift", "Leg Press"]
+            Set(BuilderV3TypeRegistry.makeEditorSession(for: BuilderV3TypeRegistry.legs).exercises.values.map(\.name)),
+            Set(["Back Squat", "Romanian Deadlift", "Leg Press"])
         )
         XCTAssertEqual(
-            BuilderV3TypeRegistry.makeEditorSession(for: BuilderV3TypeRegistry.fullBody).exercises.map(\.name),
-            ["Squat", "Bench Press", "Barbell Row"]
+            Set(BuilderV3TypeRegistry.makeEditorSession(for: BuilderV3TypeRegistry.fullBody).exercises.values.map(\.name)),
+            Set(["Squat", "Bench Press", "Barbell Row"])
         )
     }
 
@@ -148,7 +148,7 @@ final class BuilderV3Tests: XCTestCase {
     func testMobilitySeedIsPlainDurationNotRunHolds() {
         let session = BuilderV3TypeRegistry.makeEditorSession(for: BuilderV3TypeRegistry.mobility)
         XCTAssertEqual(session.exercises.count, 3)
-        for exercise in session.exercises {
+        for exercise in session.exercises.values {
             XCTAssertEqual(exercise.durationSeconds, 30)
             XCTAssertNil(exercise.distanceMeters, "mobility rows are plain duration, not run holds")
             XCTAssertNil(exercise.sets)

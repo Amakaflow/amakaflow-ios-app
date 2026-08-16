@@ -695,21 +695,24 @@ final class WorkoutEnrichmentModelsTests: XCTestCase {
         let warmupGroup = try XCTUnwrap(session.groups.values.first { $0.type == .warmup })
         XCTAssertEqual(warmupGroup.structureSource, .enrichmentDefault)
         XCTAssertEqual(warmupGroup.enrichmentKind, .sessionWarmup)
-        XCTAssertEqual(session.exercises.first?.name, "Jump Rope")
-        XCTAssertEqual(session.exercises.first?.structureSource, .enrichmentDefault)
-        XCTAssertNil(session.exercises.first?.durationSeconds)
+        XCTAssertEqual(session.exercises.values.first?.name, "Jump Rope")
+        XCTAssertEqual(session.exercises.values.first?.structureSource, .enrichmentDefault)
+        XCTAssertNil(session.exercises.values.first?.durationSeconds)
     }
 
     func testQuickAddSessionWarmupNoOpsWhenWarmupTypeAlreadyPresent() {
         var session = EditorV2Session(title: "Push")
         let key = "existing-warmup"
+        let ex = EditorV2Exercise(name: "Row 500m", durationSeconds: 300, groupKey: key)
         session.groups[key] = EditorV2Group(
             id: key,
             type: .warmup,
             name: "Warm-up",
+            memberIDs: [ex.id],
             structureSource: .explicit
         )
-        session.exercises = [EditorV2Exercise(name: "Row 500m", durationSeconds: 300, groupKey: key)]
+        session.exercises = [ex.id: ex]
+        session.order = [.group(key)]
 
         XCTAssertFalse(session.quickAddSessionWarmup(from: .defaults))
         XCTAssertEqual(session.groups.count, 1)
@@ -730,8 +733,9 @@ final class WorkoutEnrichmentModelsTests: XCTestCase {
         XCTAssertTrue(session.quickAddCooldown(from: prefs))
         let group = try XCTUnwrap(session.groups.values.first { $0.type == .cooldown })
         XCTAssertEqual(group.enrichmentKind, .cooldown)
-        XCTAssertEqual(session.exercises.last?.name, "Easy Bike")
-        XCTAssertEqual(session.exercises.last?.durationSeconds, 300)
+        let cooldownEx = session.exercises.values.first { $0.groupKey == group.id }
+        XCTAssertEqual(cooldownEx?.name, "Easy Bike")
+        XCTAssertEqual(cooldownEx?.durationSeconds, 300)
     }
 
     func testEditingOneWarmupSetRowFlipsOnlyThatRow() throws {
