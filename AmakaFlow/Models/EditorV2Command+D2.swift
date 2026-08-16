@@ -396,7 +396,7 @@ extension EditorV2Session {
             keysToUngroup.insert(key)
         }
         
-        // Check 2: Group members appear as loose when group exists in order
+        // Check 2: Group members appear as loose (split group)
         var looseIDs: Set<String> = []
         for row in order {
             if case .loose(let id) = row {
@@ -404,9 +404,12 @@ extension EditorV2Session {
             }
         }
         for (key, group) in groups {
-            for memberID in group.memberIDs where looseIDs.contains(memberID) {
+            // If ANY member of this group appears as loose in order, the group is split
+            let hasSplitMember = group.memberIDs.contains { memberID in
+                looseIDs.contains(memberID)
+            }
+            if hasSplitMember {
                 keysToUngroup.insert(key)
-                break
             }
         }
         
