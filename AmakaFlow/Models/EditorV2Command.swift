@@ -63,6 +63,7 @@ extension EditorV2Session {
         }
     }
     
+    // swiftlint:disable:next function_body_length
     private mutating func applyInternal(_ command: EditorCommand) -> ApplyResult {
         switch command {
         case .addExercises(let names, let into):
