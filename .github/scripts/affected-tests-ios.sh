@@ -76,7 +76,7 @@ else
   # source out of a target dir) looked like an ordinary edit of the new
   # path and the old path's rules never fired. Expand renames/copies into
   # BOTH paths so each side is evaluated.
-  if ! CHANGED_STATUS=$(git diff --name-status "${BASE_REF}" "${HEAD_REF}"); then
+  if ! CHANGED_STATUS=$(git diff --name-status -M "${BASE_REF}" "${HEAD_REF}"); then
     echo "FULL"
     exit 0
   fi
@@ -100,7 +100,7 @@ fi
 # changes that absolutely can break the app. Promote to FULL. Docs/README
 # still reach NONE via the IOS_CHANGED check below.
 if echo "$CHANGED" | grep -E -q \
-  '(\.entitlements$|Info\.plist$|\.xcconfig$|\.xcassets/|\.xcdatamodeld/|\.storyboard$|\.xib$|^(AmakaFlow|AmakaFlowCompanion/AmakaFlowCompanion)/.*\.(json|strings|xcstrings|stringsdict|ttf|otf|png|jpe?g|pdf|svg|gif|heic|mlmodel|mlpackage)$)'; then
+  '(\.entitlements$|Info\.plist$|\.xcconfig$|\.xcassets/|\.xcdatamodeld/|\.mlpackage/|\.storyboard$|\.xib$|^(AmakaFlow|AmakaFlowCompanion/AmakaFlowCompanion)/.*\.(json|strings|xcstrings|stringsdict|ttf|otf|png|jpe?g|pdf|svg|gif|heic|mlmodel|mlpackage)$)'; then
   echo "FULL"
   exit 0
 fi

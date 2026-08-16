@@ -136,6 +136,12 @@ check storyboard_full "FULL" \
 check core_data_model_full "FULL" \
   "AmakaFlowCompanion/AmakaFlowCompanion/AmakaFlow.xcdatamodeld/AmakaFlow.xcdatamodel/contents"
 
+check mlmodel_full "FULL" \
+  "AmakaFlow/ML/ExerciseClassifier.mlmodel"
+
+check mlpackage_member_full "FULL" \
+  "AmakaFlow/ML/PoseModel.mlpackage/Data/com.apple.CoreML/model.mlmodel"
+
 # --- AMA-2442: pbxproj-only must not silently skip tests --------------------
 check pbxproj_only_full "FULL" \
   "AmakaFlowCompanion/AmakaFlowCompanion.xcodeproj/project.pbxproj"
@@ -143,6 +149,40 @@ check pbxproj_only_full "FULL" \
 check pbxproj_plus_mapped_source_stays_mapped "AmakaFlowCompanionTests/BlockTests" \
   "AmakaFlowCompanion/AmakaFlowCompanion.xcodeproj/project.pbxproj" \
   "AmakaFlow/Models/Block.swift"
+
+# --- git-mode fixture: the REAL --name-status -M rename parser -------------
+# The hermetic cases above inject both rename paths directly; this fixture
+# builds a throwaway git repo, performs an actual rename, and runs the
+# script in git mode so the R-record expansion itself is exercised.
+git_rename_fixture() {
+  local name="git_mode_rename_expands_both_paths" repo="$TMP/gitfix" actual
+  mkdir -p "$repo/AmakaFlowCompanion/AmakaFlowCompanionTests"
+  (
+    cd "$repo" || exit 1
+    git init -q
+    git config user.email corpus@invalid
+    git config user.name corpus
+    echo "// old" > AmakaFlowCompanion/AmakaFlowCompanionTests/RenameMeTests.swift
+    git add AmakaFlowCompanion/AmakaFlowCompanionTests/RenameMeTests.swift
+    git commit -qm base
+    git mv AmakaFlowCompanion/AmakaFlowCompanionTests/RenameMeTests.swift \
+           AmakaFlowCompanion/AmakaFlowCompanionTests/RenamedTests.swift
+    git commit -qm rename
+  )
+  # Old path is expanded from the R record and no longer exists -> FULL.
+  actual=$(cd "$repo" && AFFECTED_TESTS_TEST_DIR="$repo/AmakaFlowCompanion/AmakaFlowCompanionTests" \
+    bash "$OLDPWD/$SCRIPT" HEAD~1 HEAD 2>/dev/null)
+  if [ "$actual" = "FULL" ]; then
+    PASS=$((PASS + 1))
+    echo "  ok   $name"
+  else
+    FAIL=$((FAIL + 1))
+    echo "  FAIL $name"
+    echo "       expected: FULL"
+    echo "       actual:   $actual"
+  fi
+}
+git_rename_fixture
 
 echo
 echo "corpus: $PASS passed, $FAIL failed"

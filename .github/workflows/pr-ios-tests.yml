@@ -218,6 +218,13 @@ jobs:
       # genuinely goes stale; source edits are what incremental builds exist
       # to absorb. Compare build-job timings before/after — if restore cost
       # still exceeds rebuild savings, drop this cache entirely (keep SPM).
+      #
+      # restore-keys is kept DELIBERATELY (CodeRabbit suggested dropping it):
+      # a near-miss restore after a pbxproj change is a correctness no-op —
+      # Xcode's build system revalidates DerivedData and rebuilds anything
+      # stale — while still saving the SPM/module build artifacts that
+      # dominate cold-build time. Removing it would make every pbxproj edit
+      # a fully cold ~12min build to avoid a risk Xcode already handles.
       - name: Restore DerivedData cache
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
