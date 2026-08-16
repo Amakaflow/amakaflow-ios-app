@@ -440,7 +440,7 @@ final class EditorV2Tests: XCTestCase {
         session.order = [.loose("1"), .loose("2"), .loose("3")]
         session.reorder(fromOffsets: IndexSet(integer: 2), toOffset: 0)
         session.updateExercise("3") { $0.reps = 12 }
-        session.addSet("1")
+        session.addSet(to: "1")
 
         XCTAssertEqual(session.exercises.values.first(where: { $0.id == "3" })?.reps, 12)
         XCTAssertEqual(session.exercises.values.first(where: { $0.id == "1" })?.sets, 4)
@@ -684,13 +684,11 @@ final class EditorV2Tests: XCTestCase {
     }
 
     func testExportBlocksPersistCaloriesAndOpenGoalWireFields() throws {
-        let session = EditorV2Session(
-            title: "Conditioning",
-            exercises: [
-                EditorV2Exercise(name: "SkiErg", sets: 3, calories: 15),
-                EditorV2Exercise(name: "Assault Bike", sets: 3, openGoal: true)
-            ]
-        )
+        let ex1 = EditorV2Exercise(name: "SkiErg", sets: 3, calories: 15)
+        let ex2 = EditorV2Exercise(name: "Assault Bike", sets: 3, openGoal: true)
+        var session = EditorV2Session(title: "Conditioning")
+        session.exercises = [ex1.id: ex1, ex2.id: ex2]
+        session.order = [.loose(ex1.id), .loose(ex2.id)]
 
         let exercises = try XCTUnwrap(session.toSocialImportBlocks().first?.exercises)
         XCTAssertEqual(exercises[0].calories, 15)

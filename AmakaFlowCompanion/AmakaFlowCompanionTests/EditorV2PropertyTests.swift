@@ -83,7 +83,7 @@ final class EditorV2PropertyTests: XCTestCase {
             
         case 3:
             // removeFromGroup
-            if let ex = session.exercises.first(where: { $0.groupKey != nil }) {
+            if let ex = session.exercises.values.first(where: { $0.groupKey != nil }) {
                 return .removeFromGroup(ex.id)
             }
             return .addExercises(names: ["Test"], into: nil)
@@ -122,12 +122,12 @@ final class EditorV2PropertyTests: XCTestCase {
         var violations: [String] = []
         
         // I1: Every id reference resolves; membership is a partition
-        let allExerciseIDs = Set(session.exercises.map(\.id))
+        let allExerciseIDs = Set(session.exercises.values.map(\.id))
         if allExerciseIDs.count != session.exercises.count {
             violations.append("I1: Duplicate exercise IDs")
         }
         
-        for exercise in session.exercises {
+        for exercise in session.exercises.values {
             if let groupKey = exercise.groupKey {
                 if session.groups[groupKey] == nil {
                     violations.append("I1: Unresolved group reference: \(groupKey)")

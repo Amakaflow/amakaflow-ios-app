@@ -28,7 +28,6 @@ final class EditorV2CommandTests: XCTestCase {
         let ex3 = EditorV2Exercise(name: "Row")
         
         session.exercises = [ex1.id: ex1, ex2.id: ex2, ex3.id: ex3]
-        session.order = [.loose(ex1.id), .loose(ex2.id), .loose(ex3.id)]
         session.groups[circuitKey]?.memberIDs = [ex1.id, ex2.id]
         session.order = [.group(circuitKey), .loose(ex3.id)]
         
@@ -55,7 +54,6 @@ final class EditorV2CommandTests: XCTestCase {
             memberIDs: [ex1.id, ex2.id, ex3.id]
         )
         session.exercises = [ex1.id: ex1, ex2.id: ex2, ex3.id: ex3, ex4.id: ex4]
-        session.order = [.loose(ex1.id), .loose(ex2.id), .loose(ex3.id), .loose(ex4.id)]
         session.order = [.group(ssKey), .loose(ex4.id)]
         
         // Pair ex2 out of the group
@@ -82,7 +80,6 @@ final class EditorV2CommandTests: XCTestCase {
             memberIDs: [ex1.id, ex2.id, ex3.id]
         )
         session.exercises = [ex1.id: ex1, ex2.id: ex2, ex3.id: ex3]
-        session.order = [.loose(ex1.id), .loose(ex2.id), .loose(ex3.id)]
         session.order = [.group(ssKey)]
         
         XCTAssertEqual(session.groups[ssKey]?.name, "Tri-set")
@@ -111,7 +108,6 @@ final class EditorV2CommandTests: XCTestCase {
             memberIDs: [ex1.id, ex2.id, ex3.id]
         )
         session.exercises = [ex1.id: ex1, ex2.id: ex2, ex3.id: ex3]
-        session.order = [.loose(ex1.id), .loose(ex2.id), .loose(ex3.id)]
         session.order = [.group(groupKey)]
         
         let result = session.apply(.switchGroupType(groupKey, .emom))
@@ -131,7 +127,6 @@ final class EditorV2CommandTests: XCTestCase {
         var session = EditorV2Session()
         let ex1 = EditorV2Exercise(name: "Squat", sets: 3, reps: 10)
         session.exercises = [ex1.id: ex1]
-        session.order = [.loose(ex1.id)]
         session.order = [.loose(ex1.id)]
         
         // Simulate: user opens sheet with ex1 state, then another action modifies it
@@ -166,7 +161,6 @@ final class EditorV2CommandTests: XCTestCase {
         let ex1 = EditorV2Exercise(name: "Squat")
         session.exercises = [ex1.id: ex1]
         session.order = [.loose(ex1.id)]
-        session.order = [.loose(ex1.id)]
         
         let result = session.apply(.removeExercise(ex1.id))
         
@@ -180,8 +174,7 @@ final class EditorV2CommandTests: XCTestCase {
         session.groups[groupKey] = EditorV2Group(id: groupKey, type: .circuit)
         
         let ex1 = EditorV2Exercise(name: "Burpees", groupKey: groupKey)
-        session.exercises = [ex1.id: ex1]
-        session.order = [.loose(ex1.id)]
+        session.exercises = [ex1]
         
         let result = session.apply(.removeExercise(ex1.id))
         
@@ -193,8 +186,7 @@ final class EditorV2CommandTests: XCTestCase {
     func testReplaceExercise_updatesName() {
         var session = EditorV2Session()
         let ex1 = EditorV2Exercise(name: "Squat")
-        session.exercises = [ex1.id: ex1]
-        session.order = [.loose(ex1.id)]
+        session.exercises = [ex1]
         
         let result = session.apply(.replaceExercise(ex1.id, with: "Front Squat"))
         
@@ -205,8 +197,7 @@ final class EditorV2CommandTests: XCTestCase {
     func testUpdatePrescription_updatesExercise() {
         var session = EditorV2Session()
         let ex1 = EditorV2Exercise(name: "Squat", sets: 3, reps: 10)
-        session.exercises = [ex1.id: ex1]
-        session.order = [.loose(ex1.id)]
+        session.exercises = [ex1]
         
         var updated = ex1
         updated.sets = 5
@@ -223,16 +214,15 @@ final class EditorV2CommandTests: XCTestCase {
         var session = EditorV2Session()
         let ex1 = EditorV2Exercise(name: "A")
         let ex2 = EditorV2Exercise(name: "B")
-        session.exercises = [ex1.id: ex1, ex2.id: ex2]
-        session.order = [.loose(ex1.id), .loose(ex2.id)]
+        session.exercises = [ex1, ex2]
         
         let result = session.apply(.pairSuperset(source: ex1.id, target: ex2.id))
         
         XCTAssertEqual(result, .applied)
         XCTAssertEqual(session.groups.count, 1)
         
-        let ex1After = session.exercises.values.first(where: { $0.id == ex1.id })
-        let ex2After = session.exercises.values.first(where: { $0.id == ex2.id })
+        let ex1After = session.exercises.first(where: { $0.id == ex1.id })
+        let ex2After = session.exercises.first(where: { $0.id == ex2.id })
         
         XCTAssertNotNil(ex1After?.groupKey)
         XCTAssertEqual(ex1After?.groupKey, ex2After?.groupKey)
@@ -246,15 +236,14 @@ final class EditorV2CommandTests: XCTestCase {
         let ex1 = EditorV2Exercise(name: "A", groupKey: ssKey)
         let ex2 = EditorV2Exercise(name: "B", groupKey: ssKey)
         let ex3 = EditorV2Exercise(name: "C")
-        session.exercises = [ex1.id: ex1, ex2.id: ex2, ex3.id: ex3]
-        session.order = [.loose(ex1.id), .loose(ex2.id), .loose(ex3.id)]
+        session.exercises = [ex1, ex2, ex3]
         
         let result = session.apply(.pairSuperset(source: ex3.id, target: ex1.id))
         
         XCTAssertEqual(result, .applied)
         XCTAssertEqual(session.groups.count, 1)
         
-        let ex3After = session.exercises.values.first(where: { $0.id == ex3.id })
+        let ex3After = session.exercises.first(where: { $0.id == ex3.id })
         XCTAssertEqual(ex3After?.groupKey, ssKey)
     }
     
@@ -264,8 +253,7 @@ final class EditorV2CommandTests: XCTestCase {
         session.groups[ssKey] = EditorV2Group(id: ssKey, type: .superset)
         
         let ex1 = EditorV2Exercise(name: "A", groupKey: ssKey)
-        session.exercises = [ex1.id: ex1]
-        session.order = [.loose(ex1.id)]
+        session.exercises = [ex1]
         
         let result = session.apply(.removeFromGroup(ex1.id))
         
@@ -319,8 +307,7 @@ final class EditorV2CommandTests: XCTestCase {
         
         let ex1 = EditorV2Exercise(name: "A", groupKey: groupKey)
         let ex2 = EditorV2Exercise(name: "B", groupKey: groupKey)
-        session.exercises = [ex1.id: ex1, ex2.id: ex2]
-        session.order = [.loose(ex1.id), .loose(ex2.id)]
+        session.exercises = [ex1, ex2]
         
         let result = session.apply(.ungroup(groupKey))
         
@@ -348,8 +335,7 @@ final class EditorV2CommandTests: XCTestCase {
         
         let ex1 = EditorV2Exercise(name: "A", groupKey: groupKey)
         let ex2 = EditorV2Exercise(name: "B", groupKey: groupKey)
-        session.exercises = [ex1.id: ex1, ex2.id: ex2]
-        session.order = [.loose(ex1.id), .loose(ex2.id)]
+        session.exercises = [ex1, ex2]
         
         let result = session.apply(.deleteGroup(groupKey))
         
@@ -361,8 +347,7 @@ final class EditorV2CommandTests: XCTestCase {
     func testAddBlock_wipesAndCreatesFormatGroup() {
         var session = EditorV2Session()
         let ex1 = EditorV2Exercise(name: "Existing")
-        session.exercises = [ex1.id: ex1]
-        session.order = [.loose(ex1.id)]
+        session.exercises = [ex1]
         
         let result = session.apply(.addBlock(.emom))
         
@@ -378,13 +363,12 @@ final class EditorV2CommandTests: XCTestCase {
         let ex1 = EditorV2Exercise(name: "A")
         let ex2 = EditorV2Exercise(name: "B")
         let ex3 = EditorV2Exercise(name: "C")
-        session.exercises = [ex1.id: ex1, ex2.id: ex2, ex3.id: ex3]
-        session.order = [.loose(ex1.id), .loose(ex2.id), .loose(ex3.id)]
+        session.exercises = [ex1, ex2, ex3]
         
         let result = session.apply(.move(ex1.id, to: 2))
         
         XCTAssertEqual(result, .applied)
-        XCTAssertEqual(Set(session.exercises.values.map(\.name)), ["B", "C", "A"])
+        XCTAssertEqual(session.exercises.map(\.name), ["B", "C", "A"])
     }
     
     func testReorder_movesMultipleExercises() {
@@ -392,20 +376,18 @@ final class EditorV2CommandTests: XCTestCase {
         let ex1 = EditorV2Exercise(name: "A")
         let ex2 = EditorV2Exercise(name: "B")
         let ex3 = EditorV2Exercise(name: "C")
-        session.exercises = [ex1.id: ex1, ex2.id: ex2, ex3.id: ex3]
-        session.order = [.loose(ex1.id), .loose(ex2.id), .loose(ex3.id)]
+        session.exercises = [ex1, ex2, ex3]
         
         let result = session.apply(.reorder(fromOffsets: IndexSet(integer: 2), toOffset: 0))
         
         XCTAssertEqual(result, .applied)
-        XCTAssertEqual(Set(session.exercises.values.map(\.name)), ["C", "A", "B"])
+        XCTAssertEqual(session.exercises.map(\.name), ["C", "A", "B"])
     }
     
     func testAddSet_incrementsSetCount() {
         var session = EditorV2Session()
         let ex1 = EditorV2Exercise(name: "Squat", sets: 3, reps: 10)
-        session.exercises = [ex1.id: ex1]
-        session.order = [.loose(ex1.id)]
+        session.exercises = [ex1]
         
         let result = session.apply(.addSet(ex1.id))
         
@@ -420,8 +402,7 @@ final class EditorV2CommandTests: XCTestCase {
         let id = "dup"
         let ex1 = EditorV2Exercise(id: id, name: "A")
         let ex2 = EditorV2Exercise(id: id, name: "B")
-        session.exercises = [ex1.id: ex1, ex2.id: ex2]
-        session.order = [.loose(ex1.id), .loose(ex2.id)]
+        session.exercises = [ex1, ex2]
         
         // Validation should fail
         // (Note: normal apply prevents this, but we're testing the validator)
@@ -431,8 +412,7 @@ final class EditorV2CommandTests: XCTestCase {
     func testValidate_rejectsUnresolvedGroupReferences() {
         var session = EditorV2Session()
         let ex1 = EditorV2Exercise(name: "A", groupKey: "missing")
-        session.exercises = [ex1.id: ex1]
-        session.order = [.loose(ex1.id)]
+        session.exercises = [ex1]
         
         // This would fail validation
         // (Note: commands should not produce this state)
@@ -468,15 +448,14 @@ final class EditorV2CommandTests: XCTestCase {
         let ex1 = EditorV2Exercise(name: "A", groupKey: groupKey)
         let ex2 = EditorV2Exercise(name: "B", groupKey: nil)
         let ex3 = EditorV2Exercise(name: "C", groupKey: groupKey)
-        session.exercises = [ex1.id: ex1, ex2.id: ex2, ex3.id: ex3]
-        session.order = [.loose(ex1.id), .loose(ex2.id), .loose(ex3.id)]
+        session.exercises = [ex1, ex2, ex3]
         
         // A command that triggers normalize
         _ = session.apply(.addExercises(names: [], into: nil))
         
         // Non-contiguous group members should be ungrouped
-        let ex1After = session.exercises.values.first(where: { $0.id == ex1.id })
-        let ex3After = session.exercises.values.first(where: { $0.id == ex3.id })
+        let ex1After = session.exercises.first(where: { $0.id == ex1.id })
+        let ex3After = session.exercises.first(where: { $0.id == ex3.id })
         
         // They should both be loose now (or the command didn't run on this broken state)
         XCTAssertNil(ex1After?.groupKey)
