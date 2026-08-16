@@ -74,8 +74,9 @@ struct EditorV2Session: Equatable, Sendable {
     }
 
     mutating func updateExercise(_ id: String, patch: (inout EditorV2Exercise) -> Void) {
-        guard exercises[id] != nil else { return }
-        patch(&exercises[id]!)
+        guard var exercise = exercises[id] else { return }
+        patch(&exercise)
+        exercises[id] = exercise
     }
 
     mutating func removeExercise(_ id: String) {
