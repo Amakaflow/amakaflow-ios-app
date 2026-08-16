@@ -15,47 +15,30 @@ extension EditorV2Session {
     }
 
     static func from(title: String, blocks: [DDEditorBlockDraft]) -> EditorV2Session {
-        var groups: [String: EditorV2Group] = [:]
-        var exercises: [EditorV2Exercise] = []
-
-        for block in blocks {
-            if let groupType = EditorV2GroupType.from(dd: block.structure) {
-                let key = block.id
-                let capMinutes: Int? = {
-                    guard let seconds = block.timeCapSeconds else { return nil }
-                    return max(1, seconds / 60)
-                }()
-                groups[key] = EditorV2Group(
-                    id: key,
-                    type: groupType,
-                    name: block.label,
-                    config: EditorV2GroupConfig(
-                        rounds: block.rounds,
-                        restSeconds: block.restBetweenRoundsSeconds,
-                        capMinutes: capMinutes
-                    ),
-                    structureSource: .userConfirmed
-                )
-                for exercise in block.exercises {
-                    exercises.append(exercise.asEditorV2(groupKey: key))
+        // AMA-2438 P3: reload from SocialImportBlock payload, not DDEditorBlockDraft
+        // Convert DDEditorBlockDraft → SocialImportBlock for codec
+        let socialBlocks = blocks.map { block -> SocialImportBlock in
+            let structureType: String = {
+                if let groupType = EditorV2GroupType.from(dd: block.structure) {
+                    return groupType.structureBlockType.rawValue
                 }
-            } else {
-                // Straight sets → flat cards (no structure pill).
-                for exercise in block.exercises {
-                    exercises.append(exercise.asEditorV2(groupKey: nil))
-                }
-            }
+                return StructureBlockType.sets.rawValue
+            }()
+            
+            return SocialImportBlock(
+                label: block.label,
+                rounds: block.rounds,
+                exercises: block.exercises.map { $0.asSocialImportExercise },
+                type: structureType,
+                restSec: block.restBetweenRoundsSeconds,
+                timeCapSec: block.timeCapSeconds,
+                structureSource: StructureSource.userConfirmed.rawValue,
+                enrichmentKind: nil
+            )
         }
-
-        // AMA-2438 D2: migrate from old adjacency model to new declared membership
-        return EditorV2Session.fromLegacyExercises(
-            title: title,
-            groups: groups,
-            exercisesArray: exercises,
-            formatGroupKey: nil,
-            enrichmentTombstones: [],
-            enrichmentTombstonesDirty: false
-        )
+        
+        // Use P3 D4 codec
+        return EditorV2Session.decodeFromBlocks(title: title, blocks: socialBlocks)
     }
 
     /// Round-trip ADR-017 blocks for WorkoutSaveRequest (preserve structure_source).
