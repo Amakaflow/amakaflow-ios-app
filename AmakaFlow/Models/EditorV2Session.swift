@@ -217,7 +217,7 @@ struct EditorV2Session: Equatable, Sendable {
             let trimmed = group.name.trimmingCharacters(in: .whitespacesAndNewlines)
             return trimmed.isEmpty ? "Superset" : trimmed
         }()
-        exercises.removeAll { $0.groupKey == key }
+        exercises = exercises.filter { $0.value.groupKey != key }
         groups.removeValue(forKey: key)
         if formatGroupKey == key {
             formatGroupKey = nil
@@ -259,7 +259,7 @@ struct EditorV2Session: Equatable, Sendable {
         }
 
         guard let key else { return }
-        exercises.removeAll { $0.id == sourceID }
+        exercises.removeValue(forKey: sourceID)
         if let targetIndex = exercises.firstIndex(where: { $0.id == targetID }) {
             var moved = source
             moved.groupKey = key
@@ -555,9 +555,9 @@ extension EditorV2Session {
     private mutating func removeSoftSection(type: EditorV2GroupType, kind: EnrichmentKind) {
         let keys = Set(groups.filter { $0.value.type == type }.keys)
         if !keys.isEmpty {
-            exercises.removeAll {
-                guard let groupKey = $0.groupKey else { return false }
-                return keys.contains(groupKey)
+            exercises = exercises.filter {
+                guard let groupKey = $0.value.groupKey else { return true }
+                return !keys.contains(groupKey)
             }
             for key in keys {
                 groups.removeValue(forKey: key)
@@ -575,6 +575,7 @@ extension EditorV2Session {
 
 extension EditorV2Session {
     /// Migrate from old adjacency model (flat array + groupKey back-pointers) to D2.
+    // swiftlint:disable:next function_parameter_count
     static func fromLegacyExercises(
         title: String,
         groups: [String: EditorV2Group],

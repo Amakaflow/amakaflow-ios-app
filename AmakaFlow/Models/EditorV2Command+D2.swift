@@ -377,6 +377,7 @@ extension EditorV2Session {
         }
     }
     
+    // swiftlint:disable:next cyclomatic_complexity
     func validateD2() -> ApplyResult {
         // I1: Partition invariant - every exercise in exactly one place
         var seen = Set<String>()
