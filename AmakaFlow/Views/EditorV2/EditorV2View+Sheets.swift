@@ -143,15 +143,15 @@ extension EditorV2View {
     func pairSheet(_ source: EditorV2Exercise) -> some View {
         EditorV2PairSheet(
             source: source,
-            candidates: session.exercises.filter { $0.id != source.id },
+            candidates: Array(session.exercises.values.filter { $0.id != source.id }),
             groups: session.groups
         ) { targetID in
             _ = session.apply(.pairSuperset(source: source.id, target: targetID))
             pairSourceID = nil
-            let key = session.exercises.first { $0.id == source.id }?.groupKey
-                ?? session.exercises.first { $0.id == targetID }?.groupKey
+            let key = session.exercises[source.id]?.groupKey
+                ?? session.exercises[targetID]?.groupKey
             let memberCount = key.map { groupKey in
-                session.exercises.filter { $0.groupKey == groupKey }.count
+                session.exercises.values.filter { $0.groupKey == groupKey }.count
             } ?? 0
             showToast(memberCount >= 3 ? "Tri-set grouped ✓" : "Superset paired ✓")
         }
@@ -242,21 +242,21 @@ extension EditorV2View {
 
     var menuExerciseBinding: Binding<EditorV2Exercise?> {
         Binding(
-            get: { menuExerciseID.flatMap { id in session.exercises.first { $0.id == id } } },
+            get: { menuExerciseID.flatMap { session.exercises[$0] } },
             set: { menuExerciseID = $0?.id }
         )
     }
 
     var editExerciseBinding: Binding<EditorV2Exercise?> {
         Binding(
-            get: { editExerciseID.flatMap { id in session.exercises.first { $0.id == id } } },
+            get: { editExerciseID.flatMap { session.exercises[$0] } },
             set: { editExerciseID = $0?.id }
         )
     }
 
     var pairSourceBinding: Binding<EditorV2Exercise?> {
         Binding(
-            get: { pairSourceID.flatMap { id in session.exercises.first { $0.id == id } } },
+            get: { pairSourceID.flatMap { session.exercises[$0] } },
             set: { pairSourceID = $0?.id }
         )
     }
@@ -288,14 +288,14 @@ extension EditorV2View {
             }
             .buttonStyle(.plain)
             .accessibilityIdentifier("builder_v3_type_change_button")
-            .padding(.trailing, session.exercises.count > 1 ? 8 : 0)
+            .padding(.trailing, session.order.count > 1 ? 8 : 0)
         }
     }
 
     /// TYPE · CHANGE (AMA-2372) — confirms first when the canvas is dirty.
     func builderV3ChangeTypeTapped() {
         let titleDirty = builderV3InitialTitle.map { $0 != session.title } ?? false
-        let isDirty = !session.exercises.isEmpty || !session.groups.isEmpty || titleDirty
+        let isDirty = !session.order.isEmpty || titleDirty
         if isDirty {
             showBuilderV3ChangeTypeConfirm = true
         } else {
@@ -364,7 +364,7 @@ extension EditorV2View {
                 showToast(ActualsCopy.captureNameRequiredToast)
                 return
             }
-            let summaries = session.exercises.map(\.name).filter { !$0.isEmpty }
+            let summaries = session.exercises.values.map(\.name).filter { !$0.isEmpty }
             let blocks = session.toSocialImportBlocks()
             let draft = ActualsCaptureDraft(
                 id: UUID().uuidString,

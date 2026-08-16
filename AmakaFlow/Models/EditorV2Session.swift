@@ -74,13 +74,12 @@ struct EditorV2Session: Equatable, Sendable {
     }
 
     mutating func updateExercise(_ id: String, patch: (inout EditorV2Exercise) -> Void) {
-        guard let index = exercises.firstIndex(where: { $0.id == id }) else { return }
-        patch(&exercises[index])
+        guard exercises[id] != nil else { return }
+        patch(&exercises[id]!)
     }
 
     mutating func removeExercise(_ id: String) {
-        exercises.removeAll { $0.id == id }
-        pruneEmptyGroups()
+        _ = apply(.removeExercise(id))
     }
 
     mutating func addSet(to id: String) {

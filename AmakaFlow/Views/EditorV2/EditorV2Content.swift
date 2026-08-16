@@ -33,7 +33,7 @@ enum EditorV2Content {
     ) -> some View {
         if isReorderMode {
             reorderList(session: session, actions: actions)
-        } else if session.exercises.isEmpty, session.formatGroupKey == nil {
+        } else if session.order.isEmpty, session.formatGroupKey == nil {
             if builderV3Canvas {
                 builderV3BlankEmptyState()
             } else {
@@ -44,7 +44,7 @@ enum EditorV2Content {
                 plural: builderV3Canvas,
                 onAdd: actions.onAdd
             )
-        } else if session.exercises.isEmpty,
+        } else if session.order.isEmpty,
                   let fmtKey = session.formatGroupKey,
                   let group = session.groups[fmtKey] {
             formatPinnedPlaceholder(group: group, key: fmtKey, onConfig: actions.onConfigGroup)
@@ -80,7 +80,7 @@ enum EditorV2Content {
             // so Add exercises has a visible destination (runs only include groups with moves).
             if let fmtKey = session.formatGroupKey,
                let group = session.groups[fmtKey],
-               !session.exercises.contains(where: { $0.groupKey == fmtKey }) {
+               !session.exercises.values.contains(where: { $0.groupKey == fmtKey }) {
                 formatPinnedPlaceholder(group: group, key: fmtKey, onConfig: actions.onConfigGroup)
             }
             if shouldOfferNextSupersetGroup(session: session) {
@@ -102,7 +102,7 @@ enum EditorV2Content {
         guard let key = session.formatGroupKey,
               let group = session.groups[key],
               group.type == .superset else { return false }
-        return session.exercises.contains { $0.groupKey == key }
+        return session.exercises.values.contains { $0.groupKey == key }
     }
 
     private static func nextSupersetGroupLabel(session: EditorV2Session) -> String {
@@ -313,7 +313,7 @@ enum EditorV2Content {
             }
             .listStyle(.plain)
             .scrollContentBackground(.hidden)
-            .frame(minHeight: CGFloat(session.exercises.count) * 56)
+            .frame(minHeight: CGFloat(session.order.count) * 56)
             .environment(\.editMode, .constant(.active))
 
             Button(action: actions.onExitReorder) {

@@ -106,7 +106,7 @@ struct EditorV2View: View {
 
     private var isNew: Bool { mode == .new }
     private var swapCount: Int {
-        session.exercises.filter { $0.swapMessage != nil }.count
+        session.exercises.values.filter { $0.swapMessage != nil }.count
     }
 
     var body: some View {
@@ -156,7 +156,7 @@ struct EditorV2View: View {
                 }
                 .scrollContentBackground(.hidden)
             }
-            if !isReorderMode, !session.exercises.isEmpty {
+            if !isReorderMode, !session.order.isEmpty {
                 DDEditorSaveBar(
                     title: actualsCaptureComplete != nil
                         ? ActualsCopy.captureBuilderDoneCTA
@@ -249,7 +249,7 @@ struct EditorV2View: View {
 
                 builderV3TypeChangeButton
 
-                if session.exercises.count > 1 {
+                if session.order.count > 1 {
                     Button {
                         if isReorderMode {
                             isReorderMode = false
@@ -315,15 +315,14 @@ struct EditorV2View: View {
             return "⚠ \(swapCount) SWAP SUGGESTIONS"
         }
         if builderV3Seed != nil {
-            let isBlankCanvas = session.exercises.isEmpty
+            let isBlankCanvas = session.order.isEmpty
                 && session.formatGroupKey == nil
-                && session.groups.isEmpty
             if isBlankCanvas {
                 return "JUST ADD EXERCISES — GROUP OR FORMAT THEM ANYTIME"
             }
             return "DEFAULTS APPLIED — TAP ANYTHING TO TWEAK"
         }
-        if session.exercises.isEmpty {
+        if session.order.isEmpty {
             return "JUST ADD EXERCISES — STRUCTURE COMES LATER"
         }
         return "TAP AN EXERCISE TO EDIT IT · ⋯ FOR EVERYTHING ELSE"
