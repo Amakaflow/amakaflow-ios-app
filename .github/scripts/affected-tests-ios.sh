@@ -13,6 +13,14 @@
 # watchOS tests are handled by the separate watchos-tests CI job.
 # This script only outputs iOS test targets.
 #
+# Mapping examples (AMA-2439):
+#   EditorV2Session.swift          → EditorV2SessionTests (exact match)
+#   EditorV2Session+Persistence.swift → EditorV2SessionTests (strip +extension)
+#   EditorV2Command+D2.swift       → EditorV2Tests, EditorV2CommandTests (prefix match)
+#   FooBarBaz.swift (no exact)     → FooBar*Tests, Foo*Tests (progressive stem)
+#   project.pbxproj (file-ref only) + EditorV2*.swift → mapped tests (NOT FULL)
+#   project.pbxproj (scheme change) → FULL
+#
 # Usage:
 #   ./affected-tests-ios.sh [base_ref] [head_ref]
 #
