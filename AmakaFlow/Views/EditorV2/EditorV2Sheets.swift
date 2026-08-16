@@ -74,6 +74,7 @@ struct EditorV2GroupConfigSheet: View {
     /// True when this group is already the format pin (next adds land here).
     var isInsertionTarget: Bool = false
     var onChange: (EditorV2Group) -> Void
+    var onSwitchType: (EditorV2GroupType) -> Void = { _ in }
     var onDone: () -> Void
     var onUngroup: () -> Void
     /// Delete the group + its moves, then re-pin an empty format group (tri-set / superset).
@@ -88,6 +89,7 @@ struct EditorV2GroupConfigSheet: View {
         group: EditorV2Group,
         isInsertionTarget: Bool = false,
         onChange: @escaping (EditorV2Group) -> Void,
+        onSwitchType: @escaping (EditorV2GroupType) -> Void = { _ in },
         onDone: @escaping () -> Void,
         onUngroup: @escaping () -> Void,
         onDiscardAndRepin: (() -> Void)? = nil,
@@ -98,6 +100,7 @@ struct EditorV2GroupConfigSheet: View {
         _group = State(initialValue: group)
         self.isInsertionTarget = isInsertionTarget
         self.onChange = onChange
+        self.onSwitchType = onSwitchType
         self.onDone = onDone
         self.onUngroup = onUngroup
         self.onDiscardAndRepin = onDiscardAndRepin
@@ -112,16 +115,9 @@ struct EditorV2GroupConfigSheet: View {
                 Text("RUNS AS")
                     .font(.system(size: 9, weight: .medium, design: .monospaced))
                     .foregroundColor(DailyDriver.foregroundMuted)
-                FlowRunsAsChips(selected: group.type) { type in
+                FlowRunsAsChips(selected: group.type, groupName: group.name) { type in
                     guard type != group.type else { return }
-                    var next = group
-                    let keepCustom = !EditorV2GroupType.allCases.map(\.label).contains(group.name)
-                    next.type = type
-                    next.config = type.defaultConfig
-                    if !keepCustom { next.name = type.label }
-                    next.structureSource = .userConfirmed
-                    group = next
-                    onChange(next)
+                    onSwitchType(type)
                 }
             }
             LazyVGrid(
@@ -259,6 +255,7 @@ struct EditorV2GroupConfigSheet: View {
 
 private struct FlowRunsAsChips: View {
     let selected: EditorV2GroupType
+    let groupName: String
     var onSelect: (EditorV2GroupType) -> Void
 
     var body: some View {

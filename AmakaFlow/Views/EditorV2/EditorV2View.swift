@@ -127,7 +127,7 @@ struct EditorV2View: View {
                             onConfigGroup: { configGroupKey = $0 },
                             onOpen: { editExerciseID = $0 },
                             onMenu: { menuExerciseID = $0 },
-                            onReorder: { session.reorder(fromOffsets: $0, toOffset: $1) },
+                            onReorder: { _ = session.apply(.reorder(fromOffsets: $0, toOffset: $1)) },
                             onExitReorder: {
                                 isReorderMode = false
                                 showToast("Tap Save workout to keep changes")
@@ -137,7 +137,7 @@ struct EditorV2View: View {
                                 addSheetOpen = true
                             },
                             onStartFormat: { type in
-                                _ = session.startFormat(type)
+                                _ = session.apply(.addBlock(type))
                                 showToast("\(type.label) — add the moves, timing is set")
                             },
                             onAddWarmup: { quickAddSoftSection(.sessionWarmup) },

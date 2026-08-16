@@ -53,7 +53,7 @@ extension EditorV2View {
             },
             onSupersetToggle: {
                 if isInSuperset(exercise) {
-                    session.removeFromSuperset(exercise.id)
+                    _ = session.apply(.removeFromGroup(exercise.id))
                     showToast("Removed from superset")
                     menuExerciseID = nil
                 } else {
@@ -62,7 +62,7 @@ extension EditorV2View {
                 }
             },
             onAddSet: {
-                session.addSet(to: exercise.id)
+                _ = session.apply(.addSet(to: exercise.id))
                 showToast("Set added ✓")
                 menuExerciseID = nil
             },
@@ -76,7 +76,7 @@ extension EditorV2View {
                 menuExerciseID = nil
             },
             onRemove: {
-                session.removeExercise(exercise.id)
+                _ = session.apply(.removeExercise(exercise.id))
                 showToast("Removed")
                 menuExerciseID = nil
             }
@@ -86,9 +86,7 @@ extension EditorV2View {
 
     func editSheet(_ exercise: EditorV2Exercise) -> some View {
         EditorV2EditSheet(exercise: exercise) { updated in
-            if let index = session.exercises.firstIndex(where: { $0.id == updated.id }) {
-                session.exercises[index] = updated
-            }
+            _ = session.apply(.updatePrescription(updated.id, updated))
             editExerciseID = nil
         }
         // Tall form (Load + Between moves) — medium clipped the title under the grabber.
@@ -113,10 +111,11 @@ extension EditorV2View {
             groupKey: item.id,
             group: item.group,
             isInsertionTarget: isTarget,
-            onChange: { session.groups[item.id] = $0 },
+            onChange: { _ = session.apply(.updateGroupConfig(item.id, $0.config)) },
+            onSwitchType: { _ = session.apply(.switchGroupType(item.id, $0)) },
             onDone: { configGroupKey = nil },
             onUngroup: {
-                session.ungroup(item.id)
+                _ = session.apply(.ungroup(item.id))
                 configGroupKey = nil
                 showToast("Ungrouped — now straight sets")
             },
@@ -147,7 +146,7 @@ extension EditorV2View {
             candidates: session.exercises.filter { $0.id != source.id },
             groups: session.groups
         ) { targetID in
-            session.pairSuperset(sourceID: source.id, targetID: targetID)
+            _ = session.apply(.pairSuperset(source: source.id, target: targetID))
             pairSourceID = nil
             let key = session.exercises.first { $0.id == source.id }?.groupKey
                 ?? session.exercises.first { $0.id == targetID }?.groupKey
@@ -168,7 +167,7 @@ extension EditorV2View {
                 formatLabel: formatLabel,
                 replaceMode: true,
                 onAdd: { name in
-                    session.replaceExercise(replaceID, with: name)
+                    _ = session.apply(.replaceExercise(replaceID, with: name))
                     replaceExerciseID = nil
                     addSheetOpen = false
                     showToast("Replaced ✓")
@@ -184,9 +183,7 @@ extension EditorV2View {
                 formatLabel: formatLabel,
                 availableEquipmentKeys: gymEquipmentKeys,
                 onAddExercises: { names in
-                    for name in names {
-                        _ = session.addExercise(named: name)
-                    }
+                    _ = session.apply(.addExercises(names: names, into: nil))
                     guard !names.isEmpty else { return }
                     if names.count == 1, let name = names.first {
                         let fmt = formatLabel
