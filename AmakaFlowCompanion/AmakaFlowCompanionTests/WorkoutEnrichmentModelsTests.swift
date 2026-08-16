@@ -786,12 +786,10 @@ final class WorkoutEnrichmentModelsTests: XCTestCase {
         let exercise = session.addExercise(named: "Bench Press")
 
         session.updateExercise(exercise.id) { ex in
-            var updated = ex
-            updated.restSeconds = 60
-            updated.restOpen = false
-            updated.fieldProvenance[WorkoutEnrichmentMutations.restSecKey] = .enrichmentDefault
-            updated.fieldProvenance[WorkoutEnrichmentMutations.restOpenKey] = .enrichmentDefault
-            return updated
+            ex.restSeconds = 60
+            ex.restOpen = false
+            ex.fieldProvenance[WorkoutEnrichmentMutations.restSecKey] = .enrichmentDefault
+            ex.fieldProvenance[WorkoutEnrichmentMutations.restOpenKey] = .enrichmentDefault
         }
         
         XCTAssertEqual(session.exercises[exercise.id]?.restSeconds, 60)
@@ -841,7 +839,7 @@ final class WorkoutEnrichmentModelsTests: XCTestCase {
         session.removeSessionWarmup()
 
         XCTAssertFalse(session.hasWarmupSection)
-        XCTAssertEqual(session.exercises.map(\.name), ["Bench Press"])
+        XCTAssertEqual(Set(session.exercises.values.map { $0.name }), Set(["Bench Press"]))
         XCTAssertEqual(session.enrichmentTombstones, [EnrichmentTombstone(kind: .sessionWarmup)])
         XCTAssertNil(session.enrichmentTombstones.first?.exerciseId)
         // Tombstoned kinds are never re-added by quick add.
@@ -930,7 +928,7 @@ final class WorkoutEnrichmentModelsTests: XCTestCase {
 
         XCTAssertTrue(session.addDefaultWarmupSets(to: bench.id, rows: rows, clearingTombstone: true))
 
-        XCTAssertEqual(session.exercises[exercise.id]!.warmupSets.map(\.reps), [8, 5])
+        XCTAssertEqual(session.exercises[bench.id]!.warmupSets.map(\.reps), [8, 5])
         XCTAssertEqual(
             session.enrichmentTombstones,
             [EnrichmentTombstone(kind: .exerciseWarmupSets, exerciseId: rowExerciseId)]
