@@ -574,7 +574,7 @@ extension EditorV2Session {
 // MARK: - AMA-2438 D2 Migration from adjacency to declared membership
 
 extension EditorV2Session {
-    // swiftlint:disable:next function_parameter_count
+    // swiftlint:disable function_parameter_count
     /// Migrate from old adjacency model (flat array + groupKey back-pointers) to D2.
     static func fromLegacyExercises(
         title: String,
@@ -634,6 +634,7 @@ extension EditorV2Session {
             enrichmentTombstonesDirty: enrichmentTombstonesDirty
         )
     }
+    // swiftlint:enable function_parameter_count
 }
 
 // MARK: - Compatibility methods for tests (wrap commands)
