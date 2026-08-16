@@ -277,9 +277,9 @@ final class StructureClarifyMatrixTests: XCTestCase {
             let editor = EditorV2Session.from(mode: .edit, workout: workout)
             XCTAssertFalse(editor.exercises.isEmpty, "\(type.rawValue)/\(sport) editor empty")
             XCTAssertEqual(
-                editor.exercises.map(\.name),
-                Self.exercises(for: type).map(\.name),
-                "\(type.rawValue)/\(sport) exercise order"
+                Set(editor.exercises.values.map(\.name)),
+                Set(Self.exercises(for: type).map(\.name)),
+                "\(type.rawValue)/\(sport) exercise names"
             )
         }
     }

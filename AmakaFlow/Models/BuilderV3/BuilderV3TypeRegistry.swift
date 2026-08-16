@@ -327,9 +327,9 @@ enum BuilderV3TypeRegistry {
             }
         case .mobility:
             for name in mobilityExerciseNames {
-                session.exercises.append(
-                    EditorV2Exercise(name: name, durationSeconds: mobilityDurationSeconds)
-                )
+                let exercise = EditorV2Exercise(name: name, durationSeconds: mobilityDurationSeconds)
+                session.exercises[exercise.id] = exercise
+                session.order.append(.loose(exercise.id))
             }
         }
         return session

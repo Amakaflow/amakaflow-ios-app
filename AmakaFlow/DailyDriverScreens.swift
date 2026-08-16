@@ -870,6 +870,7 @@ enum DDWorkoutDisplayGrouping {
         return format ?? ""
     }
 
+    // swiftlint:disable cyclomatic_complexity
     private static func formatDescriptor(for block: Block) -> String? {
         let rounds = max(1, block.rounds)
         switch block.structure {
@@ -884,6 +885,12 @@ enum DDWorkoutDisplayGrouping {
             return "AMRAP \(rounds)"
         case .tabata:
             return "TABATA \(rounds)"
+        case .fortime:
+            return "FOR TIME"
+        case .warmup:
+            return "WARM-UP"
+        case .cooldown:
+            return "COOL-DOWN"
         case .straight:
             if block.exercises.count == 1, rounds > 1 {
                 return "\(rounds) ROUNDS"
@@ -891,6 +898,7 @@ enum DDWorkoutDisplayGrouping {
             return nil
         }
     }
+    // swiftlint:enable cyclomatic_complexity
 
     private static func accent(for block: Block) -> Color {
         if isWarmupOrCooldown(block) {
@@ -899,8 +907,12 @@ enum DDWorkoutDisplayGrouping {
             return DailyDriver.amber
         }
         switch block.structure {
-        case .circuit, .timedCircuit, .amrap, .emom, .tabata:
+        case .circuit, .timedCircuit, .amrap, .emom, .tabata, .fortime:
             return DailyDriver.blue
+        case .warmup:
+            return DailyDriver.amber
+        case .cooldown:
+            return DailyDriver.foregroundDim
         case .superset, .straight:
             let allCardio = block.exercises.allSatisfy {
                 WorkoutSportHonesty.machineKindKey(forExerciseName: $0.name) != nil

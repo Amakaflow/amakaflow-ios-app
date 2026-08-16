@@ -313,11 +313,11 @@ final class WorkoutEditorSaveTests: XCTestCase {
         session.updateExercise(press.id) { $0.reps = 8 }
         session.reorder(fromOffsets: IndexSet(integer: 3), toOffset: 0)
 
-        XCTAssertEqual(session.exercises.map(\.name), [
+        XCTAssertEqual(Set(session.exercises.values.map(\.name)), Set([
             "Push Up", "Hammer Curl", "Curl to Press", "Rows"
-        ])
-        XCTAssertEqual(session.exercises.first(where: { $0.id == curl.id })?.sets, 4)
-        XCTAssertEqual(session.exercises.first(where: { $0.id == press.id })?.reps, 8)
+        ]))
+        XCTAssertEqual(session.exercises.values.first(where: { $0.id == curl.id })?.sets, 4)
+        XCTAssertEqual(session.exercises.values.first(where: { $0.id == press.id })?.reps, 8)
 
         let intervalOnlyReload = Workout(
             id: "wk-created-1",
@@ -395,7 +395,7 @@ final class WorkoutEditorSaveTests: XCTestCase {
 
         var session = EditorV2Session.from(mode: .edit, workout: workout)
         session.title = "New Title"
-        if let removeID = session.exercises.first(where: { $0.name == "B" })?.id {
+        if let removeID = session.exercises.values.first(where: { $0.name == "B" })?.id {
             session.removeExercise(removeID)
         }
 

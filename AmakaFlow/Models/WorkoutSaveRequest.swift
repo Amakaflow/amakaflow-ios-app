@@ -104,6 +104,7 @@ struct WorkoutSaveRequest: Codable {
         }
     }
 
+    // swiftlint:disable cyclomatic_complexity
     /// AMA-2343 A+D: map Block.structure / rounds display contract → ADR-017 type.
     private static func persistType(from block: Block) -> String? {
         switch block.structure {
@@ -119,6 +120,12 @@ struct WorkoutSaveRequest: Codable {
             return StructureBlockType.emom.rawValue
         case .tabata:
             return StructureBlockType.tabata.rawValue
+        case .fortime:
+            return StructureBlockType.forTime.rawValue
+        case .warmup:
+            return StructureBlockType.warmup.rawValue
+        case .cooldown:
+            return StructureBlockType.cooldown.rawValue
         case .straight:
             // Library decode often loses type → structure defaults to straight.
             // When Companion shows a circuit (rounds>1, multi-ex), persist circuit.
@@ -130,6 +137,7 @@ struct WorkoutSaveRequest: Codable {
             return StructureBlockType.circuit.rawValue
         }
     }
+    // swiftlint:enable cyclomatic_complexity
 
     private static func socialImportExercise(from exercise: Exercise) -> SocialImportExercise {
         let repsText = exercise.reps?.trimmingCharacters(in: .whitespacesAndNewlines)

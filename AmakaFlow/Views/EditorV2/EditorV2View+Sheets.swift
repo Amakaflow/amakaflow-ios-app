@@ -53,7 +53,7 @@ extension EditorV2View {
             },
             onSupersetToggle: {
                 if isInSuperset(exercise) {
-                    session.removeFromSuperset(exercise.id)
+                    _ = session.apply(.removeFromGroup(exercise.id))
                     showToast("Removed from superset")
                     menuExerciseID = nil
                 } else {
@@ -62,7 +62,7 @@ extension EditorV2View {
                 }
             },
             onAddSet: {
-                session.addSet(to: exercise.id)
+                _ = session.apply(.addSet(exercise.id))
                 showToast("Set added ✓")
                 menuExerciseID = nil
             },
@@ -76,7 +76,7 @@ extension EditorV2View {
                 menuExerciseID = nil
             },
             onRemove: {
-                session.removeExercise(exercise.id)
+                _ = session.apply(.removeExercise(exercise.id))
                 showToast("Removed")
                 menuExerciseID = nil
             }
@@ -86,9 +86,7 @@ extension EditorV2View {
 
     func editSheet(_ exercise: EditorV2Exercise) -> some View {
         EditorV2EditSheet(exercise: exercise) { updated in
-            if let index = session.exercises.firstIndex(where: { $0.id == updated.id }) {
-                session.exercises[index] = updated
-            }
+            _ = session.apply(.updatePrescription(updated.id, updated))
             editExerciseID = nil
         }
         // Tall form (Load + Between moves) — medium clipped the title under the grabber.
@@ -113,10 +111,11 @@ extension EditorV2View {
             groupKey: item.id,
             group: item.group,
             isInsertionTarget: isTarget,
-            onChange: { session.groups[item.id] = $0 },
+            onChange: { _ = session.apply(.updateGroupConfig(item.id, $0.config)) },
+            onSwitchType: { _ = session.apply(.switchGroupType(item.id, $0)) },
             onDone: { configGroupKey = nil },
             onUngroup: {
-                session.ungroup(item.id)
+                _ = session.apply(.ungroup(item.id))
                 configGroupKey = nil
                 showToast("Ungrouped — now straight sets")
             },
@@ -144,15 +143,15 @@ extension EditorV2View {
     func pairSheet(_ source: EditorV2Exercise) -> some View {
         EditorV2PairSheet(
             source: source,
-            candidates: session.exercises.filter { $0.id != source.id },
+            candidates: Array(session.exercises.values.filter { $0.id != source.id }),
             groups: session.groups
         ) { targetID in
-            session.pairSuperset(sourceID: source.id, targetID: targetID)
+            _ = session.apply(.pairSuperset(source: source.id, target: targetID))
             pairSourceID = nil
-            let key = session.exercises.first { $0.id == source.id }?.groupKey
-                ?? session.exercises.first { $0.id == targetID }?.groupKey
+            let key = session.exercises[source.id]?.groupKey
+                ?? session.exercises[targetID]?.groupKey
             let memberCount = key.map { groupKey in
-                session.exercises.filter { $0.groupKey == groupKey }.count
+                session.exercises.values.filter { $0.groupKey == groupKey }.count
             } ?? 0
             showToast(memberCount >= 3 ? "Tri-set grouped ✓" : "Superset paired ✓")
         }
@@ -168,7 +167,7 @@ extension EditorV2View {
                 formatLabel: formatLabel,
                 replaceMode: true,
                 onAdd: { name in
-                    session.replaceExercise(replaceID, with: name)
+                    _ = session.apply(.replaceExercise(replaceID, with: name))
                     replaceExerciseID = nil
                     addSheetOpen = false
                     showToast("Replaced ✓")
@@ -184,9 +183,7 @@ extension EditorV2View {
                 formatLabel: formatLabel,
                 availableEquipmentKeys: gymEquipmentKeys,
                 onAddExercises: { names in
-                    for name in names {
-                        _ = session.addExercise(named: name)
-                    }
+                    _ = session.apply(.addExercises(names: names, into: nil))
                     guard !names.isEmpty else { return }
                     if names.count == 1, let name = names.first {
                         let fmt = formatLabel
@@ -245,21 +242,21 @@ extension EditorV2View {
 
     var menuExerciseBinding: Binding<EditorV2Exercise?> {
         Binding(
-            get: { menuExerciseID.flatMap { id in session.exercises.first { $0.id == id } } },
+            get: { menuExerciseID.flatMap { session.exercises[$0] } },
             set: { menuExerciseID = $0?.id }
         )
     }
 
     var editExerciseBinding: Binding<EditorV2Exercise?> {
         Binding(
-            get: { editExerciseID.flatMap { id in session.exercises.first { $0.id == id } } },
+            get: { editExerciseID.flatMap { session.exercises[$0] } },
             set: { editExerciseID = $0?.id }
         )
     }
 
     var pairSourceBinding: Binding<EditorV2Exercise?> {
         Binding(
-            get: { pairSourceID.flatMap { id in session.exercises.first { $0.id == id } } },
+            get: { pairSourceID.flatMap { session.exercises[$0] } },
             set: { pairSourceID = $0?.id }
         )
     }
@@ -291,14 +288,14 @@ extension EditorV2View {
             }
             .buttonStyle(.plain)
             .accessibilityIdentifier("builder_v3_type_change_button")
-            .padding(.trailing, session.exercises.count > 1 ? 8 : 0)
+            .padding(.trailing, session.order.count > 1 ? 8 : 0)
         }
     }
 
     /// TYPE · CHANGE (AMA-2372) — confirms first when the canvas is dirty.
     func builderV3ChangeTypeTapped() {
         let titleDirty = builderV3InitialTitle.map { $0 != session.title } ?? false
-        let isDirty = !session.exercises.isEmpty || !session.groups.isEmpty || titleDirty
+        let isDirty = !session.order.isEmpty || titleDirty
         if isDirty {
             showBuilderV3ChangeTypeConfirm = true
         } else {
@@ -367,7 +364,7 @@ extension EditorV2View {
                 showToast(ActualsCopy.captureNameRequiredToast)
                 return
             }
-            let summaries = session.exercises.map(\.name).filter { !$0.isEmpty }
+            let summaries = session.exercises.values.map(\.name).filter { !$0.isEmpty }
             let blocks = session.toSocialImportBlocks()
             let draft = ActualsCaptureDraft(
                 id: UUID().uuidString,

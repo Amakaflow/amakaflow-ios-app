@@ -45,7 +45,8 @@ enum WorkoutLibraryDetailStore {
                     structure: blockStructure(from: block.type),
                     rounds: max(1, block.rounds),
                     exercises: block.exercises.map { $0.toExercise() },
-                    restBetweenSeconds: block.restSec
+                    restBetweenSeconds: block.restSec,
+                    timeCapSec: block.timeCapSec  // AMA-2438 P3: preserve time cap
                 )
             }
         } else if !saved.blocks.isEmpty {
@@ -141,14 +142,17 @@ enum WorkoutLibraryDetailStore {
     /// `for-time` has no dedicated case — use `.straight` with the cap in `label`
     /// so fill-in/Strava never treat the minute cap as circuit rounds.
     static func blockStructure(from type: String?) -> BlockStructure {
+        // AMA-2438 P3: preserve warmup, cooldown, for-time (no more lossy mapping)
         switch type?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
         case "superset": return .superset
-        case "circuit", "rounds", "warmup": return .circuit
+        case "circuit", "rounds": return .circuit
         case "timed_circuit": return .timedCircuit
-        case "for-time", "fortime": return .straight
+        case "for-time", "fortime": return .fortime
         case "amrap": return .amrap
         case "emom": return .emom
         case "tabata": return .tabata
+        case "warmup": return .warmup
+        case "cooldown": return .cooldown
         default: return .straight
         }
     }

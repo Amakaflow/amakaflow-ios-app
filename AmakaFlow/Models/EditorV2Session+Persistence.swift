@@ -15,39 +15,30 @@ extension EditorV2Session {
     }
 
     static func from(title: String, blocks: [DDEditorBlockDraft]) -> EditorV2Session {
-        var groups: [String: EditorV2Group] = [:]
-        var exercises: [EditorV2Exercise] = []
-
-        for block in blocks {
-            if let groupType = EditorV2GroupType.from(dd: block.structure) {
-                let key = block.id
-                let capMinutes: Int? = {
-                    guard let seconds = block.timeCapSeconds else { return nil }
-                    return max(1, seconds / 60)
-                }()
-                groups[key] = EditorV2Group(
-                    id: key,
-                    type: groupType,
-                    name: block.label,
-                    config: EditorV2GroupConfig(
-                        rounds: block.rounds,
-                        restSeconds: block.restBetweenRoundsSeconds,
-                        capMinutes: capMinutes
-                    ),
-                    structureSource: .userConfirmed
-                )
-                for exercise in block.exercises {
-                    exercises.append(exercise.asEditorV2(groupKey: key))
+        // AMA-2438 P3: reload from SocialImportBlock payload, not DDEditorBlockDraft
+        // Convert DDEditorBlockDraft → SocialImportBlock for codec
+        let socialBlocks = blocks.map { block -> SocialImportBlock in
+            let structureType: String = {
+                if let groupType = EditorV2GroupType.from(dd: block.structure) {
+                    return groupType.structureBlockType.rawValue
                 }
-            } else {
-                // Straight sets → flat cards (no structure pill).
-                for exercise in block.exercises {
-                    exercises.append(exercise.asEditorV2(groupKey: nil))
-                }
-            }
+                return StructureBlockType.sets.rawValue
+            }()
+            
+            return SocialImportBlock(
+                label: block.label,
+                rounds: block.rounds,
+                exercises: block.exercises.map { $0.asSocialImportExercise },
+                type: structureType,
+                restSec: block.restBetweenRoundsSeconds,
+                timeCapSec: block.timeCapSeconds,
+                structureSource: StructureSource.userConfirmed.rawValue,
+                enrichmentKind: nil
+            )
         }
-
-        return EditorV2Session(title: title, groups: groups, exercises: exercises)
+        
+        // Use P3 D4 codec
+        return EditorV2Session.decodeFromBlocks(title: title, blocks: socialBlocks)
     }
 
     /// Round-trip ADR-017 blocks for WorkoutSaveRequest (preserve structure_source).
@@ -70,8 +61,11 @@ extension EditorV2Session {
             flatBuffer = []
         }
 
-        for run in runs {
-            if let key = run.groupKey, let group = groups[key] {
+        for row in order {
+            switch row {
+            case .group(let key):
+                guard let group = groups[key] else { continue }
+                let members = group.memberIDs.compactMap { exercises[$0] }
                 flushFlat()
                 let restSec: Int? = {
                     switch group.type {
@@ -106,6 +100,9 @@ extension EditorV2Session {
                     switch group.type {
                     case .amrap, .fortime:
                         return group.metaLine
+                    case .superset:
+                        // AMA-2438 D3: use derived display name
+                        return group.displayName(memberCount: members.count)
                     default:
                         return group.name
                     }
@@ -114,7 +111,7 @@ extension EditorV2Session {
                     SocialImportBlock(
                         label: label,
                         rounds: max(1, rounds),
-                        exercises: run.exercises.map(\.asSocialImportExercise),
+                        exercises: members.map(\.asSocialImportExercise),
                         type: group.type.structureBlockType.rawValue,
                         restSec: restSec,
                         timeCapSec: timeCapSec,
@@ -122,8 +119,9 @@ extension EditorV2Session {
                         enrichmentKind: group.enrichmentKind?.rawValue
                     )
                 )
-            } else {
-                flatBuffer.append(contentsOf: run.exercises.map(\.asSocialImportExercise))
+            case .loose(let id):
+                guard let exercise = exercises[id] else { continue }
+                flatBuffer.append(exercise.asSocialImportExercise)
             }
         }
         flushFlat()
@@ -131,7 +129,22 @@ extension EditorV2Session {
     }
 
     func toSaveIntervals() -> [WorkoutSaveInterval] {
-        exercises.map { PrescriptionFormatter.saveInterval(from: $0) }
+        // AMA-2438 D2: preserve order for intervals (dict iteration is undefined)
+        var result: [WorkoutSaveInterval] = []
+        for row in order {
+            switch row {
+            case .group(let key):
+                guard let group = groups[key] else { continue }
+                for memberID in group.memberIDs {
+                    guard let exercise = exercises[memberID] else { continue }
+                    result.append(PrescriptionFormatter.saveInterval(from: exercise))
+                }
+            case .loose(let id):
+                guard let exercise = exercises[id] else { continue }
+                result.append(PrescriptionFormatter.saveInterval(from: exercise))
+            }
+        }
+        return result
     }
 }
 
@@ -153,6 +166,19 @@ private extension DDEditorExerciseDraft {
             swapReplacementName: swapReplacementName
         )
     }
+    
+    var asSocialImportExercise: SocialImportExercise {
+        SocialImportExercise(
+            name: name,
+            sets: sets,
+            reps: reps,
+            repsRange: repsRange?.display,
+            seconds: durationSeconds,
+            distanceMeters: distanceMeters,
+            calories: calories,
+            restSeconds: restSeconds
+        )
+    }
 }
 
 private extension EditorV2Exercise {
@@ -163,6 +189,21 @@ private extension EditorV2Exercise {
         var provenance: [String: String] = [:]
         for (key, value) in fieldProvenance {
             provenance[key] = value.rawValue
+        }
+        let hasWarmupSets = !warmupSets.isEmpty
+        let declaredRestOpen: Bool? = {
+            if let restOpen { return restOpen }
+            // Declared warm-up set payloads carry explicit closed-rest intent.
+            if hasWarmupSets, let restSeconds, restSeconds > 0 {
+                return false
+            }
+            return nil
+        }()
+        if hasWarmupSets,
+           let restSeconds,
+           restSeconds > 0,
+           provenance[WorkoutEnrichmentMutations.restSecKey] == nil {
+            provenance[WorkoutEnrichmentMutations.restSecKey] = ProvSource.enrichmentDefault.rawValue
         }
         return SocialImportExercise(
             name: name,
@@ -178,7 +219,7 @@ private extension EditorV2Exercise {
             fieldProvenance: provenance.isEmpty ? nil : provenance,
             exerciseId: exerciseId ?? WorkoutEnrichmentMutations.mintExerciseId(),
             warmupSets: warmupSets.isEmpty ? nil : warmupSets,
-            restOpen: restOpen,
+            restOpen: declaredRestOpen,
             structureSource: structureSource?.rawValue
         )
     }

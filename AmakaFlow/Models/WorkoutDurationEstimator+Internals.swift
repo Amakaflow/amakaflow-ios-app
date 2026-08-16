@@ -91,9 +91,9 @@ extension WorkoutDurationEstimator {
     static func isMultiStation(_ block: Block) -> Bool {
         guard block.exercises.count > 1 else { return false }
         switch block.structure {
-        case .circuit, .timedCircuit, .superset, .amrap, .emom, .tabata:
+        case .circuit, .timedCircuit, .superset, .amrap, .emom, .tabata, .fortime:
             return true
-        case .straight:
+        case .straight, .warmup, .cooldown:
             // Straight lists keep per-exercise sets / rounds-as-sets — never
             // treat them as a multi-station circuit for duration math.
             return false
@@ -126,7 +126,7 @@ extension WorkoutDurationEstimator {
 
     static func capSeconds(for block: Block) -> Int? {
         switch block.structure {
-        case .emom, .amrap:
+        case .emom, .amrap, .fortime:
             let allTimed = block.exercises.allSatisfy { ($0.durationSeconds ?? 0) > 0 }
             if allTimed { return nil }
             return max(1, block.rounds) * 60
@@ -135,7 +135,7 @@ extension WorkoutDurationEstimator {
             if allTimed { return nil }
             // Converter default: 20s work + 10s rest per exercise per round.
             return max(1, block.rounds) * max(1, block.exercises.count) * 30
-        case .straight, .superset, .circuit, .timedCircuit:
+        case .straight, .superset, .circuit, .timedCircuit, .warmup, .cooldown:
             return nil
         }
     }

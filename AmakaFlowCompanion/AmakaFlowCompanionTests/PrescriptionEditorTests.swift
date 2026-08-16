@@ -88,8 +88,10 @@ final class PrescriptionEditorTests: XCTestCase {
         XCTAssertEqual(draft.reps, 10)
         XCTAssertEqual(draft.fieldProvenance["reps"], .user)
 
-        let social = EditorV2Session(title: "t", groups: [:], exercises: [draft])
-            .toSocialImportBlocks()
+        var session = EditorV2Session(title: "t")
+        session.exercises = [draft.id: draft]
+        session.order = [.loose(draft.id)]
+        let social = session.toSocialImportBlocks()
             .flatMap(\.exercises)
             .first
         XCTAssertEqual(social?.fieldProvenance?["reps"], "user")

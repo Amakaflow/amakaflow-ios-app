@@ -149,7 +149,11 @@ struct EditorV2Group: Equatable, Identifiable, Sendable {
     var id: String
     var type: EditorV2GroupType
     var name: String
+    /// AMA-2438 D3: stable letter identity (A, B, C...). Display name is f(type, memberCount, letter).
+    var letter: String?
     var config: EditorV2GroupConfig
+    /// AMA-2438 D2: ordered member IDs (group owns its membership).
+    var memberIDs: [String]
     var structureSource: StructureSource
     /// AMA-2336 — set only on soft sections this app added (`session_warmup` / `cooldown`).
     /// Never the presence test — that stays block `type`.
@@ -159,14 +163,18 @@ struct EditorV2Group: Equatable, Identifiable, Sendable {
         id: String = UUID().uuidString,
         type: EditorV2GroupType,
         name: String? = nil,
+        letter: String? = nil,
         config: EditorV2GroupConfig? = nil,
+        memberIDs: [String] = [],
         structureSource: StructureSource = .userConfirmed,
         enrichmentKind: EnrichmentKind? = nil
     ) {
         self.id = id
         self.type = type
         self.name = name ?? type.label
+        self.letter = letter
         self.config = config ?? type.defaultConfig
+        self.memberIDs = memberIDs
         self.structureSource = structureSource
         self.enrichmentKind = enrichmentKind
     }
@@ -187,6 +195,36 @@ struct EditorV2Group: Equatable, Identifiable, Sendable {
         case .superset:
             return "\(config.rounds ?? 3) ROUNDS · \(Self.restMetaText(config.restSeconds ?? 60)) REST"
         }
+    }
+    
+    /// AMA-2438 D3: derive display name from type + member count + letter.
+    /// Auto-labeled superset groups compute their name; custom names pass through.
+    func displayName(memberCount: Int) -> String {
+        // Custom names always pass through
+        let autoNames: Set<String> = ["Superset", "Tri-set", "Tri-sets", "Giant set"]
+        guard autoNames.contains(name) || name.isEmpty else {
+            return name
+        }
+        
+        // Superset family derives from member count
+        if type == .superset {
+            let base: String
+            if memberCount >= 4 {
+                base = "Giant set"
+            } else if memberCount >= 3 {
+                base = "Tri-set"
+            } else {
+                base = "Superset"
+            }
+            
+            if let letter = letter, !letter.isEmpty {
+                return "\(base) \(letter)"
+            }
+            return base
+        }
+        
+        // Non-superset types use their type label
+        return type.label
     }
 
     /// Rest labels: keep exact seconds when not a whole minute (90s ≠ “1 MIN”).
@@ -512,6 +550,19 @@ struct EditorV2Run: Equatable, Identifiable, Sendable {
     var id: String
     var groupKey: String?
     var exercises: [EditorV2Exercise]
+}
+
+/// AMA-2438 D2: Canvas row — either a group block or a loose exercise.
+enum EditorV2Row: Equatable, Sendable {
+    case group(String)      // GroupKey
+    case loose(String)      // ExerciseID
+    
+    var id: String {
+        switch self {
+        case .group(let key): return key
+        case .loose(let id): return id
+        }
+    }
 }
 
 /// Demo library rows for the add-exercise sheet (equipment-aware).
