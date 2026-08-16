@@ -81,6 +81,9 @@ enum DDEditorStructureKind: String, CaseIterable, Identifiable {
         case .amrap: return .amrap
         case .tabata: return .tabata
         case .superset: return .superset
+        case .fortime: return .forTime
+        case .warmup: return .warmup
+        case .cooldown: return .cooldown
         case .straight: return .sets
         }
     }

@@ -298,7 +298,7 @@ enum EditorV2Content {
     ) -> some View {
         VStack(spacing: 6) {
             List {
-                ForEach(session.exercises) { exercise in
+                ForEach(Array(session.exercises.values)) { exercise in
                     EditorV2ReorderRow(
                         exercise: exercise,
                         group: exercise.groupKey.flatMap { session.groups[$0] }
