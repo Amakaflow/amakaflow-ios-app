@@ -195,7 +195,10 @@ extension EditorV2Session {
             guard var group = groups[key] else {
                 return .rejected(.groupNotFound)
             }
-            let keepCustomName = !EditorV2GroupType.allCases.map(\.label).contains(group.name)
+            // Check if name is auto-generated (type labels + superset variants)
+            let autoNames: Set<String> = Set(EditorV2GroupType.allCases.map(\.label))
+                .union(["Tri-set", "Tri-sets", "Giant set"])
+            let keepCustomName = !autoNames.contains(group.name)
             group.type = type
             group.config = type.defaultConfig
             if !keepCustomName {

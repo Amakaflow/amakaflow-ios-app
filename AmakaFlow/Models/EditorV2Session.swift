@@ -179,6 +179,22 @@ extension EditorV2Session {
     ) -> Bool {
         guard type.isSoftSection else { return false }
         
+        // Check tombstone unless explicitly clearing it
+        if !clearingTombstone && enrichmentTombstones.contains(where: { $0.kind == kind }) {
+            return false
+        }
+        
+        // Check if this type already exists (blocked by presence)
+        if groups.values.contains(where: { $0.type == type }) {
+            return false
+        }
+        
+        // Clear tombstone if requested
+        if clearingTombstone {
+            enrichmentTombstones.removeAll { $0.kind == kind }
+            enrichmentTombstonesDirty = true
+        }
+        
         let key = UUID().uuidString
         let config = type.defaultConfig
         
