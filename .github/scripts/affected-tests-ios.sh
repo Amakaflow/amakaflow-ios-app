@@ -145,7 +145,9 @@ while IFS= read -r f; do
     
     if [[ ${#matched_tests[@]} -gt 0 ]]; then
       TEST_PATTERNS+=("${matched_tests[@]}")
-      continue
+      # Do NOT continue — let progressive stem matching also run so
+      # EditorV2Command+D2.swift maps to both EditorV2CommandTests (prefix)
+      # and EditorV2Tests (stem). Dedup at the end handles overlaps.
     fi
     
     # 4. Try progressive stem shortening for compound names
@@ -190,16 +192,9 @@ fi
 
 if [[ ${#UNIQUE_TESTS[@]} -eq 0 ]]; then
   if [[ "$IOS_CHANGED" == "true" ]]; then
-    # iOS sources changed but no mapped test found -> safer fallback
-    # BUT: if we only saw a pbxproj change with no Swift source changes,
-    # that's likely just a file-ref update with no actual code, so NONE.
-    if [[ "$XCODEPROJ_CHANGED" == "true" ]]; then
-      # pbxproj changed but no Swift sources -> likely file-ref only -> NONE
-      if ! echo "$CHANGED" | grep -E -q '^(AmakaFlow/|AmakaFlowCompanion/AmakaFlowCompanion/).*\.swift$'; then
-        echo "NONE"
-        exit 0
-      fi
-    fi
+    # iOS sources changed but no mapped test found -> FULL
+    # Any iOS Swift change (including test files) that cannot be mapped
+    # must run the full suite for safety.
     echo "FULL"
   else
     # Only watchOS sources changed -> no iOS tests needed
