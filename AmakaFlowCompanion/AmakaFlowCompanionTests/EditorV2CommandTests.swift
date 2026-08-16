@@ -422,16 +422,14 @@ final class EditorV2CommandTests: XCTestCase {
     // MARK: - Invariant tests
     
     func testValidate_rejectsDuplicateExerciseIDs() {
-        // D2: exercises dict prevents duplicate IDs there, but order can have duplicates
-        // Validation should detect duplicate exercise references in order
-        let ex1 = EditorV2Exercise(name: "A")
+        // D2: Test that validateD2() detects duplicate IDs in order
         var session = EditorV2Session()
+        let ex1 = EditorV2Exercise(name: "A")
         session.exercises = [ex1.id: ex1]
-        // Manually create invalid state: same ID appears twice in order
-        session.order = [.loose(ex1.id), .loose(ex1.id)]
+        session.order = [.loose(ex1.id), .loose(ex1.id)]  // Invalid: duplicate
         
-        // Any command should reject this invalid state during validation
-        let result = session.apply(.addSet(ex1.id))
+        // Call validateD2 directly to check it detects the duplicate
+        let result = session.validateD2()
         XCTAssertEqual(result, .rejected(.duplicateIDs))
     }
     

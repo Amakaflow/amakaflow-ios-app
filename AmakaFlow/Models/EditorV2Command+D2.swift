@@ -448,6 +448,12 @@ extension EditorV2Session {
     private mutating func refreshSupersetLabelsD2() {
         for key in groups.keys where groups[key]?.type == .superset {
             guard let group = groups[key] else { continue }
+            
+            // Don't refresh format group name - it stays as the target name while building
+            if key == formatGroupKey {
+                continue
+            }
+            
             let memberCount = group.memberIDs.count
             
             // D3: use displayName function for derived labels
