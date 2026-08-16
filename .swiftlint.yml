@@ -4,8 +4,6 @@
 disabled_rules:
   - trailing_whitespace  # Xcode handles this
   - line_length          # Allow longer lines for SwiftUI
-  - cyclomatic_complexity  # AMA-2438: large command switch statements
-  - function_parameter_count  # AMA-2438 D2+D3: EditorV2Group needs 8 params
 
 # Rules to opt-in
 opt_in_rules:

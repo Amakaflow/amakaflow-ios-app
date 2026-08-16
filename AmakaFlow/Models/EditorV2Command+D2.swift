@@ -8,7 +8,7 @@
 import Foundation
 
 extension EditorV2Session {
-    // swiftlint:disable:next function_body_length
+    // swiftlint:disable:next function_body_length cyclomatic_complexity
     mutating func applyD2(_ command: EditorCommand) -> ApplyResult {
         switch command {
         case .addExercises(let names, let into):
