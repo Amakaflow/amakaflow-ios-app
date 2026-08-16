@@ -429,10 +429,22 @@ extension EditorV2Session {
     mutating func beginNextSupersetGroup(preferredName: String? = nil) -> String {
         let key = "ss\(UUID().uuidString)"
         let letter = nextSupersetLetter()
+        
+        // Infer name from previous formatGroupKey if building tri-sets
+        let defaultName: String = {
+            if let prevKey = formatGroupKey, let prevGroup = groups[prevKey] {
+                let triSetNames: Set<String> = ["Tri-set", "Tri-sets"]
+                if triSetNames.contains(prevGroup.name) {
+                    return "Tri-set"
+                }
+            }
+            return "Superset"
+        }()
+        
         groups[key] = EditorV2Group(
             id: key,
             type: .superset,
-            name: preferredName ?? "Superset",
+            name: preferredName ?? defaultName,
             letter: letter,
             config: EditorV2GroupType.superset.defaultConfig,
             memberIDs: [],
