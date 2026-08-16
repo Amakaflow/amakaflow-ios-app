@@ -170,23 +170,7 @@ private extension SocialImportExercise {
             }
         }
         
-        var warmupSetsConverted: [WarmupSetRow] = []
-        if let warmupSets = warmupSets {
-            warmupSetsConverted = warmupSets.map { set in
-                let source: StructureSource
-                if let structureSourceString = set.structureSource,
-                   let parsed = StructureSource(rawValue: structureSourceString) {
-                    source = parsed
-                } else {
-                    source = .enrichmentDefault
-                }
-                return WarmupSetRow(
-                    reps: set.reps,
-                    weight: set.weight,
-                    structureSource: source
-                )
-            }
-        }
+        let warmupSetsConverted = warmupSets ?? []
         
         return EditorV2Exercise(
             id: exerciseId ?? UUID().uuidString,
