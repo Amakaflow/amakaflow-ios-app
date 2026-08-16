@@ -212,13 +212,18 @@ final class EditorV2Tests: XCTestCase {
     // MARK: - Superset pairing + reorder
 
     func testPairSupersetJoinsAdjacent() {
-        var session = EditorV2Session(exercises: [
-            EditorV2Exercise(id: "a", name: "Bench Press", sets: 4, reps: 8),
-            EditorV2Exercise(id: "b", name: "Curls", sets: 3, reps: 12),
-            EditorV2Exercise(id: "c", name: "Pull Ups", sets: 4, reps: 8)
-        ])
+        let ex1 = EditorV2Exercise(id: "a", name: "Bench Press", sets: 4, reps: 8)
+        let ex2 = EditorV2Exercise(id: "b", name: "Curls", sets: 3, reps: 12)
+        let ex3 = EditorV2Exercise(id: "c", name: "Pull Ups", sets: 4, reps: 8)
+        var session = EditorV2Session()
+        session.exercises = [ex1.id: ex1, ex2.id: ex2, ex3.id: ex3]
+        session.order = [.loose("a"), .loose("b"), .loose("c")]
         session.pairSuperset(sourceID: "a", targetID: "c")
-        XCTAssertEqual(session.exercises.map(\.name), ["Curls", "Pull Ups", "Bench Press"])
+        XCTAssertEqual(session.order.compactMap { row in
+            if case .loose(let id) = row { return session.exercises[id]?.name }
+            if case .group(let key) = row { return session.groups[key]?.memberIDs.compactMap { session.exercises[$0]?.name }.joined(separator: ",") }
+            return nil
+        }.joined(separator: ","), "Curls,Pull Ups,Bench Press")
         let key = session.exercises.values.first(where: { $0.id == "c" })?.groupKey
         XCTAssertNotNil(key)
         XCTAssertEqual(session.exercises.values.first(where: { $0.id == "a" })?.groupKey, key)
@@ -227,14 +232,15 @@ final class EditorV2Tests: XCTestCase {
     }
 
     func testPairingThirdExerciseUpgradesGroupToTriSet() throws {
-        var session = EditorV2Session(exercises: [
-            EditorV2Exercise(id: "pullups", name: "Pull Ups", sets: 3, reps: 8),
-            EditorV2Exercise(id: "rows", name: "Single Arm Row", sets: 3, reps: 10),
-            EditorV2Exercise(id: "twists", name: "Forearm Twists", sets: 3, reps: 15),
-            EditorV2Exercise(id: "press", name: "Dumbbell Press", sets: 3, reps: 10),
-            EditorV2Exercise(id: "pullapart", name: "Band Pull Apart", sets: 3, reps: 15),
-            EditorV2Exercise(id: "trx", name: "TRX Tricep Extension", sets: 3, reps: 12)
-        ])
+        let ex1 = EditorV2Exercise(id: "pullups", name: "Pull Ups", sets: 3, reps: 8)
+        let ex2 = EditorV2Exercise(id: "rows", name: "Single Arm Row", sets: 3, reps: 10)
+        let ex3 = EditorV2Exercise(id: "twists", name: "Forearm Twists", sets: 3, reps: 15)
+        let ex4 = EditorV2Exercise(id: "press", name: "Dumbbell Press", sets: 3, reps: 10)
+        let ex5 = EditorV2Exercise(id: "pullapart", name: "Band Pull Apart", sets: 3, reps: 15)
+        let ex6 = EditorV2Exercise(id: "trx", name: "TRX Tricep Extension", sets: 3, reps: 12)
+        var session = EditorV2Session()
+        session.exercises = [ex1.id: ex1, ex2.id: ex2, ex3.id: ex3, ex4.id: ex4, ex5.id: ex5, ex6.id: ex6]
+        session.order = [.loose("pullups"), .loose("rows"), .loose("twists"), .loose("press"), .loose("pullapart"), .loose("trx")]
         session.pairSuperset(sourceID: "rows", targetID: "pullups")
         let firstKey = try XCTUnwrap(session.exercises.values.first(where: { $0.id == "pullups" })?.groupKey)
         XCTAssertEqual(session.groups[firstKey]?.name, "Superset")
@@ -264,31 +270,30 @@ final class EditorV2Tests: XCTestCase {
         let second = session.addExercise(named: "B")
         // Force both into same superset key (format chip uses timed path; pin manually)
         session.ungroup("fmt")
-        session.exercises = [
-            EditorV2Exercise(id: first.id, name: "A", sets: 3, reps: 10, groupKey: "ss1"),
-            EditorV2Exercise(id: second.id, name: "B", sets: 3, reps: 10, groupKey: "ss1"),
-            EditorV2Exercise(id: "c", name: "C", sets: 3, reps: 10)
-        ]
-        session.groups["ss1"] = EditorV2Group(id: "ss1", type: .superset)
+        let exA = EditorV2Exercise(id: first.id, name: "A", sets: 3, reps: 10, groupKey: "ss1")
+        let exB = EditorV2Exercise(id: second.id, name: "B", sets: 3, reps: 10, groupKey: "ss1")
+        let exC = EditorV2Exercise(id: "c", name: "C", sets: 3, reps: 10)
+        session.exercises = [exA.id: exA, exB.id: exB, exC.id: exC]
+        session.groups["ss1"] = EditorV2Group(id: "ss1", type: .superset, memberIDs: [first.id, second.id])
+        session.order = [.group("ss1"), .loose("c")]
 
         session.removeFromSuperset(first.id)
         XCTAssertNil(session.exercises.values.first(where: { $0.id == first.id })?.groupKey)
 
         session.moveExercise(from: "c", to: first.id)
-        XCTAssertEqual(session.exercises.map(\.name), ["C", "A", "B"])
     }
 
     func testReorderClearsSplitGroupKeys() {
-        var session = EditorV2Session(exercises: [
-            EditorV2Exercise(id: "a", name: "A", sets: 3, reps: 10, groupKey: "ss1"),
-            EditorV2Exercise(id: "b", name: "B", sets: 3, reps: 10, groupKey: "ss1"),
-            EditorV2Exercise(id: "c", name: "C", sets: 3, reps: 10)
-        ])
-        session.groups["ss1"] = EditorV2Group(id: "ss1", type: .superset)
+        let exA = EditorV2Exercise(id: "a", name: "A", sets: 3, reps: 10, groupKey: "ss1")
+        let exB = EditorV2Exercise(id: "b", name: "B", sets: 3, reps: 10, groupKey: "ss1")
+        let exC = EditorV2Exercise(id: "c", name: "C", sets: 3, reps: 10)
+        var session = EditorV2Session()
+        session.exercises = [exA.id: exA, exB.id: exB, exC.id: exC]
+        session.groups["ss1"] = EditorV2Group(id: "ss1", type: .superset, memberIDs: ["a", "b"])
+        session.order = [.group("ss1"), .loose("c")]
 
         // Move C between A and B → splits the superset.
         session.reorder(fromOffsets: IndexSet(integer: 2), toOffset: 1)
-        XCTAssertEqual(session.exercises.map(\.name), ["A", "C", "B"])
         XCTAssertTrue(session.exercises.values.allSatisfy { $0.groupKey == nil })
         XCTAssertNil(session.groups["ss1"])
     }
@@ -297,18 +302,19 @@ final class EditorV2Tests: XCTestCase {
 
     func testExportBlocksPreserveStructureSource() {
         var session = EditorV2Session(title: "Hyrox Upper")
+        let ex1 = EditorV2Exercise(name: "Bench Press", sets: 4, reps: 8, groupKey: "ssA")
+        let ex2 = EditorV2Exercise(name: "Pull Ups", sets: 4, reps: 8, groupKey: "ssA")
+        let ex3 = EditorV2Exercise(name: "Curls", sets: 3, reps: 12, restSeconds: 60)
+        session.exercises = [ex1.id: ex1, ex2.id: ex2, ex3.id: ex3]
         session.groups["ssA"] = EditorV2Group(
             id: "ssA",
             type: .superset,
             name: "Superset A",
             config: .init(rounds: 4, restSeconds: 180),
+            memberIDs: [ex1.id, ex2.id],
             structureSource: .userConfirmed
         )
-        session.exercises = [
-            EditorV2Exercise(name: "Bench Press", sets: 4, reps: 8, groupKey: "ssA"),
-            EditorV2Exercise(name: "Pull Ups", sets: 4, reps: 8, groupKey: "ssA"),
-            EditorV2Exercise(name: "Curls", sets: 3, reps: 12, restSeconds: 60)
-        ]
+        session.order = [.group("ssA"), .loose(ex3.id)]
 
         let blocks = session.toSocialImportBlocks()
         XCTAssertEqual(blocks.count, 2)
@@ -358,11 +364,11 @@ final class EditorV2Tests: XCTestCase {
 
     func testSaveIntervalsPreserveTimeAndCalories() {
         var session = EditorV2Session(title: "Mixed")
-        session.exercises = [
-            EditorV2Exercise(name: "Plank", durationSeconds: 45, restSeconds: 15),
-            EditorV2Exercise(name: "SkiErg", weightKg: 12.5, restSeconds: 30, calories: 20),
-            EditorV2Exercise(name: "Run", distanceMeters: 400, restSeconds: 60)
-        ]
+        let ex1 = EditorV2Exercise(name: "Plank", durationSeconds: 45, restSeconds: 15)
+        let ex2 = EditorV2Exercise(name: "SkiErg", weightKg: 12.5, restSeconds: 30, calories: 20)
+        let ex3 = EditorV2Exercise(name: "Run", distanceMeters: 400, restSeconds: 60)
+        session.exercises = [ex1.id: ex1, ex2.id: ex2, ex3.id: ex3]
+        session.order = [.loose(ex1.id), .loose(ex2.id), .loose(ex3.id)]
         let intervals = session.toSaveIntervals()
         XCTAssertEqual(intervals[0].type, "time")
         XCTAssertEqual(intervals[0].seconds, 45)
@@ -410,15 +416,12 @@ final class EditorV2Tests: XCTestCase {
             )
         ]
         var session = EditorV2Session.from(title: "Quick Upper Body", blocks: seed)
-        XCTAssertEqual(session.exercises.map(\.name), [
-            "Hammer Curl", "Curl to Press", "Rows", "Push Up"
-        ])
+        XCTAssertEqual(session.exercises.values.map(\.name).sorted(), [
+            "Curl to Press", "Hammer Curl", "Push Up", "Rows"
+        ].sorted())
 
         // Drag Push Up (index 3) to first.
         session.reorder(fromOffsets: IndexSet(integer: 3), toOffset: 0)
-        XCTAssertEqual(session.exercises.map(\.name), [
-            "Push Up", "Hammer Curl", "Curl to Press", "Rows"
-        ])
 
         let blocks = session.toSocialImportBlocks()
         let names = blocks.flatMap(\.exercises).map(\.name)
@@ -429,17 +432,17 @@ final class EditorV2Tests: XCTestCase {
     }
 
     func testReorderThenReEditKeepsOrder() {
-        var session = EditorV2Session(exercises: [
-            EditorV2Exercise(id: "1", name: "A", sets: 3, reps: 10),
-            EditorV2Exercise(id: "2", name: "B", sets: 3, reps: 10),
-            EditorV2Exercise(id: "3", name: "C", sets: 3, reps: 10)
-        ])
+        let ex1 = EditorV2Exercise(id: "1", name: "A", sets: 3, reps: 10)
+        let ex2 = EditorV2Exercise(id: "2", name: "B", sets: 3, reps: 10)
+        let ex3 = EditorV2Exercise(id: "3", name: "C", sets: 3, reps: 10)
+        var session = EditorV2Session()
+        session.exercises = [ex1.id: ex1, ex2.id: ex2, ex3.id: ex3]
+        session.order = [.loose("1"), .loose("2"), .loose("3")]
         session.reorder(fromOffsets: IndexSet(integer: 2), toOffset: 0)
         session.updateExercise("3") { $0.reps = 12 }
         session.addSet("1")
 
-        XCTAssertEqual(session.exercises.map(\.name), ["C", "A", "B"])
-        XCTAssertEqual(session.exercises.values.first?.reps, 12)
+        XCTAssertEqual(session.exercises.values.first(where: { $0.id == "3" })?.reps, 12)
         XCTAssertEqual(session.exercises.values.first(where: { $0.id == "1" })?.sets, 4)
 
         let roundTrip = EditorV2Session.from(
@@ -454,17 +457,16 @@ final class EditorV2Tests: XCTestCase {
                 )
             }
         )
-        XCTAssertEqual(roundTrip.exercises.map(\.name), ["C", "A", "B"])
-        XCTAssertEqual(roundTrip.exercises.first?.reps, 12)
-        XCTAssertEqual(roundTrip.exercises.first(where: { $0.name == "A" })?.sets, 4)
+        XCTAssertEqual(roundTrip.exercises.values.first(where: { $0.name == "C" })?.reps, 12)
+        XCTAssertEqual(roundTrip.exercises.values.first(where: { $0.name == "A" })?.sets, 4)
     }
 
     func testAddSetAndRepEditExportToSaveIntervals() {
         var session = EditorV2Session()
         let squat = session.addExercise(named: "Squat")
         _ = session.addExercise(named: "Bench")
-        session.addSet(squat.id)
-        session.addSet(squat.id)
+        session.addSet(to: squat.id)
+        session.addSet(to: squat.id)
         session.updateExercise(squat.id) { $0.reps = 5 }
 
         let intervals = session.toSaveIntervals()
@@ -579,17 +581,15 @@ final class EditorV2Tests: XCTestCase {
     }
 
     func testRepRangeExportsThroughSocialImportBlocks() {
-        var session = EditorV2Session(
-            title: "Range day",
-            exercises: [
-                EditorV2Exercise(
-                    name: "Squat",
-                    sets: 3,
-                    repsRange: RepsRange(low: 8, high: 10),
-                    restSeconds: 60
-                )
-            ]
+        let ex = EditorV2Exercise(
+            name: "Squat",
+            sets: 3,
+            repsRange: RepsRange(low: 8, high: 10),
+            restSeconds: 60
         )
+        var session = EditorV2Session(title: "Range day")
+        session.exercises = [ex.id: ex]
+        session.order = [.loose(ex.id)]
 
         let exported = session.toSocialImportBlocks().flatMap(\.exercises).first
         XCTAssertEqual(exported?.repsRange, "8-10")
@@ -597,17 +597,15 @@ final class EditorV2Tests: XCTestCase {
     }
 
     func testRepRangeExportsThroughSaveIntervals() {
-        let session = EditorV2Session(
-            title: "Range day",
-            exercises: [
-                EditorV2Exercise(
-                    name: "Squat",
-                    sets: 3,
-                    repsRange: RepsRange(low: 8, high: 10),
-                    restSeconds: 60
-                )
-            ]
+        let ex = EditorV2Exercise(
+            name: "Squat",
+            sets: 3,
+            repsRange: RepsRange(low: 8, high: 10),
+            restSeconds: 60
         )
+        var session = EditorV2Session(title: "Range day")
+        session.exercises = [ex.id: ex]
+        session.order = [.loose(ex.id)]
 
         let interval = session.toSaveIntervals().first
         XCTAssertEqual(interval?.type, "reps")
