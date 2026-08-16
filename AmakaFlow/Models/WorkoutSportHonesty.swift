@@ -172,9 +172,9 @@ enum WorkoutSportHonesty {
 
     private static func isIntervalStructure(_ block: Block) -> Bool {
         switch block.structure {
-        case .emom, .tabata, .amrap, .circuit, .timedCircuit:
+        case .emom, .tabata, .amrap, .circuit, .timedCircuit, .fortime:
             return true
-        case .straight, .superset:
+        case .straight, .superset, .warmup, .cooldown:
             return false
         }
     }

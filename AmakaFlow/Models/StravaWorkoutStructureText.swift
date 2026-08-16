@@ -417,7 +417,7 @@ enum StravaWorkoutStructureText {
             return label.uppercased()
         }
         switch block.structure {
-        case .circuit, .timedCircuit, .amrap, .emom, .tabata:
+        case .circuit, .timedCircuit, .amrap, .emom, .tabata, .fortime:
             if rounds > 1 {
                 return "\(structureName) · \(rounds) ROUNDS"
             }
@@ -427,6 +427,10 @@ enum StravaWorkoutStructureText {
             let stations = block.exercises.count
             let kind = stations >= 3 ? "TRI-SET" : "SUPERSET"
             return rounds > 1 ? "\(kind) · \(rounds) ROUNDS" : kind
+        case .warmup:
+            return "WARM-UP"
+        case .cooldown:
+            return "COOL-DOWN"
         case .straight:
             return rounds > 1 ? "\(rounds) ROUNDS" : ""
         }
@@ -487,10 +491,12 @@ enum StravaWorkoutStructureText {
         let rounds = max(1, block.rounds)
         let exerciseSets = max(1, exercise.sets ?? 1)
         switch block.structure {
-        case .amrap:
+        case .amrap, .fortime:
             return exerciseSets
         case .circuit, .timedCircuit, .emom, .tabata, .superset:
             return rounds > 1 ? rounds : exerciseSets
+        case .warmup, .cooldown:
+            return exerciseSets
         case .straight:
             // Legacy repeat→straight with rounds>1 and placeholder sets=1.
             if rounds > 1, exercise.sets == nil || exercise.sets == 1 {
