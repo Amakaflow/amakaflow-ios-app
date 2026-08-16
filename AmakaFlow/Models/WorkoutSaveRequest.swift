@@ -119,6 +119,12 @@ struct WorkoutSaveRequest: Codable {
             return StructureBlockType.emom.rawValue
         case .tabata:
             return StructureBlockType.tabata.rawValue
+        case .fortime:
+            return StructureBlockType.forTime.rawValue
+        case .warmup:
+            return StructureBlockType.warmup.rawValue
+        case .cooldown:
+            return StructureBlockType.cooldown.rawValue
         case .straight:
             // Library decode often loses type → structure defaults to straight.
             // When Companion shows a circuit (rounds>1, multi-ex), persist circuit.
