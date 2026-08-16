@@ -129,7 +129,22 @@ extension EditorV2Session {
     }
 
     func toSaveIntervals() -> [WorkoutSaveInterval] {
-        exercises.values.map { PrescriptionFormatter.saveInterval(from: $0) }
+        // AMA-2438 D2: preserve order for intervals (dict iteration is undefined)
+        var result: [WorkoutSaveInterval] = []
+        for row in order {
+            switch row {
+            case .group(let key):
+                guard let group = groups[key] else { continue }
+                for memberID in group.memberIDs {
+                    guard let exercise = exercises[memberID] else { continue }
+                    result.append(PrescriptionFormatter.saveInterval(from: exercise))
+                }
+            case .loose(let id):
+                guard let exercise = exercises[id] else { continue }
+                result.append(PrescriptionFormatter.saveInterval(from: exercise))
+            }
+        }
+        return result
     }
 }
 

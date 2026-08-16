@@ -418,12 +418,18 @@ extension EditorV2Session {
     private mutating func syncGroupKeyFieldsD2() {
         // Clear all groupKey fields first
         for id in exercises.keys {
-            exercises[id]?.groupKey = nil
+            if var exercise = exercises[id] {
+                exercise.groupKey = nil
+                exercises[id] = exercise
+            }
         }
         // Set groupKey for all members
         for (key, group) in groups {
             for memberID in group.memberIDs {
-                exercises[memberID]?.groupKey = key
+                if var exercise = exercises[memberID] {
+                    exercise.groupKey = key
+                    exercises[memberID] = exercise
+                }
             }
         }
     }
