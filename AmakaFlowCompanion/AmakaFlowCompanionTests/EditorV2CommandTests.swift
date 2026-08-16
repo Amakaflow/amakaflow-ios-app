@@ -123,29 +123,229 @@ final class EditorV2CommandTests: XCTestCase {
     }
     
     func testSheetCommitDoesNotClobber() {
-        // AMA-2438 P2: updatePrescription replaces the entire exercise, so stale state still clobbers
-        // This is a UI architecture issue (need field-level mutations), not a model bug
-        XCTExpectFailure("UI architecture: sheet @State captures stale copy", strict: false)
-        
         var session = EditorV2Session()
         let ex1 = EditorV2Exercise(name: "Squat", sets: 3, reps: 10)
         session.exercises = [ex1.id: ex1]
         session.order = [.loose(ex1.id)]
-        session.order = [.loose(ex1.id)]
-        
-        // Simulate: user opens sheet with ex1 state, then another action modifies it
-        var staleEx1 = ex1
         
         // Background modification while sheet is open
         _ = session.apply(.addSet(ex1.id))
         XCTAssertEqual(session.exercises[ex1.id]?.sets, 4)
         
-        // Now sheet commits stale state
-        staleEx1.reps = 12
-        _ = session.apply(.updatePrescription(ex1.id, staleEx1))
+        // Now sheet commits only the reps field change
+        _ = session.apply(.setExerciseReps(ex1.id, 12))
         
         // Sets should still be 4, not clobbered back to 3
         XCTAssertEqual(session.exercises[ex1.id]?.sets, 4)
+        XCTAssertEqual(session.exercises[ex1.id]?.reps, 12)
+    }
+    
+    // MARK: - Field-level mutation command tests
+    
+    func testSetExerciseSets_updatesSetsOnly() {
+        var session = EditorV2Session()
+        let ex1 = EditorV2Exercise(name: "Bench", sets: 3, reps: 10, restSeconds: 90)
+        session.exercises = [ex1.id: ex1]
+        session.order = [.loose(ex1.id)]
+        
+        let result = session.apply(.setExerciseSets(ex1.id, 5))
+        
+        XCTAssertEqual(result, .applied)
+        XCTAssertEqual(session.exercises[ex1.id]?.sets, 5)
+        XCTAssertEqual(session.exercises[ex1.id]?.reps, 10)
+        XCTAssertEqual(session.exercises[ex1.id]?.restSeconds, 90)
+    }
+    
+    func testSetExerciseSets_canSetToNil() {
+        var session = EditorV2Session()
+        let ex1 = EditorV2Exercise(name: "Row", sets: 3, reps: 10)
+        session.exercises = [ex1.id: ex1]
+        session.order = [.loose(ex1.id)]
+        
+        let result = session.apply(.setExerciseSets(ex1.id, nil))
+        
+        XCTAssertEqual(result, .applied)
+        XCTAssertNil(session.exercises[ex1.id]?.sets)
+        XCTAssertEqual(session.exercises[ex1.id]?.reps, 10)
+    }
+    
+    func testSetExerciseReps_updatesRepsOnly() {
+        var session = EditorV2Session()
+        let ex1 = EditorV2Exercise(name: "Squat", sets: 3, reps: 10, restSeconds: 120)
+        session.exercises = [ex1.id: ex1]
+        session.order = [.loose(ex1.id)]
+        
+        let result = session.apply(.setExerciseReps(ex1.id, 12))
+        
+        XCTAssertEqual(result, .applied)
+        XCTAssertEqual(session.exercises[ex1.id]?.sets, 3)
+        XCTAssertEqual(session.exercises[ex1.id]?.reps, 12)
+        XCTAssertEqual(session.exercises[ex1.id]?.restSeconds, 120)
+    }
+    
+    func testSetExerciseReps_clearsRepsRange() {
+        var session = EditorV2Session()
+        let range = RepsRange(lower: 8, upper: 12, qualifier: nil)
+        let ex1 = EditorV2Exercise(name: "Deadlift", sets: 3, repsRange: range)
+        session.exercises = [ex1.id: ex1]
+        session.order = [.loose(ex1.id)]
+        
+        let result = session.apply(.setExerciseReps(ex1.id, 10))
+        
+        XCTAssertEqual(result, .applied)
+        XCTAssertEqual(session.exercises[ex1.id]?.reps, 10)
+        XCTAssertNil(session.exercises[ex1.id]?.repsRange)
+    }
+    
+    func testSetExerciseRepsRange_updatesRangeOnly() {
+        var session = EditorV2Session()
+        let ex1 = EditorV2Exercise(name: "Press", sets: 3, reps: 10)
+        session.exercises = [ex1.id: ex1]
+        session.order = [.loose(ex1.id)]
+        
+        let range = RepsRange(lower: 8, upper: 12, qualifier: nil)
+        let result = session.apply(.setExerciseRepsRange(ex1.id, range))
+        
+        XCTAssertEqual(result, .applied)
+        XCTAssertEqual(session.exercises[ex1.id]?.repsRange, range)
+        XCTAssertNil(session.exercises[ex1.id]?.reps)
+        XCTAssertEqual(session.exercises[ex1.id]?.sets, 3)
+    }
+    
+    func testSetExerciseDuration_updatesDurationOnly() {
+        var session = EditorV2Session()
+        let ex1 = EditorV2Exercise(name: "Plank", sets: 3, durationSeconds: 30)
+        session.exercises = [ex1.id: ex1]
+        session.order = [.loose(ex1.id)]
+        
+        let result = session.apply(.setExerciseDuration(ex1.id, 60))
+        
+        XCTAssertEqual(result, .applied)
+        XCTAssertEqual(session.exercises[ex1.id]?.durationSeconds, 60)
+        XCTAssertEqual(session.exercises[ex1.id]?.sets, 3)
+    }
+    
+    func testSetExerciseDistance_updatesDistanceOnly() {
+        var session = EditorV2Session()
+        let ex1 = EditorV2Exercise(name: "Run", distanceMeters: 400)
+        session.exercises = [ex1.id: ex1]
+        session.order = [.loose(ex1.id)]
+        
+        let result = session.apply(.setExerciseDistance(ex1.id, 800))
+        
+        XCTAssertEqual(result, .applied)
+        XCTAssertEqual(session.exercises[ex1.id]?.distanceMeters, 800)
+    }
+    
+    func testSetExerciseWeight_updatesWeightOnly() {
+        var session = EditorV2Session()
+        let ex1 = EditorV2Exercise(name: "Squat", sets: 3, reps: 10, weightKg: 100.0)
+        session.exercises = [ex1.id: ex1]
+        session.order = [.loose(ex1.id)]
+        
+        let result = session.apply(.setExerciseWeight(ex1.id, 110.5))
+        
+        XCTAssertEqual(result, .applied)
+        XCTAssertEqual(session.exercises[ex1.id]?.weightKg, 110.5)
+        XCTAssertEqual(session.exercises[ex1.id]?.sets, 3)
+        XCTAssertEqual(session.exercises[ex1.id]?.reps, 10)
+        XCTAssertFalse(session.exercises[ex1.id]?.isBodyweight ?? true)
+    }
+    
+    func testSetExerciseWeight_clearsBodyweightFlag() {
+        var session = EditorV2Session()
+        let ex1 = EditorV2Exercise(name: "Pullup", sets: 3, reps: 10, isBodyweight: true)
+        session.exercises = [ex1.id: ex1]
+        session.order = [.loose(ex1.id)]
+        
+        let result = session.apply(.setExerciseWeight(ex1.id, 10.0))
+        
+        XCTAssertEqual(result, .applied)
+        XCTAssertEqual(session.exercises[ex1.id]?.weightKg, 10.0)
+        XCTAssertFalse(session.exercises[ex1.id]?.isBodyweight ?? true)
+    }
+    
+    func testSetExerciseBodyweight_setsBodyweightFlag() {
+        var session = EditorV2Session()
+        let ex1 = EditorV2Exercise(name: "Pushup", sets: 3, reps: 10, weightKg: 20.0)
+        session.exercises = [ex1.id: ex1]
+        session.order = [.loose(ex1.id)]
+        
+        let result = session.apply(.setExerciseBodyweight(ex1.id, true))
+        
+        XCTAssertEqual(result, .applied)
+        XCTAssertTrue(session.exercises[ex1.id]?.isBodyweight ?? false)
+        XCTAssertNil(session.exercises[ex1.id]?.weightKg)
+    }
+    
+    func testSetExerciseRest_updatesRestOnly() {
+        var session = EditorV2Session()
+        let ex1 = EditorV2Exercise(name: "Bench", sets: 3, reps: 10, restSeconds: 60)
+        session.exercises = [ex1.id: ex1]
+        session.order = [.loose(ex1.id)]
+        
+        let result = session.apply(.setExerciseRest(ex1.id, 90))
+        
+        XCTAssertEqual(result, .applied)
+        XCTAssertEqual(session.exercises[ex1.id]?.restSeconds, 90)
+        XCTAssertEqual(session.exercises[ex1.id]?.sets, 3)
+        XCTAssertEqual(session.exercises[ex1.id]?.reps, 10)
+    }
+    
+    func testSetExerciseCalories_updatesCaloriesOnly() {
+        var session = EditorV2Session()
+        let ex1 = EditorV2Exercise(name: "Assault Bike", calories: 10)
+        session.exercises = [ex1.id: ex1]
+        session.order = [.loose(ex1.id)]
+        
+        let result = session.apply(.setExerciseCalories(ex1.id, 20))
+        
+        XCTAssertEqual(result, .applied)
+        XCTAssertEqual(session.exercises[ex1.id]?.calories, 20)
+    }
+    
+    func testSetExerciseOpenGoal_setsOpenGoalFlag() {
+        var session = EditorV2Session()
+        let ex1 = EditorV2Exercise(name: "AMRAP", sets: 1, reps: 10)
+        session.exercises = [ex1.id: ex1]
+        session.order = [.loose(ex1.id)]
+        
+        let result = session.apply(.setExerciseOpenGoal(ex1.id, true))
+        
+        XCTAssertEqual(result, .applied)
+        XCTAssertTrue(session.exercises[ex1.id]?.openGoal ?? false)
+    }
+    
+    func testFieldLevelCommands_rejectNonexistentExercise() {
+        var session = EditorV2Session()
+        let bogusID = "nonexistent"
+        
+        XCTAssertEqual(session.apply(.setExerciseSets(bogusID, 5)), .rejected(.exerciseNotFound))
+        XCTAssertEqual(session.apply(.setExerciseReps(bogusID, 10)), .rejected(.exerciseNotFound))
+        XCTAssertEqual(session.apply(.setExerciseRepsRange(bogusID, nil)), .rejected(.exerciseNotFound))
+        XCTAssertEqual(session.apply(.setExerciseDuration(bogusID, 30)), .rejected(.exerciseNotFound))
+        XCTAssertEqual(session.apply(.setExerciseDistance(bogusID, 400)), .rejected(.exerciseNotFound))
+        XCTAssertEqual(session.apply(.setExerciseWeight(bogusID, 100.0)), .rejected(.exerciseNotFound))
+        XCTAssertEqual(session.apply(.setExerciseBodyweight(bogusID, true)), .rejected(.exerciseNotFound))
+        XCTAssertEqual(session.apply(.setExerciseRest(bogusID, 60)), .rejected(.exerciseNotFound))
+        XCTAssertEqual(session.apply(.setExerciseCalories(bogusID, 10)), .rejected(.exerciseNotFound))
+        XCTAssertEqual(session.apply(.setExerciseOpenGoal(bogusID, true)), .rejected(.exerciseNotFound))
+    }
+    
+    func testMultipleFieldUpdates_preserveOtherFields() {
+        var session = EditorV2Session()
+        let ex1 = EditorV2Exercise(name: "Complex", sets: 3, reps: 10, weightKg: 100.0, restSeconds: 60)
+        session.exercises = [ex1.id: ex1]
+        session.order = [.loose(ex1.id)]
+        
+        _ = session.apply(.setExerciseReps(ex1.id, 12))
+        _ = session.apply(.setExerciseWeight(ex1.id, 105.0))
+        _ = session.apply(.setExerciseRest(ex1.id, 90))
+        
+        XCTAssertEqual(session.exercises[ex1.id]?.sets, 3)
+        XCTAssertEqual(session.exercises[ex1.id]?.reps, 12)
+        XCTAssertEqual(session.exercises[ex1.id]?.weightKg, 105.0)
+        XCTAssertEqual(session.exercises[ex1.id]?.restSeconds, 90)
     }
     
     // MARK: - Basic command tests

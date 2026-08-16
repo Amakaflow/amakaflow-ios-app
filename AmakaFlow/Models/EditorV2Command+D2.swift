@@ -364,6 +364,96 @@ extension EditorV2Session {
             exercises[id] = exercise
             return .applied
             
+        case .setExerciseSets(let id, let sets):
+            guard var exercise = exercises[id] else {
+                return .rejected(.exerciseNotFound)
+            }
+            exercise.sets = sets
+            exercises[id] = exercise
+            return .applied
+            
+        case .setExerciseReps(let id, let reps):
+            guard var exercise = exercises[id] else {
+                return .rejected(.exerciseNotFound)
+            }
+            exercise.reps = reps
+            exercise.repsRange = nil
+            exercises[id] = exercise
+            return .applied
+            
+        case .setExerciseRepsRange(let id, let range):
+            guard var exercise = exercises[id] else {
+                return .rejected(.exerciseNotFound)
+            }
+            exercise.repsRange = range
+            if range != nil {
+                exercise.reps = nil
+            }
+            exercises[id] = exercise
+            return .applied
+            
+        case .setExerciseDuration(let id, let durationSeconds):
+            guard var exercise = exercises[id] else {
+                return .rejected(.exerciseNotFound)
+            }
+            exercise.durationSeconds = durationSeconds
+            exercises[id] = exercise
+            return .applied
+            
+        case .setExerciseDistance(let id, let distanceMeters):
+            guard var exercise = exercises[id] else {
+                return .rejected(.exerciseNotFound)
+            }
+            exercise.distanceMeters = distanceMeters
+            exercises[id] = exercise
+            return .applied
+            
+        case .setExerciseWeight(let id, let weightKg):
+            guard var exercise = exercises[id] else {
+                return .rejected(.exerciseNotFound)
+            }
+            exercise.weightKg = weightKg
+            if weightKg != nil {
+                exercise.isBodyweight = false
+            }
+            exercises[id] = exercise
+            return .applied
+            
+        case .setExerciseBodyweight(let id, let isBodyweight):
+            guard var exercise = exercises[id] else {
+                return .rejected(.exerciseNotFound)
+            }
+            exercise.isBodyweight = isBodyweight
+            if isBodyweight {
+                exercise.weightKg = nil
+            }
+            exercises[id] = exercise
+            return .applied
+            
+        case .setExerciseRest(let id, let restSeconds):
+            guard var exercise = exercises[id] else {
+                return .rejected(.exerciseNotFound)
+            }
+            exercise.restSeconds = restSeconds
+            exercises[id] = exercise
+            return .applied
+            
+        case .setExerciseCalories(let id, let calories):
+            guard var exercise = exercises[id] else {
+                return .rejected(.exerciseNotFound)
+            }
+            exercise.calories = calories
+            exercises[id] = exercise
+            return .applied
+            
+        case .setExerciseOpenGoal(let id, let openGoal):
+            guard var exercise = exercises[id] else {
+                return .rejected(.exerciseNotFound)
+            }
+            exercise.openGoal = openGoal
+            exercises[id] = exercise
+            return .applied
+            
         case .quickAddSoftSection, .removeSoftSection:
             // These remain unimplemented for now
             return .rejected(.invalidState)
