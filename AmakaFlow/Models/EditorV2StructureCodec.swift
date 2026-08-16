@@ -76,8 +76,7 @@ extension EditorV2Session {
                     rounds: rounds,
                     restSeconds: restSeconds,
                     capMinutes: capMinutes,
-                    workSeconds: nil,
-                    workLabelOverride: nil
+                    workSeconds: nil
                 )
                 
                 // D3: parse letter from label if present (e.g. "Superset A" → letter: "A")
@@ -155,5 +154,57 @@ extension EditorV2Session {
         
         // No match - return as-is
         return (label, nil)
+    }
+}
+
+private extension SocialImportExercise {
+    func asEditorV2(groupKey: String?) -> EditorV2Exercise {
+        var repsRangeConverted: RepsRange?
+        if let repsRange = repsRange {
+            repsRangeConverted = RepsRange(rawValue: repsRange)
+        }
+        
+        var provenance: [String: ProvSource] = [:]
+        if let fieldProvenance = fieldProvenance {
+            for (key, value) in fieldProvenance {
+                if let source = ProvSource(rawValue: value) {
+                    provenance[key] = source
+                }
+            }
+        }
+        
+        var warmupSetsConverted: [WarmupSetRow] = []
+        if let warmupSets = warmupSets {
+            warmupSetsConverted = warmupSets.map { set in
+                WarmupSetRow(
+                    reps: set.reps,
+                    weight: set.weight,
+                    structureSource: set.structureSource.flatMap { StructureSource(rawValue: $0) } ?? .enrichmentDefault
+                )
+            }
+        }
+        
+        return EditorV2Exercise(
+            id: exerciseId ?? UUID().uuidString,
+            name: name,
+            sets: sets,
+            reps: reps,
+            repsRange: repsRangeConverted,
+            durationSeconds: seconds,
+            distanceMeters: distanceMeters,
+            weightKg: nil,
+            isBodyweight: false,
+            restSeconds: restSeconds,
+            calories: calories,
+            openGoal: openGoal ?? false,
+            groupKey: groupKey,
+            swapMessage: nil,
+            swapReplacementName: nil,
+            fieldProvenance: provenance,
+            exerciseId: exerciseId,
+            warmupSets: warmupSetsConverted,
+            restOpen: restOpen,
+            structureSource: structureSource.flatMap { StructureSource(rawValue: $0) }
+        )
     }
 }

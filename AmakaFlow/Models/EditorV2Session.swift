@@ -169,6 +169,53 @@ extension EditorV2Session {
             clearingTombstone: clearingTombstone
         )
     }
+    
+    private mutating func quickAddSoftSection(
+        type: EditorV2GroupType,
+        kind: EnrichmentKind,
+        activities: [EnrichmentActivity],
+        prepend: Bool,
+        clearingTombstone: Bool
+    ) -> Bool {
+        guard type.isSoftSection else { return false }
+        
+        let key = UUID().uuidString
+        let config = type.defaultConfig
+        
+        var memberIDs: [String] = []
+        for activity in activities {
+            let exerciseID = UUID().uuidString
+            let exercise = EditorV2Exercise(
+                id: exerciseID,
+                name: activity.name,
+                sets: activity.sets,
+                durationSeconds: activity.durationSeconds,
+                groupKey: key,
+                structureSource: clearingTombstone ? .userAdded : .enrichmentDefault
+            )
+            exercises[exerciseID] = exercise
+            memberIDs.append(exerciseID)
+        }
+        
+        let group = EditorV2Group(
+            id: key,
+            name: type.label,
+            type: type,
+            memberIDs: memberIDs,
+            config: config,
+            letter: nil,
+            enrichmentKind: kind
+        )
+        groups[key] = group
+        
+        if prepend {
+            order.insert(.group(key), at: 0)
+        } else {
+            order.append(.group(key))
+        }
+        
+        return true
+    }
 
     /// Delete = remove content **and** write the tombstone (callers own tombstones).
     mutating func removeSessionWarmup() {
@@ -430,7 +477,7 @@ extension EditorV2Session {
                 break
             }
         }
-        _ = apply(.move(fromID, to: toIndex))
+        _ = apply(.move(fromID, toIndex))
     }
     
     mutating func reorder(fromOffsets: IndexSet, toOffset: Int) {

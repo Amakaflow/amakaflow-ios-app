@@ -125,7 +125,7 @@ extension EditorV2Session {
     }
 
     func toSaveIntervals() -> [WorkoutSaveInterval] {
-        exercises.map { PrescriptionFormatter.saveInterval(from: $0) }
+        exercises.values.map { PrescriptionFormatter.saveInterval(from: $0) }
     }
 }
 
@@ -145,6 +145,19 @@ private extension DDEditorExerciseDraft {
             groupKey: groupKey,
             swapMessage: swapMessage,
             swapReplacementName: swapReplacementName
+        )
+    }
+    
+    var asSocialImportExercise: SocialImportExercise {
+        SocialImportExercise(
+            name: name,
+            sets: sets,
+            reps: reps,
+            repsRange: repsRange?.display,
+            seconds: durationSeconds,
+            distanceMeters: distanceMeters,
+            calories: calories,
+            restSeconds: restSeconds
         )
     }
 }
