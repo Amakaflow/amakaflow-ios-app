@@ -131,13 +131,20 @@ final class EditorV2PropertyTests: XCTestCase {
             if let groupKey = exercise.groupKey {
                 if session.groups[groupKey] == nil {
                     violations.append("I1: Unresolved group reference: \(groupKey)")
+                } else if !(session.groups[groupKey]?.memberIDs.contains(exercise.id) ?? false) {
+                    violations.append("I1: Exercise \(exercise.id) has groupKey \(groupKey) but group doesn't contain it")
+                }
+            } else {
+                // Exercise has no groupKey, check it's not in any group
+                for (key, group) in session.groups where group.memberIDs.contains(exercise.id) {
+                    violations.append("I1: Exercise \(exercise.id) has no groupKey but is in group \(key)")
                 }
             }
         }
         
         // I2: Every group has ≥1 member OR is formatGroupKey
-        for (key, _) in session.groups {
-            let memberCount = session.exercises.values.filter { $0.groupKey == key }.count
+        for (key, group) in session.groups {
+            let memberCount = group.memberIDs.count
             if memberCount == 0 && key != session.formatGroupKey {
                 violations.append("I2: Empty non-format group: \(key)")
             }
@@ -151,14 +158,15 @@ final class EditorV2PropertyTests: XCTestCase {
         
         // I4: Superset display label == f(memberCount)
         for (key, group) in session.groups where group.type == .superset {
-            let memberCount = session.exercises.values.filter { $0.groupKey == key }.count
-            let autoNames: Set<String> = ["Superset", "Tri-set", "Tri-sets"]
+            let memberCount = group.memberIDs.count
+            let autoNames: Set<String> = ["Superset", "Tri-set", "Tri-sets", "Giant set"]
             if autoNames.contains(group.name) {
-                if memberCount >= 3 && group.name == "Superset" {
-                    violations.append("I4: ≥3 members should be Tri-set, not Superset")
-                }
-                if memberCount < 3 && (group.name == "Tri-set" || group.name == "Tri-sets") {
-                    // This is actually OK during building - we keep Tri-set name
+                if memberCount >= 4 && group.name != "Giant set" {
+                    violations.append("I4: ≥4 members should be Giant set, not \(group.name)")
+                } else if memberCount == 3 && !["Tri-set", "Tri-sets"].contains(group.name) {
+                    violations.append("I4: 3 members should be Tri-set, not \(group.name)")
+                } else if memberCount == 2 && group.name != "Superset" {
+                    violations.append("I4: 2 members should be Superset, not \(group.name)")
                 }
             }
         }
@@ -167,6 +175,34 @@ final class EditorV2PropertyTests: XCTestCase {
         if let fmtKey = session.formatGroupKey {
             if session.groups[fmtKey] == nil {
                 violations.append("I6: formatGroupKey does not resolve: \(fmtKey)")
+            }
+        }
+        
+        // I7: D2 partition - all exercises are in exactly one place in order
+        var seenInOrder = Set<String>()
+        for row in session.order {
+            switch row {
+            case .group(let key):
+                guard let group = session.groups[key] else {
+                    violations.append("I7: order references nonexistent group \(key)")
+                    continue
+                }
+                for memberID in group.memberIDs {
+                    if seenInOrder.contains(memberID) {
+                        violations.append("I7: Exercise \(memberID) appears twice in order")
+                    }
+                    seenInOrder.insert(memberID)
+                }
+            case .loose(let id):
+                if seenInOrder.contains(id) {
+                    violations.append("I7: Exercise \(id) appears twice in order")
+                }
+                seenInOrder.insert(id)
+            }
+        }
+        for id in session.exercises.keys {
+            if !seenInOrder.contains(id) {
+                violations.append("I7: Exercise \(id) not in order")
             }
         }
         
