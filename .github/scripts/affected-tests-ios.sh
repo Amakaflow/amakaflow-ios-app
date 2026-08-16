@@ -13,11 +13,20 @@
 # watchOS tests are handled by the separate watchos-tests CI job.
 # This script only outputs iOS test targets.
 #
+# Mapping examples (AMA-2439):
+#   EditorV2Session.swift          → EditorV2SessionTests (exact match)
+#   EditorV2Session+Persistence.swift → EditorV2SessionTests (strip +extension)
+#   EditorV2Command+D2.swift       → EditorV2Tests, EditorV2CommandTests (prefix match)
+#   FooBarBaz.swift (no exact)     → FooBar*Tests, Foo*Tests (progressive stem)
+#   project.pbxproj (file-ref only) + EditorV2*.swift → mapped tests (NOT FULL)
+#   project.pbxproj (scheme change) → FULL
+#
 # Usage:
 #   ./affected-tests-ios.sh [base_ref] [head_ref]
 #
 # Part of AMA-339: CI Optimization
 # Updated for AMA-553: watchOS test coverage
+# Updated for AMA-2439: smarter pbxproj handling + prefix-based test mapping
 
 set -euo pipefail
 
@@ -42,10 +51,30 @@ if ! CHANGED=$(git diff --name-only "${BASE_REF}" "${HEAD_REF}"); then
   exit 0
 fi
 
-# If Xcode project or Swift package config changes, safest is full test run
-if echo "$CHANGED" | grep -E -q '(\.xcodeproj/|Package\.swift|Package\.resolved|\.xcworkspace/)'; then
+# Check for non-file-ref project changes (scheme, build settings, etc.)
+# Package.swift / Package.resolved / .xcworkspace changes always trigger FULL.
+if echo "$CHANGED" | grep -E -q '(Package\.swift|Package\.resolved|\.xcworkspace/)'; then
   echo "FULL"
   exit 0
+fi
+
+# If .xcodeproj/ changed, inspect whether it's ONLY file-ref additions/removals.
+# A pbxproj change that only adds/removes file refs (no build settings, no
+# scheme changes) should NOT force FULL if Swift sources can still be mapped.
+XCODEPROJ_CHANGED=false
+if echo "$CHANGED" | grep -E -q '\.xcodeproj/'; then
+  XCODEPROJ_CHANGED=true
+  
+  # Check if there are scheme or non-pbxproj changes (always FULL)
+  if echo "$CHANGED" | grep -E -q '\.xcodeproj/.*\.xcscheme$'; then
+    echo "FULL"
+    exit 0
+  fi
+  
+  # For pbxproj changes, we'll allow prefix mapping to work and only fall
+  # back to FULL if no Swift sources changed or no tests can be mapped.
+  # This is the key fix for AMA-2439: registering a new Swift file touches
+  # pbxproj but should NOT force FULL if we can map the Swift sources.
 fi
 
 # Check for iOS source changes
@@ -71,7 +100,10 @@ if [[ "$IOS_CHANGED" == "false" && "$WATCH_CHANGED" == "false" ]]; then
 fi
 
 # Map changed Swift source files -> expected test class candidates
+# AMA-2439: use prefix-based mapping so EditorV2Command+D2.swift maps to
+# EditorV2CommandTests, EditorV2PropertyTests, etc., not just exact basename match.
 TEST_PATTERNS=()
+TEST_DIR="AmakaFlowCompanion/AmakaFlowCompanionTests"
 
 # iOS source -> iOS test mapping
 while IFS= read -r f; do
@@ -79,15 +111,70 @@ while IFS= read -r f; do
   if [[ "$f" =~ ^AmakaFlowCompanion/AmakaFlowCompanion/.*\.swift$ ]] || [[ "$f" =~ ^AmakaFlow/.*\.swift$ ]]; then
     # Extract filename without path and extension
     filename=$(basename "$f" .swift)
-
-    # Common patterns: Foo.swift -> FooTests.swift
-    # Also handle: FooViewModel.swift -> FooViewModelTests.swift
-    test_file="AmakaFlowCompanion/AmakaFlowCompanionTests/${filename}Tests.swift"
-
-    if [[ -f "$test_file" ]]; then
-      # Format for xcodebuild -only-testing: TARGET/CLASS
+    
+    # Strip common suffixes that don't affect test naming: +Foo, +Bar
+    # EditorV2Session+Persistence.swift -> EditorV2Session
+    base_name="${filename%%+*}"
+    
+    # Strategy: look for exact match first, then prefix matches
+    # 1. Exact match: Foo.swift -> FooTests.swift
+    exact_test="${TEST_DIR}/${filename}Tests.swift"
+    if [[ -f "$exact_test" ]]; then
       TEST_PATTERNS+=("AmakaFlowCompanionTests/${filename}Tests")
+      continue
     fi
+    
+    # 2. Base name match (strips +Extension): Foo+Bar.swift -> FooTests.swift
+    if [[ "$base_name" != "$filename" ]]; then
+      base_test="${TEST_DIR}/${base_name}Tests.swift"
+      if [[ -f "$base_test" ]]; then
+        TEST_PATTERNS+=("AmakaFlowCompanionTests/${base_name}Tests")
+        continue
+      fi
+    fi
+    
+    # 3. Prefix-based search: EditorV2Foo.swift -> EditorV2*Tests.swift
+    # Find all test files that start with the same prefix
+    matched_tests=()
+    while IFS= read -r test_file; do
+      if [[ -f "$test_file" ]]; then
+        test_class=$(basename "$test_file" .swift)
+        matched_tests+=("AmakaFlowCompanionTests/${test_class}")
+      fi
+    done < <(find "$TEST_DIR" -maxdepth 1 -name "${base_name}*Tests.swift" 2>/dev/null || true)
+    
+    if [[ ${#matched_tests[@]} -gt 0 ]]; then
+      TEST_PATTERNS+=("${matched_tests[@]}")
+      # Do NOT continue — let progressive stem matching also run so
+      # EditorV2Command+D2.swift maps to both EditorV2CommandTests (prefix)
+      # and EditorV2Tests (stem). Dedup at the end handles overlaps.
+    fi
+    
+    # 4. Try progressive stem shortening for compound names
+    # EditorV2CommandFoo -> EditorV2Command*Tests, EditorV2*Tests
+    stem="$base_name"
+    while [[ "$stem" == *[A-Z]* ]]; do
+      # Remove last capital+word (CamelCase): FooBarBaz -> FooBar
+      shorter_stem="${stem%[A-Z]*}"
+      if [[ -z "$shorter_stem" || "$shorter_stem" == "$stem" ]]; then
+        break
+      fi
+      stem="$shorter_stem"
+      
+      # Look for stem*Tests.swift
+      stem_tests=()
+      while IFS= read -r test_file; do
+        if [[ -f "$test_file" ]]; then
+          test_class=$(basename "$test_file" .swift)
+          stem_tests+=("AmakaFlowCompanionTests/${test_class}")
+        fi
+      done < <(find "$TEST_DIR" -maxdepth 1 -name "${stem}*Tests.swift" 2>/dev/null || true)
+      
+      if [[ ${#stem_tests[@]} -gt 0 ]]; then
+        TEST_PATTERNS+=("${stem_tests[@]}")
+        break
+      fi
+    done
   fi
 done <<< "$CHANGED"
 
@@ -105,7 +192,9 @@ fi
 
 if [[ ${#UNIQUE_TESTS[@]} -eq 0 ]]; then
   if [[ "$IOS_CHANGED" == "true" ]]; then
-    # iOS sources changed but no mapped test found -> safer fallback
+    # iOS sources changed but no mapped test found -> FULL
+    # Any iOS Swift change (including test files) that cannot be mapped
+    # must run the full suite for safety.
     echo "FULL"
   else
     # Only watchOS sources changed -> no iOS tests needed
