@@ -574,8 +574,8 @@ extension EditorV2Session {
 // MARK: - AMA-2438 D2 Migration from adjacency to declared membership
 
 extension EditorV2Session {
-    /// Migrate from old adjacency model (flat array + groupKey back-pointers) to D2.
     // swiftlint:disable:next function_parameter_count
+    /// Migrate from old adjacency model (flat array + groupKey back-pointers) to D2.
     static func fromLegacyExercises(
         title: String,
         groups: [String: EditorV2Group],
