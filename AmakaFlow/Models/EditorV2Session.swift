@@ -188,8 +188,7 @@ extension EditorV2Session {
             let exercise = EditorV2Exercise(
                 id: exerciseID,
                 name: activity.name,
-                sets: activity.sets,
-                durationSeconds: activity.durationSeconds,
+                durationSeconds: activity.durationSec,
                 groupKey: key,
                 structureSource: clearingTombstone ? .userAdded : .enrichmentDefault
             )
@@ -199,11 +198,12 @@ extension EditorV2Session {
         
         let group = EditorV2Group(
             id: key,
-            name: type.label,
             type: type,
-            memberIDs: memberIDs,
-            config: config,
+            name: type.label,
             letter: nil,
+            config: config,
+            memberIDs: memberIDs,
+            structureSource: .enrichmentDefault,
             enrichmentKind: kind
         )
         groups[key] = group

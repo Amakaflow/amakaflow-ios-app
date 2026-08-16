@@ -26,7 +26,7 @@ extension EditorV2Session {
         
         for block in blocks {
             // Determine if this is a structured group or loose exercises
-            let structureType = StructureBlockType(rawValue: block.type) ?? .sets
+            let structureType = StructureBlockType(rawValue: block.type ?? "") ?? .sets
             
             if structureType == .sets || structureType == .regular {
                 // Straight sets - add as loose exercises
@@ -159,10 +159,7 @@ extension EditorV2Session {
 
 private extension SocialImportExercise {
     func asEditorV2(groupKey: String?) -> EditorV2Exercise {
-        var repsRangeConverted: RepsRange?
-        if let repsRange = repsRange {
-            repsRangeConverted = RepsRange(rawValue: repsRange)
-        }
+        let repsRangeConverted = RepsRange.parse(repsRange)
         
         var provenance: [String: ProvSource] = [:]
         if let fieldProvenance = fieldProvenance {
@@ -176,10 +173,17 @@ private extension SocialImportExercise {
         var warmupSetsConverted: [WarmupSetRow] = []
         if let warmupSets = warmupSets {
             warmupSetsConverted = warmupSets.map { set in
-                WarmupSetRow(
+                let source: StructureSource
+                if let structureSourceString = set.structureSource,
+                   let parsed = StructureSource(rawValue: structureSourceString) {
+                    source = parsed
+                } else {
+                    source = .enrichmentDefault
+                }
+                return WarmupSetRow(
                     reps: set.reps,
                     weight: set.weight,
-                    structureSource: set.structureSource.flatMap { StructureSource(rawValue: $0) } ?? .enrichmentDefault
+                    structureSource: source
                 )
             }
         }
