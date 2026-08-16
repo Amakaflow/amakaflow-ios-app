@@ -381,7 +381,7 @@ final class EditorV2CommandTests: XCTestCase {
         session.exercises = [ex1.id: ex1, ex2.id: ex2, ex3.id: ex3]
         session.order = [.loose(ex1.id), .loose(ex2.id), .loose(ex3.id)]
         
-        let result = session.apply(.move(ex1.id, to: 2))
+        let result = session.apply(.move(ex1.id, 2))
         
         XCTAssertEqual(result, .applied)
         XCTAssertEqual(Set(session.exercises.values.map(\.name)), ["B", "C", "A"])

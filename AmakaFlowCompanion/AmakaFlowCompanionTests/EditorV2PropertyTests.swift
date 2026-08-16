@@ -68,7 +68,7 @@ final class EditorV2PropertyTests: XCTestCase {
             
         case 1:
             // removeExercise
-            if let ex = session.exercises.randomElement() {
+            if let ex = session.exercises.values.randomElement() {
                 return .removeExercise(ex.id)
             }
             return .addExercises(names: ["Fallback"], into: nil)
@@ -76,7 +76,7 @@ final class EditorV2PropertyTests: XCTestCase {
         case 2:
             // pairSuperset
             if session.exercises.count >= 2 {
-                let shuffled = session.exercises.shuffled(using: &rng)
+                let shuffled = Array(session.exercises.values).shuffled(using: &rng)
                 return .pairSuperset(source: shuffled[0].id, target: shuffled[1].id)
             }
             return .addExercises(names: ["A", "B"], into: nil)
@@ -99,7 +99,7 @@ final class EditorV2PropertyTests: XCTestCase {
             
         case 5:
             // addSet
-            if let ex = session.exercises.randomElement() {
+            if let ex = session.exercises.values.randomElement() {
                 return .addSet(ex.id)
             }
             return .addExercises(names: ["Test"], into: nil)
@@ -128,7 +128,7 @@ final class EditorV2PropertyTests: XCTestCase {
         }
         
         for exercise in session.exercises.values {
-            if let groupKey = exercise.value.groupKey {
+            if let groupKey = exercise.groupKey {
                 if session.groups[groupKey] == nil {
                     violations.append("I1: Unresolved group reference: \(groupKey)")
                 }
@@ -137,7 +137,7 @@ final class EditorV2PropertyTests: XCTestCase {
         
         // I2: Every group has ≥1 member OR is formatGroupKey
         for (key, _) in session.groups {
-            let memberCount = session.exercises.filter { $0.groupKey == key }.count
+            let memberCount = session.exercises.values.filter { $0.groupKey == key }.count
             if memberCount == 0 && key != session.formatGroupKey {
                 violations.append("I2: Empty non-format group: \(key)")
             }
@@ -151,7 +151,7 @@ final class EditorV2PropertyTests: XCTestCase {
         
         // I4: Superset display label == f(memberCount)
         for (key, group) in session.groups where group.type == .superset {
-            let memberCount = session.exercises.filter { $0.groupKey == key }.count
+            let memberCount = session.exercises.values.filter { $0.groupKey == key }.count
             let autoNames: Set<String> = ["Superset", "Tri-set", "Tri-sets"]
             if autoNames.contains(group.name) {
                 if memberCount >= 3 && group.name == "Superset" {
