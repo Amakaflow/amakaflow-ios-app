@@ -808,27 +808,12 @@ final class WorkoutEnrichmentModelsTests: XCTestCase {
         XCTAssertEqual(session.exercises[exercise.id]?.fieldProvenance[WorkoutEnrichmentMutations.restSecKey], .user)
     }
 
-    func testQuickAddRestRejectsContradictoryIntent() {
-        var session = EditorV2Session(title: "Push")
-        let exercise = session.addExercise(named: "Bench Press")
-        XCTAssertThrowsError(
-            try session.quickAddBetweenSetRest(to: exercise.id, restSec: 60, restOpen: true)
-        ) { error in
-            XCTAssertEqual(error as? WorkoutPreferencesValidationError, .restOpenWithRestSec)
-        }
+    func testQuickAddRestRejectsContradictoryIntent() throws {
+        throw XCTSkip("quickAddBetweenSetRest removed in D2")
     }
 
     func testQuickAddRestDoesNotOverwriteUserOwnedRest() throws {
-        var session = EditorV2Session(title: "Push")
-        let exercise = session.addExercise(named: "Bench Press")
-        try session.exercises[0].setRestIntent(restSeconds: 45, restOpen: false)
-
-        XCTAssertFalse(try session.quickAddBetweenSetRest(to: exercise.id, restSec: 90, restOpen: false))
-        XCTAssertEqual(session.exercises[0].restSeconds, 45)
-        XCTAssertEqual(
-            session.exercises[0].fieldProvenance[WorkoutEnrichmentMutations.restSecKey],
-            .user
-        )
+        throw XCTSkip("quickAddBetweenSetRest removed in D2")
     }
 
     func testParseListStripsExerciseIdOnKindScopedTombstones() {
@@ -873,7 +858,7 @@ final class WorkoutEnrichmentModelsTests: XCTestCase {
 
         let exerciseId = try XCTUnwrap(session.removeWarmupSets(from: exercise.id))
 
-        XCTAssertTrue(session.exercises[0].warmupSets.isEmpty)
+        XCTAssertTrue(session.exercises[exercise.id]!.warmupSets.isEmpty)
         XCTAssertEqual(
             session.enrichmentTombstones,
             [EnrichmentTombstone(kind: .exerciseWarmupSets, exerciseId: exerciseId)]
@@ -886,16 +871,7 @@ final class WorkoutEnrichmentModelsTests: XCTestCase {
     }
 
     func testRemoveBetweenSetRestClearsIntentAndProvenance() throws {
-        var session = EditorV2Session(title: "Push")
-        let exercise = session.addExercise(named: "Bench Press")
-        XCTAssertTrue(try session.quickAddBetweenSetRest(to: exercise.id, restSec: 60, restOpen: false))
-
-        session.removeBetweenSetRest(from: exercise.id)
-
-        XCTAssertNil(session.exercises[0].restSeconds)
-        XCTAssertNil(session.exercises[0].restOpen)
-        XCTAssertNil(session.exercises[0].fieldProvenance[WorkoutEnrichmentMutations.restSecKey])
-        XCTAssertEqual(session.enrichmentTombstones, [EnrichmentTombstone(kind: .betweenSetRest)])
+        throw XCTSkip("quickAddBetweenSetRest/removeBetweenSetRest removed in D2")
     }
 
     func testClearTombstoneAllowsReapply() {
@@ -954,7 +930,7 @@ final class WorkoutEnrichmentModelsTests: XCTestCase {
 
         XCTAssertTrue(session.addDefaultWarmupSets(to: bench.id, rows: rows, clearingTombstone: true))
 
-        XCTAssertEqual(session.exercises[0].warmupSets.map(\.reps), [8, 5])
+        XCTAssertEqual(session.exercises[exercise.id]!.warmupSets.map(\.reps), [8, 5])
         XCTAssertEqual(
             session.enrichmentTombstones,
             [EnrichmentTombstone(kind: .exerciseWarmupSets, exerciseId: rowExerciseId)]
@@ -969,34 +945,22 @@ final class WorkoutEnrichmentModelsTests: XCTestCase {
     }
 
     func testExplicitQuickAddClearsBetweenSetRestTombstone() throws {
-        var session = EditorV2Session(title: "Push")
-        let exercise = session.addExercise(named: "Bench Press")
-        session.removeBetweenSetRest(from: exercise.id)
-        XCTAssertFalse(try session.quickAddBetweenSetRest(to: exercise.id, restSec: 90, restOpen: false))
-
-        XCTAssertTrue(
-            try session.quickAddBetweenSetRest(
-                to: exercise.id,
-                restSec: 90,
-                restOpen: false,
-                clearingTombstone: true
-            )
-        )
-
-        XCTAssertEqual(session.exercises[0].restSeconds, 90)
-        XCTAssertTrue(session.enrichmentTombstones.isEmpty)
+        throw XCTSkip("quickAddBetweenSetRest/removeBetweenSetRest removed in D2")
     }
 
     func testExplicitQuickAddStillBlockedByPresenceByType() {
         var session = EditorV2Session(title: "Push")
         let key = "existing-warmup"
+        let ex = EditorV2Exercise(name: "Row 500m", durationSeconds: 300, groupKey: key)
         session.groups[key] = EditorV2Group(
             id: key,
             type: .warmup,
             name: "Warm-up",
+            memberIDs: [ex.id],
             structureSource: .explicit
         )
-        session.exercises = [EditorV2Exercise(name: "Row 500m", durationSeconds: 300, groupKey: key)]
+        session.exercises = [ex.id: ex]
+        session.order = [.group(key)]
 
         XCTAssertFalse(session.quickAddSessionWarmup(from: .defaults, clearingTombstone: true))
         XCTAssertEqual(session.groups.count, 1)
@@ -1011,7 +975,6 @@ final class WorkoutEnrichmentModelsTests: XCTestCase {
         XCTAssertTrue(
             session.addDefaultWarmupSets(to: exercise.id, rows: WorkoutPreferences.defaults.defaultWarmupSetRows)
         )
-        XCTAssertTrue(try session.quickAddBetweenSetRest(to: exercise.id, restSec: 60, restOpen: false))
         session.mintMissingExerciseIDs()
 
         let blocks = session.toSocialImportBlocks()
