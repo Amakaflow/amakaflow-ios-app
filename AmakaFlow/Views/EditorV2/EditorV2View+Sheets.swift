@@ -62,7 +62,7 @@ extension EditorV2View {
                 }
             },
             onAddSet: {
-                _ = session.apply(.addSet(to: exercise.id))
+                _ = session.apply(.addSet(exercise.id))
                 showToast("Set added ✓")
                 menuExerciseID = nil
             },

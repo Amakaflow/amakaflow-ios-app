@@ -436,7 +436,7 @@ final class EditorV2Tests: XCTestCase {
         ])
         session.reorder(fromOffsets: IndexSet(integer: 2), toOffset: 0)
         session.updateExercise("3") { $0.reps = 12 }
-        session.addSet(to: "1")
+        session.addSet("1")
 
         XCTAssertEqual(session.exercises.map(\.name), ["C", "A", "B"])
         XCTAssertEqual(session.exercises.first?.reps, 12)
@@ -463,8 +463,8 @@ final class EditorV2Tests: XCTestCase {
         var session = EditorV2Session()
         let squat = session.addExercise(named: "Squat")
         _ = session.addExercise(named: "Bench")
-        session.addSet(to: squat.id)
-        session.addSet(to: squat.id)
+        session.addSet(squat.id)
+        session.addSet(squat.id)
         session.updateExercise(squat.id) { $0.reps = 5 }
 
         let intervals = session.toSaveIntervals()

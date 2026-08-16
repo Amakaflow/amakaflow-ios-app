@@ -100,7 +100,7 @@ final class EditorV2PropertyTests: XCTestCase {
         case 5:
             // addSet
             if let ex = session.exercises.randomElement() {
-                return .addSet(to: ex.id)
+                return .addSet(ex.id)
             }
             return .addExercises(names: ["Test"], into: nil)
             

@@ -758,7 +758,7 @@ extension EditorV2Session {
     }
     
     mutating func addSet(to id: String) {
-        _ = apply(.addSet(to: id))
+        _ = apply(.addSet(id))
     }
     
     mutating func switchGroupType(_ key: String, to type: EditorV2GroupType) {

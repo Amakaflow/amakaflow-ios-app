@@ -23,7 +23,7 @@ enum EditorCommand: Equatable, Sendable {
     case reorder(fromOffsets: IndexSet, toOffset: Int)
     case quickAddSoftSection(EnrichmentKind)
     case removeSoftSection(EditorV2GroupType, EnrichmentKind)
-    case addSet(to: String)
+    case addSet(String)
 }
 
 enum ApplyResult: Equatable {

@@ -309,7 +309,7 @@ final class WorkoutEditorSaveTests: XCTestCase {
             XCTFail("seed cache failed: \(error)")
         }
 
-        session.addSet(to: curl.id) // 3 → 4
+        session.addSet(curl.id) // 3 → 4
         session.updateExercise(press.id) { $0.reps = 8 }
         session.reorder(fromOffsets: IndexSet(integer: 3), toOffset: 0)
 

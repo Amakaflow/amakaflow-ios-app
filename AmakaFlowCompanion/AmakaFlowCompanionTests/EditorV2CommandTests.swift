@@ -133,7 +133,7 @@ final class EditorV2CommandTests: XCTestCase {
         var staleEx1 = ex1
         
         // Background modification while sheet is open
-        _ = session.apply(.addSet(to: ex1.id))
+        _ = session.apply(.addSet(ex1.id))
         XCTAssertEqual(session.exercises[ex1.id]?.sets, 4)
         
         // Now sheet commits stale state
@@ -389,7 +389,7 @@ final class EditorV2CommandTests: XCTestCase {
         let ex1 = EditorV2Exercise(name: "Squat", sets: 3, reps: 10)
         session.exercises = [ex1]
         
-        let result = session.apply(.addSet(to: ex1.id))
+        let result = session.apply(.addSet(ex1.id))
         
         XCTAssertEqual(result, .applied)
         XCTAssertEqual(session.exercises[0].sets, 4)
