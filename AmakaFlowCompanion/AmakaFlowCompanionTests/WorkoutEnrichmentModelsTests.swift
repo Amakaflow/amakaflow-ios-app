@@ -695,9 +695,10 @@ final class WorkoutEnrichmentModelsTests: XCTestCase {
         let warmupGroup = try XCTUnwrap(session.groups.values.first { $0.type == .warmup })
         XCTAssertEqual(warmupGroup.structureSource, .enrichmentDefault)
         XCTAssertEqual(warmupGroup.enrichmentKind, .sessionWarmup)
-        XCTAssertEqual(session.exercises.values.first?.name, "Jump Rope")
-        XCTAssertEqual(session.exercises.values.first?.structureSource, .enrichmentDefault)
-        XCTAssertNil(session.exercises.values.first?.durationSeconds)
+        let warmupEx = try XCTUnwrap(session.exercises.values.first { $0.groupKey == warmupGroup.id })
+        XCTAssertEqual(warmupEx.name, "Jump Rope")
+        XCTAssertEqual(warmupEx.structureSource, .enrichmentDefault)
+        XCTAssertNil(warmupEx.durationSeconds)
     }
 
     func testQuickAddSessionWarmupNoOpsWhenWarmupTypeAlreadyPresent() {
