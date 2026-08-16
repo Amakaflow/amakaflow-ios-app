@@ -4,6 +4,7 @@
 disabled_rules:
   - trailing_whitespace  # Xcode handles this
   - line_length          # Allow longer lines for SwiftUI
+  - cyclomatic_complexity  # AMA-2438: large command switch statements
 
 # Rules to opt-in
 opt_in_rules:
