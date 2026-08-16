@@ -361,6 +361,7 @@ extension EditorV2Session {
         refreshSupersetLabelsD2()
     }
     
+    // swiftlint:disable cyclomatic_complexity
     private mutating func repairSplitGroupsD2() {
         // Detect groups whose members are split across order (appear as loose when they should be in group)
         var keysToUngroup: Set<String> = []
@@ -411,6 +412,7 @@ extension EditorV2Session {
             }
         }
     }
+    // swiftlint:enable cyclomatic_complexity
     
     private mutating func syncGroupKeyFieldsD2() {
         // Clear all groupKey fields first
