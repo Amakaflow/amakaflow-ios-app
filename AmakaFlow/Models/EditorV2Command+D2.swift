@@ -357,6 +357,7 @@ extension EditorV2Session {
     mutating func normalizeD2() {
         syncGroupKeyFieldsD2()
         repairSplitGroupsD2()
+        syncGroupKeyFieldsD2()  // Sync again after repair in case groups were ungrouped
         pruneEmptyGroupsD2()
         refreshSupersetLabelsD2()
     }

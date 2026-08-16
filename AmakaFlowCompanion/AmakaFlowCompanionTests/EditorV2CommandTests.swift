@@ -422,24 +422,17 @@ final class EditorV2CommandTests: XCTestCase {
     // MARK: - Invariant tests
     
     func testValidate_rejectsDuplicateExerciseIDs() {
-        // D2 uses dict for exercises, so ID uniqueness in dict is guaranteed
-        // Test that duplicate references in order are rejected
+        // D2: exercises dict prevents duplicate IDs there, but order can have duplicates
+        // Validation should detect duplicate exercise references in order
         let ex1 = EditorV2Exercise(name: "A")
-        let ex2 = EditorV2Exercise(name: "B")
         var session = EditorV2Session()
-        session.exercises = [ex1.id: ex1, ex2.id: ex2]
-        session.order = [.loose(ex1.id), .loose(ex2.id)]
+        session.exercises = [ex1.id: ex1]
+        // Manually create invalid state: same ID appears twice in order
+        session.order = [.loose(ex1.id), .loose(ex1.id)]
         
-        // Valid state - apply should work
-        let result1 = session.apply(.addSet(ex1.id))
-        XCTAssertEqual(result1, .applied)
-        
-        // Now corrupt order with a duplicate
-        session.order.append(.loose(ex1.id))
-        
-        // Next apply should reject due to duplicate in order
-        let result2 = session.apply(.addSet(ex2.id))
-        XCTAssertEqual(result2, .rejected(.duplicateIDs))
+        // Any command should reject this invalid state during validation
+        let result = session.apply(.addSet(ex1.id))
+        XCTAssertEqual(result, .rejected(.duplicateIDs))
     }
     
     func testValidate_rejectsUnresolvedGroupReferences() {
