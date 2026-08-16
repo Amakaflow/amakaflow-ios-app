@@ -159,8 +159,13 @@ final class EditorV2PropertyTests: XCTestCase {
             violations.append("I3: Duplicate run IDs")
         }
         
-        // I4: Superset display label == f(memberCount)
+        // I4: Superset display label == f(memberCount), except formatGroupKey while building
         for (key, group) in session.groups where group.type == .superset {
+            // Skip formatGroupKey - it keeps target name while building
+            if key == session.formatGroupKey {
+                continue
+            }
+            
             let memberCount = group.memberIDs.count
             let autoNames: Set<String> = ["Superset", "Tri-set", "Tri-sets", "Giant set"]
             if autoNames.contains(group.name) {
