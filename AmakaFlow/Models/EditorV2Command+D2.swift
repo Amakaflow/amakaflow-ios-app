@@ -373,6 +373,7 @@ extension EditorV2Session {
 
 extension EditorV2Session {
     mutating func normalizeD2() {
+        repairOrderCoverageD2()
         syncGroupKeyFieldsD2()
         repairSplitGroupsD2()
         syncGroupKeyFieldsD2()  // Sync again after repair in case groups were ungrouped
@@ -435,6 +436,35 @@ extension EditorV2Session {
         }
     }
     // swiftlint:enable cyclomatic_complexity
+
+    private mutating func repairOrderCoverageD2() {
+        // Ensure every declared group appears once on the canvas order.
+        var presentGroupKeys = Set<String>()
+        for row in order {
+            if case .group(let key) = row {
+                presentGroupKeys.insert(key)
+            }
+        }
+        for key in groups.keys.sorted() where !presentGroupKeys.contains(key) {
+            order.append(.group(key))
+        }
+
+        // Ensure every exercise is represented either as loose or via a group's memberIDs.
+        var representedExerciseIDs = Set<String>()
+        for row in order {
+            switch row {
+            case .group(let key):
+                if let group = groups[key] {
+                    representedExerciseIDs.formUnion(group.memberIDs)
+                }
+            case .loose(let id):
+                representedExerciseIDs.insert(id)
+            }
+        }
+        for id in exercises.keys.sorted() where !representedExerciseIDs.contains(id) {
+            order.append(.loose(id))
+        }
+    }
     
     private mutating func syncGroupKeyFieldsD2() {
         // Clear all groupKey fields first
