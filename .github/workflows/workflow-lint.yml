@@ -12,6 +12,20 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # AMA-2442: the affected-tests selection script feeds a required check;
+  # a regression in it silently skips tests. The corpus pins exact
+  # NONE/FULL/pattern outputs for representative diffs and runs hermetically
+  # (no simulator, no Xcode) on every .github/** change.
+  selection-corpus:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Run affected-tests selection corpus
+        run: bash .github/scripts/tests/affected-tests-ios-corpus.sh
+
   actionlint:
     runs-on: ubuntu-latest
     timeout-minutes: 5

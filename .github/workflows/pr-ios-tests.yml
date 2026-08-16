@@ -108,9 +108,19 @@ jobs:
 
       - name: Determine affected tests
         id: affected
+        env:
+          # AMA-2442: the `full-ios-ci` label forces the FULL suite regardless
+          # of mapping — the manual escalation hatch for mapping uncertainty.
+          # Re-evaluates on `labeled` (already in the trigger types).
+          FULL_CI_LABEL: ${{ contains(github.event.pull_request.labels.*.name, 'full-ios-ci') }}
         run: |
-          chmod +x .github/scripts/affected-tests-ios.sh
-          RESULT=$(.github/scripts/affected-tests-ios.sh)
+          if [ "$FULL_CI_LABEL" = "true" ]; then
+            RESULT="FULL"
+            echo "full-ios-ci label present — forcing FULL suite"
+          else
+            chmod +x .github/scripts/affected-tests-ios.sh
+            RESULT=$(.github/scripts/affected-tests-ios.sh)
+          fi
           echo "result=$RESULT" >> "$GITHUB_OUTPUT"
           echo "Affected iOS result: $RESULT"
           
@@ -201,11 +211,18 @@ jobs:
           restore-keys: |
             spm-${{ runner.os }}-${{ steps.xcode.outputs.version }}-
 
+      # AMA-2442: keyed by pbxproj + Xcode only. The previous key hashed every
+      # Swift file, so ANY source edit missed the exact key and each run paid
+      # save/restore for a stale prefix hit anyway. pbxproj changes (targets,
+      # settings, file membership) are the boundary where incremental state
+      # genuinely goes stale; source edits are what incremental builds exist
+      # to absorb. Compare build-job timings before/after — if restore cost
+      # still exceeds rebuild savings, drop this cache entirely (keep SPM).
       - name: Restore DerivedData cache
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: AmakaFlowCompanion/DerivedData
-          key: deriveddata-${{ runner.os }}-${{ steps.xcode.outputs.version }}-${{ hashFiles('AmakaFlowCompanion/AmakaFlowCompanion.xcodeproj/project.pbxproj', 'AmakaFlow/**/*.swift', 'AmakaFlowCompanion/**/*.swift') }}
+          key: deriveddata-${{ runner.os }}-${{ steps.xcode.outputs.version }}-${{ hashFiles('AmakaFlowCompanion/AmakaFlowCompanion.xcodeproj/project.pbxproj') }}
           restore-keys: |
             deriveddata-${{ runner.os }}-${{ steps.xcode.outputs.version }}-
 
