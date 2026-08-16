@@ -88,7 +88,7 @@ final class EditorV2Tests: XCTestCase {
         _ = session.addExercise(named: "Forearm Twists")
 
         XCTAssertEqual(session.exercises.count, 3)
-        XCTAssertTrue(session.exercises.allSatisfy { $0.groupKey == "fmt" })
+        XCTAssertTrue(session.exercises.values.allSatisfy { $0.groupKey == "fmt" })
         XCTAssertEqual(session.groups["fmt"]?.name, "Tri-set")
         XCTAssertEqual(session.runs.count, 1)
         XCTAssertEqual(session.runs.first?.exercises.count, 3)
@@ -99,7 +99,7 @@ final class EditorV2Tests: XCTestCase {
         XCTAssertEqual(session.groups[secondKey]?.name, "Tri-set")
         // Empty next group must stay pinned even though runs only show filled groups —
         // canvas draws an insertion slot from formatGroupKey + zero members.
-        XCTAssertFalse(session.exercises.contains { $0.groupKey == secondKey })
+        XCTAssertFalse(session.exercises.values.contains { $0.groupKey == secondKey })
         XCTAssertEqual(session.runs.count, 1)
         _ = session.addExercise(named: "Dumbbell Press")
         XCTAssertEqual(session.groups[secondKey]?.name, "Tri-set")
@@ -108,7 +108,7 @@ final class EditorV2Tests: XCTestCase {
         XCTAssertEqual(session.runs.count, 2)
         XCTAssertEqual(session.groups[secondKey]?.name, "Tri-set")
         XCTAssertEqual(
-            Set(session.exercises.filter { $0.groupKey == secondKey }.map(\.name)),
+            Set(session.exercises.values.filter { $0.groupKey == secondKey }.map(\.name)),
             ["Dumbbell Press", "Band Pull Apart", "TRX Tricep Extension"]
         )
     }
@@ -126,9 +126,9 @@ final class EditorV2Tests: XCTestCase {
         XCTAssertNotEqual(freshKey, secondKey)
         XCTAssertEqual(session.formatGroupKey, freshKey)
         XCTAssertEqual(session.groups[freshKey!]?.name, "Tri-set")
-        XCTAssertFalse(session.exercises.contains { $0.name == "Dumbbell Press" })
+        XCTAssertFalse(session.exercises.values.contains { $0.name == "Dumbbell Press" })
         XCTAssertEqual(session.exercises.count, 3)
-        XCTAssertTrue(session.exercises.allSatisfy { $0.groupKey == "fmt" })
+        XCTAssertTrue(session.exercises.values.allSatisfy { $0.groupKey == "fmt" })
 
         let next = session.addExercise(named: "Dumbbell Press")
         XCTAssertEqual(next.groupKey, freshKey)
@@ -157,7 +157,7 @@ final class EditorV2Tests: XCTestCase {
         // Athlete leaves the add sheet / stops mid-build — empty group must stay pinned
         // so the next reopen doesn't silently fall back to straight-set adds.
         XCTAssertEqual(session.formatGroupKey, nextKey)
-        XCTAssertFalse(session.exercises.contains { $0.groupKey == nextKey })
+        XCTAssertFalse(session.exercises.values.contains { $0.groupKey == nextKey })
         XCTAssertEqual(session.groups[nextKey]?.name, "Tri-set")
         XCTAssertEqual(session.addExercise(named: "Dumbbell Press").groupKey, nextKey)
     }
@@ -172,7 +172,7 @@ final class EditorV2Tests: XCTestCase {
 
         let fresh = session.discardAndRepinSupersetGroup(badKey)
         XCTAssertNotNil(fresh)
-        XCTAssertFalse(session.exercises.contains { $0.name == "Wrong Move" })
+        XCTAssertFalse(session.exercises.values.contains { $0.name == "Wrong Move" })
         XCTAssertEqual(session.exercises.count, 3)
         XCTAssertEqual(session.formatGroupKey, fresh)
         XCTAssertEqual(session.addExercise(named: "Dumbbell Press").groupKey, fresh)
@@ -185,12 +185,12 @@ final class EditorV2Tests: XCTestCase {
         _ = session.startFormat(.circuit)
         _ = session.addExercise(named: "Burpees")
         _ = session.addExercise(named: "Ski")
-        XCTAssertEqual(session.exercises.filter { $0.groupKey != nil }.count, 2)
+        XCTAssertEqual(session.exercises.values.filter { $0.groupKey != nil }.count, 2)
 
         session.ungroup("fmt")
         XCTAssertNil(session.formatGroupKey)
         XCTAssertTrue(session.groups.isEmpty)
-        XCTAssertTrue(session.exercises.allSatisfy { $0.groupKey == nil })
+        XCTAssertTrue(session.exercises.values.allSatisfy { $0.groupKey == nil })
     }
 
     func testSwitchRunsAsReplacesConfig() {
@@ -219,9 +219,9 @@ final class EditorV2Tests: XCTestCase {
         ])
         session.pairSuperset(sourceID: "a", targetID: "c")
         XCTAssertEqual(session.exercises.map(\.name), ["Curls", "Pull Ups", "Bench Press"])
-        let key = session.exercises.first(where: { $0.id == "c" })?.groupKey
+        let key = session.exercises.values.first(where: { $0.id == "c" })?.groupKey
         XCTAssertNotNil(key)
-        XCTAssertEqual(session.exercises.first(where: { $0.id == "a" })?.groupKey, key)
+        XCTAssertEqual(session.exercises.values.first(where: { $0.id == "a" })?.groupKey, key)
         XCTAssertEqual(session.groups[key!]?.type, .superset)
         XCTAssertEqual(session.groups[key!]?.name, "Superset")
     }
@@ -236,23 +236,23 @@ final class EditorV2Tests: XCTestCase {
             EditorV2Exercise(id: "trx", name: "TRX Tricep Extension", sets: 3, reps: 12)
         ])
         session.pairSuperset(sourceID: "rows", targetID: "pullups")
-        let firstKey = try XCTUnwrap(session.exercises.first(where: { $0.id == "pullups" })?.groupKey)
+        let firstKey = try XCTUnwrap(session.exercises.values.first(where: { $0.id == "pullups" })?.groupKey)
         XCTAssertEqual(session.groups[firstKey]?.name, "Superset")
 
         session.pairSuperset(sourceID: "twists", targetID: "pullups")
         XCTAssertEqual(session.groups[firstKey]?.name, "Tri-set")
         XCTAssertEqual(
-            Set(session.exercises.filter { $0.groupKey == firstKey }.map(\.name)),
+            Set(session.exercises.values.filter { $0.groupKey == firstKey }.map(\.name)),
             ["Pull Ups", "Single Arm Row", "Forearm Twists"]
         )
 
         session.pairSuperset(sourceID: "pullapart", targetID: "press")
         session.pairSuperset(sourceID: "trx", targetID: "press")
-        let secondKey = try XCTUnwrap(session.exercises.first(where: { $0.id == "press" })?.groupKey)
+        let secondKey = try XCTUnwrap(session.exercises.values.first(where: { $0.id == "press" })?.groupKey)
         XCTAssertNotEqual(firstKey, secondKey)
         XCTAssertEqual(session.groups[secondKey]?.name, "Tri-set")
         XCTAssertEqual(
-            Set(session.exercises.filter { $0.groupKey == secondKey }.map(\.name)),
+            Set(session.exercises.values.filter { $0.groupKey == secondKey }.map(\.name)),
             ["Dumbbell Press", "Band Pull Apart", "TRX Tricep Extension"]
         )
     }
@@ -272,7 +272,7 @@ final class EditorV2Tests: XCTestCase {
         session.groups["ss1"] = EditorV2Group(id: "ss1", type: .superset)
 
         session.removeFromSuperset(first.id)
-        XCTAssertNil(session.exercises.first(where: { $0.id == first.id })?.groupKey)
+        XCTAssertNil(session.exercises.values.first(where: { $0.id == first.id })?.groupKey)
 
         session.moveExercise(from: "c", to: first.id)
         XCTAssertEqual(session.exercises.map(\.name), ["C", "A", "B"])
@@ -289,7 +289,7 @@ final class EditorV2Tests: XCTestCase {
         // Move C between A and B → splits the superset.
         session.reorder(fromOffsets: IndexSet(integer: 2), toOffset: 1)
         XCTAssertEqual(session.exercises.map(\.name), ["A", "C", "B"])
-        XCTAssertTrue(session.exercises.allSatisfy { $0.groupKey == nil })
+        XCTAssertTrue(session.exercises.values.allSatisfy { $0.groupKey == nil })
         XCTAssertNil(session.groups["ss1"])
     }
 
@@ -439,8 +439,8 @@ final class EditorV2Tests: XCTestCase {
         session.addSet("1")
 
         XCTAssertEqual(session.exercises.map(\.name), ["C", "A", "B"])
-        XCTAssertEqual(session.exercises.first?.reps, 12)
-        XCTAssertEqual(session.exercises.first(where: { $0.id == "1" })?.sets, 4)
+        XCTAssertEqual(session.exercises.values.first?.reps, 12)
+        XCTAssertEqual(session.exercises.values.first(where: { $0.id == "1" })?.sets, 4)
 
         let roundTrip = EditorV2Session.from(
             title: "RT",
@@ -523,7 +523,7 @@ final class EditorV2Tests: XCTestCase {
         )
 
         let session = EditorV2Session.from(mode: .edit, workout: workout)
-        let row = try XCTUnwrap(session.exercises.first)
+        let row = try XCTUnwrap(session.exercises.values.first)
 
         XCTAssertNil(row.reps)
         XCTAssertEqual(row.repsRange, RepsRange(low: 8, high: 10))
