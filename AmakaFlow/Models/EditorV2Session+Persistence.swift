@@ -190,6 +190,21 @@ private extension EditorV2Exercise {
         for (key, value) in fieldProvenance {
             provenance[key] = value.rawValue
         }
+        let hasWarmupSets = !warmupSets.isEmpty
+        let declaredRestOpen: Bool? = {
+            if let restOpen { return restOpen }
+            // Declared warm-up set payloads carry explicit closed-rest intent.
+            if hasWarmupSets, let restSeconds, restSeconds > 0 {
+                return false
+            }
+            return nil
+        }()
+        if hasWarmupSets,
+           let restSeconds,
+           restSeconds > 0,
+           provenance[WorkoutEnrichmentMutations.restSecKey] == nil {
+            provenance[WorkoutEnrichmentMutations.restSecKey] = ProvSource.enrichmentDefault.rawValue
+        }
         return SocialImportExercise(
             name: name,
             sets: sets,
@@ -204,7 +219,7 @@ private extension EditorV2Exercise {
             fieldProvenance: provenance.isEmpty ? nil : provenance,
             exerciseId: exerciseId ?? WorkoutEnrichmentMutations.mintExerciseId(),
             warmupSets: warmupSets.isEmpty ? nil : warmupSets,
-            restOpen: restOpen,
+            restOpen: declaredRestOpen,
             structureSource: structureSource?.rawValue
         )
     }
