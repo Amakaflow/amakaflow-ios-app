@@ -358,10 +358,7 @@ jobs:
             -parallel-testing-worker-count 2 2>&1 | tee test_output.log
           XCODE_EXIT=${PIPESTATUS[0]}
           set -e
-
-          if grep -q "TEST SUCCEEDED" test_output.log || grep -q "with 0 failures" test_output.log; then
-            exit 0
-          fi
+          
           exit "$XCODE_EXIT"
 
       - name: Run full tests (fallback)
@@ -382,10 +379,7 @@ jobs:
             -parallel-testing-worker-count 2 2>&1 | tee test_output.log
           XCODE_EXIT=${PIPESTATUS[0]}
           set -e
-
-          if grep -q "TEST SUCCEEDED" test_output.log || grep -q "with 0 failures" test_output.log; then
-            exit 0
-          fi
+          
           exit "$XCODE_EXIT"
 
       - name: Generate test failure summary

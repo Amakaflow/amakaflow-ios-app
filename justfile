@@ -9,6 +9,7 @@ project := "AmakaFlowCompanion/AmakaFlowCompanion.xcodeproj"
 scheme := "AmakaFlowCompanion"
 derived_data := "AmakaFlowCompanion/DerivedData"
 spm_dir := "AmakaFlowCompanion/.spm"
+result_bundle := "TestResults"
 
 # Clerk keys for build (same as CI)
 clerk_dev := "pk_test_c29saWQtY2hpY2tlbi01MC5jbGVyay5hY2NvdW50cy5kZXYk"
@@ -70,7 +71,7 @@ ios-test-editorv2:
     echo "Running ${#ONLY_FLAGS[@]} EditorV2 test class(es)"
     
     # Remove old result bundle
-    rm -rf {{ derived_data }}/Build/Products/Debug-iphonesimulator/TestResults
+    rm -rf {{ derived_data }}/Build/Products/Debug-iphonesimulator/{{ result_bundle }}
     
     xcodebuild test-without-building \
         -project {{ project }} \
@@ -79,7 +80,7 @@ ios-test-editorv2:
         -derivedDataPath {{ derived_data }} \
         -clonedSourcePackagesDirPath {{ spm_dir }} \
         "${ONLY_FLAGS[@]}" \
-        -resultBundlePath TestResults \
+        -resultBundlePath {{ result_bundle }} \
         -enableCodeCoverage NO \
         -parallel-testing-enabled YES \
         -parallel-testing-worker-count 2
@@ -107,7 +108,7 @@ ios-test-impacted BASE="origin/main":
     xcrun simctl bootstatus "$SIM_NAME" -b
     
     # Remove old result bundle
-    rm -rf {{ derived_data }}/Build/Products/Debug-iphonesimulator/TestResults
+    rm -rf {{ derived_data }}/Build/Products/Debug-iphonesimulator/{{ result_bundle }}
     
     if [ "$AFFECTED" = "FULL" ]; then
         echo "Running full test suite (FULL mode)"
@@ -118,7 +119,7 @@ ios-test-impacted BASE="origin/main":
             -derivedDataPath {{ derived_data }} \
             -clonedSourcePackagesDirPath {{ spm_dir }} \
             -only-testing:AmakaFlowCompanionTests \
-            -resultBundlePath TestResults \
+            -resultBundlePath {{ result_bundle }} \
             -enableCodeCoverage NO \
             -parallel-testing-enabled YES \
             -parallel-testing-worker-count 2
@@ -136,7 +137,7 @@ ios-test-impacted BASE="origin/main":
             -derivedDataPath {{ derived_data }} \
             -clonedSourcePackagesDirPath {{ spm_dir }} \
             "${ONLY_FLAGS[@]}" \
-            -resultBundlePath TestResults \
+            -resultBundlePath {{ result_bundle }} \
             -enableCodeCoverage NO \
             -parallel-testing-enabled YES \
             -parallel-testing-worker-count 2
@@ -155,7 +156,7 @@ ios-test-full:
     xcrun simctl bootstatus "$SIM_NAME" -b
     
     # Remove old result bundle
-    rm -rf {{ derived_data }}/Build/Products/Debug-iphonesimulator/TestResults
+    rm -rf {{ derived_data }}/Build/Products/Debug-iphonesimulator/{{ result_bundle }}
     
     xcodebuild test-without-building \
         -project {{ project }} \
@@ -164,7 +165,7 @@ ios-test-full:
         -derivedDataPath {{ derived_data }} \
         -clonedSourcePackagesDirPath {{ spm_dir }} \
         -only-testing:AmakaFlowCompanionTests \
-        -resultBundlePath TestResults \
+        -resultBundlePath {{ result_bundle }} \
         -enableCodeCoverage NO \
         -parallel-testing-enabled YES \
         -parallel-testing-worker-count 2
