@@ -84,7 +84,7 @@ extension EditorV2Session {
                         restSeconds: 60,
                         groupKey: key
                     )
-                } else if groupType.map({ $0 != .superset }) ?? false, let key = groupKey {
+                } else if groupType.map { $0 != .superset } ?? false, let key = groupKey {
                     exercise = EditorV2Exercise(name: trimmed, reps: 10, groupKey: key)
                 } else {
                     exercise = EditorV2Exercise(

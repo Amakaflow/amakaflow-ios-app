@@ -66,9 +66,9 @@ extension EditorV2Session {
                 let rounds: Int = {
                     switch groupType {
                     case .amrap, .fortime:
-                        return 1  // Don't use round count for these types
+                        1  // Don't use round count for these types
                     default:
-                        return max(1, block.rounds ?? 1)
+                        max(1, block.rounds ?? 1)
                     }
                 }()
                 
