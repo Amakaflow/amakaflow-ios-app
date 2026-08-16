@@ -50,8 +50,8 @@ ios-test-editorv2:
     echo "Running EditorV2 tests on simulator: $SIM_NAME"
     
     # Boot the simulator
-    xcrun simctl shutdown all || true
     xcrun simctl boot "$SIM_NAME" || true
+    xcrun simctl bootstatus "$SIM_NAME" -b
     
     # Discover all EditorV2*Tests.swift files and build -only-testing args
     ONLY_FLAGS=()
@@ -68,6 +68,9 @@ ios-test-editorv2:
     fi
     
     echo "Running ${#ONLY_FLAGS[@]} EditorV2 test class(es)"
+    
+    # Remove old result bundle
+    rm -rf {{ derived_data }}/Build/Products/Debug-iphonesimulator/TestResults
     
     xcodebuild test-without-building \
         -project {{ project }} \
@@ -100,8 +103,11 @@ ios-test-impacted BASE="origin/main":
     echo "Running tests on simulator: $SIM_NAME"
     
     # Boot the simulator
-    xcrun simctl shutdown all || true
     xcrun simctl boot "$SIM_NAME" || true
+    xcrun simctl bootstatus "$SIM_NAME" -b
+    
+    # Remove old result bundle
+    rm -rf {{ derived_data }}/Build/Products/Debug-iphonesimulator/TestResults
     
     if [ "$AFFECTED" = "FULL" ]; then
         echo "Running full test suite (FULL mode)"
@@ -145,8 +151,11 @@ ios-test-full:
     echo "Running full test suite on simulator: $SIM_NAME"
     
     # Boot the simulator
-    xcrun simctl shutdown all || true
     xcrun simctl boot "$SIM_NAME" || true
+    xcrun simctl bootstatus "$SIM_NAME" -b
+    
+    # Remove old result bundle
+    rm -rf {{ derived_data }}/Build/Products/Debug-iphonesimulator/TestResults
     
     xcodebuild test-without-building \
         -project {{ project }} \

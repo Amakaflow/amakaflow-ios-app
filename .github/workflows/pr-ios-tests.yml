@@ -114,8 +114,17 @@ jobs:
           echo "result=$RESULT" >> "$GITHUB_OUTPUT"
           echo "Affected iOS result: $RESULT"
           
+          # Get changed files for summary
+          CHANGED_FILES=$(git diff --name-only "origin/${GITHUB_BASE_REF:-main}" HEAD || echo "(diff unavailable)")
+          
           # Write to step summary for observability
           {
+            echo "## Changed Files"
+            echo ""
+            echo '```'
+            echo "$CHANGED_FILES"
+            echo '```'
+            echo ""
             echo "## Affected Tests Selection"
             echo ""
             if [ "$RESULT" = "NONE" ]; then
@@ -355,44 +364,6 @@ jobs:
           fi
           exit "$XCODE_EXIT"
 
-      - name: Generate test failure summary
-        if: ${{ always() && needs.detect-changes.outputs.affected != 'NONE' }}
-        working-directory: AmakaFlowCompanion
-        run: |
-          {
-            echo "## Test Results"
-            echo ""
-          } >> "$GITHUB_STEP_SUMMARY"
-          
-          if [ -d TestResults ]; then
-            # Extract failures from xcresult
-            FAILURES=$(xcrun xcresulttool get test-results summary --path TestResults 2>/dev/null | grep -E "failed|error" || true)
-            if [ -n "$FAILURES" ]; then
-              {
-                echo "### ❌ Test Failures"
-                echo '```'
-                xcrun xcresulttool get test-results summary --path TestResults 2>/dev/null || echo "xcresulttool summary unavailable"
-                echo '```'
-              } >> "$GITHUB_STEP_SUMMARY"
-            else
-              echo "✅ All tests passed" >> "$GITHUB_STEP_SUMMARY"
-            fi
-          fi
-          
-          # Parse test_output.log for detailed errors
-          if [ -f test_output.log ]; then
-            ERRORS=$(grep -E "error:|failed -" test_output.log | head -20 || true)
-            if [ -n "$ERRORS" ]; then
-              {
-                echo ""
-                echo "### Error Output (first 20 lines)"
-                echo '```'
-                echo "$ERRORS"
-                echo '```'
-              } >> "$GITHUB_STEP_SUMMARY"
-            fi
-          fi
-
       - name: Run full tests (fallback)
         if: needs.detect-changes.outputs.affected == 'FULL'
         working-directory: AmakaFlowCompanion
@@ -416,6 +387,49 @@ jobs:
             exit 0
           fi
           exit "$XCODE_EXIT"
+
+      - name: Generate test failure summary
+        if: ${{ always() && needs.detect-changes.outputs.affected != 'NONE' }}
+        working-directory: AmakaFlowCompanion
+        run: |
+          {
+            echo "## Test Results"
+            echo ""
+          } >> "$GITHUB_STEP_SUMMARY"
+          
+          if [ -d TestResults ]; then
+            # Parse test results using xcresulttool (Xcode 26.2)
+            if TEST_OUTPUT=$(xcrun xcresulttool get test-results tests --path TestResults 2>/dev/null); then
+              # Extract failed test identifiers
+              FAILED_TESTS=$(echo "$TEST_OUTPUT" | grep -E "^\s+Assertion Failure:|Test Case.*failed" || true)
+              if [ -n "$FAILED_TESTS" ]; then
+                {
+                  echo "### ❌ Test Failures"
+                  echo '```'
+                  echo "$TEST_OUTPUT" | grep -B 2 -A 1 -E "failed|Failure" | head -50
+                  echo '```'
+                } >> "$GITHUB_STEP_SUMMARY"
+              else
+                echo "✅ All tests passed" >> "$GITHUB_STEP_SUMMARY"
+              fi
+            else
+              echo "⚠️ xcresulttool unavailable — cannot parse test results" >> "$GITHUB_STEP_SUMMARY"
+            fi
+          fi
+          
+          # Parse test_output.log for detailed errors
+          if [ -f test_output.log ]; then
+            ERRORS=$(grep -E "error:|failed -|Testing failed:" test_output.log | head -20 || true)
+            if [ -n "$ERRORS" ]; then
+              {
+                echo ""
+                echo "### Error Output (first 20 lines)"
+                echo '```'
+                echo "$ERRORS"
+                echo '```'
+              } >> "$GITHUB_STEP_SUMMARY"
+            fi
+          fi
 
       - name: Upload test results
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
