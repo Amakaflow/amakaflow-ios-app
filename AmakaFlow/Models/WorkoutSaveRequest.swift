@@ -105,6 +105,7 @@ struct WorkoutSaveRequest: Codable {
     }
 
     /// AMA-2343 A+D: map Block.structure / rounds display contract → ADR-017 type.
+    // swiftlint:disable cyclomatic_complexity
     private static func persistType(from block: Block) -> String? {
         switch block.structure {
         case .circuit:
@@ -136,6 +137,7 @@ struct WorkoutSaveRequest: Codable {
             return StructureBlockType.circuit.rawValue
         }
     }
+    // swiftlint:enable cyclomatic_complexity
 
     private static func socialImportExercise(from exercise: Exercise) -> SocialImportExercise {
         let repsText = exercise.reps?.trimmingCharacters(in: .whitespacesAndNewlines)
