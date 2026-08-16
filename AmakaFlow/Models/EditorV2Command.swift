@@ -45,12 +45,13 @@ enum Violation: String, Equatable {
 extension EditorV2Session {
     mutating func apply(_ command: EditorCommand) -> ApplyResult {
         var copy = self
-        let result = copy.applyInternal(command)
+        // AMA-2438 P2: use D2 implementation
+        let result = copy.applyD2(command)
         
         switch result {
         case .applied:
-            copy.normalize()
-            let validation = copy.validate()
+            copy.normalizeD2()
+            let validation = copy.validateD2()
             if validation == .applied {
                 self = copy
                 return .applied

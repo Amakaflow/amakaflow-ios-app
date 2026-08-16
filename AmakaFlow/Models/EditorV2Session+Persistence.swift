@@ -47,7 +47,15 @@ extension EditorV2Session {
             }
         }
 
-        return EditorV2Session(title: title, groups: groups, exercises: exercises)
+        // AMA-2438 D2: migrate from old adjacency model to new declared membership
+        return EditorV2Session.fromLegacyExercises(
+            title: title,
+            groups: groups,
+            exercisesArray: exercises,
+            formatGroupKey: nil,
+            enrichmentTombstones: [],
+            enrichmentTombstonesDirty: false
+        )
     }
 
     /// Round-trip ADR-017 blocks for WorkoutSaveRequest (preserve structure_source).
@@ -106,6 +114,9 @@ extension EditorV2Session {
                     switch group.type {
                     case .amrap, .fortime:
                         return group.metaLine
+                    case .superset:
+                        // AMA-2438 D3: use derived display name
+                        return group.displayName(memberCount: run.exercises.count)
                     default:
                         return group.name
                     }

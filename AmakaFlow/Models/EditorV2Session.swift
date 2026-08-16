@@ -11,8 +11,11 @@ import Foundation
 
 struct EditorV2Session: Equatable, Sendable {
     var title: String
+    /// AMA-2438 D2: canvas owns block order. Adjacency carries no meaning.
+    var order: [EditorV2Row]
     var groups: [String: EditorV2Group]
-    var exercises: [EditorV2Exercise]
+    /// AMA-2438 D2: exercises keyed by ID (no longer flat array with back-pointers).
+    var exercises: [String: EditorV2Exercise]
     /// Pinned format group key from empty-state chips (`fmt` in the prototype).
     var formatGroupKey: String?
     /// AMA-2336 — workout-level enrichment deletes. Written here, read by enrich.
@@ -24,13 +27,15 @@ struct EditorV2Session: Equatable, Sendable {
 
     init(
         title: String = "",
+        order: [EditorV2Row] = [],
         groups: [String: EditorV2Group] = [:],
-        exercises: [EditorV2Exercise] = [],
+        exercises: [String: EditorV2Exercise] = [:],
         formatGroupKey: String? = nil,
         enrichmentTombstones: [EnrichmentTombstone] = [],
         enrichmentTombstonesDirty: Bool = false
     ) {
         self.title = title
+        self.order = order
         self.groups = groups
         self.exercises = exercises
         self.formatGroupKey = formatGroupKey
@@ -38,20 +43,28 @@ struct EditorV2Session: Equatable, Sendable {
         self.enrichmentTombstonesDirty = enrichmentTombstonesDirty
     }
 
+    /// AMA-2438 D2: runs projection from declared membership (trivial now).
     var runs: [EditorV2Run] {
         var result: [EditorV2Run] = []
-        for exercise in exercises {
-            if let key = exercise.groupKey,
-               let last = result.last,
-               last.groupKey == key {
-                var updated = last
-                updated.exercises.append(exercise)
-                result[result.count - 1] = updated
-            } else {
+        for row in order {
+            switch row {
+            case .group(let key):
+                guard let group = groups[key] else { continue }
+                let members = group.memberIDs.compactMap { exercises[$0] }
+                guard !members.isEmpty else { continue }
                 result.append(
                     EditorV2Run(
-                        id: exercise.groupKey ?? exercise.id,
-                        groupKey: exercise.groupKey,
+                        id: key,
+                        groupKey: key,
+                        exercises: members
+                    )
+                )
+            case .loose(let id):
+                guard let exercise = exercises[id] else { continue }
+                result.append(
+                    EditorV2Run(
+                        id: id,
+                        groupKey: nil,
                         exercises: [exercise]
                     )
                 )
@@ -555,5 +568,69 @@ extension EditorV2Session {
         }
         WorkoutEnrichmentMutations.appendTombstone(&enrichmentTombstones, kind: kind)
         enrichmentTombstonesDirty = true
+    }
+}
+
+// MARK: - AMA-2438 D2 Migration from adjacency to declared membership
+
+extension EditorV2Session {
+    /// Migrate from old adjacency model (flat array + groupKey back-pointers) to D2.
+    static func fromLegacyExercises(
+        title: String,
+        groups: [String: EditorV2Group],
+        exercisesArray: [EditorV2Exercise],
+        formatGroupKey: String?,
+        enrichmentTombstones: [EnrichmentTombstone],
+        enrichmentTombstonesDirty: Bool
+    ) -> EditorV2Session {
+        var order: [EditorV2Row] = []
+        var newGroups = groups
+        var exercisesDict: [String: EditorV2Exercise] = [:]
+        
+        // Build order and memberIDs from adjacency
+        var currentGroupKey: String?
+        var currentMembers: [String] = []
+        
+        for exercise in exercisesArray {
+            exercisesDict[exercise.id] = exercise
+            
+            if let groupKey = exercise.groupKey {
+                if groupKey != currentGroupKey {
+                    // Flush previous group
+                    if let prevKey = currentGroupKey, !currentMembers.isEmpty {
+                        newGroups[prevKey]?.memberIDs = currentMembers
+                        order.append(.group(prevKey))
+                        currentMembers = []
+                    }
+                    currentGroupKey = groupKey
+                }
+                currentMembers.append(exercise.id)
+            } else {
+                // Loose exercise - flush any in-progress group first
+                if let prevKey = currentGroupKey, !currentMembers.isEmpty {
+                    newGroups[prevKey]?.memberIDs = currentMembers
+                    order.append(.group(prevKey))
+                    currentMembers = []
+                    currentGroupKey = nil
+                }
+                order.append(.loose(exercise.id))
+            }
+        }
+        
+        // Flush final group
+        if let prevKey = currentGroupKey, !currentMembers.isEmpty {
+            newGroups[prevKey]?.memberIDs = currentMembers
+            order.append(.group(prevKey))
+        }
+        
+        return EditorV2Session(
+            title: title,
+            order: order,
+            groups: newGroups,
+            exercises: exercisesDict,
+            formatGroupKey: formatGroupKey,
+            enrichmentTombstones: enrichmentTombstones,
+            enrichmentTombstonesDirty: enrichmentTombstonesDirty
+        )
     }
 }

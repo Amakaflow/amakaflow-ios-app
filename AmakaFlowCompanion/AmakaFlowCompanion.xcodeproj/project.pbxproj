@@ -191,6 +191,7 @@
 		AMA2307MDLBLD /* EditorV2Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2307MDLREF /* EditorV2Models.swift */; };
 		AMA2307SESBLD /* EditorV2Session.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2307SESREF /* EditorV2Session.swift */; };
 		AMA2438CMDBLD /* EditorV2Command.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2438CMDREF /* EditorV2Command.swift */; };
+		AMA2438CMD2BLD /* EditorV2Command+D2.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2438CMD2REF /* EditorV2Command+D2.swift */; };
 		AMA2307PERBLD /* EditorV2Session+Persistence.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2307PERREF /* EditorV2Session+Persistence.swift */; };
 		AMA2307CMPBLD /* EditorV2Components.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2307CMPREF /* EditorV2Components.swift */; };
 		AMA2307SHTBLD /* EditorV2Sheets.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2307SHTREF /* EditorV2Sheets.swift */; };
@@ -1008,6 +1009,7 @@
 		AMA2307MDLREF /* EditorV2Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = EditorV2Models.swift; path = ../AmakaFlow/Models/EditorV2Models.swift; sourceTree = SOURCE_ROOT; };
 		AMA2307SESREF /* EditorV2Session.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = EditorV2Session.swift; path = ../AmakaFlow/Models/EditorV2Session.swift; sourceTree = SOURCE_ROOT; };
 		AMA2438CMDREF /* EditorV2Command.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = EditorV2Command.swift; path = ../AmakaFlow/Models/EditorV2Command.swift; sourceTree = SOURCE_ROOT; };
+		AMA2438CMD2REF /* EditorV2Command+D2.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "EditorV2Command+D2.swift"; path = "../AmakaFlow/Models/EditorV2Command+D2.swift"; sourceTree = SOURCE_ROOT; };
 		AMA2307PERREF /* EditorV2Session+Persistence.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "EditorV2Session+Persistence.swift"; path = "../AmakaFlow/Models/EditorV2Session+Persistence.swift"; sourceTree = SOURCE_ROOT; };
 		AMA2307CMPREF /* EditorV2Components.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = EditorV2Components.swift; path = ../AmakaFlow/Views/EditorV2/EditorV2Components.swift; sourceTree = SOURCE_ROOT; };
 		AMA2307SHTREF /* EditorV2Sheets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = EditorV2Sheets.swift; path = ../AmakaFlow/Views/EditorV2/EditorV2Sheets.swift; sourceTree = SOURCE_ROOT; };
@@ -2365,6 +2367,7 @@
 				AMA2307MDLREF /* EditorV2Models.swift */,
 				AMA2307SESREF /* EditorV2Session.swift */,
 				AMA2438CMDREF /* EditorV2Command.swift */,
+				AMA2438CMD2REF /* EditorV2Command+D2.swift */,
 				AMA2307PERREF /* EditorV2Session+Persistence.swift */,
 				AMA2291STARTSELREF /* WorkoutStartSelection.swift */,
 				AMA2291LIBDESTREF /* LibraryDestination.swift */,
@@ -3172,6 +3175,7 @@
 				AMA2307MDLBLD /* EditorV2Models.swift in Sources */,
 				AMA2307SESBLD /* EditorV2Session.swift in Sources */,
 				AMA2438CMDBLD /* EditorV2Command.swift in Sources */,
+				AMA2438CMD2BLD /* EditorV2Command+D2.swift in Sources */,
 				AMA2307PERBLD /* EditorV2Session+Persistence.swift in Sources */,
 				AMA2307CMPBLD /* EditorV2Components.swift in Sources */,
 				AMA2307SHTBLD /* EditorV2Sheets.swift in Sources */,
