@@ -352,8 +352,47 @@ extension EditorV2Session {
 extension EditorV2Session {
     mutating func normalizeD2() {
         syncGroupKeyFieldsD2()
+        repairSplitGroupsD2()
         pruneEmptyGroupsD2()
         refreshSupersetLabelsD2()
+    }
+    
+    private mutating func repairSplitGroupsD2() {
+        // If a group's members are not all together in order, ungroup them
+        var groupPositions: [String: [Int]] = [:]
+        
+        for (idx, row) in order.enumerated() {
+            if case .group(let key) = row {
+                groupPositions[key, default: []].append(idx)
+            }
+        }
+        
+        // Groups that appear more than once in order are split
+        var keysToUngroup: [String] = []
+        for (key, positions) in groupPositions where positions.count > 1 {
+            keysToUngroup.append(key)
+        }
+        
+        // Ungroup split groups
+        for key in keysToUngroup {
+            guard let group = groups[key] else { continue }
+            // Replace all group references with loose exercises
+            var newOrder: [EditorV2Session.Row] = []
+            for row in order {
+                if case .group(key) = row {
+                    for memberID in group.memberIDs {
+                        newOrder.append(.loose(memberID))
+                    }
+                } else {
+                    newOrder.append(row)
+                }
+            }
+            order = newOrder
+            groups.removeValue(forKey: key)
+            if formatGroupKey == key {
+                formatGroupKey = nil
+            }
+        }
     }
     
     private mutating func syncGroupKeyFieldsD2() {
