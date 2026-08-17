@@ -252,8 +252,13 @@ final class EditorV2PropertyTests: XCTestCase {
             
         case 13:
             // beginFormatGroup — append + pin a new empty format group
-            let types: [EditorV2GroupType] = [.superset, .circuit, .emom, .amrap, .tabata]
-            return .beginFormatGroup(type: types.randomElement(using: &rng)!, preferredName: nil)
+            // runsAsOptions = [.superset] + formatChips — every type the UI can
+            // pin, incl. For time. Superset matters most: it is the only branch
+            // that takes a letter.
+            return .beginFormatGroup(
+                type: EditorV2GroupType.runsAsOptions.randomElement(using: &rng)!,
+                preferredName: nil
+            )
 
         default:
             return .addExercises(names: ["Default"], into: nil)

@@ -20,7 +20,9 @@ struct EditorV2ContentActions {
     var onStartFormat: (EditorV2GroupType) -> Void
     /// AMA-2443 slice 4 — appends a new pinned block mid-workout, then opens
     /// the picker into it. Never destructive.
-    var onBeginFormatGroup: (EditorV2GroupType) -> Void = { _ in }
+    /// No default: a silent no-op here would make the block chips look
+    /// functional while doing nothing.
+    var onBeginFormatGroup: (EditorV2GroupType) -> Void
     /// AMA-2336 — quick-add the session warm-up from `workout_preferences`.
     var onAddWarmup: () -> Void = {}
     var onAddCooldown: () -> Void = {}
