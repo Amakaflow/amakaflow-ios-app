@@ -130,10 +130,16 @@ final class EditorV2PropertyTests: XCTestCase {
         
         switch choice {
         case 0:
-            // addExercises
+            // addExercises — AMA-2443 slice 3: sometimes pick an existing group as destination
             let count = Int.random(in: 1...3, using: &rng)
             let names = (1...count).map { "Ex\($0)" }
-            return .addExercises(names: names, into: nil)
+            let into: String?
+            if !session.groups.isEmpty, Int.random(in: 0..<4, using: &rng) == 0 {
+                into = Array(session.groups.keys).randomElement(using: &rng)
+            } else {
+                into = nil
+            }
+            return .addExercises(names: names, into: into)
             
         case 1:
             // removeExercise

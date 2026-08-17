@@ -229,14 +229,37 @@ struct EditorV2GroupedRun: View {
     var onPill: () -> Void
     var onOpen: (EditorV2Exercise) -> Void
     var onMenu: (EditorV2Exercise) -> Void
+    /// AMA-2443 slice 3 — "＋ Add here": open the picker with THIS group as the
+    /// explicit destination. Does not move the format-group pin (shape B).
+    var onAddHere: () -> Void = {}
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            EditorV2GroupPill(
-                group: group,
-                isInsertionTarget: isInsertionTarget,
-                onTap: onPill
-            )
+            HStack(spacing: 8) {
+                EditorV2GroupPill(
+                    group: group,
+                    isInsertionTarget: isInsertionTarget,
+                    onTap: onPill
+                )
+                Spacer()
+                Button(action: onAddHere) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "plus.circle.fill")
+                            .font(.system(size: 11, weight: .semibold))
+                        Text("Add here")
+                            .font(.system(size: 11, weight: .semibold))
+                    }
+                    .foregroundColor(group.type.accentColor)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(
+                        Capsule()
+                            .fill(group.type.accentColor.opacity(0.15))
+                    )
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("editor_v2_add_here_\(group.id)")
+            }
             VStack(spacing: 0) {
                 ForEach(Array(exercises.enumerated()), id: \.element.id) { index, exercise in
                     EditorV2ExerciseCard(

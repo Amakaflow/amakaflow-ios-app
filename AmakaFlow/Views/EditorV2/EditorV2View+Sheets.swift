@@ -22,8 +22,11 @@ extension EditorV2View {
     }
 
     private var formatLabel: String? {
-        guard let key = session.formatGroupKey, let group = session.groups[key] else { return nil }
-        // Prefer the display name (Tri-set) over the structural type label (Superset).
+        groupLabel(for: session.formatGroupKey)
+    }
+
+    private func groupLabel(for groupID: String?) -> String? {
+        guard let groupID, let group = session.groups[groupID] else { return nil }
         let name = group.name.trimmingCharacters(in: .whitespacesAndNewlines)
         return name.isEmpty ? group.type.label : name
     }
@@ -212,34 +215,35 @@ extension EditorV2View {
             .presentationDetents([.large])
         } else {
             BuilderV3ExercisePickerSheet(
-                formatLabel: formatLabel,
+                formatLabel: groupLabel(for: addTargetGroupID) ?? formatLabel,
                 availableEquipmentKeys: gymEquipmentKeys,
                 mode: .add,
                 canvasExerciseNames: Array(session.exercises.values.map(\.name)),
                 hasWarmupSection: session.hasWarmupSection,
                 hasCooldownSection: session.hasCooldownSection,
+                hideQuickBlocks: addTargetGroupID != nil,
                 onAddExercises: { names in
-                    _ = session.apply(.addExercises(names: names, into: nil))
+                    _ = session.apply(.addExercises(names: names, into: addTargetGroupID))
                     guard !names.isEmpty else { return }
+                    let groupName = groupLabel(for: addTargetGroupID) ?? formatLabel
                     if names.count == 1, let name = names.first {
-                        let fmt = formatLabel
-                        showToast(
-                            fmt.map { "\(name) added to the \($0)" }
-                                ?? "\(name) added · 3×10 · 60s — tap to tweak"
-                        )
+                        showToast(groupName.map { "\(name) added to the \($0)" } ?? "\(name) added · 3×10 · 60s — tap to tweak")
                     } else {
                         showToast("\(names.count) exercises added ✓")
                     }
                 },
                 onDone: {
                     addSheetOpen = false
+                    addTargetGroupID = nil
                 },
                 onAskAmaka: { query in
                     addSheetOpen = false
+                    addTargetGroupID = nil
                     presentCoachWithQuery(query)
                 },
                 onAddBlock: { type in
                     addSheetOpen = false
+                    addTargetGroupID = nil
                     _ = session.apply(.addBlock(type))
                     showToast("\(type.label) — add the moves, timing is set")
                     // Reopen picker to continue adding into the new block
@@ -247,6 +251,7 @@ extension EditorV2View {
                 },
                 onQuickAddSoftSection: { kind in
                     addSheetOpen = false
+                    addTargetGroupID = nil
                     quickAddSoftSection(kind)
                 }
             )

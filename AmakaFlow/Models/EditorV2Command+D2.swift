@@ -13,6 +13,11 @@ extension EditorV2Session {
     mutating func applyD2(_ command: EditorCommand) -> ApplyResult {
         switch command {
         case .addExercises(let names, let into):
+            // Validate explicit destination early (shape B constraint)
+            if let into, groups[into] == nil {
+                return .rejected(.invalidGroupMembership)
+            }
+            
             for name in names {
                 let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
                 guard !trimmed.isEmpty else { continue }

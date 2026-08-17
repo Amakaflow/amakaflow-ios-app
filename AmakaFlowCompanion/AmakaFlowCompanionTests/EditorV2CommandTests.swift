@@ -971,4 +971,124 @@ final class EditorV2CommandTests: XCTestCase {
         XCTAssertEqual(session, stateBefore)
         XCTAssertNil(session.formatGroupKey)
     }
+    
+    // MARK: - AMA-2443 slice 3 — explicit destination (into:)
+
+    /// Builds a session whose pre-state is *engine-reachable*: every group is
+    /// either non-empty or the format group (invariant I2). Hand-built states
+    /// with an empty non-format group cannot be produced by any command —
+    /// `pruneEmptyGroupsD2()` deletes them on every normalize — and `undo()`
+    /// re-validates after restoring, so seeding an illegal pre-state traps.
+    private func makeSessionWithSeededGroup(
+        key: String,
+        type: EditorV2GroupType,
+        seedName: String = "Existing"
+    ) -> (session: EditorV2Session, seedID: String) {
+        var session = EditorV2Session()
+        let seed = EditorV2Exercise(name: seedName)
+        session.exercises[seed.id] = seed
+        session.groups[key] = EditorV2Group(id: key, type: type, memberIDs: [seed.id])
+        session.order = [.group(key)]
+        return (session, seed.id)
+    }
+
+    /// Names passed with an explicit destination land in THAT group's
+    /// `memberIDs`, in order, rather than becoming loose rows.
+    func testAddExercises_intoSpecificGroup_landsInThatGroup() {
+        let targetKey = "target1"
+        var (session, seedID) = makeSessionWithSeededGroup(key: targetKey, type: .superset)
+
+        let result = session.apply(.addExercises(names: ["Squat", "Lunge"], into: targetKey))
+
+        XCTAssertEqual(result, .applied)
+        let members = session.groups[targetKey]?.memberIDs ?? []
+        XCTAssertEqual(members.count, 3, "seed + 2 added")
+        XCTAssertEqual(members.first, seedID)
+        XCTAssertEqual(session.exercises[members[1]]?.name, "Squat")
+        XCTAssertEqual(session.exercises[members[2]]?.name, "Lunge")
+    }
+
+    /// Shape B constraint: adding into a group other than the pinned format
+    /// group must NOT move the pin. The pin is only moved by explicit
+    /// user intent, never as a side effect of an add.
+    func testAddExercises_intoNonPinGroup_doesNotChangePin() {
+        let pinKey = "pin"
+        let targetKey = "target"
+        var (session, _) = makeSessionWithSeededGroup(key: targetKey, type: .superset)
+        // The pin may legally be an empty group — I2 exempts the format group.
+        session.groups[pinKey] = EditorV2Group(id: pinKey, type: .emom, memberIDs: [])
+        session.formatGroupKey = pinKey
+        session.order = [.group(pinKey), .group(targetKey)]
+        XCTAssertEqual(session.validateD2(), .applied, "pre-state must be engine-reachable")
+
+        let result = session.apply(.addExercises(names: ["Bench"], into: targetKey))
+
+        XCTAssertEqual(result, .applied)
+        XCTAssertEqual(session.formatGroupKey, pinKey, "pin must not follow the destination")
+        XCTAssertEqual(session.groups[targetKey]?.memberIDs.count, 2, "seed + 1 added")
+        XCTAssertEqual(session.groups[pinKey]?.memberIDs.count, 0)
+    }
+
+    /// An unknown destination is rejected up front, before any mutation —
+    /// not caught post-hoc by `validateD2()`, which would trip the
+    /// `assertionFailure` in `apply()` and trap the process.
+    func testAddExercises_intoInvalidGroup_doesNotCommit() {
+        var (session, _) = makeSessionWithSeededGroup(key: "valid", type: .circuit)
+
+        let stateBefore = session
+        let result = session.apply(.addExercises(names: ["Squat"], into: "invalid"))
+
+        XCTAssertEqual(result, .rejected(.invalidGroupMembership))
+        XCTAssertEqual(session, stateBefore, "rejected commands must not mutate state")
+        XCTAssertFalse(session.canUndo, "a rejected command must not push an undo entry")
+    }
+
+    /// One add batch is one undo entry, and undoing restores both the group
+    /// membership and the pin. Undo re-validates on restore, so this also
+    /// proves the pre-state is legal.
+    func testAddExercises_intoGroup_oneUndoRestoresBoth() {
+        let targetKey = "target"
+        let pinKey = "pin"
+        var (session, _) = makeSessionWithSeededGroup(key: targetKey, type: .superset)
+        session.groups[pinKey] = EditorV2Group(id: pinKey, type: .amrap, memberIDs: [])
+        session.formatGroupKey = pinKey
+        session.order = [.group(pinKey), .group(targetKey)]
+        XCTAssertEqual(session.validateD2(), .applied, "pre-state must be engine-reachable")
+
+        let stateBefore = session
+        let result = session.apply(.addExercises(names: ["Deadlift"], into: targetKey))
+
+        XCTAssertEqual(result, .applied)
+        XCTAssertEqual(session.groups[targetKey]?.memberIDs.count, 2, "seed + 1 added")
+        XCTAssertEqual(session.formatGroupKey, pinKey)
+
+        XCTAssertTrue(session.undo())
+        XCTAssertEqual(session, stateBefore, "one batch = one undo")
+        XCTAssertEqual(session.groups[targetKey]?.memberIDs.count, 1, "back to seed only")
+        XCTAssertEqual(session.formatGroupKey, pinKey)
+    }
+
+    /// Soft sections are ordinary destinations — add-here works on the
+    /// session warm-up.
+    func testAddExercises_intoWarmupGroup_isValid() {
+        let warmupKey = "warmup"
+        var (session, _) = makeSessionWithSeededGroup(key: warmupKey, type: .warmup)
+
+        let result = session.apply(.addExercises(names: ["Jumping Jacks"], into: warmupKey))
+
+        XCTAssertEqual(result, .applied)
+        XCTAssertEqual(session.groups[warmupKey]?.memberIDs.count, 2, "seed + 1 added")
+    }
+
+    /// Soft sections are ordinary destinations — add-here works on the
+    /// cool-down.
+    func testAddExercises_intoCooldownGroup_isValid() {
+        let cooldownKey = "cooldown"
+        var (session, _) = makeSessionWithSeededGroup(key: cooldownKey, type: .cooldown)
+
+        let result = session.apply(.addExercises(names: ["Stretch"], into: cooldownKey))
+
+        XCTAssertEqual(result, .applied)
+        XCTAssertEqual(session.groups[cooldownKey]?.memberIDs.count, 2, "seed + 1 added")
+    }
 }
