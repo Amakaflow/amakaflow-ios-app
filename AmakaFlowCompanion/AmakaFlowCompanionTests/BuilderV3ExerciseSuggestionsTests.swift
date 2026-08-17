@@ -6,7 +6,7 @@
 //
 
 import XCTest
-@testable import AmakaFlow
+@testable import AmakaFlowCompanion
 
 final class BuilderV3ExerciseSuggestionsTests: XCTestCase {
     
