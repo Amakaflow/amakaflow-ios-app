@@ -35,6 +35,15 @@ principle executable in THIS repo.
   description; changing the test is the reviewer's call, not yours.
 - New `.swift` files must be registered in project.pbxproj (Sources build
   phase) or CI fails.
+- **Before calling any initializer or method you did not just read, grep its
+  definition** — never guess argument labels or access levels. Every
+  compile-level failure to date (`RepsRange(lower:upper:)`, PR #600;
+  `removeSoftSection(type:kind:)` and a private-access violation, PR #604)
+  was an invented signature.
+- **The ticket's Tests section is an acceptance checklist**: your PR must
+  enumerate every listed item as done or explicitly deferred with a reason.
+  Silently dropping an expensive requirement (e.g. a PBT extension) is a
+  scope lie.
 
 ## Scope honesty
 

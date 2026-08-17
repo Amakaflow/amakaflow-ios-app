@@ -164,7 +164,12 @@ extension EditorV2Session {
     /// Begin an undo group. Commands within the group will be captured as a single undo entry.
     /// The snapshot is taken when the group begins, before any commands run.
     mutating func beginUndoGroup() {
-        let snapshot = EditorV2SessionSnapshot(from: self)
+        pushUndoSnapshot(EditorV2SessionSnapshot(from: self))
+    }
+
+    /// The only writer of the (private) undo stack — apply() and group
+    /// begins both come through here so the cap lives in one place.
+    mutating func pushUndoSnapshot(_ snapshot: EditorV2SessionSnapshot) {
         undoStack.append(snapshot)
         // Cap the stack at 50
         if undoStack.count > 50 {
@@ -172,10 +177,11 @@ extension EditorV2Session {
         }
     }
     
-    /// Commit the undo group without adding a new snapshot.
-    /// The group's snapshot was already added in beginUndoGroup().
-    mutating func commitUndoGroup() {
-        // No-op: the snapshot was already added in beginUndoGroup()
+    /// Drop the most recent snapshot — used when a begun group turned out
+    /// to change nothing, so UNDO never pops a do-nothing entry.
+    mutating func discardLastUndoSnapshot() {
+        guard !undoStack.isEmpty else { return }
+        undoStack.removeLast()
     }
 }
 
@@ -248,11 +254,11 @@ extension EditorV2Session {
     
     /// Delete = remove content **and** write the tombstone (callers own tombstones).
     mutating func removeSessionWarmup() {
-        _ = apply(.removeSoftSection(type: .warmup, kind: .sessionWarmup))
+        _ = apply(.removeSoftSection(.warmup, .sessionWarmup))
     }
 
     mutating func removeCooldown() {
-        _ = apply(.removeSoftSection(type: .cooldown, kind: .cooldown))
+        _ = apply(.removeSoftSection(.cooldown, .cooldown))
     }
 
     /// Warm-up sets are a sibling list — `sets: Int` is untouched. Strength shapes only.

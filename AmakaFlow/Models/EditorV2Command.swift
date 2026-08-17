@@ -62,12 +62,20 @@ enum Violation: String, Equatable {
 
 extension EditorV2Session {
     mutating func apply(_ command: EditorCommand) -> ApplyResult {
+        apply(command, recordUndo: true)
+    }
+
+    /// The ONE transactional door — copy → applyD2 → normalize → validate →
+    /// commit. `recordUndo: false` is for grouped gestures (sheet commit)
+    /// whose single group snapshot was already pushed via `beginUndoGroup()`;
+    /// there must never be a second copy of this sequence anywhere.
+    mutating func apply(_ command: EditorCommand, recordUndo: Bool) -> ApplyResult {
         // Capture pre-state for undo
         let preState = self
-        
+
         var copy = self
         let result = copy.applyD2(command)
-        
+
         switch result {
         case .applied:
             copy.normalizeD2()
@@ -76,17 +84,12 @@ extension EditorV2Session {
                 // Check if state actually changed
                 let stateChanged = copy != preState
                 self = copy
-                
+
                 // Push snapshot only if state changed
-                if stateChanged {
-                    let snapshot = EditorV2SessionSnapshot(from: preState)
-                    undoStack.append(snapshot)
-                    // Cap the stack at 50
-                    if undoStack.count > 50 {
-                        undoStack.removeFirst()
-                    }
+                if recordUndo && stateChanged {
+                    pushUndoSnapshot(EditorV2SessionSnapshot(from: preState))
                 }
-                
+
                 return .applied
             } else {
                 assertionFailure("Command produced invalid state: \(command)")
