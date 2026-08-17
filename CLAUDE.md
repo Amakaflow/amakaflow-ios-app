@@ -24,3 +24,6 @@
 - Every bug fix needs a failing test first
 - Every new feature ships with tests
 - Use existing test helpers — don't create parallel ones
+- Verification is executable, not narrative — see `.cursor/rules/verify-before-done.mdc`
+  (run `just ios-build` + targeted tests before any done claim; ✅ needs evidence;
+  never `Closes AMA-…` in PR bodies; never add `XCTExpectFailure`)
