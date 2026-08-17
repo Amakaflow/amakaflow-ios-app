@@ -8,6 +8,37 @@
 
 import Foundation
 
+/// AMA-2443: Pre-state snapshot for undo. Captures the state before a command runs.
+struct EditorV2SessionSnapshot: Equatable, Sendable {
+    let title: String
+    let order: [EditorV2Row]
+    let groups: [String: EditorV2Group]
+    let exercises: [String: EditorV2Exercise]
+    let formatGroupKey: String?
+    let enrichmentTombstones: [EnrichmentTombstone]
+    let enrichmentTombstonesDirty: Bool
+    
+    init(from session: EditorV2Session) {
+        self.title = session.title
+        self.order = session.order
+        self.groups = session.groups
+        self.exercises = session.exercises
+        self.formatGroupKey = session.formatGroupKey
+        self.enrichmentTombstones = session.enrichmentTombstones
+        self.enrichmentTombstonesDirty = session.enrichmentTombstonesDirty
+    }
+    
+    func restore(to session: inout EditorV2Session) {
+        session.title = title
+        session.order = order
+        session.groups = groups
+        session.exercises = exercises
+        session.formatGroupKey = formatGroupKey
+        session.enrichmentTombstones = enrichmentTombstones
+        session.enrichmentTombstonesDirty = enrichmentTombstonesDirty
+    }
+}
+
 struct EditorV2Session: Equatable, Sendable {
     var title: String
     /// AMA-2438 D2: canvas owns block order. Adjacency carries no meaning.
@@ -23,6 +54,8 @@ struct EditorV2Session: Equatable, Sendable {
     /// Untouched sessions omit the key so a library reload without seeded tombstones
     /// cannot wipe server markers (nil = leave alone, [] = clear after re-opt-in).
     var enrichmentTombstonesDirty: Bool
+    /// AMA-2443: Session Memento undo stack (capped at 50 snapshots).
+    private var undoStack: [EditorV2SessionSnapshot] = []
 
     init(
         title: String = "",
@@ -100,6 +133,49 @@ struct EditorV2Session: Equatable, Sendable {
             exercise.swapMessage = nil
             exercise.swapReplacementName = nil
         }
+    }
+    
+    /// AMA-2443: Undo the last command by restoring the previous snapshot.
+    /// Returns true if undo succeeded, false if the stack was empty.
+    mutating func undo() -> Bool {
+        guard !undoStack.isEmpty else { return false }
+        let snapshot = undoStack.removeLast()
+        snapshot.restore(to: &self)
+        // Re-run validation after restore per spec §Memento
+        let validation = validateD2()
+        assert(validation == .applied, "Undo produced invalid state: \(validation)")
+        return true
+    }
+    
+    /// AMA-2443: Check if undo is available (stack not empty).
+    var canUndo: Bool {
+        !undoStack.isEmpty
+    }
+    
+    /// AMA-2443: Clear undo history (called on save/reload).
+    mutating func clearUndoHistory() {
+        undoStack.removeAll()
+    }
+}
+
+// MARK: - Undo grouping (AMA-2443 sheet commit)
+
+extension EditorV2Session {
+    /// Begin an undo group. Commands within the group will be captured as a single undo entry.
+    /// The snapshot is taken when the group begins, before any commands run.
+    mutating func beginUndoGroup() {
+        let snapshot = EditorV2SessionSnapshot(from: self)
+        undoStack.append(snapshot)
+        // Cap the stack at 50
+        if undoStack.count > 50 {
+            undoStack.removeFirst()
+        }
+    }
+    
+    /// Commit the undo group without adding a new snapshot.
+    /// The group's snapshot was already added in beginUndoGroup().
+    mutating func commitUndoGroup() {
+        // No-op: the snapshot was already added in beginUndoGroup()
     }
 }
 

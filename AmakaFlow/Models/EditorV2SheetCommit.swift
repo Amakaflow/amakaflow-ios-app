@@ -33,9 +33,35 @@ extension EditorV2Session {
             draft: sheetDraft,
             baseline: baseline
         )
+        
+        // AMA-2443: Sheet commit is one undo entry
+        // Take snapshot before any commands run
+        if !commands.isEmpty {
+            beginUndoGroup()
+        }
 
         for command in commands {
-            _ = apply(command)
+            // Don't push individual snapshots; the group snapshot was already taken
+            let preState = self
+            var copy = self
+            let result = copy.applyD2(command)
+            
+            switch result {
+            case .applied:
+                copy.normalizeD2()
+                let validation = copy.validateD2()
+                if validation == .applied {
+                    self = copy
+                } else {
+                    assertionFailure("Command produced invalid state: \(command)")
+                }
+            case .rejected:
+                break
+            }
+        }
+        
+        if !commands.isEmpty {
+            commitUndoGroup()
         }
     }
 

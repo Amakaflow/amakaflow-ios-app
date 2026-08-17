@@ -62,6 +62,9 @@ enum Violation: String, Equatable {
 
 extension EditorV2Session {
     mutating func apply(_ command: EditorCommand) -> ApplyResult {
+        // Capture pre-state for undo
+        let preState = self
+        
         var copy = self
         let result = copy.applyD2(command)
         
@@ -70,7 +73,20 @@ extension EditorV2Session {
             copy.normalizeD2()
             let validation = copy.validateD2()
             if validation == .applied {
+                // Check if state actually changed
+                let stateChanged = copy != preState
                 self = copy
+                
+                // Push snapshot only if state changed
+                if stateChanged {
+                    let snapshot = EditorV2SessionSnapshot(from: preState)
+                    undoStack.append(snapshot)
+                    // Cap the stack at 50
+                    if undoStack.count > 50 {
+                        undoStack.removeFirst()
+                    }
+                }
+                
                 return .applied
             } else {
                 assertionFailure("Command produced invalid state: \(command)")
