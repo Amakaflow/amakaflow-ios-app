@@ -448,10 +448,165 @@ extension EditorV2Session {
             exercises[id] = exercise
             return .applied
             
-        case .quickAddSoftSection, .removeSoftSection:
-            // These remain unimplemented for now
-            return .rejected(.invalidState)
+        case .quickAddSoftSection(let kind, let activities, let clearingTombstone):
+            let type: EditorV2GroupType = kind == .cooldown ? .cooldown : .warmup
+            guard type.isSoftSection else { return .rejected(.invalidState) }
+            
+            // Check tombstone unless explicitly clearing it
+            if !clearingTombstone && enrichmentTombstones.contains(where: { $0.kind == kind }) {
+                return .rejected(.invalidState)
+            }
+            
+            // Check if this type already exists (blocked by presence)
+            if groups.values.contains(where: { $0.type == type }) {
+                return .rejected(.invalidState)
+            }
+            
+            // Clear tombstone if requested
+            if clearingTombstone {
+                enrichmentTombstones.removeAll { $0.kind == kind }
+                enrichmentTombstonesDirty = true
+            }
+            
+            let key = UUID().uuidString
+            let config = type.defaultConfig
+            let prepend = (type == .warmup)
+            
+            var memberIDs: [String] = []
+            for activity in activities {
+                let exerciseID = UUID().uuidString
+                let exercise = EditorV2Exercise(
+                    id: exerciseID,
+                    name: activity.name,
+                    durationSeconds: activity.durationSec,
+                    groupKey: nil,
+                    structureSource: clearingTombstone ? .userAdded : .enrichmentDefault
+                )
+                exercises[exerciseID] = exercise
+                memberIDs.append(exerciseID)
+            }
+            
+            let group = EditorV2Group(
+                id: key,
+                type: type,
+                name: type.label,
+                letter: nil,
+                config: config,
+                memberIDs: memberIDs,
+                structureSource: .enrichmentDefault,
+                enrichmentKind: kind
+            )
+            groups[key] = group
+            
+            if prepend {
+                order.insert(.group(key), at: 0)
+            } else {
+                order.append(.group(key))
+            }
+            
+            return .applied
+            
+        case .removeSoftSection(let type, let kind):
+            guard type.isSoftSection else { return .rejected(.invalidState) }
+            
+            let keys = Set(groups.filter { $0.value.type == type }.keys)
+            if !keys.isEmpty {
+                // Remove exercises that are members of these groups
+                for key in keys {
+                    if let group = groups[key] {
+                        for memberID in group.memberIDs {
+                            exercises.removeValue(forKey: memberID)
+                        }
+                    }
+                    groups.removeValue(forKey: key)
+                    if formatGroupKey == key {
+                        formatGroupKey = nil
+                    }
+                }
+                // Remove groups from order
+                order.removeAll { row in
+                    if case .group(let key) = row {
+                        return keys.contains(key)
+                    }
+                    return false
+                }
+            }
+            WorkoutEnrichmentMutations.appendTombstone(&enrichmentTombstones, kind: kind)
+            enrichmentTombstonesDirty = true
+            return .applied
+            
+        case .beginNextSupersetGroup(let preferredName):
+            let key = "ss\(UUID().uuidString)"
+            let letter = nextSupersetLetter()
+            
+            // Infer name from previous formatGroupKey if building tri-sets
+            let defaultName: String = {
+                if let prevKey = formatGroupKey, let prevGroup = groups[prevKey] {
+                    let triSetNames: Set<String> = ["Tri-set", "Tri-sets"]
+                    if triSetNames.contains(prevGroup.name) {
+                        return "Tri-set"
+                    }
+                }
+                return "Superset"
+            }()
+            
+            groups[key] = EditorV2Group(
+                id: key,
+                type: .superset,
+                name: preferredName ?? defaultName,
+                letter: letter,
+                config: EditorV2GroupType.superset.defaultConfig,
+                memberIDs: [],
+                structureSource: .userConfirmed
+            )
+            formatGroupKey = key
+            order.append(.group(key))
+            return .applied
+            
+        case .addWarmupSets(let exerciseID, let rows, let clearingTombstone):
+            guard !rows.isEmpty, var exercise = exercises[exerciseID] else { return .rejected(.exerciseNotFound) }
+            guard exercise.sets != nil else { return .rejected(.invalidState) }
+            guard exercise.warmupSets.isEmpty else { return .rejected(.invalidState) }
+            let exerciseId = exercise.exerciseId ?? WorkoutEnrichmentMutations.mintExerciseId()
+            if clearingTombstone {
+                clearEnrichmentTombstone(.exerciseWarmupSets, exerciseId: exerciseId)
+            }
+            guard !WorkoutEnrichmentPresence.isTombstoned(
+                .exerciseWarmupSets,
+                exerciseId: exerciseId,
+                tombstones: enrichmentTombstones
+            ) else { return .rejected(.invalidState) }
+            exercise.exerciseId = exerciseId
+            exercise.warmupSets = rows
+            exercises[exerciseID] = exercise
+            return .applied
+            
+        case .removeWarmupSets(let exerciseID):
+            guard var exercise = exercises[exerciseID] else { return .rejected(.exerciseNotFound) }
+            let exerciseId = exercise.exerciseId ?? WorkoutEnrichmentMutations.mintExerciseId()
+            exercise.exerciseId = exerciseId
+            exercise.warmupSets = []
+            exercises[exerciseID] = exercise
+            WorkoutEnrichmentMutations.appendTombstone(
+                &enrichmentTombstones,
+                kind: .exerciseWarmupSets,
+                exerciseId: exerciseId
+            )
+            enrichmentTombstonesDirty = true
+            return .applied
         }
+    }
+    
+    private func nextSupersetLetter() -> String {
+        let letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        let usedLetters = Set(groups.values.compactMap(\.letter))
+        for letter in letters {
+            let str = String(letter)
+            if !usedLetters.contains(str) {
+                return str
+            }
+        }
+        return "A"
     }
 }
 

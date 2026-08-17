@@ -30,9 +30,12 @@ enum EditorCommand: Equatable, Sendable {
     case addBlock(EditorV2GroupType)
     case move(String, Int)
     case reorder(fromOffsets: IndexSet, toOffset: Int)
-    case quickAddSoftSection(EnrichmentKind)
+    case quickAddSoftSection(EnrichmentKind, activities: [EnrichmentActivity], clearingTombstone: Bool)
     case removeSoftSection(EditorV2GroupType, EnrichmentKind)
     case addSet(String)
+    case beginNextSupersetGroup(preferredName: String?)
+    case addWarmupSets(exerciseID: String, rows: [WarmupSetRow], clearingTombstone: Bool)
+    case removeWarmupSets(exerciseID: String)
 }
 
 // `updatePrescription` (whole-object replace) was REMOVED (AMA-2441): with only

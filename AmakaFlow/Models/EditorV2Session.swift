@@ -137,13 +137,12 @@ extension EditorV2Session {
         activities: [EnrichmentActivity],
         clearingTombstone: Bool = false
     ) -> Bool {
-        quickAddSoftSection(
-            type: .warmup,
-            kind: .sessionWarmup,
+        let result = apply(.quickAddSoftSection(
+            .sessionWarmup,
             activities: activities,
-            prepend: true,
             clearingTombstone: clearingTombstone
-        )
+        ))
+        return result == .applied
     }
 
     @discardableResult
@@ -163,85 +162,21 @@ extension EditorV2Session {
         activities: [EnrichmentActivity],
         clearingTombstone: Bool = false
     ) -> Bool {
-        quickAddSoftSection(
-            type: .cooldown,
-            kind: .cooldown,
+        let result = apply(.quickAddSoftSection(
+            .cooldown,
             activities: activities,
-            prepend: false,
             clearingTombstone: clearingTombstone
-        )
+        ))
+        return result == .applied
     }
     
-    private mutating func quickAddSoftSection(
-        type: EditorV2GroupType,
-        kind: EnrichmentKind,
-        activities: [EnrichmentActivity],
-        prepend: Bool,
-        clearingTombstone: Bool
-    ) -> Bool {
-        guard type.isSoftSection else { return false }
-        
-        // Check tombstone unless explicitly clearing it
-        if !clearingTombstone && enrichmentTombstones.contains(where: { $0.kind == kind }) {
-            return false
-        }
-        
-        // Check if this type already exists (blocked by presence)
-        if groups.values.contains(where: { $0.type == type }) {
-            return false
-        }
-        
-        // Clear tombstone if requested
-        if clearingTombstone {
-            enrichmentTombstones.removeAll { $0.kind == kind }
-            enrichmentTombstonesDirty = true
-        }
-        
-        let key = UUID().uuidString
-        let config = type.defaultConfig
-        
-        var memberIDs: [String] = []
-        for activity in activities {
-            let exerciseID = UUID().uuidString
-            let exercise = EditorV2Exercise(
-                id: exerciseID,
-                name: activity.name,
-                durationSeconds: activity.durationSec,
-                groupKey: key,
-                structureSource: clearingTombstone ? .userAdded : .enrichmentDefault
-            )
-            exercises[exerciseID] = exercise
-            memberIDs.append(exerciseID)
-        }
-        
-        let group = EditorV2Group(
-            id: key,
-            type: type,
-            name: type.label,
-            letter: nil,
-            config: config,
-            memberIDs: memberIDs,
-            structureSource: .enrichmentDefault,
-            enrichmentKind: kind
-        )
-        groups[key] = group
-        
-        if prepend {
-            order.insert(.group(key), at: 0)
-        } else {
-            order.append(.group(key))
-        }
-        
-        return true
-    }
-
     /// Delete = remove content **and** write the tombstone (callers own tombstones).
     mutating func removeSessionWarmup() {
-        removeSoftSection(type: .warmup, kind: .sessionWarmup)
+        _ = apply(.removeSoftSection(type: .warmup, kind: .sessionWarmup))
     }
 
     mutating func removeCooldown() {
-        removeSoftSection(type: .cooldown, kind: .cooldown)
+        _ = apply(.removeSoftSection(type: .cooldown, kind: .cooldown))
     }
 
     /// Warm-up sets are a sibling list — `sets: Int` is untouched. Strength shapes only.
@@ -251,38 +186,20 @@ extension EditorV2Session {
         rows: [WarmupSetRow],
         clearingTombstone: Bool = false
     ) -> Bool {
-        guard !rows.isEmpty, var exercise = exercises[id] else { return false }
-        guard exercise.sets != nil else { return false }
-        guard exercise.warmupSets.isEmpty else { return false }
-        let exerciseId = exercise.exerciseId ?? WorkoutEnrichmentMutations.mintExerciseId()
-        if clearingTombstone {
-            clearEnrichmentTombstone(.exerciseWarmupSets, exerciseId: exerciseId)
-        }
-        guard !WorkoutEnrichmentPresence.isTombstoned(
-            .exerciseWarmupSets,
-            exerciseId: exerciseId,
-            tombstones: enrichmentTombstones
-        ) else { return false }
-        exercise.exerciseId = exerciseId
-        exercise.warmupSets = rows
-        exercises[id] = exercise
-        return true
+        let result = apply(.addWarmupSets(
+            exerciseID: id,
+            rows: rows,
+            clearingTombstone: clearingTombstone
+        ))
+        return result == .applied
     }
 
     /// Per-exercise tombstone keys off `exercise_id` (rename-safe), so mint when missing.
     @discardableResult
     mutating func removeWarmupSets(from id: String) -> String? {
-        guard var exercise = exercises[id] else { return nil }
+        guard let exercise = exercises[id] else { return nil }
         let exerciseId = exercise.exerciseId ?? WorkoutEnrichmentMutations.mintExerciseId()
-        exercise.exerciseId = exerciseId
-        exercise.warmupSets = []
-        exercises[id] = exercise
-        WorkoutEnrichmentMutations.appendTombstone(
-            &enrichmentTombstones,
-            kind: .exerciseWarmupSets,
-            exerciseId: exerciseId
-        )
-        enrichmentTombstonesDirty = true
+        _ = apply(.removeWarmupSets(exerciseID: id))
         return exerciseId
     }
 
@@ -303,33 +220,6 @@ extension EditorV2Session {
             kind: kind,
             exerciseId: exerciseId
         )
-        enrichmentTombstonesDirty = true
-    }
-
-    private mutating func removeSoftSection(type: EditorV2GroupType, kind: EnrichmentKind) {
-        let keys = Set(groups.filter { $0.value.type == type }.keys)
-        if !keys.isEmpty {
-            // Remove exercises that are members of these groups
-            for key in keys {
-                if let group = groups[key] {
-                    for memberID in group.memberIDs {
-                        exercises.removeValue(forKey: memberID)
-                    }
-                }
-                groups.removeValue(forKey: key)
-                if formatGroupKey == key {
-                    formatGroupKey = nil
-                }
-            }
-            // Remove groups from order
-            order.removeAll { row in
-                if case .group(let key) = row {
-                    return keys.contains(key)
-                }
-                return false
-            }
-        }
-        WorkoutEnrichmentMutations.appendTombstone(&enrichmentTombstones, kind: kind)
         enrichmentTombstonesDirty = true
     }
 }
@@ -430,44 +320,8 @@ extension EditorV2Session {
     }
     
     mutating func beginNextSupersetGroup(preferredName: String? = nil) -> String {
-        let key = "ss\(UUID().uuidString)"
-        let letter = nextSupersetLetter()
-        
-        // Infer name from previous formatGroupKey if building tri-sets
-        let defaultName: String = {
-            if let prevKey = formatGroupKey, let prevGroup = groups[prevKey] {
-                let triSetNames: Set<String> = ["Tri-set", "Tri-sets"]
-                if triSetNames.contains(prevGroup.name) {
-                    return "Tri-set"
-                }
-            }
-            return "Superset"
-        }()
-        
-        groups[key] = EditorV2Group(
-            id: key,
-            type: .superset,
-            name: preferredName ?? defaultName,
-            letter: letter,
-            config: EditorV2GroupType.superset.defaultConfig,
-            memberIDs: [],
-            structureSource: .userConfirmed
-        )
-        formatGroupKey = key
-        order.append(.group(key))
-        return key
-    }
-    
-    private func nextSupersetLetter() -> String {
-        let letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-        let usedLetters = Set(groups.values.compactMap(\.letter))
-        for letter in letters {
-            let str = String(letter)
-            if !usedLetters.contains(str) {
-                return str
-            }
-        }
-        return "A"
+        _ = apply(.beginNextSupersetGroup(preferredName: preferredName))
+        return formatGroupKey ?? "fmt"
     }
     
     mutating func updateGroup(_ key: String, patch: (inout EditorV2Group) -> Void) {
