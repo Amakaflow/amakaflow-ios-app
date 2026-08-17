@@ -121,7 +121,9 @@ __pycache__/
 *.pyc
 ama2375-*.png
 
-# XCTest artifacts — never commit test results or xcresult bundles
-TestResults/
+# XCTest artifacts — never commit test results or xcresult bundles.
+# "TestResults" without a slash also covers the plain summary FILE the
+# just recipes drop next to the bundle.
+TestResults
 TestResults.xcresult/
 *.xcresult/

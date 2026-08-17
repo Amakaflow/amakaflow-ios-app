@@ -177,6 +177,7 @@
 		MANCRFAVROWBLD /* WorkoutTypeFavoritesRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = MANCRFAVROWREF /* WorkoutTypeFavoritesRow.swift */; };
 		AMA2304SHEETBLD /* WorkoutTypeMatchSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2304SHEETREF /* WorkoutTypeMatchSheet.swift */; };
 		AMA2304EV2SBLD /* EditorV2View+Sheets.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2304EV2SREF /* EditorV2View+Sheets.swift */; };
+		AMA2443COACHBLD /* EditorV2CoachSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2443COACHREF /* EditorV2CoachSheet.swift */; };
 		MANCRAIPROMPTBLD /* CreateWithAIPromptView.swift in Sources */ = {isa = PBXBuildFile; fileRef = MANCRAIPROMPTREF /* CreateWithAIPromptView.swift */; };
 		AMA2373COPYBLD /* CreateWithAICopy.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2373COPYREF /* CreateWithAICopy.swift */; };
 		AMA2373PRESBLD /* CreateWithAIDraftPresentation.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2373PRESREF /* CreateWithAIDraftPresentation.swift */; };
@@ -1001,6 +1002,7 @@
 		MANCRFAVROWREF /* WorkoutTypeFavoritesRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutTypeFavoritesRow.swift; path = ../AmakaFlow/Views/EditorV2/WorkoutTypeFavoritesRow.swift; sourceTree = SOURCE_ROOT; };
 		AMA2304SHEETREF /* WorkoutTypeMatchSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutTypeMatchSheet.swift; path = ../AmakaFlow/Views/EditorV2/WorkoutTypeMatchSheet.swift; sourceTree = SOURCE_ROOT; };
 		AMA2304EV2SREF /* EditorV2View+Sheets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "EditorV2View+Sheets.swift"; path = "../AmakaFlow/Views/EditorV2/EditorV2View+Sheets.swift"; sourceTree = SOURCE_ROOT; };
+		AMA2443COACHREF /* EditorV2CoachSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = EditorV2CoachSheet.swift; path = ../AmakaFlow/Views/EditorV2/EditorV2CoachSheet.swift; sourceTree = SOURCE_ROOT; };
 		MANCRAIPROMPTREF /* CreateWithAIPromptView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CreateWithAIPromptView.swift; path = ../AmakaFlow/Views/CreateWithAIPromptView.swift; sourceTree = SOURCE_ROOT; };
 		AMA2373COPYREF /* CreateWithAICopy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CreateWithAICopy.swift; path = ../AmakaFlow/Models/CreateWithAICopy.swift; sourceTree = SOURCE_ROOT; };
 		AMA2373PRESREF /* CreateWithAIDraftPresentation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CreateWithAIDraftPresentation.swift; path = ../AmakaFlow/Models/CreateWithAIDraftPresentation.swift; sourceTree = SOURCE_ROOT; };
@@ -2434,6 +2436,7 @@
 				MANCRFAVROWREF /* WorkoutTypeFavoritesRow.swift */,
 				AMA2304SHEETREF /* WorkoutTypeMatchSheet.swift */,
 				AMA2304EV2SREF /* EditorV2View+Sheets.swift */,
+				AMA2443COACHREF /* EditorV2CoachSheet.swift */,
 				AK00FIX014A /* ProgramDetailView.swift */,
 				AK00FIX015A /* ProgramsListView.swift */,
 				AK00FIX016A /* CalendarSyncView.swift */,
@@ -3187,6 +3190,7 @@
 				MANCRFAVROWBLD /* WorkoutTypeFavoritesRow.swift in Sources */,
 				AMA2304SHEETBLD /* WorkoutTypeMatchSheet.swift in Sources */,
 				AMA2304EV2SBLD /* EditorV2View+Sheets.swift in Sources */,
+				AMA2443COACHBLD /* EditorV2CoachSheet.swift in Sources */,
 				AMA2305VMXBLD /* SocialImportViewModel+StructureClarify.swift in Sources */,
 				AMA2308VMXBLD /* SocialImportViewModel+Failure.swift in Sources */,
 				AMA2305VWBLD /* StructureClarifyView.swift in Sources */,

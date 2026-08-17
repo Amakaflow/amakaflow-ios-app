@@ -130,20 +130,26 @@ enum BuilderV3ExerciseLibrary {
         ("Bike", "stationary_bike"), ("Stairs", "stair_climber")
     ]
 
-    private static let equipmentLabels: [String: String] = [
-        "barbell": "Barbell",
-        "dumbbells": "Dumbbells",
-        "kettlebells": "Kettlebell",
-        "cable": "Cable",
-        "machine": "Machine",
-        "bodyweight": "Bodyweight",
-        "ski_erg": "Ski Erg",
-        "treadmill": "Treadmill",
-        "rowing_machine": "Rower",
-        "assault_bike": "Assault bike",
-        "stationary_bike": "Stationary bike",
-        "stair_climber": "Stair climber"
+    /// Single source for the picker's promoted equipment chips, in display
+    /// order. `equipmentLabels` is derived from this — add new equipment here
+    /// and both the labels and the promoted row stay in sync.
+    static let promotedEquipment: [(key: String, label: String)] = [
+        ("barbell", "Barbell"),
+        ("dumbbells", "Dumbbells"),
+        ("kettlebells", "Kettlebell"),
+        ("cable", "Cable"),
+        ("machine", "Machine"),
+        ("bodyweight", "Bodyweight"),
+        ("ski_erg", "Ski Erg"),
+        ("treadmill", "Treadmill"),
+        ("rowing_machine", "Rower"),
+        ("assault_bike", "Assault bike"),
+        ("stationary_bike", "Stationary bike"),
+        ("stair_climber", "Stair climber")
     ]
+
+    private static let equipmentLabels: [String: String] =
+        Dictionary(uniqueKeysWithValues: promotedEquipment)
 
     nonisolated static func equipmentFilterLabel(_ key: String) -> String {
         equipmentLabels[key] ?? key.capitalized

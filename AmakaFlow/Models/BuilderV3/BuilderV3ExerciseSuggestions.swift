@@ -89,14 +89,18 @@ enum BuilderV3ExerciseSuggestions {
             }
         }
         
-        // Check for close Levenshtein distance (≤2 edits for queries >4 chars)
+        // Check for close Levenshtein distance (≤2 edits for queries >4 chars).
+        // Track the minimum so the CLOSEST catalog name wins, not the first
+        // within tolerance in catalog order.
         if needle.count > 4 {
+            var best: (name: String, distance: Int)?
             for (originalName, norm) in normalized {
                 let distance = levenshteinDistance(needle, norm)
-                if distance <= 2 {
-                    return originalName
+                if distance <= 2, distance < (best?.distance ?? Int.max) {
+                    best = (originalName, distance)
                 }
             }
+            if let best { return best.name }
         }
         
         return nil

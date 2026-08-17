@@ -398,10 +398,7 @@ extension BuilderV3ExercisePickerSheet {
     
     @ViewBuilder
     private var promotedEquipmentChips: some View {
-        let promotedKeys = ["barbell", "dumbbells", "kettlebells", "cable", "machine", "bodyweight", "ski_erg", "treadmill", "rowing_machine", "assault_bike", "stationary_bike", "stair_climber"]
-        let labels = promotedKeys.map { key in
-            (key: key, label: BuilderV3ExerciseLibrary.equipmentFilterLabel(key))
-        }
+        let labels = BuilderV3ExerciseLibrary.promotedEquipment
         EditorV2FlowWrap {
             ForEach(labels.indices, id: \.self) { index in
                 let chip = labels[index]

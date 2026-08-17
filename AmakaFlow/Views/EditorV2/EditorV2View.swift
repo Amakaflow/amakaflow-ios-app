@@ -190,13 +190,9 @@ struct EditorV2View: View {
         .sheet(isPresented: $addSheetOpen) { addSheet }
         .sheet(isPresented: $isMatchSheetPresented) { workoutTypeMatchSheet }
         .sheet(isPresented: $showCoachSheet) {
-            CoachChatView()
-                .environmentObject(CoachSessionStore())
-                .onAppear {
-                    // Send the prefilled query if available
-                    // For now, just present the coach; full integration would
-                    // require accessing the store and calling sendMessage
-                }
+            EditorV2CoachSheet(prefillQuery: coachPrefillQuery) {
+                coachPrefillQuery = nil
+            }
         }
         .alert("Change workout type?", isPresented: $showBuilderV3ChangeTypeConfirm) {
             Button("Keep editing", role: .cancel) {}

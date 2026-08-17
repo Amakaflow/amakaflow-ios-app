@@ -103,6 +103,23 @@ final class BuilderV3ExerciseSuggestionsTests: XCTestCase {
         XCTAssertNil(result, "Exact match should return nil")
     }
     
+    func testDidYouMean_picksClosestMatch_notFirstWithinTolerance() {
+        // "Blanks" (distance 2) comes before "Planks" (distance 1) in catalog
+        // order; the closest name must win regardless of order.
+        let catalog = [
+            BuilderV3ExerciseItem(
+                id: "a", name: "Blanks", muscle: "Core",
+                equipmentKey: nil, equipmentLabel: "Bodyweight"
+            ),
+            BuilderV3ExerciseItem(
+                id: "b", name: "Planks", muscle: "Core",
+                equipmentKey: nil, equipmentLabel: "Bodyweight"
+            )
+        ]
+        let result = BuilderV3ExerciseSuggestions.didYouMean(query: "plank", catalog: catalog)
+        XCTAssertEqual(result, "Planks", "Closest match should win, not catalog order")
+    }
+
     func testDidYouMean_emptyQuery_returnsNil() {
         let catalog = BuilderV3ExerciseLibrary.demo
         let result = BuilderV3ExerciseSuggestions.didYouMean(query: "", catalog: catalog)

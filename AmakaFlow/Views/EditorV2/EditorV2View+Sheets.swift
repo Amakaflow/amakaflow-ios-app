@@ -485,7 +485,6 @@ struct ConfigGroupItem: Identifiable {
     let id: String
     let group: EditorV2Group
 }
-
 #if DEBUG
 #Preview("Editor v2 edit") {
     EditorV2View(mode: .edit)
