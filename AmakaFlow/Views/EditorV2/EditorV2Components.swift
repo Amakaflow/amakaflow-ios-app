@@ -379,3 +379,79 @@ struct EditorV2FlowWrap: Layout {
         }
     }
 }
+
+/// AMA-2443 slice 4 — "＋ Add a block" for a canvas that already has work on it.
+///
+/// Tapping reveals the format chips inline; picking one appends a new pinned
+/// group and opens the picker into it. Deliberately does NOT offer `.addBlock`,
+/// which replaces the whole canvas — that stays on the empty state and the
+/// explicit "Change workout type?" confirm.
+///
+/// Expansion state lives here so the canvas stays a pure function of session.
+struct EditorV2AddBlockButton: View {
+    var onSelect: (EditorV2GroupType) -> Void
+    @State private var isExpanded = false
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Button {
+                withAnimation(.easeOut(duration: 0.18)) { isExpanded.toggle() }
+            } label: {
+                Text(isExpanded ? "Cancel" : "＋ Add a block")
+                    .ddDisplayText(12.5, weight: .bold)
+                    .foregroundColor(DailyDriver.foregroundMuted)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 11)
+                    .background(DailyDriver.card2)
+                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .stroke(DailyDriver.foregroundDim.opacity(0.3), lineWidth: 1)
+                    )
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("editor_v2_add_a_block")
+
+            if isExpanded {
+                EditorV2FormatChipRow(idPrefix: "editor_v2_add_block_chip") { type in
+                    isExpanded = false
+                    onSelect(type)
+                }
+                .padding(.top, 10)
+            }
+        }
+        .padding(.bottom, 8)
+    }
+}
+
+/// The format-chip row, shared by the empty state and "＋ Add a block" so a
+/// design tweak can't leave two visibly different chip rows on one screen.
+///
+/// `.superset` is intentionally absent: you don't *start* a superset, you make
+/// one by pairing rows (⋯) or via the "Runs as" switcher — which is what
+/// `runsAsOptions` is for.
+struct EditorV2FormatChipRow: View {
+    var idPrefix: String
+    var onSelect: (EditorV2GroupType) -> Void
+
+    var body: some View {
+        EditorV2FlowWrap {
+            ForEach(EditorV2GroupType.formatChips, id: \.self) { type in
+                Button { onSelect(type) } label: {
+                    Text(type.label)
+                        .ddDisplayText(12, weight: .bold)
+                        .foregroundColor(DailyDriver.foreground)
+                        .padding(.horizontal, 13)
+                        .padding(.vertical, 8)
+                        .background(DailyDriver.card2)
+                        .clipShape(Capsule())
+                        .overlay(
+                            Capsule().stroke(type.accentColor.opacity(0.45), lineWidth: 1)
+                        )
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("\(idPrefix)_\(type.rawValue)")
+            }
+        }
+    }
+}

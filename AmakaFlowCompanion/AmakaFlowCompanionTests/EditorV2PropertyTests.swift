@@ -125,7 +125,10 @@ final class EditorV2PropertyTests: XCTestCase {
     }
 
     private func randomCommand(session: EditorV2Session, rng: inout SeededRNG) -> EditorCommand {
-        let commandTypes: [Int] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+        // 13 = AMA-2443 slice 4 beginFormatGroup — appends a pinned empty group,
+        // the one command that legitimately leaves an empty group behind (I2
+        // exempts the pin), so the invariant sweep must exercise it.
+        let commandTypes: [Int] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]
         let choice = commandTypes.randomElement(using: &rng)!
         
         switch choice {
@@ -247,6 +250,16 @@ final class EditorV2PropertyTests: XCTestCase {
             }
             return .addExercises(names: ["Test"], into: nil)
             
+        case 13:
+            // beginFormatGroup — append + pin a new empty format group
+            // runsAsOptions = [.superset] + formatChips — every type the UI can
+            // pin, incl. For time. Superset matters most: it is the only branch
+            // that takes a letter.
+            return .beginFormatGroup(
+                type: EditorV2GroupType.runsAsOptions.randomElement(using: &rng)!,
+                preferredName: nil
+            )
+
         default:
             return .addExercises(names: ["Default"], into: nil)
         }

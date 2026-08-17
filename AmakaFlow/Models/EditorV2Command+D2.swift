@@ -540,12 +540,24 @@ extension EditorV2Session {
             enrichmentTombstonesDirty = true
             return .applied
             
-        case .beginNextSupersetGroup(let preferredName):
-            let key = "ss\(UUID().uuidString)"
-            let letter = nextSupersetLetter()
-            
-            // Infer name from previous formatGroupKey if building tri-sets
+        case .beginFormatGroup(let type, let preferredName):
+            // Warm-up / cool-down are enrichment sections owned by
+            // quickAddSoftSection (which PREPENDS and sets enrichmentKind).
+            // Minting one here would make hasWarmupSection read true for a
+            // group removeSoftSection would later delete wholesale, taking its
+            // exercises with it. Sibling soft-section commands guard the
+            // inverse; this is that guard's other half.
+            guard !type.isSoftSection else { return .rejected(.invalidState) }
+
+            let key = "fg\(UUID().uuidString)"
+            // Letters belong to the superset ladder only (A/B/C → tri-set,
+            // giant set). Handing one to an EMOM would consume from that pool
+            // and render a letter the format has no use for.
+            let letter = type == .superset ? nextSupersetLetter() : nil
+
             let defaultName: String = {
+                guard type == .superset else { return type.label }
+                // Infer from previous formatGroupKey if building tri-sets
                 if let prevKey = formatGroupKey, let prevGroup = groups[prevKey] {
                     let triSetNames: Set<String> = ["Tri-set", "Tri-sets"]
                     if triSetNames.contains(prevGroup.name) {
@@ -554,13 +566,13 @@ extension EditorV2Session {
                 }
                 return "Superset"
             }()
-            
+
             groups[key] = EditorV2Group(
                 id: key,
-                type: .superset,
+                type: type,
                 name: preferredName ?? defaultName,
                 letter: letter,
-                config: EditorV2GroupType.superset.defaultConfig,
+                config: type.defaultConfig,
                 memberIDs: [],
                 structureSource: .userConfirmed
             )

@@ -213,6 +213,28 @@ struct EditorV2View: View {
         }
     }
 
+    /// AMA-2443 slice 4 — append a pinned block mid-workout, then open the
+    /// picker into it. One `apply()`, so one undo takes back both the block
+    /// and the pin move; nothing on the canvas is destroyed.
+    ///
+    /// The single door for every mid-workout block: the canvas "＋ Add a block"
+    /// and both picker quick-block chip rows. (Re-presenting the sheet is the
+    /// false→true toggle the picker paths already used.)
+    func beginFormatGroupAndAdd(_ type: EditorV2GroupType) {
+        addSheetOpen = false
+        // Bail rather than toasting success on a rejection — feeding a stale
+        // pin (or a sentinel key) into addTargetGroupID would land the user's
+        // moves in the wrong block.
+        guard let key = session.beginFormatGroup(type) else {
+            showToast("Couldn't add that block — try again")
+            return
+        }
+        replaceExerciseID = nil
+        addTargetGroupID = key
+        showToast("\(type.label) added — pick the moves")
+        addSheetOpen = true
+    }
+
     private var contentActions: EditorV2ContentActions {
         EditorV2ContentActions(
             onConfigGroup: { configGroupKey = $0 },
@@ -223,6 +245,7 @@ struct EditorV2View: View {
             onAdd: { replaceExerciseID = nil; addTargetGroupID = nil; addSheetOpen = true },
             onAddHere: { groupID in replaceExerciseID = nil; addTargetGroupID = groupID; addSheetOpen = true },
             onStartFormat: { type in _ = session.apply(.addBlock(type)); showToast("\(type.label) — add the moves, timing is set") },
+            onBeginFormatGroup: { type in beginFormatGroupAndAdd(type) },
             onAddWarmup: { quickAddSoftSection(.sessionWarmup) },
             onAddCooldown: { quickAddSoftSection(.cooldown) },
             onBeginNextSupersetGroup: { let key = session.beginNextSupersetGroup(); let name = session.groups[key]?.name ?? "Superset"; showToast("\(name) ready — add the next moves") }
