@@ -27,10 +27,18 @@ struct BuilderV3ExercisePickerSheet: View {
     var mode: Mode = .add
     /// Exercise names currently on the canvas (for suggestions).
     var canvasExerciseNames: [String] = []
+    /// Whether the canvas already has a warm-up section.
+    var hasWarmupSection: Bool = false
+    /// Whether the canvas already has a cool-down section.
+    var hasCooldownSection: Bool = false
     var onAddExercises: ([String]) -> Void
     var onDone: () -> Void
     /// Callback when "Ask Amaka" is tapped with the typed query.
     var onAskAmaka: ((String) -> Void)?
+    /// Callback when a format block chip is tapped (Superset, EMOM, etc).
+    var onAddBlock: ((EditorV2GroupType) -> Void)?
+    /// Callback when Warm-up or Cool-down chip is tapped.
+    var onQuickAddSoftSection: ((EnrichmentKind) -> Void)?
 
     @State var query = ""
     @State var tab: Tab = .all
@@ -281,32 +289,68 @@ struct BuilderV3ExercisePickerSheet: View {
         if tab == .all, trimmedQuery.isEmpty, selectedCategory == nil, case .add = mode {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
-                    ForEach(BuilderV3SplitStarter.allCases, id: \.self) { starter in
+                    // Format chips: Superset, EMOM, AMRAP, Tabata, For time, Circuit
+                    Button {
+                        onAddBlock?(.superset)
+                        onDone()
+                    } label: {
+                        blockChipLabel("Superset")
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("builder_v3_quick_block_superset")
+                    
+                    ForEach(EditorV2GroupType.formatChips, id: \.self) { type in
                         Button {
-                            onAddExercises(starter.starterExerciseNames)
-                            selectedNames.removeAll()
-                            createdItems.removeAll()
+                            onAddBlock?(type)
                             onDone()
                         } label: {
-                            HStack(spacing: 5) {
-                                Image(systemName: "plus.circle.fill")
-                                    .font(.system(size: 11, weight: .semibold))
-                                Text(starter.label)
-                                    .font(.system(size: 11.5, weight: .semibold))
-                            }
-                            .foregroundColor(DailyDriver.ink)
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 6)
-                            .background(Capsule().fill(DailyDriver.lime))
+                            blockChipLabel(type.label)
                         }
                         .buttonStyle(.plain)
-                        .accessibilityIdentifier("builder_v3_quick_block_\(starter.rawValue)")
+                        .accessibilityIdentifier("builder_v3_quick_block_\(type.rawValue)")
+                    }
+                    
+                    // Warm-up chip (only if not already present)
+                    if !hasWarmupSection {
+                        Button {
+                            onQuickAddSoftSection?(.sessionWarmup)
+                            onDone()
+                        } label: {
+                            blockChipLabel("Warm-up")
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityIdentifier("builder_v3_quick_block_warmup")
+                    }
+                    
+                    // Cool-down chip (only if not already present)
+                    if !hasCooldownSection {
+                        Button {
+                            onQuickAddSoftSection?(.cooldown)
+                            onDone()
+                        } label: {
+                            blockChipLabel("Cool-down")
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityIdentifier("builder_v3_quick_block_cooldown")
                     }
                 }
             }
             .padding(.top, 10)
             .accessibilityIdentifier("builder_v3_quick_block_chips")
         }
+    }
+    
+    private func blockChipLabel(_ text: String) -> some View {
+        HStack(spacing: 5) {
+            Image(systemName: "plus.circle.fill")
+                .font(.system(size: 11, weight: .semibold))
+            Text(text)
+                .font(.system(size: 11.5, weight: .semibold))
+        }
+        .foregroundColor(DailyDriver.ink)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(Capsule().fill(DailyDriver.lime))
     }
 
     private var filterChips: some View {

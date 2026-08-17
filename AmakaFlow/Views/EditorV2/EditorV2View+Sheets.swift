@@ -179,6 +179,8 @@ extension EditorV2View {
                 availableEquipmentKeys: gymEquipmentKeys,
                 mode: .replace(exerciseID: replaceID, exerciseName: replaceName),
                 canvasExerciseNames: Array(session.exercises.values.map(\.name)),
+                hasWarmupSection: session.hasWarmupSection,
+                hasCooldownSection: session.hasCooldownSection,
                 onAddExercises: { names in
                     guard let name = names.first else { return }
                     _ = session.apply(.replaceExercise(replaceID, with: name))
@@ -194,6 +196,17 @@ extension EditorV2View {
                     addSheetOpen = false
                     replaceExerciseID = nil
                     presentCoachWithQuery(query)
+                },
+                onAddBlock: { type in
+                    addSheetOpen = false
+                    _ = session.apply(.addBlock(type))
+                    showToast("\(type.label) — add the moves, timing is set")
+                    // Reopen picker to continue adding into the new block
+                    addSheetOpen = true
+                },
+                onQuickAddSoftSection: { kind in
+                    addSheetOpen = false
+                    quickAddSoftSection(kind)
                 }
             )
             .presentationDetents([.large])
@@ -203,6 +216,8 @@ extension EditorV2View {
                 availableEquipmentKeys: gymEquipmentKeys,
                 mode: .add,
                 canvasExerciseNames: Array(session.exercises.values.map(\.name)),
+                hasWarmupSection: session.hasWarmupSection,
+                hasCooldownSection: session.hasCooldownSection,
                 onAddExercises: { names in
                     _ = session.apply(.addExercises(names: names, into: nil))
                     guard !names.isEmpty else { return }
@@ -222,6 +237,17 @@ extension EditorV2View {
                 onAskAmaka: { query in
                     addSheetOpen = false
                     presentCoachWithQuery(query)
+                },
+                onAddBlock: { type in
+                    addSheetOpen = false
+                    _ = session.apply(.addBlock(type))
+                    showToast("\(type.label) — add the moves, timing is set")
+                    // Reopen picker to continue adding into the new block
+                    addSheetOpen = true
+                },
+                onQuickAddSoftSection: { kind in
+                    addSheetOpen = false
+                    quickAddSoftSection(kind)
                 }
             )
             .presentationDetents([.large])

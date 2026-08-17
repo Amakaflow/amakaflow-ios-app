@@ -74,6 +74,7 @@
 		AMA2438CODECTESTBLD /* EditorV2CodecTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2438CODECTESTREF /* EditorV2CodecTests.swift */; };
 		AMA2372B3TSTBLD /* BuilderV3Tests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2372B3TSTREF /* BuilderV3Tests.swift */; };
 		AMA2443B3MODEBLD /* BuilderV3ExercisePickerModeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2443B3MODEREF /* BuilderV3ExercisePickerModeTests.swift */; };
+		AMA24432BSUGTSTBLD /* BuilderV3ExerciseSuggestionsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA24432BSUGTSTREF /* BuilderV3ExerciseSuggestionsTests.swift */; };
 		AMA2311PEDTSTBLD /* PrescriptionEditorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2311PEDTSTREF /* PrescriptionEditorTests.swift */; };
 		AMA2311PDEFTSTBLD /* PrescriptionDefaultsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2311PDEFTSTREF /* PrescriptionDefaultsTests.swift */; };
 		AMA2311PDSTSTBLD /* PrescriptionDisplayTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2311PDSTSTREF /* PrescriptionDisplayTests.swift */; };
@@ -911,6 +912,7 @@
 		AMA2438CODECTESTREF /* EditorV2CodecTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = EditorV2CodecTests.swift; path = AmakaFlowCompanionTests/EditorV2CodecTests.swift; sourceTree = "<group>"; };
 		AMA2372B3TSTREF /* BuilderV3Tests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = BuilderV3Tests.swift; path = AmakaFlowCompanionTests/BuilderV3Tests.swift; sourceTree = "<group>"; };
 		AMA2443B3MODEREF /* BuilderV3ExercisePickerModeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = BuilderV3ExercisePickerModeTests.swift; path = AmakaFlowCompanionTests/BuilderV3ExercisePickerModeTests.swift; sourceTree = "<group>"; };
+		AMA24432BSUGTSTREF /* BuilderV3ExerciseSuggestionsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = BuilderV3ExerciseSuggestionsTests.swift; path = AmakaFlowCompanionTests/BuilderV3ExerciseSuggestionsTests.swift; sourceTree = "<group>"; };
 		AMA2311PEDTSTREF /* PrescriptionEditorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PrescriptionEditorTests.swift; path = AmakaFlowCompanionTests/PrescriptionEditorTests.swift; sourceTree = "<group>"; };
 		AMA2311PDEFTSTREF /* PrescriptionDefaultsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PrescriptionDefaultsTests.swift; path = AmakaFlowCompanionTests/PrescriptionDefaultsTests.swift; sourceTree = "<group>"; };
 		AMA2311PDSTSTREF /* PrescriptionDisplayTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PrescriptionDisplayTests.swift; path = AmakaFlowCompanionTests/PrescriptionDisplayTests.swift; sourceTree = "<group>"; };
@@ -2462,6 +2464,7 @@
 				AMA2438CODECTESTREF /* EditorV2CodecTests.swift */,
 				AMA2372B3TSTREF /* BuilderV3Tests.swift */,
 				AMA2443B3MODEREF /* BuilderV3ExercisePickerModeTests.swift */,
+				AMA24432BSUGTSTREF /* BuilderV3ExerciseSuggestionsTests.swift */,
 				AMA2311PEDTSTREF /* PrescriptionEditorTests.swift */,
 				AMA2311PDEFTSTREF /* PrescriptionDefaultsTests.swift */,
 				AMA2311PDSTSTREF /* PrescriptionDisplayTests.swift */,
@@ -3531,6 +3534,7 @@
 				AMA2438CODECTESTBLD /* EditorV2CodecTests.swift in Sources */,
 				AMA2372B3TSTBLD /* BuilderV3Tests.swift in Sources */,
 				AMA2443B3MODEBLD /* BuilderV3ExercisePickerModeTests.swift in Sources */,
+				AMA24432BSUGTSTBLD /* BuilderV3ExerciseSuggestionsTests.swift in Sources */,
 				AMA2311PEDTSTBLD /* PrescriptionEditorTests.swift in Sources */,
 				AMA2311PDEFTSTBLD /* PrescriptionDefaultsTests.swift in Sources */,
 				AMA2311PDSTSTBLD /* PrescriptionDisplayTests.swift in Sources */,
