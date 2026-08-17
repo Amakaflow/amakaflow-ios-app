@@ -168,15 +168,18 @@ extension EditorV2View {
         .presentationDetents([.medium, .large])
     }
 
-    /// AMA-2372 — replace stays single-select (old sheet); adding new exercises
-    /// goes through the Hevy-style multi-select picker with gym overlay + search.
+    /// AMA-2443 slice 2 — shared picker for both add and replace. Replace is
+    /// single-select with outgoing exercise pinned. Numbers carry over.
     @ViewBuilder
     var addSheet: some View {
         if let replaceID = replaceExerciseID {
-            EditorV2AddExerciseSheet(
+            let replaceName = session.exercises[replaceID]?.name ?? "Unknown"
+            BuilderV3ExercisePickerSheet(
                 formatLabel: formatLabel,
-                replaceMode: true,
-                onAdd: { name in
+                availableEquipmentKeys: gymEquipmentKeys,
+                mode: .replace(exerciseID: replaceID, exerciseName: replaceName),
+                onAddExercises: { names in
+                    guard let name = names.first else { return }
                     _ = session.apply(.replaceExercise(replaceID, with: name))
                     replaceExerciseID = nil
                     addSheetOpen = false
@@ -192,6 +195,7 @@ extension EditorV2View {
             BuilderV3ExercisePickerSheet(
                 formatLabel: formatLabel,
                 availableEquipmentKeys: gymEquipmentKeys,
+                mode: .add,
                 onAddExercises: { names in
                     _ = session.apply(.addExercises(names: names, into: nil))
                     guard !names.isEmpty else { return }

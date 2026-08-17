@@ -14,11 +14,17 @@ struct BuilderV3ExercisePickerSheet: View {
         case all = "All"
         case recent = "Recent"
     }
+    
+    enum Mode {
+        case add
+        case replace(exerciseID: String, exerciseName: String)
+    }
 
     /// Current format label ("EMOM", "Superset", …) shown in the footer hint.
     var formatLabel: String?
     /// `nil` = no coaching profile loaded — never mark anything missing.
     var availableEquipmentKeys: Set<String>?
+    var mode: Mode = .add
     var onAddExercises: ([String]) -> Void
     var onDone: () -> Void
 
@@ -88,6 +94,9 @@ struct BuilderV3ExercisePickerSheet: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             header
+            if case .replace(_, let exerciseName) = mode {
+                outgoingExerciseRow(exerciseName)
+            }
             selectedChips
             searchField
             tabPicker
@@ -103,14 +112,37 @@ struct BuilderV3ExercisePickerSheet: View {
         .accessibilityIdentifier("builder_v3_exercise_picker_sheet")
         .task(id: loadKey) { await loadExercises() }
     }
+    
+    private func outgoingExerciseRow(_ exerciseName: String) -> some View {
+        VStack(spacing: 0) {
+            HStack(spacing: 11) {
+                Image(systemName: "arrow.right.circle.fill")
+                    .font(.system(size: 18))
+                    .foregroundColor(DailyDriver.amber)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(exerciseName)
+                        .font(.system(size: 13.5, weight: .semibold))
+                        .foregroundColor(DailyDriver.foreground)
+                    Text("OUTGOING")
+                        .font(.system(size: 8.5, weight: .medium, design: .monospaced))
+                        .foregroundColor(DailyDriver.amber)
+                }
+                Spacer()
+            }
+            .padding(.vertical, 10)
+            .padding(.bottom, 8)
+            .accessibilityIdentifier("builder_v3_outgoing_exercise")
+            Divider().background(DailyDriver.border)
+        }
+    }
 
     private var header: some View {
         HStack {
-            Text("Add exercises")
+            Text(headerTitle)
                 .ddDisplayText(18, weight: .bold)
                 .foregroundColor(DailyDriver.foreground)
             Spacer()
-            if !selectedNames.isEmpty {
+            if case .add = mode, !selectedNames.isEmpty {
                 Text("\(selectedNames.count) selected")
                     .font(.system(size: 11, weight: .semibold, design: .monospaced))
                     .foregroundColor(DailyDriver.lime)
@@ -129,11 +161,21 @@ struct BuilderV3ExercisePickerSheet: View {
         .padding(.top, 8)
         .padding(.bottom, 12)
     }
+    
+    private var headerTitle: String {
+        switch mode {
+        case .add:
+            return "Add exercises"
+        case .replace:
+            return "Replace exercise"
+        }
+    }
 
     /// Always-visible selection strip so Create / search → category-grid doesn't hide what was picked.
     @ViewBuilder
     private var selectedChips: some View {
-        if !selectedNames.isEmpty {
+        // In replace mode, hide chips (single-select shows in footer button instead)
+        if case .add = mode, !selectedNames.isEmpty {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
                     ForEach(selectedNames, id: \.self) { name in
@@ -169,12 +211,22 @@ struct BuilderV3ExercisePickerSheet: View {
     }
 
     func toggleSelection(_ name: String) {
-        if let index = selectedNames.firstIndex(where: {
-            $0.caseInsensitiveCompare(name) == .orderedSame
-        }) {
-            selectedNames.remove(at: index)
-        } else {
-            selectedNames.append(name)
+        switch mode {
+        case .add:
+            if let index = selectedNames.firstIndex(where: {
+                $0.caseInsensitiveCompare(name) == .orderedSame
+            }) {
+                selectedNames.remove(at: index)
+            } else {
+                selectedNames.append(name)
+            }
+        case .replace:
+            // Single-select: replace current selection or select if empty
+            if selectedNames.first?.caseInsensitiveCompare(name) == .orderedSame {
+                selectedNames.removeAll()
+            } else {
+                selectedNames = [name]
+            }
         }
     }
 
