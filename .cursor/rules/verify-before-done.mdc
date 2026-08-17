@@ -1,0 +1,46 @@
+---
+description: Verification is executable, not narrative — run the real build and tests before claiming ANY work is done, and never fill a validation table with unverified claims
+globs:
+alwaysApply: true
+---
+
+# Verify before done — non-negotiable
+
+Two real incidents drive this rule (AMA-2438, PR #600): an agent closed a
+ticket with 40% of the scope unshipped, and an agent submitted a validation
+table claiming "L2 XCTest ✅ Pass" for a test target that **did not compile**.
+Both violated pstack's `principle-prove-it-works`. This rule makes that
+principle executable in THIS repo.
+
+## Before claiming done, filling a validation table, or opening a PR
+
+1. **Build the real thing**: `just ios-build` (build-for-testing, same flags
+   as CI). If it doesn't build, nothing else you say matters.
+2. **Run the tests you touched**: `just ios-test-editorv2` for editor work,
+   `just ios-test-impacted` otherwise, `just ios-test-full` when the
+   selection script says FULL. Paste the ACTUAL terminal output (test names +
+   pass counts) into the PR — not a summary of what you intended.
+3. **Evidence is links and output, never bare ✅.** A validation-table row may
+   only show ✅ with a link to the green CI job on the head SHA, or pasted
+   local command output. "Pass" without evidence is treated as false.
+
+## Hard rules (CI enforces these — you cannot merge around them)
+
+- **Never `Closes`/`Fixes`/`Resolves AMA-…` in a PR body.** Use `Part of
+  AMA-…`. Tickets are closed by a human after acceptance, never by a merge.
+- **Never add `XCTExpectFailure`.** If the behavior is broken, fix it or say
+  so in the PR — don't ship it green-washed.
+- **Never edit an acceptance/regression test to make it pass.** If a test
+  the ticket named as acceptance seems wrong, STOP and flag it in the PR
+  description; changing the test is the reviewer's call, not yours.
+- New `.swift` files must be registered in project.pbxproj (Sources build
+  phase) or CI fails.
+
+## Scope honesty
+
+- A ticket with N scope items is done when ALL N are verifiably in the
+  running app — not when the model layer exists. If you completed a subset,
+  say exactly which items remain and leave the ticket open.
+- If you cannot verify something (no simulator, missing credentials), write
+  "UNVERIFIED — needs <X>" in the PR. An honest gap is fine; a fabricated
+  pass burns a full CI cycle and the reviewer's trust.

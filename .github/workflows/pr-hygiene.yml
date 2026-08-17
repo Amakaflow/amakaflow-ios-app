@@ -1,0 +1,52 @@
+# PR Hygiene — agent-integrity guards (AMA-2444).
+#
+# Enforces, where no agent can edit its way around them:
+#   - no Closes/Fixes/Resolves AMA-… in PR bodies (humans close tickets,
+#     after acceptance — AMA-2438 was auto-closed with 40% of scope unshipped)
+#   - every ✅ claim in a validation table carries evidence (a job link or a
+#     local: output reference — PR #600 claimed tests passed that didn't
+#     compile)
+#   - no ADDED XCTExpectFailure (broken behavior is fixed or flagged, not
+#     green-washed)
+#
+# Logic lives in .github/scripts/pr-hygiene.sh; its fixture corpus runs in
+# workflow-lint on every .github/** PR. `edited` is in the trigger so fixing
+# the PR body re-evaluates without a push.
+
+name: PR Hygiene
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr-hygiene-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pr-hygiene:
+    name: PR hygiene guards
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Fetch PR base for diff
+        run: git fetch --depth=1 origin "${GITHUB_BASE_REF:-main}"
+
+      - name: Run hygiene guards
+        env:
+          # Body passed via env, never interpolated into the script text —
+          # PR bodies are untrusted input (zizmor template-injection rule).
+          PR_HYGIENE_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          PR_HYGIENE_DIFF=$(git diff "origin/${GITHUB_BASE_REF:-main}" HEAD)
+          export PR_HYGIENE_DIFF
+          bash .github/scripts/pr-hygiene.sh

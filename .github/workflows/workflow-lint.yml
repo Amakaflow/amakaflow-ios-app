@@ -25,6 +25,9 @@ jobs:
           persist-credentials: false
       - name: Run affected-tests selection corpus
         run: bash .github/scripts/tests/affected-tests-ios-corpus.sh
+      # AMA-2444: same guard for the PR-hygiene script.
+      - name: Run pr-hygiene corpus
+        run: bash .github/scripts/tests/pr-hygiene-corpus.sh
 
   actionlint:
     runs-on: ubuntu-latest
