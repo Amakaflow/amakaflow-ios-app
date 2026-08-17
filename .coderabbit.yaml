@@ -127,10 +127,14 @@ reviews:
         exact number where a constant is tunable.
 
   finishing_touches:
-    # AMA-2439: autofix stays OFF — it caused agent ping-pong (same as
-    # amakaflow-docs #74). Do not re-enable without a plan for the loop.
+    # AMA-2439 disabled autofix because TWO agents were fixing each other's
+    # fixes. Both partners are now gone: the Cursor "CodeRabbit autofix
+    # (no ping-pong)" automation stopped running after PR #561, and the
+    # Claude auto-fix workflow is deleted in this PR. With a single fixer a
+    # loop cannot form, and `auto_pause_after_reviewed_commits: 2` above is
+    # the brake if one somehow starts.
     autofix:
-      enabled: false
+      enabled: true
     simplify:
       enabled: true
     docstrings:
