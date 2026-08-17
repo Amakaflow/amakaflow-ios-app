@@ -28,6 +28,9 @@ jobs:
       # AMA-2444: same guard for the PR-hygiene script.
       - name: Run pr-hygiene corpus
         run: bash .github/scripts/tests/pr-hygiene-corpus.sh
+      # AMA-2445: same guard for the app-changed build trigger.
+      - name: Run app-changed corpus
+        run: bash .github/scripts/tests/app-changed-ios-corpus.sh
 
   actionlint:
     runs-on: ubuntu-latest
