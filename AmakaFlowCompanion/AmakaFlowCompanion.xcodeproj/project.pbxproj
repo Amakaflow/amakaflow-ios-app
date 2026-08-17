@@ -104,6 +104,7 @@
 		997164A8636AF31DED75ACE1 /* CoachViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F87085CB2DDF9255246439F /* CoachViewModel.swift */; };
 		9D0C3D8A603340BC8364F188 /* PreWorkoutDeviceSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3910753486A542ECAA1E5971 /* PreWorkoutDeviceSheet.swift */; };
 		A1780B8C38BE4F00BB0C26DE /* ErrorToast.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5EF3E8A935E42BBA7096B32 /* ErrorToast.swift */; };
+		AMA2443STAGGERBLD /* StaggeredReveal.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2443STAGGERREF /* StaggeredReveal.swift */; };
 		AMA2383MOTOKBLD /* MotionTokens.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2383MOTOKREF /* MotionTokens.swift */; };
 		AMA2383TOASTBLD /* DDToast.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2383TOASTREF /* DDToast.swift */; };
 		AMA2383BUILDBLD /* BuildReveal.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2383BUILDREF /* BuildReveal.swift */; };
@@ -1503,6 +1504,7 @@
 		D3P3ND1NJ3CT10N0005 /* APIServiceProviding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = APIServiceProviding.swift; path = ../AmakaFlow/DependencyInjection/APIServiceProviding.swift; sourceTree = SOURCE_ROOT; };
 		D3P3ND1NJ3CT10N0006 /* WatchSessionProviding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WatchSessionProviding.swift; path = ../AmakaFlow/DependencyInjection/WatchSessionProviding.swift; sourceTree = SOURCE_ROOT; };
 		D5EF3E8A935E42BBA7096B32 /* ErrorToast.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ErrorToast.swift; path = ../AmakaFlow/Views/Components/ErrorToast.swift; sourceTree = SOURCE_ROOT; };
+		AMA2443STAGGERREF /* StaggeredReveal.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = StaggeredReveal.swift; path = ../AmakaFlow/Motion/StaggeredReveal.swift; sourceTree = SOURCE_ROOT; };
 		AMA2383MOTOKREF /* MotionTokens.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = MotionTokens.swift; path = ../AmakaFlow/Motion/MotionTokens.swift; sourceTree = SOURCE_ROOT; };
 		AMA2383TOASTREF /* DDToast.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DDToast.swift; path = ../AmakaFlow/Motion/DDToast.swift; sourceTree = SOURCE_ROOT; };
 		AMA2383BUILDREF /* BuildReveal.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = BuildReveal.swift; path = ../AmakaFlow/Motion/BuildReveal.swift; sourceTree = SOURCE_ROOT; };
@@ -1884,6 +1886,7 @@
 				0DDF14FDAE6346A5831A6B37 /* WorkoutCompletionView.swift */,
 				BC16168084DD4307BA295F94 /* CTAError.swift */,
 				D5EF3E8A935E42BBA7096B32 /* ErrorToast.swift */,
+				AMA2443STAGGERREF /* StaggeredReveal.swift */,
 				AMA2383MOTOKREF /* MotionTokens.swift */,
 				AMA2383TOASTREF /* DDToast.swift */,
 				AMA2383BUILDREF /* BuildReveal.swift */,
@@ -3509,6 +3512,7 @@
 				A472B5FFC8CB61D805621A61 /* EditProfileView.swift in Sources */,
 				C0EE9007F3C8491C99D133C1 /* CTAError.swift in Sources */,
 				A1780B8C38BE4F00BB0C26DE /* ErrorToast.swift in Sources */,
+				AMA2443STAGGERBLD /* StaggeredReveal.swift in Sources */,
 				AMA2383MOTOKBLD /* MotionTokens.swift in Sources */,
 				AMA2383TOASTBLD /* DDToast.swift in Sources */,
 				AMA2383BUILDBLD /* BuildReveal.swift in Sources */,

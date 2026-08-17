@@ -37,6 +37,26 @@ enum MotionTokens {
     /// CTA color settle after done.
     static let ctaColorSettle: Double = 0.350
 
+    // MARK: List reveal (AMA-2443 slice 6)
+
+    /// Per-row entrance stagger — 55ms/row (`screens-exsearch.jsx` header).
+    static let rowStagger: Double = 0.055
+
+    /// Only the rows on screen at open are staggered.
+    ///
+    /// Two reasons, both load-bearing. Uncapped, row 60 of a search result would
+    /// wait 3.3s to appear. And rows past the first screenful are realized lazily
+    /// during scrolling, so animating them would fire an entrance mid-scroll on
+    /// content the athlete is already looking at. Beyond this index the reveal is
+    /// off entirely, not merely instant.
+    static let maxStaggeredRows = 8
+
+    /// Entrance delay for the row at `index`, or nil when it should not animate.
+    static func staggerDelay(index: Int) -> Double? {
+        guard index >= 0, index < maxStaggeredRows else { return nil }
+        return Double(index) * rowStagger
+    }
+
     // MARK: Toast
 
     static let toastIn: Double = 0.320

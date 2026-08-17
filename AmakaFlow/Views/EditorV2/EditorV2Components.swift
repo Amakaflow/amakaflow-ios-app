@@ -395,7 +395,9 @@ struct EditorV2AddBlockButton: View {
     var body: some View {
         VStack(spacing: 0) {
             Button {
-                withAnimation(.easeOut(duration: 0.18)) { isExpanded.toggle() }
+                withAnimation(MotionTokens.easeOutQuart(duration: MotionTokens.fast)) {
+                    isExpanded.toggle()
+                }
             } label: {
                 Text(isExpanded ? "Cancel" : "＋ Add a block")
                     .ddDisplayText(12.5, weight: .bold)

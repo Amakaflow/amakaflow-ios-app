@@ -222,12 +222,33 @@ struct BuilderV3ExercisePickerSheet: View {
                         }
                         .buttonStyle(.plain)
                         .accessibilityIdentifier("builder_v3_selected_chip_\(name)")
+                        // Chip lands from the row it was picked in, and leaves
+                        // by shrinking back rather than blinking out.
+                        .transition(
+                            .scale(scale: 0.7).combined(with: .opacity)
+                        )
                     }
                 }
             }
             .padding(.bottom, 10)
             .accessibilityIdentifier("builder_v3_selected_chips")
+            .transition(.move(edge: .top).combined(with: .opacity))
         }
+    }
+
+    /// Re-arms the row entrance whenever the list's content changes.
+    ///
+    /// Derived rather than bumped by hand at each call site — a new filter added
+    /// later joins the signature here, instead of silently animating nothing.
+    var revealGeneration: Int {
+        var hasher = Hasher()
+        hasher.combine(trimmedQuery)
+        hasher.combine(tab)
+        hasher.combine(selectedCategory?.id)
+        hasher.combine(muscleFilter)
+        hasher.combine(equipmentFilter)
+        hasher.combine(filteredItems.count)
+        return hasher.finalize()
     }
 
     func isSelected(_ name: String) -> Bool {
@@ -235,21 +256,23 @@ struct BuilderV3ExercisePickerSheet: View {
     }
 
     func toggleSelection(_ name: String) {
-        switch mode {
-        case .add:
-            if let index = selectedNames.firstIndex(where: {
-                $0.caseInsensitiveCompare(name) == .orderedSame
-            }) {
-                selectedNames.remove(at: index)
-            } else {
-                selectedNames.append(name)
-            }
-        case .replace:
-            // Single-select: replace current selection or select if empty
-            if selectedNames.first?.caseInsensitiveCompare(name) == .orderedSame {
-                selectedNames.removeAll()
-            } else {
-                selectedNames = [name]
+        withAnimation(MotionTokens.spring) {
+            switch mode {
+            case .add:
+                if let index = selectedNames.firstIndex(where: {
+                    $0.caseInsensitiveCompare(name) == .orderedSame
+                }) {
+                    selectedNames.remove(at: index)
+                } else {
+                    selectedNames.append(name)
+                }
+            case .replace:
+                // Single-select: replace current selection or select if empty
+                if selectedNames.first?.caseInsensitiveCompare(name) == .orderedSame {
+                    selectedNames.removeAll()
+                } else {
+                    selectedNames = [name]
+                }
             }
         }
     }

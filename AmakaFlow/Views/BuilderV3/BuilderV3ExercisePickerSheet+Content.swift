@@ -17,9 +17,11 @@ extension BuilderV3ExercisePickerSheet {
                         suggestedSection
                     }
                     categoryGrid
+                        .drillInTransition()
                 } else {
                     if tab == .all, trimmedQuery.isEmpty, let selectedCategory {
                         categoryHeader(selectedCategory)
+                            .drillInTransition()
                     }
 
                     if isLoading {
@@ -28,8 +30,9 @@ extension BuilderV3ExercisePickerSheet {
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 28)
                     } else {
-                        ForEach(filteredItems) { item in
+                        ForEach(Array(filteredItems.enumerated()), id: \.element.id) { index, item in
                             exerciseRow(item)
+                                .staggeredReveal(index: index, generation: revealGeneration)
                                 .onAppear {
                                     guard item.id == filteredItems.last?.id else { return }
                                     Task { await loadNextPage() }
@@ -135,7 +138,7 @@ extension BuilderV3ExercisePickerSheet {
                 columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)],
                 spacing: 8
             ) {
-                ForEach(suggestedExercises) { item in
+                ForEach(Array(suggestedExercises.enumerated()), id: \.element.id) { index, item in
                     Button {
                         toggleSelection(item.name)
                     } label: {
@@ -160,6 +163,7 @@ extension BuilderV3ExercisePickerSheet {
                     }
                     .buttonStyle(.plain)
                     .accessibilityIdentifier("builder_v3_suggested_\(item.name)")
+                    .staggeredReveal(index: index, generation: revealGeneration)
                 }
             }
         }
@@ -198,9 +202,11 @@ extension BuilderV3ExercisePickerSheet {
         ) {
             ForEach(BuilderV3BrowseCategory.allCases) { category in
                 Button {
-                    selectedCategory = category
-                    muscleFilter = nil
-                    equipmentFilter = nil
+                    withAnimation(MotionTokens.easeOutQuart(duration: MotionTokens.base)) {
+                        selectedCategory = category
+                        muscleFilter = nil
+                        equipmentFilter = nil
+                    }
                 } label: {
                     VStack(alignment: .leading, spacing: 10) {
                         Image(systemName: category.systemImage)
@@ -224,10 +230,12 @@ extension BuilderV3ExercisePickerSheet {
 
     func categoryHeader(_ category: BuilderV3BrowseCategory) -> some View {
         Button {
-            selectedCategory = nil
-            muscleFilter = nil
-            equipmentFilter = nil
-            fetchMode = nil
+            withAnimation(MotionTokens.easeOutQuart(duration: MotionTokens.base)) {
+                selectedCategory = nil
+                muscleFilter = nil
+                equipmentFilter = nil
+                fetchMode = nil
+            }
         } label: {
             HStack(spacing: 6) {
                 Image(systemName: "chevron.left")
