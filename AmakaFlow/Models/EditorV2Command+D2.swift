@@ -88,10 +88,53 @@ extension EditorV2Session {
             return .applied
             
         case .updatePrescription(let id, let updated):
-            guard exercises[id] != nil else {
+            // Deprecated: Reimplemented as field-diff to prevent whole-object clobber.
+            // New code should use field-level commands directly.
+            guard let current = exercises[id] else {
                 return .rejected(.exerciseNotFound)
             }
-            exercises[id] = updated
+            
+            // Apply only changed fields via field-level commands
+            if updated.sets != current.sets {
+                let result = applyD2(.setExerciseSets(id, updated.sets))
+                if result != .applied { return result }
+            }
+            if updated.reps != current.reps {
+                let result = applyD2(.setExerciseReps(id, updated.reps))
+                if result != .applied { return result }
+            }
+            if updated.repsRange != current.repsRange {
+                let result = applyD2(.setExerciseRepsRange(id, updated.repsRange))
+                if result != .applied { return result }
+            }
+            if updated.durationSeconds != current.durationSeconds {
+                let result = applyD2(.setExerciseDuration(id, updated.durationSeconds))
+                if result != .applied { return result }
+            }
+            if updated.distanceMeters != current.distanceMeters {
+                let result = applyD2(.setExerciseDistance(id, updated.distanceMeters))
+                if result != .applied { return result }
+            }
+            if updated.weightKg != current.weightKg {
+                let result = applyD2(.setExerciseWeight(id, updated.weightKg))
+                if result != .applied { return result }
+            }
+            if updated.isBodyweight != current.isBodyweight {
+                let result = applyD2(.setExerciseBodyweight(id, updated.isBodyweight))
+                if result != .applied { return result }
+            }
+            if updated.restSeconds != current.restSeconds {
+                let result = applyD2(.setExerciseRest(id, updated.restSeconds))
+                if result != .applied { return result }
+            }
+            if updated.calories != current.calories {
+                let result = applyD2(.setExerciseCalories(id, updated.calories))
+                if result != .applied { return result }
+            }
+            if updated.openGoal != current.openGoal {
+                let result = applyD2(.setExerciseOpenGoal(id, updated.openGoal))
+                if result != .applied { return result }
+            }
             return .applied
             
         case .pairSuperset(let sourceID, let targetID):
@@ -368,6 +411,7 @@ extension EditorV2Session {
             guard var exercise = exercises[id] else {
                 return .rejected(.exerciseNotFound)
             }
+            // Intentional: sets can be nil. No validator opinion on a sets-less rep exercise.
             exercise.sets = sets
             exercises[id] = exercise
             return .applied

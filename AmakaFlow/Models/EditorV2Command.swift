@@ -11,6 +11,8 @@ enum EditorCommand: Equatable, Sendable {
     case addExercises(names: [String], into: String?)
     case removeExercise(String)
     case replaceExercise(String, with: String)
+    /// Deprecated: Use field-level commands (setExerciseSets, setExerciseReps, etc.) instead.
+    /// This command is reimplemented as a diff to prevent stale-sheet clobber.
     case updatePrescription(String, EditorV2Exercise)
     case setExerciseSets(String, Int?)
     case setExerciseReps(String, Int?)

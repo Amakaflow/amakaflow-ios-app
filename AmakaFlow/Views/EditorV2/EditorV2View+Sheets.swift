@@ -86,7 +86,7 @@ extension EditorV2View {
 
     func editSheet(_ exercise: EditorV2Exercise) -> some View {
         EditorV2EditSheet(exercise: exercise) { updated in
-            _ = session.apply(.updatePrescription(updated.id, updated))
+            session.commitSheetEdit(exerciseID: updated.id, sheetDraft: updated)
             editExerciseID = nil
         }
         // Tall form (Load + Between moves) — medium clipped the title under the grabber.

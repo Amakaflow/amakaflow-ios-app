@@ -140,6 +140,77 @@ final class EditorV2CommandTests: XCTestCase {
         XCTAssertEqual(session.exercises[ex1.id]?.reps, 12)
     }
     
+    func testSheetCommitSeam_diffBasedCommit() {
+        // Test at the sheet-commit seam (the actual code path EditorV2View uses)
+        var session = EditorV2Session()
+        let ex1 = EditorV2Exercise(name: "Bench", sets: 3, reps: 10, weightKg: 100, restSeconds: 60)
+        session.exercises = [ex1.id: ex1]
+        session.order = [.loose(ex1.id)]
+        
+        // Simulate: user opens sheet (captures stale state), then background addSet runs
+        var sheetDraft = ex1
+        _ = session.apply(.addSet(ex1.id))
+        XCTAssertEqual(session.exercises[ex1.id]?.sets, 4)
+        
+        // User edits reps and weight in the sheet
+        sheetDraft.reps = 12
+        sheetDraft.weightKg = 105
+        
+        // Commit via the actual sheet seam (diff-based)
+        session.commitSheetEdit(exerciseID: ex1.id, sheetDraft: sheetDraft)
+        
+        // Sets should still be 4 (not clobbered), and user changes applied
+        XCTAssertEqual(session.exercises[ex1.id]?.sets, 4)
+        XCTAssertEqual(session.exercises[ex1.id]?.reps, 12)
+        XCTAssertEqual(session.exercises[ex1.id]?.weightKg, 105)
+        XCTAssertEqual(session.exercises[ex1.id]?.restSeconds, 60)
+    }
+    
+    func testSheetCommitSeam_exerciseDeletedWhileOpen() {
+        // Exercise deleted while sheet is open - commit should be a no-op
+        var session = EditorV2Session()
+        let ex1 = EditorV2Exercise(name: "Squat", sets: 3, reps: 10)
+        session.exercises = [ex1.id: ex1]
+        session.order = [.loose(ex1.id)]
+        
+        var sheetDraft = ex1
+        
+        // Exercise deleted while sheet was open
+        _ = session.apply(.removeExercise(ex1.id))
+        XCTAssertNil(session.exercises[ex1.id])
+        
+        // Sheet commit should be a no-op
+        sheetDraft.reps = 15
+        session.commitSheetEdit(exerciseID: ex1.id, sheetDraft: sheetDraft)
+        
+        // Exercise still deleted
+        XCTAssertNil(session.exercises[ex1.id])
+    }
+    
+    func testUpdatePrescription_nowDiffBased() {
+        // updatePrescription is deprecated but reimplemented as diff to prevent clobber
+        var session = EditorV2Session()
+        let ex1 = EditorV2Exercise(name: "Press", sets: 3, reps: 10, weightKg: 60)
+        session.exercises = [ex1.id: ex1]
+        session.order = [.loose(ex1.id)]
+        
+        // Capture stale state
+        var stale = ex1
+        
+        // Background modification
+        _ = session.apply(.addSet(ex1.id))
+        XCTAssertEqual(session.exercises[ex1.id]?.sets, 4)
+        
+        // Old code path: updatePrescription with stale state
+        stale.reps = 8
+        _ = session.apply(.updatePrescription(ex1.id, stale))
+        
+        // Sets should still be 4 (diff-based reimplementation prevents clobber)
+        XCTAssertEqual(session.exercises[ex1.id]?.sets, 4)
+        XCTAssertEqual(session.exercises[ex1.id]?.reps, 8)
+        XCTAssertEqual(session.exercises[ex1.id]?.weightKg, 60)
+    }
+    
     // MARK: - Field-level mutation command tests
     
     func testSetExerciseSets_updatesSetsOnly() {

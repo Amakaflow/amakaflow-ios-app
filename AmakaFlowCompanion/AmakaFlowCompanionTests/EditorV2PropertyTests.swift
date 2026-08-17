@@ -56,7 +56,7 @@ final class EditorV2PropertyTests: XCTestCase {
     }
     
     private func randomCommand(session: EditorV2Session, rng: inout SeededRNG) -> EditorCommand {
-        let commandTypes: [Int] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+        let commandTypes: [Int] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
         let choice = commandTypes.randomElement(using: &rng)!
         
         switch choice {
@@ -149,6 +149,26 @@ final class EditorV2PropertyTests: XCTestCase {
             if !exs.isEmpty, let ex = exs.randomElement(using: &rng) {
                 let rest = Int.random(in: 30...180, using: &rng)
                 return .setExerciseRest(ex.id, rest)
+            }
+            return .addExercises(names: ["Test"], into: nil)
+            
+        case 11:
+            // setExerciseRepsRange
+            let exs = Array(session.exercises.values)
+            if !exs.isEmpty, let ex = exs.randomElement(using: &rng) {
+                let lower = Int.random(in: 5...10, using: &rng)
+                let upper = Int.random(in: lower...20, using: &rng)
+                let range = RepsRange(lower: lower, upper: upper, qualifier: nil)
+                return .setExerciseRepsRange(ex.id, range)
+            }
+            return .addExercises(names: ["Test"], into: nil)
+            
+        case 12:
+            // setExerciseBodyweight
+            let exs = Array(session.exercises.values)
+            if !exs.isEmpty, let ex = exs.randomElement(using: &rng) {
+                let isBodyweight = Bool.random(using: &rng)
+                return .setExerciseBodyweight(ex.id, isBodyweight)
             }
             return .addExercises(names: ["Test"], into: nil)
             
