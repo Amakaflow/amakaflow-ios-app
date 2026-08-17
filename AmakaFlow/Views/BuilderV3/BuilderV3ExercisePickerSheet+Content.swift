@@ -71,8 +71,7 @@ extension BuilderV3ExercisePickerSheet {
                         }
                         // In replace mode, auto-commit on create
                         if case .replace = mode {
-                            let names = selectedNames
-                            onAddExercises(names)
+                            onAddExercises([trimmedQuery])
                             selectedNames.removeAll()
                             createdItems.removeAll()
                             onDone()
@@ -154,10 +153,9 @@ extension BuilderV3ExercisePickerSheet {
         let inGym = BuilderV3GymOverlay.isInGym(equipmentKey: item.equipmentKey, availableKeys: availableEquipmentKeys)
         return Button {
             toggleSelection(item.name)
-            // In replace mode, auto-commit on selection
-            if case .replace = mode, selected {
-                let names = selectedNames
-                onAddExercises(names)
+            // In replace mode, auto-commit on new selection (not deselection)
+            if case .replace = mode, !selected {
+                onAddExercises([item.name])
                 selectedNames.removeAll()
                 createdItems.removeAll()
                 onDone()
