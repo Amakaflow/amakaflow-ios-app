@@ -68,6 +68,34 @@ final class EditorV2WheelLayoutTests: XCTestCase {
         XCTAssertEqual(EditorV2WheelColumn.range.accessibilityIdentifier, "af_exsheet_range")
     }
 
+    // MARK: - A wheel always offers the value it is bound to
+
+    func testOffGridSelectionJoinsTheOfferedValues() {
+        let grid = Array(stride(from: 5, through: 100, by: 5))
+        let offered = EditorV2WheelValues.offering(grid, including: 47)
+        XCTAssertTrue(offered.contains(47), "an off-grid saved value had no row to select")
+        XCTAssertEqual(offered, offered.sorted(), "inserting 47 broke wheel order")
+        XCTAssertEqual(offered.count, grid.count + 1)
+    }
+
+    func testSelectionAboveAndBelowTheGridStillGetsARow() {
+        let grid = Array(stride(from: 20, through: 2_000, by: 20))
+        XCTAssertEqual(EditorV2WheelValues.offering(grid, including: 5_000).last, 5_000)
+        XCTAssertEqual(EditorV2WheelValues.offering(grid, including: 5).first, 5)
+    }
+
+    func testOnGridSelectionIsNotDuplicated() {
+        let grid = Array(stride(from: 5, through: 100, by: 5))
+        XCTAssertEqual(EditorV2WheelValues.offering(grid, including: 45), grid)
+    }
+
+    func testFractionalWeightOffTheTwoPointFiveGridStillGetsARow() {
+        let grid = stride(from: 0.0, through: 300.0, by: 2.5).map { $0 }
+        let offered = EditorV2WheelValues.offering(grid, including: 61.0)
+        XCTAssertTrue(offered.contains(61.0))
+        XCTAssertEqual(offered, offered.sorted())
+    }
+
     // MARK: - Distance target family
 
     func testDistanceExerciseOpensOnTheDistanceTrack() {

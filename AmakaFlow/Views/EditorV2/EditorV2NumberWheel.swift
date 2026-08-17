@@ -7,12 +7,33 @@
 
 import SwiftUI
 
+/// Grid values a wheel offers, always including whatever is currently selected.
+///
+/// `Picker` renders no selected row when the bound value is absent from its
+/// options, and the first scroll then silently overwrites the saved value. A
+/// saved workout is under no obligation to sit on our step grid — 47s of work,
+/// 61 kg, 450 m — so the selected value joins the grid rather than being snapped
+/// onto it. Snapping would need a write-back, and a write-back on open would
+/// stamp user provenance onto an exercise nobody touched.
+enum EditorV2WheelValues {
+    static func offering<Value: Hashable & Comparable>(
+        _ values: [Value],
+        including selection: Value
+    ) -> [Value] {
+        guard !values.contains(selection) else { return values }
+        var merged = values
+        let insertion = merged.firstIndex { $0 > selection } ?? merged.endIndex
+        merged.insert(selection, at: insertion)
+        return merged
+    }
+}
+
 /// One wheel column: a snapping value picker with a mono caption beneath it.
 ///
 /// `Picker(.wheel)` is the same control the logbook uses (`LogbookWheelSheet`),
 /// including its own centred selection band, so the rig's highlight band is not
 /// redrawn here.
-struct EditorV2NumberWheel<Value: Hashable>: View {
+struct EditorV2NumberWheel<Value: Hashable & Comparable>: View {
     let label: String
     let values: [Value]
     let display: (Value) -> String
@@ -22,7 +43,7 @@ struct EditorV2NumberWheel<Value: Hashable>: View {
     var body: some View {
         VStack(spacing: 5) {
             Picker(label, selection: $selection) {
-                ForEach(values, id: \.self) { value in
+                ForEach(EditorV2WheelValues.offering(values, including: selection), id: \.self) { value in
                     Text(display(value))
                         .font(.system(size: 21, weight: .semibold, design: .rounded))
                         .foregroundColor(DailyDriver.foreground)

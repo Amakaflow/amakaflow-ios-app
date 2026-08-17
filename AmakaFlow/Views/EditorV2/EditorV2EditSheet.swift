@@ -10,11 +10,16 @@ import SwiftUI
 struct EditorV2EditSheet: View {
     @State private var draft: EditorV2Exercise
     @State private var targetMemory: EditorV2EditTargetMemory
+    /// Weight's session memory. `setBodyweightLoad()` clears `weightKg`, so
+    /// without this the Weight chip round-trip would hand back the default
+    /// instead of the athlete's own number — the rule the target families follow.
+    @State private var lastWeightKg: Double
     var onDone: (EditorV2Exercise) -> Void
 
     init(exercise: EditorV2Exercise, onDone: @escaping (EditorV2Exercise) -> Void) {
         _draft = State(initialValue: exercise)
         _targetMemory = State(initialValue: EditorV2EditTargetMemory(exercise: exercise))
+        _lastWeightKg = State(initialValue: exercise.weightKg ?? Self.defaultWeightKg)
         self.onDone = onDone
     }
 
@@ -85,9 +90,10 @@ struct EditorV2EditSheet: View {
     private var weightChip: some View {
         Button {
             if isWeightOn {
+                lastWeightKg = draft.weightKg ?? lastWeightKg
                 draft.setBodyweightLoad()
             } else {
-                draft.setWeightedLoad(kilograms: draft.weightKg ?? Self.defaultWeightKg)
+                draft.setWeightedLoad(kilograms: lastWeightKg)
             }
         } label: {
             Text(isWeightOn ? "✓ Weight" : "＋ Weight")
@@ -339,8 +345,11 @@ extension EditorV2EditSheet {
 
     private var weightBinding: Binding<Double> {
         Binding(
-            get: { draft.weightKg ?? Self.defaultWeightKg },
-            set: { draft.setWeightedLoad(kilograms: $0) }
+            get: { draft.weightKg ?? lastWeightKg },
+            set: { newValue in
+                lastWeightKg = newValue
+                draft.setWeightedLoad(kilograms: newValue)
+            }
         )
     }
 
