@@ -57,6 +57,17 @@ enum MotionTokens {
         return Double(index) * rowStagger
     }
 
+    // MARK: Reduce Motion
+
+    /// The animation to actually run, or nil to change state with no animation.
+    ///
+    /// `withAnimation` takes an `Animation?`, so nil is the honest way to honor
+    /// Reduce Motion: the state change still happens, it just does not move.
+    /// Every animation this app starts should pass through here.
+    static func resolved(_ animation: Animation, reduceMotion: Bool) -> Animation? {
+        reduceMotion ? nil : animation
+    }
+
     // MARK: Toast
 
     static let toastIn: Double = 0.320

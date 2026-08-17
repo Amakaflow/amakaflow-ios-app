@@ -390,12 +390,18 @@ struct EditorV2FlowWrap: Layout {
 /// Expansion state lives here so the canvas stays a pure function of session.
 struct EditorV2AddBlockButton: View {
     var onSelect: (EditorV2GroupType) -> Void
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var isExpanded = false
 
     var body: some View {
         VStack(spacing: 0) {
             Button {
-                withAnimation(MotionTokens.easeOutQuart(duration: MotionTokens.fast)) {
+                withAnimation(
+                    MotionTokens.resolved(
+                        MotionTokens.easeOutQuart(duration: MotionTokens.fast),
+                        reduceMotion: reduceMotion
+                    )
+                ) {
                     isExpanded.toggle()
                 }
             } label: {

@@ -17,6 +17,7 @@ struct StaggeredReveal: ViewModifier {
     let index: Int
     let generation: Int
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var revealed = false
 
     private var delay: Double? {
@@ -24,7 +25,7 @@ struct StaggeredReveal: ViewModifier {
     }
 
     func body(content: Content) -> some View {
-        if let delay {
+        if let delay, !reduceMotion {
             content
                 .opacity(revealed ? 1 : 0)
                 .offset(y: revealed ? 0 : 6)
@@ -37,7 +38,39 @@ struct StaggeredReveal: ViewModifier {
                     }
                 }
         } else {
+            // Reduce Motion, or past the cap: the row is simply there. No
+            // delayed opacity either — a fade-in is still motion to some people,
+            // and a list that assembles itself is the thing being opted out of.
             content
+        }
+    }
+}
+
+/// Drill-in / drill-out for the picker's browse hierarchy.
+///
+/// Under Reduce Motion the slide is dropped and only the cross-fade remains,
+/// so the hierarchy change stays legible without travel.
+struct DrillInTransition: ViewModifier {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    func body(content: Content) -> some View {
+        if reduceMotion {
+            content.transition(.opacity)
+        } else {
+            content.transition(.move(edge: .trailing).combined(with: .opacity))
+        }
+    }
+}
+
+/// Chip landing in the selection tray. Scale is travel, so Reduce Motion fades.
+struct ChipLandTransition: ViewModifier {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    func body(content: Content) -> some View {
+        if reduceMotion {
+            content.transition(.opacity)
+        } else {
+            content.transition(.scale(scale: 0.7).combined(with: .opacity))
         }
     }
 }
@@ -48,8 +81,11 @@ extension View {
         modifier(StaggeredReveal(index: index, generation: generation))
     }
 
-    /// Drill-in / drill-out for the picker's browse hierarchy.
     func drillInTransition() -> some View {
-        transition(.move(edge: .trailing).combined(with: .opacity))
+        modifier(DrillInTransition())
+    }
+
+    func chipLandTransition() -> some View {
+        modifier(ChipLandTransition())
     }
 }

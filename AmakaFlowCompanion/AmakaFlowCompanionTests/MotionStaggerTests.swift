@@ -37,6 +37,29 @@ final class MotionStaggerTests: XCTestCase {
         XCTAssertLessThanOrEqual(last, MotionTokens.slow)
     }
 
+    // MARK: - Reduce Motion
+
+    func testReduceMotionResolvesToNoAnimation() {
+        XCTAssertNil(
+            MotionTokens.resolved(MotionTokens.spring, reduceMotion: true),
+            "Reduce Motion must produce nil so withAnimation changes state without moving"
+        )
+        XCTAssertNotNil(MotionTokens.resolved(MotionTokens.spring, reduceMotion: false))
+    }
+
+    func testReduceMotionAppliesToEveryTokenAnimation() {
+        let animations = [
+            MotionTokens.spring,
+            MotionTokens.toastSpring,
+            MotionTokens.easeOutQuart(duration: MotionTokens.fast),
+            MotionTokens.easeOutQuart(duration: MotionTokens.base),
+            MotionTokens.easeOutQuart(duration: MotionTokens.slow)
+        ]
+        for animation in animations {
+            XCTAssertNil(MotionTokens.resolved(animation, reduceMotion: true))
+        }
+    }
+
     /// The rig's three durations, pinned so a later edit cannot drift them.
     func testDurationTokensMatchTheMotionRig() {
         XCTAssertEqual(MotionTokens.fast, 0.160, accuracy: 1e-9)

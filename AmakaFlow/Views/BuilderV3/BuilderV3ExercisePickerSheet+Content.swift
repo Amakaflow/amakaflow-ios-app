@@ -202,7 +202,7 @@ extension BuilderV3ExercisePickerSheet {
         ) {
             ForEach(BuilderV3BrowseCategory.allCases) { category in
                 Button {
-                    withAnimation(MotionTokens.easeOutQuart(duration: MotionTokens.base)) {
+                    withAnimation(motion(MotionTokens.easeOutQuart(duration: MotionTokens.base))) {
                         selectedCategory = category
                         muscleFilter = nil
                         equipmentFilter = nil
@@ -230,7 +230,7 @@ extension BuilderV3ExercisePickerSheet {
 
     func categoryHeader(_ category: BuilderV3BrowseCategory) -> some View {
         Button {
-            withAnimation(MotionTokens.easeOutQuart(duration: MotionTokens.base)) {
+            withAnimation(motion(MotionTokens.easeOutQuart(duration: MotionTokens.base))) {
                 selectedCategory = nil
                 muscleFilter = nil
                 equipmentFilter = nil

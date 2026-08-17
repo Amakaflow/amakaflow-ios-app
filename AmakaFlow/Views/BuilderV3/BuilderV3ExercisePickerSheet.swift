@@ -42,6 +42,8 @@ struct BuilderV3ExercisePickerSheet: View {
     /// Callback when Warm-up or Cool-down chip is tapped.
     var onQuickAddSoftSection: ((EnrichmentKind) -> Void)?
 
+    @Environment(\.accessibilityReduceMotion) var reduceMotion
+
     @State var query = ""
     @State var tab: Tab = .all
     @State var selectedCategory: BuilderV3BrowseCategory?
@@ -224,9 +226,7 @@ struct BuilderV3ExercisePickerSheet: View {
                         .accessibilityIdentifier("builder_v3_selected_chip_\(name)")
                         // Chip lands from the row it was picked in, and leaves
                         // by shrinking back rather than blinking out.
-                        .transition(
-                            .scale(scale: 0.7).combined(with: .opacity)
-                        )
+                        .chipLandTransition()
                     }
                 }
             }
@@ -234,6 +234,11 @@ struct BuilderV3ExercisePickerSheet: View {
             .accessibilityIdentifier("builder_v3_selected_chips")
             .transition(.move(edge: .top).combined(with: .opacity))
         }
+    }
+
+    /// The animation to run, or nil under Reduce Motion.
+    func motion(_ animation: Animation) -> Animation? {
+        MotionTokens.resolved(animation, reduceMotion: reduceMotion)
     }
 
     /// Re-arms the row entrance whenever the list's content changes.
@@ -256,7 +261,7 @@ struct BuilderV3ExercisePickerSheet: View {
     }
 
     func toggleSelection(_ name: String) {
-        withAnimation(MotionTokens.spring) {
+        withAnimation(motion(MotionTokens.spring)) {
             switch mode {
             case .add:
                 if let index = selectedNames.firstIndex(where: {
