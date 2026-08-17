@@ -30,9 +30,12 @@ enum EditorCommand: Equatable, Sendable {
     case addBlock(EditorV2GroupType)
     case move(String, Int)
     case reorder(fromOffsets: IndexSet, toOffset: Int)
-    case quickAddSoftSection(EnrichmentKind)
+    case quickAddSoftSection(EnrichmentKind, activities: [EnrichmentActivity], clearingTombstone: Bool)
     case removeSoftSection(EditorV2GroupType, EnrichmentKind)
     case addSet(String)
+    case beginNextSupersetGroup(preferredName: String?)
+    case addWarmupSets(exerciseID: String, rows: [WarmupSetRow], clearingTombstone: Bool)
+    case removeWarmupSets(exerciseID: String)
 }
 
 // `updatePrescription` (whole-object replace) was REMOVED (AMA-2441): with only
@@ -59,15 +62,34 @@ enum Violation: String, Equatable {
 
 extension EditorV2Session {
     mutating func apply(_ command: EditorCommand) -> ApplyResult {
+        apply(command, recordUndo: true)
+    }
+
+    /// The ONE transactional door — copy → applyD2 → normalize → validate →
+    /// commit. `recordUndo: false` is for grouped gestures (sheet commit)
+    /// whose single group snapshot was already pushed via `beginUndoGroup()`;
+    /// there must never be a second copy of this sequence anywhere.
+    mutating func apply(_ command: EditorCommand, recordUndo: Bool) -> ApplyResult {
+        // Capture pre-state for undo
+        let preState = self
+
         var copy = self
         let result = copy.applyD2(command)
-        
+
         switch result {
         case .applied:
             copy.normalizeD2()
             let validation = copy.validateD2()
             if validation == .applied {
+                // Check if state actually changed
+                let stateChanged = copy != preState
                 self = copy
+
+                // Push snapshot only if state changed
+                if recordUndo && stateChanged {
+                    pushUndoSnapshot(EditorV2SessionSnapshot(from: preState))
+                }
+
                 return .applied
             } else {
                 assertionFailure("Command produced invalid state: \(command)")

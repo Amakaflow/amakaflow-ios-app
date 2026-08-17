@@ -33,9 +33,23 @@ extension EditorV2Session {
             draft: sheetDraft,
             baseline: baseline
         )
+        
+        // AMA-2443: the whole sheet commit is ONE undo entry — snapshot once
+        // up front, then run each field command through the real door with
+        // per-command snapshots suppressed (never a second inline copy of
+        // the apply sequence).
+        guard !commands.isEmpty else { return }
+        let preCommit = self
+        beginUndoGroup()
 
         for command in commands {
-            _ = apply(command)
+            _ = apply(command, recordUndo: false)
+        }
+
+        // If every command no-opped/rejected, the gesture changed nothing —
+        // drop the group snapshot so UNDO never pops a do-nothing entry.
+        if self == preCommit {
+            discardLastUndoSnapshot()
         }
     }
 

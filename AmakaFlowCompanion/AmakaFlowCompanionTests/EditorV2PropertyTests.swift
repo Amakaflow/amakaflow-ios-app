@@ -54,7 +54,76 @@ final class EditorV2PropertyTests: XCTestCase {
         
         XCTAssertEqual(failureCount, 0, "Found \(failureCount) sequences that violated invariants")
     }
-    
+
+    // AMA-2443: undo interleaved into random sequences — invariants must
+    // hold after every step, whether it was a command or an undo.
+    func testRandomCommandsInterleavedWithUndo_maintainInvariants() {
+        let seed: UInt64 = 2443
+        var rng = SeededRNG(seed: seed)
+
+        let sequenceCount = 150
+        var failureCount = 0
+
+        for sequenceNum in 1...sequenceCount {
+            let sequenceLength = Int.random(in: 20...120, using: &rng)
+            var session = EditorV2Session()
+
+            for step in 1...sequenceLength {
+                // ~1 in 5 steps is an undo gesture instead of a command.
+                if Int.random(in: 0..<5, using: &rng) == 0 {
+                    _ = session.undo()
+                } else {
+                    let command = randomCommand(session: session, rng: &rng)
+                    let result = session.apply(command)
+                    if result != .applied { continue }
+                }
+
+                let violations = checkInvariants(session: session)
+                if !violations.isEmpty {
+                    failureCount += 1
+                    print("Sequence \(sequenceNum), step \(step): violations \(violations)")
+                    break
+                }
+            }
+        }
+
+        XCTAssertEqual(failureCount, 0,
+            "Found \(failureCount) undo-interleaved sequences that violated invariants (seed \(seed))")
+    }
+
+    // AMA-2443: undo(n) restores the exact state n state-changing gestures
+    // ago — walk the whole history back and compare snapshots.
+    func testUndoN_restoresNthPriorState() {
+        let seed: UInt64 = 99
+        var rng = SeededRNG(seed: seed)
+        var session = EditorV2Session()
+        // History of states BEFORE each state-changing apply, oldest first.
+        var history: [EditorV2Session] = []
+
+        var applied = 0
+        var attempts = 0
+        while applied < 30 && attempts < 300 {
+            attempts += 1
+            let before = session
+            let command = randomCommand(session: session, rng: &rng)
+            let result = session.apply(command)
+            if result == .applied && session != before {
+                history.append(before)
+                applied += 1
+            }
+        }
+        XCTAssertGreaterThanOrEqual(applied, 20, "generator failed to produce enough state changes")
+
+        // The stack caps at 50 — we applied ≤30, so every entry is present.
+        while let expected = history.popLast() {
+            XCTAssertTrue(session.undo(), "undo stack exhausted early")
+            XCTAssertEqual(session.exercises, expected.exercises)
+            XCTAssertEqual(session.order, expected.order)
+            XCTAssertEqual(session.groups, expected.groups)
+        }
+        XCTAssertFalse(session.canUndo, "stack should be empty after full walk-back")
+    }
+
     private func randomCommand(session: EditorV2Session, rng: inout SeededRNG) -> EditorCommand {
         let commandTypes: [Int] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
         let choice = commandTypes.randomElement(using: &rng)!

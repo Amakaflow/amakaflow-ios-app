@@ -721,4 +721,254 @@ final class EditorV2CommandTests: XCTestCase {
         XCTAssertNil(ex1After?.groupKey)
         XCTAssertNil(ex3After?.groupKey)
     }
+    
+    // MARK: - AMA-2443: Undo tests
+    
+    func testUndo_restoresPreviousState() {
+        var session = EditorV2Session()
+        let ex1 = EditorV2Exercise(name: "Squat", sets: 3, reps: 10)
+        session.exercises = [ex1.id: ex1]
+        session.order = [.loose(ex1.id)]
+        
+        let stateBefore = session
+        
+        // Modify state
+        _ = session.apply(.setExerciseReps(ex1.id, 12))
+        XCTAssertEqual(session.exercises[ex1.id]?.reps, 12)
+        XCTAssertNotEqual(session, stateBefore)
+        
+        // Undo should restore
+        let undoSuccess = session.undo()
+        XCTAssertTrue(undoSuccess)
+        XCTAssertEqual(session, stateBefore)
+        XCTAssertEqual(session.exercises[ex1.id]?.reps, 10)
+    }
+    
+    func testUndo_afterRemoveExercise() {
+        var session = EditorV2Session()
+        let ex1 = EditorV2Exercise(name: "Bench", sets: 3, reps: 10)
+        let ex2 = EditorV2Exercise(name: "Squat", sets: 3, reps: 10)
+        session.exercises = [ex1.id: ex1, ex2.id: ex2]
+        session.order = [.loose(ex1.id), .loose(ex2.id)]
+        
+        // Remove ex1
+        _ = session.apply(.removeExercise(ex1.id))
+        XCTAssertNil(session.exercises[ex1.id])
+        XCTAssertEqual(session.exercises.count, 1)
+        
+        // Undo should restore ex1
+        XCTAssertTrue(session.undo())
+        XCTAssertNotNil(session.exercises[ex1.id])
+        XCTAssertEqual(session.exercises.count, 2)
+        XCTAssertEqual(session.exercises[ex1.id]?.name, "Bench")
+    }
+    
+    func testUndo_afterAddExercise() {
+        var session = EditorV2Session()
+        let ex1 = EditorV2Exercise(name: "Squat", sets: 3, reps: 10)
+        session.exercises = [ex1.id: ex1]
+        session.order = [.loose(ex1.id)]
+        
+        let stateBefore = session
+        
+        // Add exercise
+        _ = session.apply(.addExercises(names: ["Bench"], into: nil))
+        XCTAssertEqual(session.exercises.count, 2)
+        
+        // Undo should restore to 1 exercise
+        XCTAssertTrue(session.undo())
+        XCTAssertEqual(session, stateBefore)
+        XCTAssertEqual(session.exercises.count, 1)
+    }
+    
+    func testUndo_afterPairSuperset() {
+        var session = EditorV2Session()
+        let ex1 = EditorV2Exercise(name: "A")
+        let ex2 = EditorV2Exercise(name: "B")
+        session.exercises = [ex1.id: ex1, ex2.id: ex2]
+        session.order = [.loose(ex1.id), .loose(ex2.id)]
+        
+        let stateBefore = session
+        
+        // Pair into superset
+        _ = session.apply(.pairSuperset(source: ex1.id, target: ex2.id))
+        XCTAssertEqual(session.groups.count, 1)
+        XCTAssertNotNil(session.exercises[ex1.id]?.groupKey)
+        
+        // Undo should restore to loose exercises
+        XCTAssertTrue(session.undo())
+        XCTAssertEqual(session, stateBefore)
+        XCTAssertEqual(session.groups.count, 0)
+        XCTAssertNil(session.exercises[ex1.id]?.groupKey)
+    }
+    
+    func testUndo_afterAddBlock() {
+        var session = EditorV2Session()
+        let ex1 = EditorV2Exercise(name: "Squat")
+        session.exercises = [ex1.id: ex1]
+        session.order = [.loose(ex1.id)]
+        
+        let stateBefore = session
+        
+        // Add block (wipes canvas)
+        _ = session.apply(.addBlock(.emom))
+        XCTAssertTrue(session.exercises.isEmpty)
+        XCTAssertEqual(session.formatGroupKey, "fmt")
+        
+        // Undo should restore the canvas
+        XCTAssertTrue(session.undo())
+        XCTAssertEqual(session, stateBefore)
+        XCTAssertEqual(session.exercises.count, 1)
+        XCTAssertNil(session.formatGroupKey)
+    }
+    
+    func testUndo_noStateChange_doesNotPushSnapshot() {
+        var session = EditorV2Session()
+        
+        // Apply command that makes no change
+        _ = session.apply(.addExercises(names: [], into: nil))
+        
+        // No snapshot should be pushed (canUndo should be false)
+        XCTAssertFalse(session.canUndo)
+    }
+    
+    func testUndo_multipleCommands() {
+        var session = EditorV2Session()
+        let ex1 = EditorV2Exercise(name: "Squat", sets: 3, reps: 10)
+        session.exercises = [ex1.id: ex1]
+        session.order = [.loose(ex1.id)]
+        
+        let state0 = session
+        
+        // Command 1
+        _ = session.apply(.setExerciseReps(ex1.id, 12))
+        let state1 = session
+        XCTAssertEqual(session.exercises[ex1.id]?.reps, 12)
+        
+        // Command 2
+        _ = session.apply(.setExerciseSets(ex1.id, 5))
+        XCTAssertEqual(session.exercises[ex1.id]?.sets, 5)
+        
+        // Command 3
+        _ = session.apply(.setExerciseRest(ex1.id, 90))
+        XCTAssertEqual(session.exercises[ex1.id]?.restSeconds, 90)
+        
+        // Undo 3 times
+        XCTAssertTrue(session.undo())
+        XCTAssertEqual(session.exercises[ex1.id]?.restSeconds, nil)
+        XCTAssertEqual(session.exercises[ex1.id]?.sets, 5)
+        
+        XCTAssertTrue(session.undo())
+        XCTAssertEqual(session.exercises[ex1.id]?.sets, 3)
+        XCTAssertEqual(session, state1)
+        
+        XCTAssertTrue(session.undo())
+        XCTAssertEqual(session, state0)
+        XCTAssertEqual(session.exercises[ex1.id]?.reps, 10)
+        
+        // No more undo available
+        XCTAssertFalse(session.undo())
+    }
+    
+    func testUndo_stackCappedAt50() {
+        var session = EditorV2Session()
+        let ex1 = EditorV2Exercise(name: "Squat", sets: 3, reps: 10)
+        session.exercises = [ex1.id: ex1]
+        session.order = [.loose(ex1.id)]
+        
+        // Apply 60 commands
+        for i in 1...60 {
+            _ = session.apply(.setExerciseReps(ex1.id, i))
+        }
+        
+        // Should only be able to undo 50 times (stack cap)
+        var undoCount = 0
+        while session.undo() {
+            undoCount += 1
+        }
+        
+        XCTAssertEqual(undoCount, 50)
+        // After 50 undos, reps should be 10 (60 - 50 = 10)
+        XCTAssertEqual(session.exercises[ex1.id]?.reps, 10)
+    }
+    
+    func testUndo_clearHistoryOnSave() {
+        var session = EditorV2Session()
+        let ex1 = EditorV2Exercise(name: "Squat", sets: 3, reps: 10)
+        session.exercises = [ex1.id: ex1]
+        session.order = [.loose(ex1.id)]
+        
+        // Apply command
+        _ = session.apply(.setExerciseReps(ex1.id, 12))
+        XCTAssertTrue(session.canUndo)
+        
+        // Clear history (simulates save)
+        session.clearUndoHistory()
+        XCTAssertFalse(session.canUndo)
+        XCTAssertFalse(session.undo())
+    }
+    
+    func testUndo_sheetCommitIsOneEntry() {
+        var session = EditorV2Session()
+        let ex1 = EditorV2Exercise(name: "Bench", sets: 3, reps: 10, weightKg: 100, restSeconds: 60)
+        session.exercises = [ex1.id: ex1]
+        session.order = [.loose(ex1.id)]
+        
+        let stateBefore = session
+        
+        // Sheet commit: multiple field changes
+        let baseline = ex1
+        var sheetDraft = ex1
+        sheetDraft.reps = 12
+        sheetDraft.weightKg = 105
+        sheetDraft.restSeconds = 90
+        
+        session.commitSheetEdit(exerciseID: ex1.id, baseline: baseline, sheetDraft: sheetDraft)
+        
+        // All fields should be updated
+        XCTAssertEqual(session.exercises[ex1.id]?.reps, 12)
+        XCTAssertEqual(session.exercises[ex1.id]?.weightKg, 105)
+        XCTAssertEqual(session.exercises[ex1.id]?.restSeconds, 90)
+        
+        // ONE undo should revert all changes
+        XCTAssertTrue(session.undo())
+        XCTAssertEqual(session, stateBefore)
+        XCTAssertEqual(session.exercises[ex1.id]?.reps, 10)
+        XCTAssertEqual(session.exercises[ex1.id]?.weightKg, 100)
+        XCTAssertEqual(session.exercises[ex1.id]?.restSeconds, 60)
+        
+        // No more undo available
+        XCTAssertFalse(session.canUndo)
+    }
+    
+    func testUndo_afterSoftSectionAdd() {
+        var session = EditorV2Session()
+        let stateBefore = session
+        
+        // Add soft section
+        let activities = [EnrichmentActivity(name: "Jog", durationSec: 300)]
+        _ = session.apply(.quickAddSoftSection(.sessionWarmup, activities: activities, clearingTombstone: false))
+        
+        XCTAssertTrue(session.groups.values.contains { $0.type == .warmup })
+        
+        // Undo should remove the section
+        XCTAssertTrue(session.undo())
+        XCTAssertEqual(session, stateBefore)
+        XCTAssertFalse(session.groups.values.contains { $0.type == .warmup })
+    }
+    
+    func testUndo_afterBeginNextSupersetGroup() {
+        var session = EditorV2Session()
+        let stateBefore = session
+        
+        // Begin superset group
+        _ = session.apply(.beginNextSupersetGroup(preferredName: nil))
+        XCTAssertNotNil(session.formatGroupKey)
+        XCTAssertTrue(session.groups.values.contains { $0.type == .superset })
+        
+        // Undo should remove the group
+        XCTAssertTrue(session.undo())
+        XCTAssertEqual(session, stateBefore)
+        XCTAssertNil(session.formatGroupKey)
+    }
 }

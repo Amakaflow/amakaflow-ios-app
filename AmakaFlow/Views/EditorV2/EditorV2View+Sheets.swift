@@ -37,6 +37,15 @@ extension EditorV2View {
         // AMA-2383 — DD Toast at app root replaces the legacy bottom capsule.
         DDToastCenter.shared.success(message)
     }
+    
+    func showUndoableToast(_ message: String) {
+        // AMA-2443 — Undoable toast with 4s hold + Undo action
+        DDToastCenter.shared.undo(message) {
+            if session.undo() {
+                // Toast is auto-dismissed when action runs
+            }
+        }
+    }
 
     func menuSheet(_ exercise: EditorV2Exercise) -> some View {
         EditorV2MenuSheet(
@@ -54,7 +63,7 @@ extension EditorV2View {
             onSupersetToggle: {
                 if isInSuperset(exercise) {
                     _ = session.apply(.removeFromGroup(exercise.id))
-                    showToast("Removed from superset")
+                    showUndoableToast("Removed from superset")
                     menuExerciseID = nil
                 } else {
                     pairSourceID = exercise.id
@@ -63,7 +72,7 @@ extension EditorV2View {
             },
             onAddSet: {
                 _ = session.apply(.addSet(exercise.id))
-                showToast("Set added ✓")
+                showUndoableToast("Set added ✓")
                 menuExerciseID = nil
             },
             onAddWarmupSets: {
@@ -72,12 +81,12 @@ extension EditorV2View {
             },
             onRemoveWarmupSets: {
                 _ = session.removeWarmupSets(from: exercise.id)
-                showToast("Warm-up sets removed")
+                showUndoableToast("Warm-up sets removed")
                 menuExerciseID = nil
             },
             onRemove: {
                 _ = session.apply(.removeExercise(exercise.id))
-                showToast("Removed")
+                showUndoableToast("Removed")
                 menuExerciseID = nil
             }
         )
@@ -101,10 +110,10 @@ extension EditorV2View {
         let onRemoveSoftSection = {
             if item.group.type == .cooldown {
                 session.removeCooldown()
-                showToast("Cool-down removed")
+                showUndoableToast("Cool-down removed")
             } else {
                 session.removeSessionWarmup()
-                showToast("Warm-up removed")
+                showUndoableToast("Warm-up removed")
             }
             configGroupKey = nil
         }
@@ -118,14 +127,14 @@ extension EditorV2View {
             onUngroup: {
                 _ = session.apply(.ungroup(item.id))
                 configGroupKey = nil
-                showToast("Ungrouped — now straight sets")
+                showUndoableToast("Ungrouped — now straight sets")
             },
             onDiscardAndRepin: item.group.type == .superset
                 ? {
                     let name = item.group.name
                     if session.discardAndRepinSupersetGroup(item.id) != nil {
                         configGroupKey = nil
-                        showToast("\(name) deleted — add moves to the new one")
+                        showUndoableToast("\(name) deleted — add moves to the new one")
                     }
                 }
                 : nil,
@@ -377,6 +386,8 @@ extension EditorV2View {
                 intervals: session.toSaveIntervals(),
                 blocks: blocks.isEmpty ? nil : blocks
             )
+            // AMA-2443: Clear undo on capture complete
+            session.clearUndoHistory()
             // Parent dismisses the capture cover after receiving the draft.
             actualsCaptureComplete(draft)
             return
@@ -389,6 +400,8 @@ extension EditorV2View {
         saveModel.saveEnrichmentTombstones = session.enrichmentTombstonesDirty
             ? session.enrichmentTombstones
             : nil
+        // AMA-2443: Clear undo on save
+        session.clearUndoHistory()
         Task {
             matchController.noteTitleForSave(trimmedTitle)
             let canonicalValues = await matchController.onSave(online: true)
