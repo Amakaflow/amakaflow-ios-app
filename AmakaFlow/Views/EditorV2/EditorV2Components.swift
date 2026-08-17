@@ -229,6 +229,8 @@ struct EditorV2GroupedRun: View {
     var onPill: () -> Void
     var onOpen: (EditorV2Exercise) -> Void
     var onMenu: (EditorV2Exercise) -> Void
+    /// AMA-2443 slice 3 — "＋ Add here": open the picker with THIS group as the
+    /// explicit destination. Does not move the format-group pin (shape B).
     var onAddHere: () -> Void = {}
 
     var body: some View {

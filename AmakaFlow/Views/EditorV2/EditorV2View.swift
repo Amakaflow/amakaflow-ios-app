@@ -35,6 +35,9 @@ struct EditorV2View: View {
     @State var pairSourceID: String?
     @State var addSheetOpen = false
     @State var replaceExerciseID: String?
+    /// AMA-2443 slice 3 — explicit add destination set by "＋ Add here".
+    /// `nil` = plain "+ Add", which falls back to the format-group pin.
+    /// Cleared on every sheet-exit path so it never leaks into the next add.
     @State var addTargetGroupID: String?
     @State var isMatchSheetPresented = false
     @State var showBuilderV3ChangeTypeConfirm = false
