@@ -37,24 +37,76 @@ enum BuilderV3ExerciseFetchMode: Equatable, Sendable {
     case mock
 }
 
+/// Why a fetch fell back to fixtures.
+///
+/// AMA-2449: for a year the picker served fixtures on every call because the
+/// requests went to the wrong host, and a permanent 404 was indistinguishable
+/// from a dropped connection — both produced the same small `MOCK` badge. A
+/// missing route is a wiring mistake, not a network condition, so it is
+/// classified separately and trapped in debug.
+enum BuilderV3ExerciseFallbackReason: Equatable, Sendable {
+    /// Deliberate: UI tests asked for fixtures.
+    case fixturesRequested
+    /// The query was empty, so there was nothing to ask the server.
+    case noQuery
+    /// The upstream route does not exist. A bug in this app, not a bad network.
+    case routeMissing
+    /// Anything genuinely transient — offline, timeout, 5xx, bad payload.
+    case requestFailed
+}
+
 struct BuilderV3ExerciseFetchResult: Equatable, Sendable {
     var items: [BuilderV3ExerciseItem]
     /// Server rows before ID filtering — pagination must advance by this count.
     var receivedRowCount: Int
     var mode: BuilderV3ExerciseFetchMode
+    /// Set only when `mode == .mock`.
+    var fallbackReason: BuilderV3ExerciseFallbackReason?
 
     init(
         items: [BuilderV3ExerciseItem],
         receivedRowCount: Int? = nil,
-        mode: BuilderV3ExerciseFetchMode
+        mode: BuilderV3ExerciseFetchMode,
+        fallbackReason: BuilderV3ExerciseFallbackReason? = nil
     ) {
         self.items = items
         self.receivedRowCount = receivedRowCount ?? items.count
         self.mode = mode
+        self.fallbackReason = fallbackReason
+    }
+
+    /// Fixtures because of a failure, classified. Traps in debug when the cause
+    /// is a missing route, so a host or path mistake fails loudly in tests and
+    /// dev builds instead of quietly serving demo data.
+    static func fallback(
+        items: [BuilderV3ExerciseItem],
+        error: Error,
+        endpoint: String
+    ) -> BuilderV3ExerciseFetchResult {
+        let reason = classify(error)
+        if reason == .routeMissing {
+            assertionFailure(
+                "\(endpoint) returned 404 — wrong host or path. "
+                    + "Exercise routes live on mobile-bff (APIService.bffURL), not mapper-api."
+            )
+        }
+        return BuilderV3ExerciseFetchResult(items: items, mode: .mock, fallbackReason: reason)
+    }
+
+    /// Split from `fallback` so the rule can be asserted directly — `fallback`
+    /// traps on `.routeMissing` by design, which a test cannot exercise.
+    static func classify(_ error: Error) -> BuilderV3ExerciseFallbackReason {
+        APIError.coerce(error).category == .notFound ? .routeMissing : .requestFailed
     }
 }
 
 struct BuilderV3ExerciseSearchClient {
+    /// Paths are relative to `APIService.bffURL`, which already carries the
+    /// `/v1` prefix. These routes are served by mobile-bff; the default
+    /// `makeAPIRequest` base is mapper-api, which 404s on both (AMA-2449).
+    static let searchPath = "/exercises/search"
+    static let listPath = "/exercises"
+
     private let apiService: APIService
     private let useFixtures: Bool
 
@@ -66,24 +118,58 @@ struct BuilderV3ExerciseSearchClient {
         self.useFixtures = useFixtures
     }
 
+    /// Request builders are split out so a test can assert the URL these
+    /// routes actually resolve to. Passing `headers` skips the auth round trip;
+    /// production leaves it nil and gets the real headers (AMA-2449).
+    func makeSearchRequest(
+        query: String,
+        limit: Int,
+        headers: [String: String]? = nil
+    ) async throws -> URLRequest {
+        try await apiService.makeAPIRequest(
+            baseURL: apiService.bffURL,
+            path: Self.searchPath,
+            queryItems: [
+                URLQueryItem(name: "q", value: query),
+                URLQueryItem(name: "limit", value: String(limit))
+            ],
+            method: "GET",
+            headers: headers
+        )
+    }
+
+    func makeListRequest(
+        queryItems: [URLQueryItem],
+        headers: [String: String]? = nil
+    ) async throws -> URLRequest {
+        try await apiService.makeAPIRequest(
+            baseURL: apiService.bffURL,
+            path: Self.listPath,
+            queryItems: queryItems,
+            method: "GET",
+            headers: headers
+        )
+    }
+
     /// Never throws. Failures are explicit through `.mock`; live empty stays empty.
     func search(query: String, limit: Int = 30) async -> BuilderV3ExerciseFetchResult {
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
-            return BuilderV3ExerciseFetchResult(items: Self.fixtureResults(matching: ""), mode: .mock)
+            return BuilderV3ExerciseFetchResult(
+                items: Self.fixtureResults(matching: ""),
+                mode: .mock,
+                fallbackReason: .noQuery
+            )
         }
         guard !useFixtures else {
-            return BuilderV3ExerciseFetchResult(items: Self.fixtureResults(matching: trimmed), mode: .mock)
+            return BuilderV3ExerciseFetchResult(
+                items: Self.fixtureResults(matching: trimmed),
+                mode: .mock,
+                fallbackReason: .fixturesRequested
+            )
         }
         do {
-            let request = try await apiService.makeAPIRequest(
-                path: "/v1/exercises/search",
-                queryItems: [
-                    URLQueryItem(name: "q", value: trimmed),
-                    URLQueryItem(name: "limit", value: String(limit))
-                ],
-                method: "GET"
-            )
+            let request = try await makeSearchRequest(query: trimmed, limit: limit)
             // BFF already emits camelCase; use generated decoder (no snake_case).
             let response = try await apiService.request(
                 request,
@@ -97,7 +183,11 @@ struct BuilderV3ExerciseSearchClient {
                 mode: .live
             )
         } catch {
-            return BuilderV3ExerciseFetchResult(items: Self.fixtureResults(matching: trimmed), mode: .mock)
+            return .fallback(
+                items: Self.fixtureResults(matching: trimmed),
+                error: error,
+                endpoint: Self.searchPath
+            )
         }
     }
 
@@ -115,7 +205,11 @@ struct BuilderV3ExerciseSearchClient {
             equipment: equipment
         )
         guard !useFixtures else {
-            return BuilderV3ExerciseFetchResult(items: fixture, mode: .mock)
+            return BuilderV3ExerciseFetchResult(
+                items: fixture,
+                mode: .mock,
+                fallbackReason: .fixturesRequested
+            )
         }
 
         do {
@@ -164,7 +258,7 @@ struct BuilderV3ExerciseSearchClient {
                 mode: .live
             )
         } catch {
-            return BuilderV3ExerciseFetchResult(items: fixture, mode: .mock)
+            return .fallback(items: fixture, error: error, endpoint: Self.listPath)
         }
     }
 
@@ -186,11 +280,7 @@ struct BuilderV3ExerciseSearchClient {
         if let equipment {
             queryItems.append(URLQueryItem(name: "equipment", value: equipment))
         }
-        let request = try await apiService.makeAPIRequest(
-            path: "/v1/exercises",
-            queryItems: queryItems,
-            method: "GET"
-        )
+        let request = try await makeListRequest(queryItems: queryItems)
         let response = try await apiService.request(
             request,
             decode: BuilderV3ExerciseListResponse.self,
