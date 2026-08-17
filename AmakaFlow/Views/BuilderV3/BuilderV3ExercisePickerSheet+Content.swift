@@ -88,8 +88,8 @@ extension BuilderV3ExercisePickerSheet {
                     } label: {
                         Text(
                             isSelected(trimmedQuery)
-                                ? "✓ "\(trimmedQuery)" selected"
-                                : "＋ Create "\(trimmedQuery)""
+                                ? "✓ “\(trimmedQuery)” selected"
+                                : "＋ Create “\(trimmedQuery)”"
                         )
                             .ddDisplayText(12.5, weight: .bold)
                             .foregroundColor(DailyDriver.lime)
