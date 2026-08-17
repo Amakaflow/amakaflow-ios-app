@@ -540,12 +540,16 @@ extension EditorV2Session {
             enrichmentTombstonesDirty = true
             return .applied
             
-        case .beginNextSupersetGroup(let preferredName):
-            let key = "ss\(UUID().uuidString)"
-            let letter = nextSupersetLetter()
-            
-            // Infer name from previous formatGroupKey if building tri-sets
+        case .beginFormatGroup(let type, let preferredName):
+            let key = "fg\(UUID().uuidString)"
+            // Letters belong to the superset ladder only (A/B/C → tri-set,
+            // giant set). Handing one to an EMOM would consume from that pool
+            // and render a letter the format has no use for.
+            let letter = type == .superset ? nextSupersetLetter() : nil
+
             let defaultName: String = {
+                guard type == .superset else { return type.label }
+                // Infer from previous formatGroupKey if building tri-sets
                 if let prevKey = formatGroupKey, let prevGroup = groups[prevKey] {
                     let triSetNames: Set<String> = ["Tri-set", "Tri-sets"]
                     if triSetNames.contains(prevGroup.name) {
@@ -554,13 +558,13 @@ extension EditorV2Session {
                 }
                 return "Superset"
             }()
-            
+
             groups[key] = EditorV2Group(
                 id: key,
-                type: .superset,
+                type: type,
                 name: preferredName ?? defaultName,
                 letter: letter,
-                config: EditorV2GroupType.superset.defaultConfig,
+                config: type.defaultConfig,
                 memberIDs: [],
                 structureSource: .userConfirmed
             )

@@ -27,13 +27,25 @@ enum EditorCommand: Equatable, Sendable {
     case updateGroupConfig(String, EditorV2GroupConfig)
     case ungroup(String)
     case deleteGroup(String)
+    /// Start over: REPLACES the canvas with a single empty group of `type`.
+    /// Destructive by design — reserved for the empty canvas and the explicit
+    /// "Change workout type?" confirm. To add a block mid-workout without
+    /// losing work, use `beginFormatGroup` (AMA-2443 slice 4).
     case addBlock(EditorV2GroupType)
     case move(String, Int)
     case reorder(fromOffsets: IndexSet, toOffset: Int)
     case quickAddSoftSection(EnrichmentKind, activities: [EnrichmentActivity], clearingTombstone: Bool)
     case removeSoftSection(EditorV2GroupType, EnrichmentKind)
     case addSet(String)
-    case beginNextSupersetGroup(preferredName: String?)
+    /// AMA-2443 slice 4 — APPEND a new empty format group and pin it, without
+    /// touching existing rows. Generalizes the superset "＋ Another superset"
+    /// flow to every format type. The pin move happens inside `apply()`, so a
+    /// single undo restores both the pin and the appended group.
+    ///
+    /// The new group is legal while empty because it is `formatGroupKey`
+    /// (invariant I2 exempts the pin); if the user abandons it and pins
+    /// something else, `pruneEmptyGroupsD2()` removes it on the next normalize.
+    case beginFormatGroup(type: EditorV2GroupType, preferredName: String?)
     case addWarmupSets(exerciseID: String, rows: [WarmupSetRow], clearingTombstone: Bool)
     case removeWarmupSets(exerciseID: String)
 }

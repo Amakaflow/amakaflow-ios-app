@@ -16,7 +16,11 @@ struct EditorV2ContentActions {
     var onAdd: () -> Void
     /// AMA-2443 slice 3 — group key of the run whose "＋ Add here" was tapped.
     var onAddHere: (String) -> Void = { _ in }
+    /// Empty canvas only — REPLACES the canvas (`.addBlock`).
     var onStartFormat: (EditorV2GroupType) -> Void
+    /// AMA-2443 slice 4 — appends a new pinned block mid-workout, then opens
+    /// the picker into it. Never destructive.
+    var onBeginFormatGroup: (EditorV2GroupType) -> Void = { _ in }
     /// AMA-2336 — quick-add the session warm-up from `workout_preferences`.
     var onAddWarmup: () -> Void = {}
     var onAddCooldown: () -> Void = {}
@@ -92,6 +96,12 @@ enum EditorV2Content {
                     action: actions.onBeginNextSupersetGroup
                 )
             }
+            // AMA-2443 slice 4 — non-destructive mid-workout block. Hidden while
+            // the pin is an empty group: that block has no moves yet, so the
+            // next thing to do is fill it, not start another one.
+            if !isPinnedGroupEmpty(session: session) {
+                EditorV2AddBlockButton(onSelect: actions.onBeginFormatGroup)
+            }
             addExerciseButton(
                 emphasized: false,
                 plural: builderV3Canvas,
@@ -99,6 +109,13 @@ enum EditorV2Content {
                 onAdd: actions.onAdd
             )
         }
+    }
+
+    /// True when the pin names a group with no moves yet — the canvas already
+    /// draws `formatPinnedPlaceholder` for it and the user owes it exercises.
+    private static func isPinnedGroupEmpty(session: EditorV2Session) -> Bool {
+        guard let key = session.formatGroupKey, session.groups[key] != nil else { return false }
+        return !session.exercises.values.contains { $0.groupKey == key }
     }
 
     private static func shouldOfferNextSupersetGroup(session: EditorV2Session) -> Bool {

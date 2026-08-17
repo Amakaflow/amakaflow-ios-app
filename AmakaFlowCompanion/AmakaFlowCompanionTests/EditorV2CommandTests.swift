@@ -962,7 +962,7 @@ final class EditorV2CommandTests: XCTestCase {
         let stateBefore = session
         
         // Begin superset group
-        _ = session.apply(.beginNextSupersetGroup(preferredName: nil))
+        _ = session.apply(.beginFormatGroup(type: .superset, preferredName: nil))
         XCTAssertNotNil(session.formatGroupKey)
         XCTAssertTrue(session.groups.values.contains { $0.type == .superset })
         
@@ -1090,5 +1090,128 @@ final class EditorV2CommandTests: XCTestCase {
 
         XCTAssertEqual(result, .applied)
         XCTAssertEqual(session.groups[cooldownKey]?.memberIDs.count, 2, "seed + 1 added")
+    }
+    // MARK: - AMA-2443 slice 4 — append-pin a format group mid-workout
+
+    /// The whole point of slice 4: adding a block mid-workout must NOT destroy
+    /// existing rows. `.addBlock` replaces the canvas; `.beginFormatGroup`
+    /// appends beside it.
+    func testBeginFormatGroup_midWorkout_keepsExistingRows() {
+        var (session, seedID) = makeSessionWithSeededGroup(key: "existing", type: .superset)
+
+        let result = session.apply(.beginFormatGroup(type: .emom, preferredName: nil))
+
+        XCTAssertEqual(result, .applied)
+        XCTAssertEqual(session.exercises[seedID]?.name, "Existing", "existing move survives")
+        XCTAssertNotNil(session.groups["existing"], "existing group survives")
+        XCTAssertEqual(session.groups.count, 2)
+        XCTAssertEqual(session.order.count, 2, "new block is appended, not swapped in")
+    }
+
+    /// Contrast case — proves the destructive command is still destructive, so
+    /// the two are not accidentally interchangeable.
+    func testAddBlock_midWorkout_stillReplacesCanvas() {
+        var (session, seedID) = makeSessionWithSeededGroup(key: "existing", type: .superset)
+
+        let result = session.apply(.addBlock(.emom))
+
+        XCTAssertEqual(result, .applied)
+        XCTAssertNil(session.exercises[seedID], ".addBlock is start-over by design")
+        XCTAssertEqual(session.order.count, 1)
+    }
+
+    /// The appended group becomes the pin, so a following plain add lands in it.
+    func testBeginFormatGroup_pinsTheNewGroup() {
+        var (session, _) = makeSessionWithSeededGroup(key: "existing", type: .superset)
+        let previousPin = session.formatGroupKey
+
+        session.beginFormatGroup(.circuit)
+
+        XCTAssertNotEqual(session.formatGroupKey, previousPin)
+        XCTAssertEqual(session.groups[session.formatGroupKey ?? ""]?.type, .circuit)
+    }
+
+    /// Letters belong to the superset ladder only — handing one to an EMOM
+    /// would consume from that pool and render a letter the format never uses.
+    func testBeginFormatGroup_letterOnlyForSuperset() {
+        var session = EditorV2Session()
+
+        session.beginFormatGroup(.emom)
+        XCTAssertNil(session.groups[session.formatGroupKey ?? ""]?.letter)
+
+        session.beginFormatGroup(.superset)
+        XCTAssertEqual(session.groups[session.formatGroupKey ?? ""]?.letter, "A")
+    }
+
+    /// Non-supersets take their display name from the type; supersets keep the
+    /// existing A/B/C + tri-set inference.
+    func testBeginFormatGroup_namesFromType() {
+        var session = EditorV2Session()
+
+        session.beginFormatGroup(.amrap)
+        XCTAssertEqual(session.groups[session.formatGroupKey ?? ""]?.name, EditorV2GroupType.amrap.label)
+
+        session.beginFormatGroup(.superset)
+        XCTAssertEqual(session.groups[session.formatGroupKey ?? ""]?.name, "Superset")
+    }
+
+    /// Shape B's core claim: the pin move happens inside `apply()`, so ONE undo
+    /// takes back both the appended group and the pin. (Under shape A the pin
+    /// move sat outside `apply()` and undo could not reach it.)
+    func testBeginFormatGroup_oneUndoRestoresGroupAndPin() {
+        var (session, _) = makeSessionWithSeededGroup(key: "existing", type: .superset)
+        session.formatGroupKey = "existing"
+        let stateBefore = session
+
+        session.beginFormatGroup(.emom)
+        XCTAssertNotEqual(session.formatGroupKey, "existing")
+        XCTAssertEqual(session.groups.count, 2)
+
+        XCTAssertTrue(session.undo())
+        XCTAssertEqual(session, stateBefore, "one gesture = one undo entry")
+        XCTAssertEqual(session.formatGroupKey, "existing", "undo restores the pin too")
+        XCTAssertEqual(session.groups.count, 1)
+    }
+
+    /// An empty appended group is legal *while it is the pin* (I2 exempts the
+    /// format group) — this is the state the canvas draws as the pinned
+    /// placeholder.
+    func testBeginFormatGroup_emptyGroupIsLegalWhilePinned() {
+        var (session, _) = makeSessionWithSeededGroup(key: "existing", type: .superset)
+
+        session.beginFormatGroup(.tabata)
+
+        XCTAssertEqual(session.validateD2(), .applied)
+        XCTAssertEqual(session.groups[session.formatGroupKey ?? ""]?.memberIDs, [])
+    }
+
+    /// …and if the user abandons it by pinning something else, the orphan is
+    /// swept by `pruneEmptyGroupsD2()` on the next normalize rather than
+    /// lingering as an I2 violation.
+    func testBeginFormatGroup_abandonedEmptyGroupIsPruned() {
+        var (session, _) = makeSessionWithSeededGroup(key: "existing", type: .superset)
+
+        session.beginFormatGroup(.tabata)
+        let abandonedKey = session.formatGroupKey
+        XCTAssertNotNil(abandonedKey)
+
+        session.beginFormatGroup(.emom)
+
+        XCTAssertNil(session.groups[abandonedKey ?? ""], "abandoned empty block is swept")
+        XCTAssertEqual(session.validateD2(), .applied)
+        XCTAssertEqual(session.order.count, 2, "existing run + the new pin")
+    }
+
+    /// Adding into the freshly pinned block is the flow the UI drives:
+    /// begin → picker opens with `into:` = the new key.
+    func testBeginFormatGroup_thenAddIntoIt() {
+        var (session, _) = makeSessionWithSeededGroup(key: "existing", type: .superset)
+
+        let key = session.beginFormatGroup(.emom)
+        let result = session.apply(.addExercises(names: ["Burpees"], into: key))
+
+        XCTAssertEqual(result, .applied)
+        XCTAssertEqual(session.groups[key]?.memberIDs.count, 1)
+        XCTAssertEqual(session.validateD2(), .applied)
     }
 }

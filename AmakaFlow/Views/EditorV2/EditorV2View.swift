@@ -213,6 +213,17 @@ struct EditorV2View: View {
         }
     }
 
+    /// AMA-2443 slice 4 — append a pinned block mid-workout, then open the
+    /// picker into it. One `apply()`, so one undo takes back both the block
+    /// and the pin move; nothing on the canvas is destroyed.
+    private func beginFormatGroupAndAdd(_ type: EditorV2GroupType) {
+        let key = session.beginFormatGroup(type)
+        replaceExerciseID = nil
+        addTargetGroupID = key
+        addSheetOpen = true
+        showToast("\(type.label) added — pick the moves")
+    }
+
     private var contentActions: EditorV2ContentActions {
         EditorV2ContentActions(
             onConfigGroup: { configGroupKey = $0 },
@@ -223,6 +234,7 @@ struct EditorV2View: View {
             onAdd: { replaceExerciseID = nil; addTargetGroupID = nil; addSheetOpen = true },
             onAddHere: { groupID in replaceExerciseID = nil; addTargetGroupID = groupID; addSheetOpen = true },
             onStartFormat: { type in _ = session.apply(.addBlock(type)); showToast("\(type.label) — add the moves, timing is set") },
+            onBeginFormatGroup: { type in beginFormatGroupAndAdd(type) },
             onAddWarmup: { quickAddSoftSection(.sessionWarmup) },
             onAddCooldown: { quickAddSoftSection(.cooldown) },
             onBeginNextSupersetGroup: { let key = session.beginNextSupersetGroup(); let name = session.groups[key]?.name ?? "Superset"; showToast("\(name) ready — add the next moves") }
