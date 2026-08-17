@@ -7,11 +7,17 @@
 
 import Foundation
 
-/// The five mutually exclusive work-target families presented by the focused editor.
+/// The mutually exclusive work-target families presented by the focused editor.
+///
+/// AMA-2443 slice 5 renames this surface TRACK and adds `.distance`
+/// (screens-editor3.jsx "Numbers sheet v3.1"). `.range` and `.cals` stay in the
+/// model so saved workouts that use them keep editing losslessly; `visibleKinds`
+/// decides which chips a given exercise actually offers.
 enum EditorV2EditTargetKind: String, CaseIterable, Equatable {
     case reps
     case range
     case timed
+    case distance
     case cals
     case open
 
@@ -19,11 +25,16 @@ enum EditorV2EditTargetKind: String, CaseIterable, Equatable {
         switch self {
         case .reps: return "Reps"
         case .range: return "Range"
-        case .timed: return "Timed"
+        case .timed: return "Time"
+        case .distance: return "Distance"
         case .cals: return "Cals"
         case .open: return "Open"
         }
     }
+
+    /// The rig's calm chip row. `.range` and `.cals` are legacy families — they
+    /// appear only for exercises whose data already carries them.
+    static let alwaysOffered: [EditorV2EditTargetKind] = [.reps, .timed, .distance, .open]
 
     var accessibilityIdentifier: String {
         "af_exsheet_target_\(rawValue)"
@@ -34,6 +45,7 @@ private enum EditorV2EditTargetIntent: Equatable {
     case reps(Int)
     case range(min: Int, max: Int)
     case timed(Int)
+    case distance(Int)
     case cals(Int)
     case open
 }
@@ -46,6 +58,7 @@ struct EditorV2EditTargetMemory: Equatable {
     var rangeMin: Int = 8
     var rangeMax: Int = 12
     var workSeconds: Int = 40
+    var meters: Int = 400
     var calories: Int = 15
     private let initialIntent: EditorV2EditTargetIntent?
     private var shouldApplyTarget: Bool
@@ -63,6 +76,10 @@ struct EditorV2EditTargetMemory: Equatable {
             kind = .timed
             workSeconds = seconds
             initialIntent = .timed(seconds)
+        } else if let targetMeters = exercise.distanceMeters {
+            kind = .distance
+            meters = targetMeters
+            initialIntent = .distance(targetMeters)
         } else if let targetCalories = exercise.calories {
             kind = .cals
             calories = targetCalories
@@ -84,7 +101,30 @@ struct EditorV2EditTargetMemory: Equatable {
     static let defaultRangeMin = 8
     static let defaultRangeMax = 12
     static let defaultWorkSeconds = 40
+    static let defaultMeters = 400
     static let defaultCalories = 15
+
+    /// The chip row for this exercise: the calm four, plus whichever legacy
+    /// family the data arrived with, plus wherever the athlete has since moved.
+    /// Derived from the data shape, never from a UI flag.
+    var visibleKinds: [EditorV2EditTargetKind] {
+        var offered = EditorV2EditTargetKind.alwaysOffered
+        for legacy in [initialKind, kind] where !offered.contains(legacy) {
+            offered.append(legacy)
+        }
+        return offered
+    }
+
+    private var initialKind: EditorV2EditTargetKind {
+        switch initialIntent {
+        case .range: return .range
+        case .cals: return .cals
+        case .timed: return .timed
+        case .distance: return .distance
+        case .open: return .open
+        case .reps, .none: return .reps
+        }
+    }
 
     mutating func setRangeMin(_ value: Int) {
         let updated = Swift.min(Swift.max(1, value), rangeMax)
@@ -115,6 +155,12 @@ struct EditorV2EditTargetMemory: Equatable {
     mutating func setWorkSeconds(_ value: Int) {
         guard value != workSeconds else { return }
         workSeconds = value
+        shouldApplyTarget = true
+    }
+
+    mutating func setMeters(_ value: Int) {
+        guard value != meters else { return }
+        meters = value
         shouldApplyTarget = true
     }
 
@@ -149,6 +195,8 @@ struct EditorV2EditTargetMemory: Equatable {
             exercise.repsRange = RepsRange(low: rangeMin, high: rangeMax)
         case .timed:
             exercise.durationSeconds = workSeconds
+        case .distance:
+            exercise.distanceMeters = meters
         case .cals:
             exercise.calories = calories
         case .open:
@@ -161,6 +209,7 @@ struct EditorV2EditTargetMemory: Equatable {
         case .reps: return "reps"
         case .range: return "reps_range"
         case .timed: return "duration_seconds"
+        case .distance: return "distance_meters"
         case .cals: return "calories"
         case .open: return "open_goal"
         }
@@ -171,6 +220,7 @@ struct EditorV2EditTargetMemory: Equatable {
         case .reps: return .reps(reps)
         case .range: return .range(min: rangeMin, max: rangeMax)
         case .timed: return .timed(workSeconds)
+        case .distance: return .distance(meters)
         case .cals: return .cals(calories)
         case .open: return .open
         }

@@ -792,6 +792,7 @@ final class EditorV2Tests: XCTestCase {
                 "af_exsheet_target_reps",
                 "af_exsheet_target_range",
                 "af_exsheet_target_timed",
+                "af_exsheet_target_distance",
                 "af_exsheet_target_cals",
                 "af_exsheet_target_open",
             ]
@@ -838,8 +839,7 @@ final class EditorV2Tests: XCTestCase {
 
     func testEditSheetCommitPreservesDistanceAfterSetsChangeWithoutTargetChange() {
         let exercise = EditorV2Exercise(name: "Run", sets: 3, distanceMeters: 400)
-        var memory = EditorV2EditTargetMemory(exercise: exercise)
-        memory.select(.reps) // Reps is already displayed for a distance-only row.
+        let memory = EditorV2EditTargetMemory(exercise: exercise)
         var draft = exercise
         draft.sets = 4
 
@@ -848,6 +848,20 @@ final class EditorV2Tests: XCTestCase {
         XCTAssertEqual(committed.sets, 4)
         XCTAssertEqual(committed.distanceMeters, 400)
         XCTAssertNil(committed.reps)
+    }
+
+    /// AMA-2443 slice 5 — Distance is now a TRACK chip, so a distance row opens
+    /// on Distance and moving to Reps is a deliberate conversion, not a no-op.
+    func testEditSheetSwitchingDistanceRowToRepsConvertsTheTarget() {
+        let exercise = EditorV2Exercise(name: "Run", sets: 3, distanceMeters: 400)
+        var memory = EditorV2EditTargetMemory(exercise: exercise)
+        XCTAssertEqual(memory.kind, .distance)
+        memory.select(.reps)
+
+        let committed = editorV2CommitEditDraft(exercise, targetMemory: memory)
+
+        XCTAssertNil(committed.distanceMeters)
+        XCTAssertEqual(committed.reps, EditorV2EditTargetMemory.defaultReps)
     }
 
     func testEditSheetUnchangedTargetDoesNotStampUserProvenance() {
