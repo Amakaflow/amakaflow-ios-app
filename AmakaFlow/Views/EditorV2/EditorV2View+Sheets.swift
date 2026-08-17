@@ -200,13 +200,7 @@ extension EditorV2View {
                     replaceExerciseID = nil
                     presentCoachWithQuery(query)
                 },
-                onAddBlock: { type in
-                    addSheetOpen = false
-                    guard let key = session.beginFormatGroup(type) else { return }
-                    addTargetGroupID = key
-                    showToast("\(type.label) added — pick the moves")
-                    addSheetOpen = true
-                },
+                onAddBlock: { beginFormatGroupAndAdd($0) },
                 onQuickAddSoftSection: { kind in
                     addSheetOpen = false
                     quickAddSoftSection(kind)
@@ -241,13 +235,7 @@ extension EditorV2View {
                     addTargetGroupID = nil
                     presentCoachWithQuery(query)
                 },
-                onAddBlock: { type in
-                    addSheetOpen = false
-                    guard let key = session.beginFormatGroup(type) else { return }
-                    addTargetGroupID = key
-                    showToast("\(type.label) added — pick the moves")
-                    addSheetOpen = true
-                },
+                onAddBlock: { beginFormatGroupAndAdd($0) },
                 onQuickAddSoftSection: { kind in
                     addSheetOpen = false
                     addTargetGroupID = nil
@@ -429,7 +417,7 @@ extension EditorV2View {
                 return
             }
             let summaries = session.exercises.values.map(\.name).filter { !$0.isEmpty }
-            let blocks = session.toSocialImportBlocks()
+            let blocks = session.toSaveBlocks()
             let draft = ActualsCaptureDraft(
                 id: UUID().uuidString,
                 title: trimmedTitle,
@@ -449,7 +437,7 @@ extension EditorV2View {
         saveModel.name = trimmedTitle
         saveModel.intervals = session.toSaveIntervals()
         session.mintMissingExerciseIDs()
-        saveModel.saveBlocks = session.toSocialImportBlocks()
+        saveModel.saveBlocks = session.toSaveBlocks()
         // nil = leave server tombstones alone when this session never touched them.
         saveModel.saveEnrichmentTombstones = session.enrichmentTombstonesDirty
             ? session.enrichmentTombstones

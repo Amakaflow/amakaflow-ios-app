@@ -400,13 +400,18 @@ extension EditorV2Session {
         return "fmt"
     }
     
-    mutating func beginNextSupersetGroup(preferredName: String? = nil) -> String? {
-        beginFormatGroup(.superset, preferredName: preferredName)
+    mutating func beginNextSupersetGroup(preferredName: String? = nil) -> String {
+        beginFormatGroup(.superset, preferredName: preferredName) ?? "fmt"
     }
 
     /// AMA-2443 slice 4 — append a new empty format group of `type` and pin it.
     /// Non-destructive: existing rows are untouched, unlike `.addBlock`.
-    /// Returns the new group key on success, nil on rejection.
+    ///
+    /// Returns nil when the command was rejected, rather than a sentinel: the
+    /// old `?? "fmt"` fallback returned the key `.addBlock` mints, so a caller
+    /// feeding it into an add destination would silently land moves in the
+    /// wrong block (in release builds `assertionFailure` is a no-op, so a
+    /// rejection is otherwise invisible).
     @discardableResult
     mutating func beginFormatGroup(
         _ type: EditorV2GroupType,

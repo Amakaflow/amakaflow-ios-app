@@ -66,9 +66,11 @@ extension EditorV2Session {
             case .group(let key):
                 guard let group = groups[key] else { continue }
                 let members = group.memberIDs.compactMap { exercises[$0] }
-                // Skip empty groups (pre-existing via "＋ Another superset"; AMA-2443
-                // slice 4 widens it to picker dismiss). I2-legal in memory, illegal on save.
-                guard !members.isEmpty else { continue }
+                // Empty pinned groups ARE encoded here on purpose: `encodeToBlocks()`
+                // delegates to this, and the D4 law is decode(encode(s)) == normalize(s)
+                // — normalize keeps the pinned empty group, so dropping it here breaks
+                // round-trip (EditorV2CodecTests.testPinnedEmptyGroupRoundTrip).
+                // Filtering for the WIRE happens at the save seam instead.
                 flushFlat()
                 let restSec: Int? = {
                     switch group.type {
@@ -225,5 +227,18 @@ private extension EditorV2Exercise {
             restOpen: declaredRestOpen,
             structureSource: structureSource?.rawValue
         )
+    }
+}
+
+extension EditorV2Session {
+    /// Blocks for the WIRE: the round-trip encoding minus empty groups.
+    ///
+    /// An empty group only exists while it is `formatGroupKey` — a live editing
+    /// slot the user hasn't filled yet (abandoning the add sheet leaves one,
+    /// since the pin is exempt from `pruneEmptyGroupsD2`). Round-trip must keep
+    /// it so reload restores the slot; the server must never see it, or workout
+    /// detail renders a phantom zero-exercise block.
+    func toSaveBlocks() -> [SocialImportBlock] {
+        toSocialImportBlocks().filter { !$0.exercises.isEmpty }
     }
 }

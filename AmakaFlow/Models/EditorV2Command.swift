@@ -27,10 +27,13 @@ enum EditorCommand: Equatable, Sendable {
     case updateGroupConfig(String, EditorV2GroupConfig)
     case ungroup(String)
     case deleteGroup(String)
-    /// Start over: REPLACES the canvas with a single empty group of `type`.
-    /// Destructive by design — reserved for the empty canvas and the explicit
-    /// "Change workout type?" confirm. To add a block mid-workout without
-    /// losing work, use `beginFormatGroup` (AMA-2443 slice 4).
+    /// Start over: REPLACES the canvas with a single empty group of `type`,
+    /// discarding every exercise, group and row. Destructive by design.
+    ///
+    /// Only reachable where there is nothing to lose: the empty-state chips and
+    /// the explicit "Change workout type?" confirm. Every mid-workout door —
+    /// canvas "＋ Add a block" and the picker's quick-block chips — goes through
+    /// `beginFormatGroup` instead (AMA-2443 slice 4).
     case addBlock(EditorV2GroupType)
     case move(String, Int)
     case reorder(fromOffsets: IndexSet, toOffset: Int)

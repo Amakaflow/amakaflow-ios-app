@@ -92,17 +92,18 @@ enum EditorV2Content {
                let group = session.groups[fmtKey] {
                 formatPinnedPlaceholder(group: group, key: fmtKey, onConfig: actions.onConfigGroup)
             }
+            // Mutually exclusive: "＋ Another superset" is the superset-shaped
+            // case of "＋ Add a block". Showing both stacked three full-width
+            // CTAs doing near-identical things.
             if shouldOfferNextSupersetGroup(session: session) {
                 nextSupersetGroupButton(
                     label: nextSupersetGroupLabel(session: session),
                     action: actions.onBeginNextSupersetGroup
                 )
-            }
-            // AMA-2443 slice 4 — non-destructive mid-workout block. Hidden while
-            // the pin is an empty group OR when Another superset shows (conservative
-            // gate: avoid three stacked CTAs). That block has no moves yet, so the
-            // next thing to do is fill it, not start another one.
-            if !isPinnedGroupEmpty(session: session) && !shouldOfferNextSupersetGroup(session: session) {
+            } else if !isPinnedGroupEmpty(session: session) {
+                // AMA-2443 slice 4 — non-destructive mid-workout block. Hidden
+                // while the pin is empty: that block has no moves yet, so the
+                // next thing to do is fill it, not start another one.
                 EditorV2AddBlockButton(onSelect: actions.onBeginFormatGroup)
             }
             addExerciseButton(
@@ -114,13 +115,16 @@ enum EditorV2Content {
         }
     }
 
-    /// True when the pin names a group with no moves yet — the canvas already
-    /// draws `formatPinnedPlaceholder` for it and the user owes it exercises.
-    /// Source of truth is `memberIDs`, not derived `groupKey` field (which is
-    /// only populated after `syncGroupKeyFieldsD2` runs inside `apply()`).
+    /// True when the pin names a group with no moves yet — the canvas draws
+    /// `formatPinnedPlaceholder` for it and the user owes it exercises.
+    ///
+    /// Reads `memberIDs`, the D2 source of truth. The `exercise.groupKey`
+    /// back-pointer is DERIVED and only synced by `syncGroupKeyFieldsD2()`
+    /// inside `apply()`; a freshly decoded session has it nil on every
+    /// exercise (`decodeFromBlocks` builds them with `groupKey: nil`), so
+    /// scanning it reports a populated group as empty until the first edit.
     private static func isPinnedGroupEmpty(session: EditorV2Session) -> Bool {
-        guard let key = session.formatGroupKey,
-              let group = session.groups[key] else { return false }
+        guard let key = session.formatGroupKey, let group = session.groups[key] else { return false }
         return group.memberIDs.isEmpty
     }
 
@@ -250,10 +254,7 @@ enum EditorV2Content {
                 .padding(.top, 18)
                 .padding(.bottom, 8)
 
-            EditorV2FormatChipRow(
-                idPrefix: "editor_v2_format_chip_",
-                onSelect: onStartFormat
-            )
+            EditorV2FormatChipRow(idPrefix: "editor_v2_format_chip") { onStartFormat($0) }
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 22)

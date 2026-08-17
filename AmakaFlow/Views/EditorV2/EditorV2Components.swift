@@ -380,35 +380,6 @@ struct EditorV2FlowWrap: Layout {
     }
 }
 
-/// Shared format chip row — extracted for empty state and Add a block button.
-struct EditorV2FormatChipRow: View {
-    var idPrefix: String
-    var onSelect: (EditorV2GroupType) -> Void
-
-    var body: some View {
-        EditorV2FlowWrap {
-            ForEach(EditorV2GroupType.formatChips, id: \.self) { type in
-                Button {
-                    onSelect(type)
-                } label: {
-                    Text(type.label)
-                        .ddDisplayText(12, weight: .bold)
-                        .foregroundColor(DailyDriver.foreground)
-                        .padding(.horizontal, 13)
-                        .padding(.vertical, 8)
-                        .background(DailyDriver.card2)
-                        .clipShape(Capsule())
-                        .overlay(
-                            Capsule().stroke(type.accentColor.opacity(0.45), lineWidth: 1)
-                        )
-                }
-                .buttonStyle(.plain)
-                .accessibilityIdentifier("\(idPrefix)\(type.rawValue)")
-            }
-        }
-    }
-}
-
 /// AMA-2443 slice 4 — "＋ Add a block" for a canvas that already has work on it.
 ///
 /// Tapping reveals the format chips inline; picking one appends a new pinned
@@ -442,16 +413,45 @@ struct EditorV2AddBlockButton: View {
             .accessibilityIdentifier("editor_v2_add_a_block")
 
             if isExpanded {
-                EditorV2FormatChipRow(
-                    idPrefix: "editor_v2_add_block_chip_",
-                    onSelect: { type in
-                        isExpanded = false
-                        onSelect(type)
-                    }
-                )
+                EditorV2FormatChipRow(idPrefix: "editor_v2_add_block_chip") { type in
+                    isExpanded = false
+                    onSelect(type)
+                }
                 .padding(.top, 10)
             }
         }
         .padding(.bottom, 8)
+    }
+}
+
+/// The format-chip row, shared by the empty state and "＋ Add a block" so a
+/// design tweak can't leave two visibly different chip rows on one screen.
+///
+/// `.superset` is intentionally absent: you don't *start* a superset, you make
+/// one by pairing rows (⋯) or via the "Runs as" switcher — which is what
+/// `runsAsOptions` is for.
+struct EditorV2FormatChipRow: View {
+    var idPrefix: String
+    var onSelect: (EditorV2GroupType) -> Void
+
+    var body: some View {
+        EditorV2FlowWrap {
+            ForEach(EditorV2GroupType.formatChips, id: \.self) { type in
+                Button { onSelect(type) } label: {
+                    Text(type.label)
+                        .ddDisplayText(12, weight: .bold)
+                        .foregroundColor(DailyDriver.foreground)
+                        .padding(.horizontal, 13)
+                        .padding(.vertical, 8)
+                        .background(DailyDriver.card2)
+                        .clipShape(Capsule())
+                        .overlay(
+                            Capsule().stroke(type.accentColor.opacity(0.45), lineWidth: 1)
+                        )
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("\(idPrefix)_\(type.rawValue)")
+            }
+        }
     }
 }

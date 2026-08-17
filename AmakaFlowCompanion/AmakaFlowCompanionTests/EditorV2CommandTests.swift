@@ -1207,11 +1207,84 @@ final class EditorV2CommandTests: XCTestCase {
     func testBeginFormatGroup_thenAddIntoIt() {
         var (session, _) = makeSessionWithSeededGroup(key: "existing", type: .superset)
 
-        let key = session.beginFormatGroup(.emom)
+        guard let key = session.beginFormatGroup(.emom) else {
+            return XCTFail("beginFormatGroup should succeed for a format type")
+        }
         let result = session.apply(.addExercises(names: ["Burpees"], into: key))
 
         XCTAssertEqual(result, .applied)
         XCTAssertEqual(session.groups[key]?.memberIDs.count, 1)
         XCTAssertEqual(session.validateD2(), .applied)
+    }
+
+    // MARK: - AMA-2443 slice 4 — review follow-ups
+
+    /// Soft sections belong to `quickAddSoftSection` (which PREPENDS and sets
+    /// `enrichmentKind`). Minting one here would make `hasWarmupSection` true
+    /// for a group `removeSoftSection` later deletes wholesale.
+    func testBeginFormatGroup_rejectsSoftSectionTypes() {
+        var session = EditorV2Session()
+
+        XCTAssertEqual(
+            session.apply(.beginFormatGroup(type: .warmup, preferredName: nil)),
+            .rejected(.invalidState)
+        )
+        XCTAssertEqual(
+            session.apply(.beginFormatGroup(type: .cooldown, preferredName: nil)),
+            .rejected(.invalidState)
+        )
+        XCTAssertTrue(session.groups.isEmpty)
+        XCTAssertFalse(session.hasWarmupSection)
+        XCTAssertNil(session.beginFormatGroup(.warmup), "wrapper surfaces the rejection as nil")
+    }
+
+    /// An empty pinned group is a live editing slot, not content. Abandoning the
+    /// add sheet must not put a zero-exercise block on the wire — but it MUST
+    /// survive the round-trip encoding, or reload loses the slot and the D4 law
+    /// (decode(encode(s)) == normalize(s)) breaks, since normalize keeps the pin.
+    func testEmptyPinnedGroup_roundTripsButIsNotSaved() {
+        var (session, _) = makeSessionWithSeededGroup(key: "existing", type: .superset)
+        session.beginFormatGroup(.emom)
+
+        let roundTrip = session.toSocialImportBlocks()
+        XCTAssertEqual(roundTrip.count, 2, "round-trip keeps the empty pinned slot")
+        XCTAssertTrue(roundTrip.contains { $0.exercises.isEmpty })
+
+        let wire = session.toSaveBlocks()
+        XCTAssertFalse(
+            wire.contains { $0.exercises.isEmpty },
+            "an abandoned empty block must not reach the server"
+        )
+        XCTAssertEqual(wire.count, 1, "only the populated superset is saved")
+    }
+
+    /// Regression: the canvas predicates must read `memberIDs` (D2 source of
+    /// truth), not the derived `exercise.groupKey` back-pointer. A freshly
+    /// decoded session has `groupKey` nil on every exercise, so a back-pointer
+    /// scan reports a populated group as empty until the first edit.
+    func testDecodedSession_populatedGroupIsNotSeenAsEmpty() {
+        let block = SocialImportBlock(
+            label: "Superset A",
+            rounds: 3,
+            exercises: [
+                SocialImportExercise(name: "Bench Press", sets: 3, reps: 10),
+                SocialImportExercise(name: "Barbell Row", sets: 3, reps: 10)
+            ],
+            type: StructureBlockType.superset.rawValue,
+            restSec: 60,
+            structureSource: StructureSource.userConfirmed.rawValue
+        )
+        var session = EditorV2Session.decodeFromBlocks(title: "Test", blocks: [block])
+        guard let key = session.groups.keys.first else {
+            return XCTFail("decode produced no group")
+        }
+        session.formatGroupKey = key
+
+        // The bug this guards: back-pointers are nil straight off the decoder.
+        XCTAssertTrue(
+            session.exercises.values.allSatisfy { $0.groupKey == nil },
+            "decode leaves the derived back-pointer unset — that is why memberIDs is the source of truth"
+        )
+        XCTAssertEqual(session.groups[key]?.memberIDs.count, 2, "membership is declared, and populated")
     }
 }
