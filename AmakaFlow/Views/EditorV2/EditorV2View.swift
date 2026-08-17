@@ -216,31 +216,13 @@ struct EditorV2View: View {
             onOpen: { editExerciseID = $0 },
             onMenu: { menuExerciseID = $0 },
             onReorder: { _ = session.apply(.reorder(fromOffsets: $0, toOffset: $1)) },
-            onExitReorder: {
-                isReorderMode = false
-                showToast("Tap Save workout to keep changes")
-            },
-            onAdd: {
-                replaceExerciseID = nil
-                addTargetGroupID = nil
-                addSheetOpen = true
-            },
-            onAddHere: { groupID in
-                replaceExerciseID = nil
-                addTargetGroupID = groupID
-                addSheetOpen = true
-            },
-            onStartFormat: { type in
-                _ = session.apply(.addBlock(type))
-                showToast("\(type.label) — add the moves, timing is set")
-            },
+            onExitReorder: { isReorderMode = false; showToast("Tap Save workout to keep changes") },
+            onAdd: { replaceExerciseID = nil; addTargetGroupID = nil; addSheetOpen = true },
+            onAddHere: { groupID in replaceExerciseID = nil; addTargetGroupID = groupID; addSheetOpen = true },
+            onStartFormat: { type in _ = session.apply(.addBlock(type)); showToast("\(type.label) — add the moves, timing is set") },
             onAddWarmup: { quickAddSoftSection(.sessionWarmup) },
             onAddCooldown: { quickAddSoftSection(.cooldown) },
-            onBeginNextSupersetGroup: {
-                let key = session.beginNextSupersetGroup()
-                let name = session.groups[key]?.name ?? "Superset"
-                showToast("\(name) ready — add the next moves")
-            }
+            onBeginNextSupersetGroup: { let key = session.beginNextSupersetGroup(); let name = session.groups[key]?.name ?? "Superset"; showToast("\(name) ready — add the next moves") }
         )
     }
 
