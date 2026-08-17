@@ -1027,9 +1027,11 @@ final class EditorV2CommandTests: XCTestCase {
         )
         session.order = [.group("valid")]
         
+        let stateBefore = session
         let result = session.apply(.addExercises(names: ["Squat"], into: "invalid"))
         
-        XCTAssertEqual(result, .rejected(.unresolvedReferences))
+        XCTAssertEqual(result, .rejected(.invalidGroupMembership))
+        XCTAssertEqual(session, stateBefore)
         XCTAssertEqual(session.exercises.count, 0)
     }
     

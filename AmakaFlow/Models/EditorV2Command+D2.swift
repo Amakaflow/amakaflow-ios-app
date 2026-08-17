@@ -15,7 +15,7 @@ extension EditorV2Session {
         case .addExercises(let names, let into):
             // Validate explicit destination early (shape B constraint)
             if let into, groups[into] == nil {
-                return .rejected(.unresolvedReferences)
+                return .rejected(.invalidGroupMembership)
             }
             
             for name in names {
