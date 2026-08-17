@@ -18,6 +18,9 @@ enum BuilderV3ExerciseSuggestions {
         catalog: [BuilderV3ExerciseItem],
         limit: Int = 6
     ) -> [BuilderV3ExerciseItem] {
+        // An empty canvas gives no signal to rank against — suggest nothing.
+        guard !canvasNames.isEmpty else { return [] }
+
         // Extract muscles and equipment from canvas
         let canvasMuscles = Set(
             canvasNames.compactMap { name -> String? in
@@ -64,8 +67,12 @@ enum BuilderV3ExerciseSuggestions {
     ///
     /// Tolerates: missing/extra spaces, common typos, plural/singular mismatch.
     static func didYouMean(query: String, catalog: [BuilderV3ExerciseItem]) -> String? {
-        let needle = query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        let needle = trimmed.lowercased()
         guard !needle.isEmpty else { return nil }
+
+        // The query already names a catalog exercise verbatim — no correction to offer.
+        if catalog.contains(where: { $0.name == trimmed }) { return nil }
         
         // Normalize spaces in catalog names
         let normalized = catalog.map { item -> (name: String, normalized: String) in
