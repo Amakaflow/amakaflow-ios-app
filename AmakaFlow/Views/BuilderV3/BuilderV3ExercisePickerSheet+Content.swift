@@ -69,6 +69,13 @@ extension BuilderV3ExercisePickerSheet {
                                 )
                             )
                         }
+                        // In replace mode, auto-commit on create
+                        if case .replace = mode {
+                            onAddExercises([trimmedQuery])
+                            selectedNames.removeAll()
+                            createdItems.removeAll()
+                            onDone()
+                        }
                     } label: {
                         Text(
                             isSelected(trimmedQuery)
@@ -146,6 +153,13 @@ extension BuilderV3ExercisePickerSheet {
         let inGym = BuilderV3GymOverlay.isInGym(equipmentKey: item.equipmentKey, availableKeys: availableEquipmentKeys)
         return Button {
             toggleSelection(item.name)
+            // In replace mode, auto-commit on new selection (not deselection)
+            if case .replace = mode, !selected {
+                onAddExercises([item.name])
+                selectedNames.removeAll()
+                createdItems.removeAll()
+                onDone()
+            }
         } label: {
             HStack(spacing: 11) {
                 Image(systemName: selected ? "checkmark.circle.fill" : "circle")
@@ -175,13 +189,10 @@ extension BuilderV3ExercisePickerSheet {
 
     var footer: some View {
         VStack(spacing: 10) {
-            Text(
-                formatLabel.map { "Selected exercises land straight into the \($0)." }
-                    ?? "Added as 3 × 10 · 60s rest — tap the card after to change anything."
-            )
-            .font(.system(size: 10))
-            .foregroundColor(DailyDriver.foregroundDim)
-            .frame(maxWidth: .infinity)
+            Text(footerHintText)
+                .font(.system(size: 10))
+                .foregroundColor(DailyDriver.foregroundDim)
+                .frame(maxWidth: .infinity)
 
             Button {
                 let names = selectedNames
@@ -190,7 +201,7 @@ extension BuilderV3ExercisePickerSheet {
                 createdItems.removeAll()
                 onDone()
             } label: {
-                Text(selectedNames.isEmpty ? "Add exercises" : "Add \(selectedNames.count) exercise\(selectedNames.count == 1 ? "" : "s")")
+                Text(footerButtonText)
                     .ddDisplayText(14, weight: .bold)
                     .foregroundColor(DailyDriver.ink)
                     .frame(maxWidth: .infinity)
@@ -203,6 +214,25 @@ extension BuilderV3ExercisePickerSheet {
             .accessibilityIdentifier("builder_v3_add_exercises_button")
         }
         .padding(.top, 10)
+    }
+    
+    private var footerHintText: String {
+        switch mode {
+        case .add:
+            return formatLabel.map { "Selected exercises land straight into the \($0)." }
+                ?? "Added as 3 × 10 · 60s rest — tap the card after to change anything."
+        case .replace:
+            return "Numbers and prescription carry over — only the name changes."
+        }
+    }
+    
+    private var footerButtonText: String {
+        switch mode {
+        case .add:
+            return selectedNames.isEmpty ? "Add exercises" : "Add \(selectedNames.count) exercise\(selectedNames.count == 1 ? "" : "s")"
+        case .replace:
+            return selectedNames.isEmpty ? "Replace exercise" : "Replace with \(selectedNames.first ?? "")"
+        }
     }
 
     func loadExercises() async {

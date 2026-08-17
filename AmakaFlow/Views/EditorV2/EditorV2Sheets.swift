@@ -338,6 +338,9 @@ struct EditorV2PairSheet: View {
 
 // MARK: - Add / replace exercise
 
+/// AMA-2443 slice 2 — DEPRECATED in favor of BuilderV3ExercisePickerSheet.
+/// This old single-select sheet is no longer in the replace path as of slice 2.
+/// Kept for reference until the full AMA-2443 implementation is complete.
 struct EditorV2AddExerciseSheet: View {
     var formatLabel: String?
     var replaceMode: Bool
