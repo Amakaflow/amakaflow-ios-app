@@ -103,6 +103,41 @@ check both_violations_fail 1 \
   '+++ b/AmakaFlowCompanion/AmakaFlowCompanionTests/FooTests.swift
 +    XCTExpectFailure("later")'
 
+# --- *_FILE inputs (the E2BIG path from PR #607) ----------------------------
+# check_file <name> <expected-exit> [body] [diff] — same fixtures, routed
+# through PR_HYGIENE_BODY_FILE / PR_HYGIENE_DIFF_FILE instead of env strings.
+check_file() {
+  local name="$1" expected="$2" body="${3:-}" diff="${4:-}"
+  local tmpdir
+  tmpdir="$(mktemp -d)"
+  printf '%s' "$body" > "$tmpdir/body"
+  printf '%s' "$diff" > "$tmpdir/diff"
+  PR_HYGIENE_BODY_FILE="$tmpdir/body" PR_HYGIENE_DIFF_FILE="$tmpdir/diff" \
+    bash "$SCRIPT" >/dev/null 2>&1
+  local actual=$?
+  rm -rf "$tmpdir"
+  if [ "$actual" = "$expected" ]; then
+    PASS=$((PASS + 1))
+    echo "  ok   $name"
+  else
+    FAIL=$((FAIL + 1))
+    echo "  FAIL $name (expected exit $expected, got $actual)"
+  fi
+}
+
+check_file file_input_clean_passes 0 \
+  "- Part of AMA-2443
+
+| L2 | ✅ | local: see Verify by |" \
+  '+++ b/AmakaFlowCompanion/AmakaFlowCompanionTests/FooTests.swift
++    func testNewThing() { XCTAssertTrue(true) }'
+
+check_file file_input_violations_fail 1 \
+  "Closes AMA-2443
+| L2 | ✅ Pass | trust me |" \
+  '+++ b/AmakaFlowCompanion/AmakaFlowCompanionTests/FooTests.swift
++    XCTExpectFailure("later")'
+
 echo
 echo "corpus: $PASS passed, $FAIL failed"
 [ "$FAIL" -eq 0 ]
