@@ -283,7 +283,11 @@ struct BuilderV3ExercisePickerSheet: View {
         }
         .padding(.top, 10)
     }
-    
+}
+
+// MARK: - Zero-query chips, filters, suggestions (extension keeps the
+// struct body under the 300-line type_body_length lint cap — AMA-2443).
+extension BuilderV3ExercisePickerSheet {
     @ViewBuilder
     private var quickBlockChips: some View {
         if tab == .all, trimmedQuery.isEmpty, selectedCategory == nil, case .add = mode {
