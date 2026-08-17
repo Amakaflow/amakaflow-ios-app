@@ -48,6 +48,8 @@ extension BuilderV3ExercisePickerSheet {
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 28)
                                 .accessibilityIdentifier("builder_v3_exercise_empty")
+                        } else if filteredItems.isEmpty, !trimmedQuery.isEmpty {
+                            didYouMeanEmptyState
                         }
                     }
                 }
@@ -90,6 +92,24 @@ extension BuilderV3ExercisePickerSheet {
                     }
                     .buttonStyle(.plain)
                     .accessibilityIdentifier("builder_v3_create_exercise")
+                }
+                
+                if !trimmedQuery.isEmpty, filteredItems.isEmpty {
+                    Button {
+                        // Ask Amaka placeholder - future integration
+                    } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: "sparkles")
+                                .font(.system(size: 11, weight: .bold))
+                            Text("Ask Amaka")
+                                .ddDisplayText(12.5, weight: .bold)
+                        }
+                        .foregroundColor(DailyDriver.lime)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("builder_v3_ask_amaka")
                 }
             }
         }
@@ -187,6 +207,24 @@ extension BuilderV3ExercisePickerSheet {
     func exerciseMetaLine(_ item: BuilderV3ExerciseItem, inGym: Bool) -> String {
         let base = "\(item.muscle.uppercased()) · \(item.equipmentLabel.uppercased())"
         return inGym ? base : "\(base) — NOT IN YOUR GYM"
+    }
+    
+    private var didYouMeanEmptyState: some View {
+        VStack(spacing: 16) {
+            VStack(spacing: 8) {
+                Text("No exercises found")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(DailyDriver.foreground)
+                Text("Try a different search or create a custom exercise")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(DailyDriver.foregroundMuted)
+                    .multilineTextAlignment(.center)
+            }
+            .padding(.vertical, 8)
+            .accessibilityIdentifier("builder_v3_did_you_mean_empty")
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 20)
     }
 
     var footer: some View {

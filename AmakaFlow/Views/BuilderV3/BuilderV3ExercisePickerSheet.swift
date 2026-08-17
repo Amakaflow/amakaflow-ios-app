@@ -266,7 +266,7 @@ struct BuilderV3ExercisePickerSheet: View {
         Group {
             if tab == .all, trimmedQuery.isEmpty, selectedCategory == .strength {
                 EditorV2FlowWrap {
-                    filterChip(label: "All muscles", isSelected: muscleFilter == nil) { muscleFilter = nil }
+                    filterChip(label: "All muscles", isSelected: muscleFilter == nil, id: "builder_v3_muscle_chip_all") { muscleFilter = nil }
                     ForEach(BuilderV3ExerciseLibrary.strengthMuscleChips.indices, id: \.self) { index in
                         let chip = BuilderV3ExerciseLibrary.strengthMuscleChips[index]
                         filterChip(
@@ -281,7 +281,7 @@ struct BuilderV3ExercisePickerSheet: View {
                 .padding(.top, 10)
             } else if tab == .all, trimmedQuery.isEmpty, selectedCategory == .cardio {
                 EditorV2FlowWrap {
-                    filterChip(label: "All equipment", isSelected: equipmentFilter == nil) { equipmentFilter = nil }
+                    filterChip(label: "All equipment", isSelected: equipmentFilter == nil, id: "builder_v3_equipment_chip_all") { equipmentFilter = nil }
                     ForEach(BuilderV3ExerciseLibrary.cardioEquipmentChips.indices, id: \.self) { index in
                         let chip = BuilderV3ExerciseLibrary.cardioEquipmentChips[index]
                         filterChip(
