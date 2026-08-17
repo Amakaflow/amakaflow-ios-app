@@ -20,6 +20,11 @@ jobs:
        github.event.review.user.login == 'droid-review[bot]' ||
        github.event.review.user.login == 'coderabbitai[bot]')
     runs-on: ubuntu-latest
+    # AMA-2448 — this job has never had a passing run; the credential is
+    # rejected before any work happens. Non-blocking so a broken bot does not
+    # show red on every PR. REMOVE THIS once a run completes with is_error:false
+    # — until then a genuinely failing auto-fix is invisible.
+    continue-on-error: true
     timeout-minutes: 30
     permissions:
       contents: write
