@@ -2,7 +2,7 @@
 //  BuilderV3ExercisePickerSheet+Content.swift
 //  AmakaFlow
 //
-//  AMA-2384 — results list, rows, and fetch helpers extracted for SwiftLint.
+//  AMA-2384 / AMA-2443 slice 2b — results list, rows, and fetch helpers.
 //
 
 import SwiftUI
@@ -12,6 +12,10 @@ extension BuilderV3ExercisePickerSheet {
         ScrollView {
             LazyVStack(spacing: 0) {
                 if tab == .all, trimmedQuery.isEmpty, selectedCategory == nil {
+                    // Show suggestions above category grid (feature 1)
+                    if !suggestedExercises.isEmpty, case .add = mode {
+                        suggestedSection
+                    }
                     categoryGrid
                 } else {
                     if tab == .all, trimmedQuery.isEmpty, let selectedCategory {
@@ -49,6 +53,11 @@ extension BuilderV3ExercisePickerSheet {
                                 .padding(.vertical, 28)
                                 .accessibilityIdentifier("builder_v3_exercise_empty")
                         }
+                        
+                        // Did-you-mean empty state (feature 4)
+                        if filteredItems.isEmpty, !trimmedQuery.isEmpty, let suggestion = didYouMeanResult {
+                            didYouMeanView(suggestion: suggestion)
+                        }
                     }
                 }
 
@@ -79,8 +88,8 @@ extension BuilderV3ExercisePickerSheet {
                     } label: {
                         Text(
                             isSelected(trimmedQuery)
-                                ? "✓ “\(trimmedQuery)” selected"
-                                : "＋ Create “\(trimmedQuery)”"
+                                ? "✓ "\(trimmedQuery)" selected"
+                                : "＋ Create "\(trimmedQuery)""
                         )
                             .ddDisplayText(12.5, weight: .bold)
                             .foregroundColor(DailyDriver.lime)
@@ -90,9 +99,96 @@ extension BuilderV3ExercisePickerSheet {
                     .buttonStyle(.plain)
                     .accessibilityIdentifier("builder_v3_create_exercise")
                 }
+                
+                // Ask Amaka button in empty state (feature 5)
+                if !trimmedQuery.isEmpty, filteredItems.isEmpty, onAskAmaka != nil {
+                    Button {
+                        onAskAmaka?(trimmedQuery)
+                    } label: {
+                        HStack(spacing: 8) {
+                            Image(systemName: "sparkles")
+                                .font(.system(size: 14, weight: .semibold))
+                            Text("Ask Amaka")
+                                .ddDisplayText(12.5, weight: .bold)
+                        }
+                        .foregroundColor(DailyDriver.foreground)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("builder_v3_ask_amaka")
+                }
             }
         }
         .frame(maxHeight: 360)
+    }
+    
+    @ViewBuilder
+    private var suggestedSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Suggested for this workout")
+                .font(.system(size: 11, weight: .bold))
+                .foregroundColor(DailyDriver.foregroundMuted)
+                .padding(.horizontal, 2)
+            
+            LazyVGrid(
+                columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)],
+                spacing: 8
+            ) {
+                ForEach(suggestedExercises) { item in
+                    Button {
+                        toggleSelection(item.name)
+                    } label: {
+                        HStack(spacing: 8) {
+                            Image(systemName: isSelected(item.name) ? "checkmark.circle.fill" : "circle")
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundColor(isSelected(item.name) ? DailyDriver.lime : DailyDriver.foregroundDim)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(item.name)
+                                    .font(.system(size: 11.5, weight: .semibold))
+                                    .foregroundColor(DailyDriver.foreground)
+                                    .lineLimit(1)
+                                Text(item.equipmentLabel.uppercased())
+                                    .font(.system(size: 8, weight: .medium, design: .monospaced))
+                                    .foregroundColor(DailyDriver.foregroundDim)
+                            }
+                            Spacer()
+                        }
+                        .padding(10)
+                        .background(DailyDriver.card2)
+                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("builder_v3_suggested_\(item.name)")
+                }
+            }
+        }
+        .padding(.vertical, 12)
+        .accessibilityIdentifier("builder_v3_suggested_section")
+        
+        Divider().background(DailyDriver.border)
+    }
+    
+    private func didYouMeanView(suggestion: String) -> some View {
+        Button {
+            query = suggestion
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: "arrow.right.circle")
+                    .font(.system(size: 12, weight: .semibold))
+                Text("Did you mean ")
+                    .font(.system(size: 11.5, weight: .medium))
+                    + Text(suggestion)
+                    .font(.system(size: 11.5, weight: .bold))
+                    + Text("?")
+                    .font(.system(size: 11.5, weight: .medium))
+            }
+            .foregroundColor(DailyDriver.amber)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 12)
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("builder_v3_did_you_mean")
     }
 
     var categoryGrid: some View {

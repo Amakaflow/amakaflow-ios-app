@@ -178,6 +178,7 @@ extension EditorV2View {
                 formatLabel: formatLabel,
                 availableEquipmentKeys: gymEquipmentKeys,
                 mode: .replace(exerciseID: replaceID, exerciseName: replaceName),
+                canvasExerciseNames: Array(session.exercises.values.map(\.name)),
                 onAddExercises: { names in
                     guard let name = names.first else { return }
                     _ = session.apply(.replaceExercise(replaceID, with: name))
@@ -188,6 +189,11 @@ extension EditorV2View {
                 onDone: {
                     addSheetOpen = false
                     replaceExerciseID = nil
+                },
+                onAskAmaka: { query in
+                    addSheetOpen = false
+                    replaceExerciseID = nil
+                    presentCoachWithQuery(query)
                 }
             )
             .presentationDetents([.large])
@@ -196,6 +202,7 @@ extension EditorV2View {
                 formatLabel: formatLabel,
                 availableEquipmentKeys: gymEquipmentKeys,
                 mode: .add,
+                canvasExerciseNames: Array(session.exercises.values.map(\.name)),
                 onAddExercises: { names in
                     _ = session.apply(.addExercises(names: names, into: nil))
                     guard !names.isEmpty else { return }
@@ -211,10 +218,23 @@ extension EditorV2View {
                 },
                 onDone: {
                     addSheetOpen = false
+                },
+                onAskAmaka: { query in
+                    addSheetOpen = false
+                    presentCoachWithQuery(query)
                 }
             )
             .presentationDetents([.large])
         }
+    }
+    
+    func presentCoachWithQuery(_ query: String) {
+        // Dismiss the picker and present Coach with the query prefilled
+        // The parent view owns the Coach presentation; signal via an @State binding
+        // or navigate directly depending on the app's navigation model.
+        // For now, store the query and set a flag.
+        coachPrefillQuery = query
+        showCoachSheet = true
     }
 
     /// Coaching profile equipment → gym overlay keys. Any failure (network,

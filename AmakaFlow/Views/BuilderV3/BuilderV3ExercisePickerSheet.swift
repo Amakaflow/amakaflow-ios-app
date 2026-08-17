@@ -25,8 +25,12 @@ struct BuilderV3ExercisePickerSheet: View {
     /// `nil` = no coaching profile loaded — never mark anything missing.
     var availableEquipmentKeys: Set<String>?
     var mode: Mode = .add
+    /// Exercise names currently on the canvas (for suggestions).
+    var canvasExerciseNames: [String] = []
     var onAddExercises: ([String]) -> Void
     var onDone: () -> Void
+    /// Callback when "Ask Amaka" is tapped with the typed query.
+    var onAskAmaka: ((String) -> Void)?
 
     @State var query = ""
     @State var tab: Tab = .all
@@ -43,6 +47,7 @@ struct BuilderV3ExercisePickerSheet: View {
     @State var isLoadingNextPage = false
     @State var canLoadMore = false
     @State var nextOffset = 0
+    @State var suggestedExercises: [BuilderV3ExerciseItem] = []
     let searchClient = BuilderV3ExerciseSearchClient()
     static let browsePageSize = 40
 
@@ -70,7 +75,12 @@ struct BuilderV3ExercisePickerSheet: View {
     }
 
     var filteredItems: [BuilderV3ExerciseItem] {
-        baseItems
+        var items = baseItems
+        // Apply promoted equipment filter when typing (feature 3)
+        if !trimmedQuery.isEmpty, let filter = equipmentFilter {
+            items = items.filter { $0.equipmentKey == filter }
+        }
+        return items
     }
 
     var loadKey: String {
@@ -100,6 +110,7 @@ struct BuilderV3ExercisePickerSheet: View {
             selectedChips
             searchField
             tabPicker
+            quickBlockChips
             filterChips
             Divider().background(DailyDriver.border).padding(.top, 8)
             resultsList
@@ -111,6 +122,9 @@ struct BuilderV3ExercisePickerSheet: View {
         .preferredColorScheme(.dark)
         .accessibilityIdentifier("builder_v3_exercise_picker_sheet")
         .task(id: loadKey) { await loadExercises() }
+        .onAppear {
+            computeSuggestions()
+        }
     }
     
     private func outgoingExerciseRow(_ exerciseName: String) -> some View {
@@ -261,6 +275,39 @@ struct BuilderV3ExercisePickerSheet: View {
         }
         .padding(.top, 10)
     }
+    
+    @ViewBuilder
+    private var quickBlockChips: some View {
+        if tab == .all, trimmedQuery.isEmpty, selectedCategory == nil, case .add = mode {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(BuilderV3SplitStarter.allCases, id: \.self) { starter in
+                        Button {
+                            onAddExercises(starter.starterExerciseNames)
+                            selectedNames.removeAll()
+                            createdItems.removeAll()
+                            onDone()
+                        } label: {
+                            HStack(spacing: 5) {
+                                Image(systemName: "plus.circle.fill")
+                                    .font(.system(size: 11, weight: .semibold))
+                                Text(starter.label)
+                                    .font(.system(size: 11.5, weight: .semibold))
+                            }
+                            .foregroundColor(DailyDriver.ink)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .background(Capsule().fill(DailyDriver.lime))
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityIdentifier("builder_v3_quick_block_\(starter.rawValue)")
+                    }
+                }
+            }
+            .padding(.top, 10)
+            .accessibilityIdentifier("builder_v3_quick_block_chips")
+        }
+    }
 
     private var filterChips: some View {
         Group {
@@ -294,8 +341,33 @@ struct BuilderV3ExercisePickerSheet: View {
                     }
                 }
                 .padding(.top, 10)
+            } else if tab == .all, !trimmedQuery.isEmpty {
+                // Promoted equipment chips while typing (feature 3)
+                promotedEquipmentChips
             }
         }
+    }
+    
+    @ViewBuilder
+    private var promotedEquipmentChips: some View {
+        let promotedKeys = ["barbell", "dumbbells", "kettlebells", "cable", "machine", "bodyweight", "ski_erg", "treadmill", "rowing_machine", "assault_bike", "stationary_bike", "stair_climber"]
+        let labels = promotedKeys.map { key in
+            (key: key, label: BuilderV3ExerciseLibrary.equipmentFilterLabel(key))
+        }
+        EditorV2FlowWrap {
+            ForEach(labels.indices, id: \.self) { index in
+                let chip = labels[index]
+                filterChip(
+                    label: chip.label,
+                    isSelected: equipmentFilter == chip.key,
+                    id: "builder_v3_promoted_equipment_\(chip.key)"
+                ) {
+                    equipmentFilter = equipmentFilter == chip.key ? nil : chip.key
+                }
+            }
+        }
+        .padding(.top, 10)
+        .accessibilityIdentifier("builder_v3_promoted_equipment_chips")
     }
 
     private func filterChip(
@@ -314,6 +386,26 @@ struct BuilderV3ExercisePickerSheet: View {
         }
         .buttonStyle(.plain)
         .modifier(OptionalAccessibilityId(id: id))
+    }
+    
+    func computeSuggestions() {
+        guard !canvasExerciseNames.isEmpty else {
+            suggestedExercises = []
+            return
+        }
+        suggestedExercises = BuilderV3ExerciseSuggestions.suggestedExercises(
+            canvasNames: canvasExerciseNames,
+            catalog: BuilderV3ExerciseLibrary.demo,
+            limit: 6
+        )
+    }
+    
+    var didYouMeanResult: String? {
+        guard !trimmedQuery.isEmpty, filteredItems.isEmpty else { return nil }
+        return BuilderV3ExerciseSuggestions.didYouMean(
+            query: trimmedQuery,
+            catalog: BuilderV3ExerciseLibrary.demo
+        )
     }
 }
 
