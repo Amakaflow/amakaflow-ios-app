@@ -7,7 +7,6 @@
 
 import SwiftUI
 
-// swiftlint:disable:next type_body_length
 struct EditorV2EditSheet: View {
     @State private var draft: EditorV2Exercise
     @State private var targetMemory: EditorV2EditTargetMemory
@@ -23,8 +22,8 @@ struct EditorV2EditSheet: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
                 sheetHeading
-                targetEditors
-                if draft.showsStrengthPrescriptionEditors { loadEditors }
+                trackRow
+                wheelRow
                 if showsRestEditor { restEditors }
                 Button {
                     onDone(committedDraft())
@@ -67,29 +66,122 @@ struct EditorV2EditSheet: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
+    /// TRACK — Reps / Time / Distance are exclusive, Weight is an add-on chip.
     @ViewBuilder
-    private var targetEditors: some View {
-        sectionLabel("TARGET")
+    private var trackRow: some View {
+        sectionLabel("TRACK")
         HStack(spacing: 4) {
-            ForEach(EditorV2EditTargetKind.allCases, id: \.self) { kind in
+            ForEach(targetMemory.visibleKinds, id: \.self) { kind in
                 targetKindChip(kind)
             }
+            weightChip
         }
-        proportionalGrid {
-            EditorV2EditSheetStepperCell(
-                configuration: .init(
-                    label: "SETS",
-                    value: draft.sets ?? PrescriptionDefaults.defaultSets,
-                    min: 1,
-                    max: 12,
-                    accessibilityIdentifier: "af_exsheet_sets"
-                )
-            ) { newValue in
-                draft.sets = newValue
-                draft.stampUser("sets")
+    }
+
+    private var isWeightOn: Bool {
+        draft.weightKg != nil
+    }
+
+    private var weightChip: some View {
+        Button {
+            if isWeightOn {
+                draft.setBodyweightLoad()
+            } else {
+                draft.setWeightedLoad(kilograms: draft.weightKg ?? Self.defaultWeightKg)
             }
-        } right: {
-            targetValueCell
+        } label: {
+            Text(isWeightOn ? "✓ Weight" : "＋ Weight")
+                .font(.system(size: 11.5, weight: .semibold))
+                .foregroundColor(isWeightOn ? DailyDriver.lime : DailyDriver.foregroundMuted)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 8)
+                .background(isWeightOn ? DailyDriver.lime.opacity(0.16) : DailyDriver.inputBackground)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .stroke(isWeightOn ? DailyDriver.lime.opacity(0.5) : .clear, lineWidth: 1)
+                )
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("af_exsheet_track_weight")
+        .accessibilityAddTraits(isWeightOn ? .isSelected : [])
+    }
+
+    /// At most three columns — `EditorV2WheelLayout` owns that rule.
+    @ViewBuilder
+    private var wheelRow: some View {
+        let columns = EditorV2WheelLayout.columns(track: targetMemory.kind, weightOn: isWeightOn)
+        if targetMemory.kind == .open {
+            openGoalCell
+            if columns.contains(.weight) { wheelStrip([.weight]) }
+        } else {
+            wheelStrip(columns)
+        }
+    }
+
+    private func wheelStrip(_ columns: [EditorV2WheelColumn]) -> some View {
+        HStack(spacing: 10) {
+            ForEach(columns, id: \.self) { column in
+                wheel(for: column)
+            }
+        }
+        .background(DailyDriver.card2)
+        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .accessibilityIdentifier("af_exsheet_wheels")
+    }
+
+    @ViewBuilder
+    private func wheel(for column: EditorV2WheelColumn) -> some View {
+        switch column {
+        case .sets:
+            EditorV2NumberWheel(
+                label: "SETS",
+                range: 1...12,
+                accessibilityIdentifier: column.accessibilityIdentifier,
+                selection: setsBinding
+            )
+        case .reps:
+            EditorV2NumberWheel(
+                label: "REPS",
+                range: 1...50,
+                accessibilityIdentifier: column.accessibilityIdentifier,
+                selection: bind(\.reps) { $0.setReps($1) }
+            )
+        case .seconds:
+            EditorV2NumberWheel(
+                label: "SECONDS",
+                range: 5...3_600,
+                step: 5,
+                accessibilityIdentifier: column.accessibilityIdentifier,
+                selection: bind(\.workSeconds) { $0.setWorkSeconds($1) },
+                display: formatSeconds
+            )
+        case .meters:
+            EditorV2NumberWheel(
+                label: "METERS",
+                range: 20...2_000,
+                step: 20,
+                accessibilityIdentifier: column.accessibilityIdentifier,
+                selection: bind(\.meters) { $0.setMeters($1) }
+            )
+        case .calories:
+            EditorV2NumberWheel(
+                label: "CALORIES",
+                range: 5...500,
+                step: 5,
+                accessibilityIdentifier: column.accessibilityIdentifier,
+                selection: bind(\.calories) { $0.setCalories($1) }
+            )
+        case .range:
+            rangeCell
+        case .weight:
+            EditorV2NumberWheel(
+                label: "KG · STEP 2.5",
+                values: Self.weightValues,
+                display: formatKilograms,
+                accessibilityIdentifier: column.accessibilityIdentifier,
+                selection: weightBinding
+            )
         }
     }
 
@@ -106,85 +198,6 @@ struct EditorV2EditSheet: View {
 
     private var isTimedRest: Bool {
         !isRestOpen
-    }
-
-    private var isBodyweightLoad: Bool {
-        draft.isBodyweight
-    }
-
-    private var isWeightedLoad: Bool {
-        !draft.isBodyweight && draft.weightKg != nil
-    }
-
-    @ViewBuilder
-    private var loadEditors: some View {
-        sectionLabel("LOAD")
-        proportionalGrid {
-            HStack(spacing: 4) {
-                restModeChip(title: "Bodyweight", selected: isBodyweightLoad) {
-                    draft.setBodyweightLoad()
-                }
-                .accessibilityIdentifier("af_exsheet_load_bodyweight")
-                restModeChip(title: "Weighted", selected: isWeightedLoad) {
-                    let kilograms = draft.weightKg ?? 20
-                    draft.setWeightedLoad(kilograms: kilograms)
-                }
-                .accessibilityIdentifier("af_exsheet_load_weighted")
-            }
-        } right: {
-            if isBodyweightLoad {
-                Text("NO EXTERNAL LOAD")
-                    .font(.system(size: 8.5, weight: .medium, design: .monospaced))
-                    .foregroundColor(DailyDriver.foregroundDim)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .accessibilityIdentifier("af_exsheet_load_bodyweight_caption")
-            } else {
-                weightStepperCell
-            }
-        }
-    }
-
-    private var weightStepperCell: some View {
-        let kilograms = draft.weightKg ?? 0
-        return VStack(alignment: .leading, spacing: 3) {
-            Text("WEIGHT KG")
-                .font(.system(size: 8.5, weight: .medium, design: .monospaced))
-                .foregroundColor(DailyDriver.foregroundMuted)
-            HStack(spacing: 2) {
-                Button {
-                    let next = max(0, kilograms - 2.5)
-                    if next == 0 {
-                        draft.clearLoad()
-                    } else {
-                        draft.setWeightedLoad(kilograms: next)
-                    }
-                } label: {
-                    Text("−").ddDisplayText(16, weight: .bold)
-                }
-                .buttonStyle(.plain)
-                .foregroundColor(DailyDriver.foregroundMuted)
-                Text(
-                    kilograms.truncatingRemainder(dividingBy: 1) == 0
-                        ? String(Int(kilograms))
-                        : String(format: "%.1f", kilograms)
-                )
-                .ddDisplayText(16, weight: .heavy)
-                .foregroundColor(DailyDriver.foreground)
-                .frame(maxWidth: .infinity)
-                Button {
-                    draft.setWeightedLoad(kilograms: min(300, kilograms + 2.5))
-                } label: {
-                    Text("＋").ddDisplayText(16, weight: .bold)
-                }
-                .buttonStyle(.plain)
-                .foregroundColor(DailyDriver.foregroundMuted)
-            }
-        }
-        .padding(.horizontal, 10)
-        .frame(maxWidth: .infinity, minHeight: 72, maxHeight: 72)
-        .background(DailyDriver.card2)
-        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-        .accessibilityIdentifier("af_exsheet_weight")
     }
 
     @ViewBuilder
@@ -238,51 +251,6 @@ struct EditorV2EditSheet: View {
         }
     }
 
-    private var targetValueCell: some View {
-        Group {
-            switch targetMemory.kind {
-            case .reps:
-                EditorV2EditSheetStepperCell(
-                    configuration: .init(
-                        label: "REPS",
-                        value: targetMemory.reps,
-                        min: 1,
-                        max: 50,
-                        accessibilityIdentifier: "af_exsheet_reps"
-                    )
-                ) { targetMemory.setReps($0) }
-            case .range:
-                rangeCell
-            case .timed:
-                EditorV2EditSheetStepperCell(
-                    configuration: .init(
-                        label: "WORK",
-                        value: targetMemory.workSeconds,
-                        min: 10,
-                        max: 3_600,
-                        step: 10,
-                        valueText: formatSeconds,
-                        accessibilityIdentifier: "af_exsheet_work"
-                    )
-                ) { targetMemory.setWorkSeconds($0) }
-            case .cals:
-                EditorV2EditSheetStepperCell(
-                    configuration: .init(
-                        label: "CALORIES",
-                        value: targetMemory.calories,
-                        min: 5,
-                        max: 500,
-                        step: 5,
-                        accessibilityIdentifier: "af_exsheet_calories"
-                    )
-                ) { targetMemory.setCalories($0) }
-            case .open:
-                openGoalCell
-            }
-        }
-        .frame(maxWidth: .infinity)
-    }
-
     private var rangeCell: some View {
         HStack(spacing: 0) {
             rangeHalf(
@@ -301,9 +269,7 @@ struct EditorV2EditSheet: View {
             ) { targetMemory.setRangeMax($0) }
         }
         .padding(.horizontal, 8)
-        .frame(height: 72)
-        .background(DailyDriver.card2)
-        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .frame(maxWidth: .infinity, minHeight: 155)
     }
 
     private var openGoalCell: some View {
@@ -345,6 +311,46 @@ struct EditorV2EditSheet: View {
 }
 
 extension EditorV2EditSheet {
+    static let defaultWeightKg: Double = 20
+    static let maxWeightKg: Double = 300
+    static let weightValues: [Double] = stride(from: 0, through: maxWeightKg, by: 2.5).map { $0 }
+
+    /// Wheels drive the target memory's mutating setters, so switching TRACK
+    /// still preserves whatever the athlete typed into the other families.
+    private func bind(
+        _ value: KeyPath<EditorV2EditTargetMemory, Int>,
+        set: @escaping (inout EditorV2EditTargetMemory, Int) -> Void
+    ) -> Binding<Int> {
+        Binding(
+            get: { targetMemory[keyPath: value] },
+            set: { newValue in set(&targetMemory, newValue) }
+        )
+    }
+
+    private var setsBinding: Binding<Int> {
+        Binding(
+            get: { draft.sets ?? PrescriptionDefaults.defaultSets },
+            set: { newValue in
+                draft.sets = newValue
+                draft.stampUser("sets")
+            }
+        )
+    }
+
+    private var weightBinding: Binding<Double> {
+        Binding(
+            get: { draft.weightKg ?? Self.defaultWeightKg },
+            set: { draft.setWeightedLoad(kilograms: $0) }
+        )
+    }
+
+    private func formatKilograms(_ kilograms: Double) -> String {
+        if abs(kilograms - kilograms.rounded()) < 1e-9 {
+            return String(Int(kilograms.rounded()))
+        }
+        return String(format: "%.1f", kilograms)
+    }
+
     private func proportionalGrid<Left: View, Right: View>(
         @ViewBuilder left: @escaping () -> Left,
         @ViewBuilder right: @escaping () -> Right
