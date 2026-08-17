@@ -13,60 +13,44 @@ extension EditorV2Session {
     /// whole captured object to prevent stale-sheet clobber.
     mutating func commitSheetEdit(exerciseID: String, sheetDraft: EditorV2Exercise) {
         guard let current = exercises[exerciseID] else {
-            // Exercise was deleted while sheet was open - nothing to commit
             return
         }
         
-        // Diff each field and apply field-level commands for changes only
+        let commands = buildFieldCommands(
+            exerciseID: exerciseID,
+            draft: sheetDraft,
+            current: current
+        )
         
-        // Sets
-        if sheetDraft.sets != current.sets {
-            _ = apply(.setExerciseSets(exerciseID, sheetDraft.sets))
+        for command in commands {
+            _ = apply(command)
         }
-        
-        // Reps (mutually exclusive with repsRange)
-        if sheetDraft.reps != current.reps {
-            _ = apply(.setExerciseReps(exerciseID, sheetDraft.reps))
-        }
-        
-        // Reps range (mutually exclusive with reps)
-        if sheetDraft.repsRange != current.repsRange {
-            _ = apply(.setExerciseRepsRange(exerciseID, sheetDraft.repsRange))
-        }
-        
-        // Duration
-        if sheetDraft.durationSeconds != current.durationSeconds {
-            _ = apply(.setExerciseDuration(exerciseID, sheetDraft.durationSeconds))
-        }
-        
-        // Distance
-        if sheetDraft.distanceMeters != current.distanceMeters {
-            _ = apply(.setExerciseDistance(exerciseID, sheetDraft.distanceMeters))
-        }
-        
-        // Weight (mutually exclusive with isBodyweight)
-        if sheetDraft.weightKg != current.weightKg {
-            _ = apply(.setExerciseWeight(exerciseID, sheetDraft.weightKg))
-        }
-        
-        // Bodyweight flag (mutually exclusive with weightKg)
-        if sheetDraft.isBodyweight != current.isBodyweight {
-            _ = apply(.setExerciseBodyweight(exerciseID, sheetDraft.isBodyweight))
-        }
-        
-        // Rest
-        if sheetDraft.restSeconds != current.restSeconds {
-            _ = apply(.setExerciseRest(exerciseID, sheetDraft.restSeconds))
-        }
-        
-        // Calories
-        if sheetDraft.calories != current.calories {
-            _ = apply(.setExerciseCalories(exerciseID, sheetDraft.calories))
-        }
-        
-        // Open goal
-        if sheetDraft.openGoal != current.openGoal {
-            _ = apply(.setExerciseOpenGoal(exerciseID, sheetDraft.openGoal))
-        }
+    }
+    
+    private func buildFieldCommands(
+        exerciseID: String,
+        draft: EditorV2Exercise,
+        current: EditorV2Exercise
+    ) -> [EditorCommand] {
+        [
+            fieldCommand(draft.sets, current.sets) { .setExerciseSets(exerciseID, $0) },
+            fieldCommand(draft.reps, current.reps) { .setExerciseReps(exerciseID, $0) },
+            fieldCommand(draft.repsRange, current.repsRange) { .setExerciseRepsRange(exerciseID, $0) },
+            fieldCommand(draft.durationSeconds, current.durationSeconds) { .setExerciseDuration(exerciseID, $0) },
+            fieldCommand(draft.distanceMeters, current.distanceMeters) { .setExerciseDistance(exerciseID, $0) },
+            fieldCommand(draft.weightKg, current.weightKg) { .setExerciseWeight(exerciseID, $0) },
+            fieldCommand(draft.isBodyweight, current.isBodyweight) { .setExerciseBodyweight(exerciseID, $0) },
+            fieldCommand(draft.restSeconds, current.restSeconds) { .setExerciseRest(exerciseID, $0) },
+            fieldCommand(draft.calories, current.calories) { .setExerciseCalories(exerciseID, $0) },
+            fieldCommand(draft.openGoal, current.openGoal) { .setExerciseOpenGoal(exerciseID, $0) }
+        ].compactMap { $0 }
+    }
+    
+    private func fieldCommand<T: Equatable>(
+        _ draftValue: T,
+        _ currentValue: T,
+        make: (T) -> EditorCommand
+    ) -> EditorCommand? {
+        draftValue != currentValue ? make(draftValue) : nil
     }
 }

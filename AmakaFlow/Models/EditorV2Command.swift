@@ -11,8 +11,6 @@ enum EditorCommand: Equatable, Sendable {
     case addExercises(names: [String], into: String?)
     case removeExercise(String)
     case replaceExercise(String, with: String)
-    /// Deprecated: Use field-level commands (setExerciseSets, setExerciseReps, etc.) instead.
-    /// This command is reimplemented as a diff to prevent stale-sheet clobber.
     case updatePrescription(String, EditorV2Exercise)
     case setExerciseSets(String, Int?)
     case setExerciseReps(String, Int?)
@@ -36,6 +34,16 @@ enum EditorCommand: Equatable, Sendable {
     case quickAddSoftSection(EnrichmentKind)
     case removeSoftSection(EditorV2GroupType, EnrichmentKind)
     case addSet(String)
+}
+
+extension EditorCommand {
+    /// Deprecated: Use field-level commands (setExerciseSets, setExerciseReps, etc.)
+    /// or commitSheetEdit() instead. This command is reimplemented as a diff internally
+    /// to prevent stale-sheet clobber.
+    @available(*, deprecated, message: "use field-level commands / commitSheetEdit")
+    static func makeUpdatePrescription(_ id: String, _ exercise: EditorV2Exercise) -> EditorCommand {
+        .updatePrescription(id, exercise)
+    }
 }
 
 enum ApplyResult: Equatable {
