@@ -127,37 +127,7 @@ struct EditorV2View: View {
                     EditorV2Content.main(
                         session: session,
                         isReorderMode: isReorderMode,
-                        actions: EditorV2ContentActions(
-                            onConfigGroup: { configGroupKey = $0 },
-                            onOpen: { editExerciseID = $0 },
-                            onMenu: { menuExerciseID = $0 },
-                            onReorder: { _ = session.apply(.reorder(fromOffsets: $0, toOffset: $1)) },
-                            onExitReorder: {
-                                isReorderMode = false
-                                showToast("Tap Save workout to keep changes")
-                            },
-                            onAdd: {
-                                replaceExerciseID = nil
-                                addTargetGroupID = nil
-                                addSheetOpen = true
-                            },
-                            onAddHere: { groupID in
-                                replaceExerciseID = nil
-                                addTargetGroupID = groupID
-                                addSheetOpen = true
-                            },
-                            onStartFormat: { type in
-                                _ = session.apply(.addBlock(type))
-                                showToast("\(type.label) — add the moves, timing is set")
-                            },
-                            onAddWarmup: { quickAddSoftSection(.sessionWarmup) },
-                            onAddCooldown: { quickAddSoftSection(.cooldown) },
-                            onBeginNextSupersetGroup: {
-                                let key = session.beginNextSupersetGroup()
-                                let name = session.groups[key]?.name ?? "Superset"
-                                showToast("\(name) ready — add the next moves")
-                            }
-                        ),
+                        actions: contentActions,
                         builderV3Canvas: builderV3Seed != nil
                     )
                     .padding(.horizontal, 18)
@@ -238,6 +208,40 @@ struct EditorV2View: View {
             Text(" ").font(.system(size: 1)).opacity(0.01)
                 .accessibilityIdentifier("editor_v2_screen")
         }
+    }
+
+    private var contentActions: EditorV2ContentActions {
+        EditorV2ContentActions(
+            onConfigGroup: { configGroupKey = $0 },
+            onOpen: { editExerciseID = $0 },
+            onMenu: { menuExerciseID = $0 },
+            onReorder: { _ = session.apply(.reorder(fromOffsets: $0, toOffset: $1)) },
+            onExitReorder: {
+                isReorderMode = false
+                showToast("Tap Save workout to keep changes")
+            },
+            onAdd: {
+                replaceExerciseID = nil
+                addTargetGroupID = nil
+                addSheetOpen = true
+            },
+            onAddHere: { groupID in
+                replaceExerciseID = nil
+                addTargetGroupID = groupID
+                addSheetOpen = true
+            },
+            onStartFormat: { type in
+                _ = session.apply(.addBlock(type))
+                showToast("\(type.label) — add the moves, timing is set")
+            },
+            onAddWarmup: { quickAddSoftSection(.sessionWarmup) },
+            onAddCooldown: { quickAddSoftSection(.cooldown) },
+            onBeginNextSupersetGroup: {
+                let key = session.beginNextSupersetGroup()
+                let name = session.groups[key]?.name ?? "Superset"
+                showToast("\(name) ready — add the next moves")
+            }
+        )
     }
 
     private var header: some View {

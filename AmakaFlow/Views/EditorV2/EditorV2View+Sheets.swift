@@ -22,14 +22,11 @@ extension EditorV2View {
     }
 
     private var formatLabel: String? {
-        guard let key = session.formatGroupKey, let group = session.groups[key] else { return nil }
-        // Prefer the display name (Tri-set) over the structural type label (Superset).
-        let name = group.name.trimmingCharacters(in: .whitespacesAndNewlines)
-        return name.isEmpty ? group.type.label : name
+        groupLabel(for: session.formatGroupKey)
     }
 
-    private func groupLabel(for groupID: String) -> String? {
-        guard let group = session.groups[groupID] else { return nil }
+    private func groupLabel(for groupID: String?) -> String? {
+        guard let groupID, let group = session.groups[groupID] else { return nil }
         let name = group.name.trimmingCharacters(in: .whitespacesAndNewlines)
         return name.isEmpty ? group.type.label : name
     }
@@ -217,9 +214,8 @@ extension EditorV2View {
             )
             .presentationDetents([.large])
         } else {
-            let destLabel = addTargetGroupID.flatMap { groupLabel(for: $0) }
             BuilderV3ExercisePickerSheet(
-                formatLabel: destLabel ?? formatLabel,
+                formatLabel: groupLabel(for: addTargetGroupID) ?? formatLabel,
                 availableEquipmentKeys: gymEquipmentKeys,
                 mode: .add,
                 canvasExerciseNames: Array(session.exercises.values.map(\.name)),
@@ -229,12 +225,9 @@ extension EditorV2View {
                 onAddExercises: { names in
                     _ = session.apply(.addExercises(names: names, into: addTargetGroupID))
                     guard !names.isEmpty else { return }
+                    let groupName = groupLabel(for: addTargetGroupID) ?? formatLabel
                     if names.count == 1, let name = names.first {
-                        let destName = destLabel ?? formatLabel
-                        showToast(
-                            destName.map { "\(name) added to the \($0)" }
-                                ?? "\(name) added · 3×10 · 60s — tap to tweak"
-                        )
+                        showToast(groupName.map { "\(name) added to the \($0)" } ?? "\(name) added · 3×10 · 60s — tap to tweak")
                     } else {
                         showToast("\(names.count) exercises added ✓")
                     }
