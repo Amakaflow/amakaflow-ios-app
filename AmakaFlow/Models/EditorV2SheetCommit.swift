@@ -8,49 +8,61 @@
 import Foundation
 
 extension EditorV2Session {
-    /// Commit a sheet-edited exercise by diffing against the CURRENT session state
-    /// and emitting only changed fields as field-level commands. Never writes the
-    /// whole captured object to prevent stale-sheet clobber.
-    mutating func commitSheetEdit(exerciseID: String, sheetDraft: EditorV2Exercise) {
-        guard let current = exercises[exerciseID] else {
+    /// Commit a sheet-edited exercise by diffing the draft against the exercise
+    /// as it was WHEN THE SHEET OPENED (`baseline`) and emitting only the fields
+    /// the user actually changed, as field-level commands.
+    ///
+    /// The baseline matters: diffing against the *current* session state would
+    /// make any field that changed underneath the open sheet (e.g. a concurrent
+    /// add-set) look user-edited, and the stale draft value would clobber it —
+    /// the exact bug this seam exists to prevent. If the user and a concurrent
+    /// command both touched the same field, the user's value wins for that
+    /// field only.
+    mutating func commitSheetEdit(
+        exerciseID: String,
+        baseline: EditorV2Exercise,
+        sheetDraft: EditorV2Exercise
+    ) {
+        guard exercises[exerciseID] != nil else {
+            // Exercise was deleted while the sheet was open — nothing to commit.
             return
         }
-        
+
         let commands = buildFieldCommands(
             exerciseID: exerciseID,
             draft: sheetDraft,
-            current: current
+            baseline: baseline
         )
-        
+
         for command in commands {
             _ = apply(command)
         }
     }
-    
+
     private func buildFieldCommands(
         exerciseID: String,
         draft: EditorV2Exercise,
-        current: EditorV2Exercise
+        baseline: EditorV2Exercise
     ) -> [EditorCommand] {
         [
-            fieldCommand(draft.sets, current.sets) { .setExerciseSets(exerciseID, $0) },
-            fieldCommand(draft.reps, current.reps) { .setExerciseReps(exerciseID, $0) },
-            fieldCommand(draft.repsRange, current.repsRange) { .setExerciseRepsRange(exerciseID, $0) },
-            fieldCommand(draft.durationSeconds, current.durationSeconds) { .setExerciseDuration(exerciseID, $0) },
-            fieldCommand(draft.distanceMeters, current.distanceMeters) { .setExerciseDistance(exerciseID, $0) },
-            fieldCommand(draft.weightKg, current.weightKg) { .setExerciseWeight(exerciseID, $0) },
-            fieldCommand(draft.isBodyweight, current.isBodyweight) { .setExerciseBodyweight(exerciseID, $0) },
-            fieldCommand(draft.restSeconds, current.restSeconds) { .setExerciseRest(exerciseID, $0) },
-            fieldCommand(draft.calories, current.calories) { .setExerciseCalories(exerciseID, $0) },
-            fieldCommand(draft.openGoal, current.openGoal) { .setExerciseOpenGoal(exerciseID, $0) }
+            fieldCommand(draft.sets, baseline.sets) { .setExerciseSets(exerciseID, $0) },
+            fieldCommand(draft.reps, baseline.reps) { .setExerciseReps(exerciseID, $0) },
+            fieldCommand(draft.repsRange, baseline.repsRange) { .setExerciseRepsRange(exerciseID, $0) },
+            fieldCommand(draft.durationSeconds, baseline.durationSeconds) { .setExerciseDuration(exerciseID, $0) },
+            fieldCommand(draft.distanceMeters, baseline.distanceMeters) { .setExerciseDistance(exerciseID, $0) },
+            fieldCommand(draft.weightKg, baseline.weightKg) { .setExerciseWeight(exerciseID, $0) },
+            fieldCommand(draft.isBodyweight, baseline.isBodyweight) { .setExerciseBodyweight(exerciseID, $0) },
+            fieldCommand(draft.restSeconds, baseline.restSeconds) { .setExerciseRest(exerciseID, $0) },
+            fieldCommand(draft.calories, baseline.calories) { .setExerciseCalories(exerciseID, $0) },
+            fieldCommand(draft.openGoal, baseline.openGoal) { .setExerciseOpenGoal(exerciseID, $0) }
         ].compactMap { $0 }
     }
-    
+
     private func fieldCommand<T: Equatable>(
         _ draftValue: T,
-        _ currentValue: T,
+        _ baselineValue: T,
         make: (T) -> EditorCommand
     ) -> EditorCommand? {
-        draftValue != currentValue ? make(draftValue) : nil
+        draftValue != baselineValue ? make(draftValue) : nil
     }
 }

@@ -147,17 +147,19 @@ final class EditorV2CommandTests: XCTestCase {
         session.exercises = [ex1.id: ex1]
         session.order = [.loose(ex1.id)]
         
-        // Simulate: user opens sheet (captures stale state), then background addSet runs
+        // Simulate: user opens sheet (baseline captured), then background addSet runs
+        let baseline = ex1
         var sheetDraft = ex1
         _ = session.apply(.addSet(ex1.id))
         XCTAssertEqual(session.exercises[ex1.id]?.sets, 4)
-        
+
         // User edits reps and weight in the sheet
         sheetDraft.reps = 12
         sheetDraft.weightKg = 105
-        
-        // Commit via the actual sheet seam (diff-based)
-        session.commitSheetEdit(exerciseID: ex1.id, sheetDraft: sheetDraft)
+
+        // Commit via the actual sheet seam — diff against the sheet-open
+        // baseline, so the untouched (stale) sets field emits no command.
+        session.commitSheetEdit(exerciseID: ex1.id, baseline: baseline, sheetDraft: sheetDraft)
         
         // Sets should still be 4 (not clobbered), and user changes applied
         XCTAssertEqual(session.exercises[ex1.id]?.sets, 4)
@@ -181,35 +183,12 @@ final class EditorV2CommandTests: XCTestCase {
         
         // Sheet commit should be a no-op
         sheetDraft.reps = 15
-        session.commitSheetEdit(exerciseID: ex1.id, sheetDraft: sheetDraft)
+        session.commitSheetEdit(exerciseID: ex1.id, baseline: ex1, sheetDraft: sheetDraft)
         
         // Exercise still deleted
         XCTAssertNil(session.exercises[ex1.id])
     }
     
-    func testUpdatePrescription_nowDiffBased() {
-        // updatePrescription is deprecated but reimplemented as diff to prevent clobber
-        var session = EditorV2Session()
-        let ex1 = EditorV2Exercise(name: "Press", sets: 3, reps: 10, weightKg: 60)
-        session.exercises = [ex1.id: ex1]
-        session.order = [.loose(ex1.id)]
-        
-        // Capture stale state
-        var stale = ex1
-        
-        // Background modification
-        _ = session.apply(.addSet(ex1.id))
-        XCTAssertEqual(session.exercises[ex1.id]?.sets, 4)
-        
-        // Old code path: updatePrescription with stale state
-        stale.reps = 8
-        _ = session.apply(.updatePrescription(ex1.id, stale))
-        
-        // Sets should still be 4 (diff-based reimplementation prevents clobber)
-        XCTAssertEqual(session.exercises[ex1.id]?.sets, 4)
-        XCTAssertEqual(session.exercises[ex1.id]?.reps, 8)
-        XCTAssertEqual(session.exercises[ex1.id]?.weightKg, 60)
-    }
     
     // MARK: - Field-level mutation command tests
     
@@ -472,22 +451,6 @@ final class EditorV2CommandTests: XCTestCase {
         XCTAssertEqual(session.exercises.values.first!.name, "Front Squat")
     }
     
-    func testUpdatePrescription_updatesExercise() {
-        var session = EditorV2Session()
-        let ex1 = EditorV2Exercise(name: "Squat", sets: 3, reps: 10)
-        session.exercises = [ex1.id: ex1]
-        session.order = [.loose(ex1.id)]
-        
-        var updated = ex1
-        updated.sets = 5
-        updated.reps = 5
-        
-        let result = session.apply(.updatePrescription(ex1.id, updated))
-        
-        XCTAssertEqual(result, .applied)
-        XCTAssertEqual(session.exercises[ex1.id]?.sets, 5)
-        XCTAssertEqual(session.exercises[ex1.id]?.reps, 5)
-    }
     
     func testPairSuperset_createsNewGroup() {
         var session = EditorV2Session()

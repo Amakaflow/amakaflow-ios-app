@@ -11,7 +11,6 @@ enum EditorCommand: Equatable, Sendable {
     case addExercises(names: [String], into: String?)
     case removeExercise(String)
     case replaceExercise(String, with: String)
-    case updatePrescription(String, EditorV2Exercise)
     case setExerciseSets(String, Int?)
     case setExerciseReps(String, Int?)
     case setExerciseRepsRange(String, RepsRange?)
@@ -36,15 +35,11 @@ enum EditorCommand: Equatable, Sendable {
     case addSet(String)
 }
 
-extension EditorCommand {
-    /// Deprecated: Use field-level commands (setExerciseSets, setExerciseReps, etc.)
-    /// or commitSheetEdit() instead. This command is reimplemented as a diff internally
-    /// to prevent stale-sheet clobber.
-    @available(*, deprecated, message: "use field-level commands / commitSheetEdit")
-    static func makeUpdatePrescription(_ id: String, _ exercise: EditorV2Exercise) -> EditorCommand {
-        .updatePrescription(id, exercise)
-    }
-}
+// `updatePrescription` (whole-object replace) was REMOVED (AMA-2441): with only
+// a stale draft and no baseline it cannot distinguish user edits from concurrent
+// changes, so it is clobber-unsafe by construction. Sheet commits go through
+// `commitSheetEdit(exerciseID:baseline:sheetDraft:)`; everything else uses the
+// field-level commands above.
 
 enum ApplyResult: Equatable {
     case applied

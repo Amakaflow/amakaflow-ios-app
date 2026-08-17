@@ -87,56 +87,6 @@ extension EditorV2Session {
             exercises[id] = exercise
             return .applied
             
-        case .updatePrescription(let id, let updated):
-            // Deprecated: Reimplemented as field-diff to prevent whole-object clobber.
-            // New code should use field-level commands directly.
-            guard let current = exercises[id] else {
-                return .rejected(.exerciseNotFound)
-            }
-            
-            // Apply only changed fields via field-level commands
-            if updated.sets != current.sets {
-                let result = applyD2(.setExerciseSets(id, updated.sets))
-                if result != .applied { return result }
-            }
-            if updated.reps != current.reps {
-                let result = applyD2(.setExerciseReps(id, updated.reps))
-                if result != .applied { return result }
-            }
-            if updated.repsRange != current.repsRange {
-                let result = applyD2(.setExerciseRepsRange(id, updated.repsRange))
-                if result != .applied { return result }
-            }
-            if updated.durationSeconds != current.durationSeconds {
-                let result = applyD2(.setExerciseDuration(id, updated.durationSeconds))
-                if result != .applied { return result }
-            }
-            if updated.distanceMeters != current.distanceMeters {
-                let result = applyD2(.setExerciseDistance(id, updated.distanceMeters))
-                if result != .applied { return result }
-            }
-            if updated.weightKg != current.weightKg {
-                let result = applyD2(.setExerciseWeight(id, updated.weightKg))
-                if result != .applied { return result }
-            }
-            if updated.isBodyweight != current.isBodyweight {
-                let result = applyD2(.setExerciseBodyweight(id, updated.isBodyweight))
-                if result != .applied { return result }
-            }
-            if updated.restSeconds != current.restSeconds {
-                let result = applyD2(.setExerciseRest(id, updated.restSeconds))
-                if result != .applied { return result }
-            }
-            if updated.calories != current.calories {
-                let result = applyD2(.setExerciseCalories(id, updated.calories))
-                if result != .applied { return result }
-            }
-            if updated.openGoal != current.openGoal {
-                let result = applyD2(.setExerciseOpenGoal(id, updated.openGoal))
-                if result != .applied { return result }
-            }
-            return .applied
-            
         case .pairSuperset(let sourceID, let targetID):
             guard let source = exercises[sourceID],
                   exercises[targetID] != nil else {
