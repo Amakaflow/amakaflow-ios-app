@@ -120,3 +120,8 @@ maestro-evidence*/
 __pycache__/
 *.pyc
 ama2375-*.png
+
+# XCTest artifacts — never commit test results or xcresult bundles
+TestResults/
+TestResults.xcresult/
+*.xcresult/
