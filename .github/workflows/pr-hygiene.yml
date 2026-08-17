@@ -47,6 +47,7 @@ jobs:
           # PR bodies are untrusted input (zizmor template-injection rule).
           PR_HYGIENE_BODY: ${{ github.event.pull_request.body }}
         run: |
-          PR_HYGIENE_DIFF=$(git diff "origin/${GITHUB_BASE_REF:-main}" HEAD)
-          export PR_HYGIENE_DIFF
-          bash .github/scripts/pr-hygiene.sh
+          # Diff goes through a file, not an env string — a large PR diff
+          # (169KB on #607) overflows exec's per-string limit (E2BIG).
+          git diff "origin/${GITHUB_BASE_REF:-main}" HEAD > "$RUNNER_TEMP/pr-hygiene.diff"
+          PR_HYGIENE_DIFF_FILE="$RUNNER_TEMP/pr-hygiene.diff" bash .github/scripts/pr-hygiene.sh

@@ -44,6 +44,9 @@ struct EditorV2View: View {
     @FocusState private var isTitleFocused: Bool
     /// AMA-2336 — `workout_preferences` cache; fetched on the first quick-add.
     @State var enrichmentPrefs: WorkoutPreferences?
+    /// AMA-2443 slice 2b — Coach sheet presentation with prefilled query
+    @State var showCoachSheet = false
+    @State var coachPrefillQuery: String?
 
     /// AMA-2372 — title captured at open; title-only edits count as dirty for
     /// TYPE · CHANGE so we don't discard an unnamed→named draft silently.
@@ -186,6 +189,11 @@ struct EditorV2View: View {
         .sheet(item: pairSourceBinding, content: pairSheet)
         .sheet(isPresented: $addSheetOpen) { addSheet }
         .sheet(isPresented: $isMatchSheetPresented) { workoutTypeMatchSheet }
+        .sheet(isPresented: $showCoachSheet) {
+            EditorV2CoachSheet(prefillQuery: coachPrefillQuery) {
+                coachPrefillQuery = nil
+            }
+        }
         .alert("Change workout type?", isPresented: $showBuilderV3ChangeTypeConfirm) {
             Button("Keep editing", role: .cancel) {}
             Button("Change type", role: .destructive) { onBuilderV3ChangeType?() }

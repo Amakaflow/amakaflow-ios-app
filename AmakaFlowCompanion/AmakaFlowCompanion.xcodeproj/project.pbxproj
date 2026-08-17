@@ -74,6 +74,7 @@
 		AMA2438CODECTESTBLD /* EditorV2CodecTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2438CODECTESTREF /* EditorV2CodecTests.swift */; };
 		AMA2372B3TSTBLD /* BuilderV3Tests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2372B3TSTREF /* BuilderV3Tests.swift */; };
 		AMA2443B3MODEBLD /* BuilderV3ExercisePickerModeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2443B3MODEREF /* BuilderV3ExercisePickerModeTests.swift */; };
+		AMA24432BSUGTSTBLD /* BuilderV3ExerciseSuggestionsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA24432BSUGTSTREF /* BuilderV3ExerciseSuggestionsTests.swift */; };
 		AMA2311PEDTSTBLD /* PrescriptionEditorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2311PEDTSTREF /* PrescriptionEditorTests.swift */; };
 		AMA2311PDEFTSTBLD /* PrescriptionDefaultsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2311PDEFTSTREF /* PrescriptionDefaultsTests.swift */; };
 		AMA2311PDSTSTBLD /* PrescriptionDisplayTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2311PDSTSTREF /* PrescriptionDisplayTests.swift */; };
@@ -176,6 +177,7 @@
 		MANCRFAVROWBLD /* WorkoutTypeFavoritesRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = MANCRFAVROWREF /* WorkoutTypeFavoritesRow.swift */; };
 		AMA2304SHEETBLD /* WorkoutTypeMatchSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2304SHEETREF /* WorkoutTypeMatchSheet.swift */; };
 		AMA2304EV2SBLD /* EditorV2View+Sheets.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2304EV2SREF /* EditorV2View+Sheets.swift */; };
+		AMA2443COACHBLD /* EditorV2CoachSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2443COACHREF /* EditorV2CoachSheet.swift */; };
 		MANCRAIPROMPTBLD /* CreateWithAIPromptView.swift in Sources */ = {isa = PBXBuildFile; fileRef = MANCRAIPROMPTREF /* CreateWithAIPromptView.swift */; };
 		AMA2373COPYBLD /* CreateWithAICopy.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2373COPYREF /* CreateWithAICopy.swift */; };
 		AMA2373PRESBLD /* CreateWithAIDraftPresentation.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2373PRESREF /* CreateWithAIDraftPresentation.swift */; };
@@ -209,6 +211,7 @@
 		AMA2372GYMBLD /* BuilderV3GymOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2372GYMREF /* BuilderV3GymOverlay.swift */; };
 		AMA2372SRCHBLD /* BuilderV3ExerciseSearchClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2372SRCHREF /* BuilderV3ExerciseSearchClient.swift */; };
 		AMA2372PICKBLD /* BuilderV3TypePickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2372PICKREF /* BuilderV3TypePickerView.swift */; };
+		AMA24432BSUGBLD /* BuilderV3ExerciseSuggestions.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA24432BSUGREF /* BuilderV3ExerciseSuggestions.swift */; };
 		AMA2372EXPKBLD /* BuilderV3ExercisePickerSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2372EXPKREF /* BuilderV3ExercisePickerSheet.swift */; };
 		AMA2384EXPCBLD /* BuilderV3ExercisePickerSheet+Content.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2384EXPCREF /* BuilderV3ExercisePickerSheet+Content.swift */; };
 		AMA2372RUNVBLD /* BuilderV3RunStepBuilderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2372RUNVREF /* BuilderV3RunStepBuilderView.swift */; };
@@ -910,6 +913,7 @@
 		AMA2438CODECTESTREF /* EditorV2CodecTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = EditorV2CodecTests.swift; path = AmakaFlowCompanionTests/EditorV2CodecTests.swift; sourceTree = "<group>"; };
 		AMA2372B3TSTREF /* BuilderV3Tests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = BuilderV3Tests.swift; path = AmakaFlowCompanionTests/BuilderV3Tests.swift; sourceTree = "<group>"; };
 		AMA2443B3MODEREF /* BuilderV3ExercisePickerModeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = BuilderV3ExercisePickerModeTests.swift; path = AmakaFlowCompanionTests/BuilderV3ExercisePickerModeTests.swift; sourceTree = "<group>"; };
+		AMA24432BSUGTSTREF /* BuilderV3ExerciseSuggestionsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = BuilderV3ExerciseSuggestionsTests.swift; path = AmakaFlowCompanionTests/BuilderV3ExerciseSuggestionsTests.swift; sourceTree = "<group>"; };
 		AMA2311PEDTSTREF /* PrescriptionEditorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PrescriptionEditorTests.swift; path = AmakaFlowCompanionTests/PrescriptionEditorTests.swift; sourceTree = "<group>"; };
 		AMA2311PDEFTSTREF /* PrescriptionDefaultsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PrescriptionDefaultsTests.swift; path = AmakaFlowCompanionTests/PrescriptionDefaultsTests.swift; sourceTree = "<group>"; };
 		AMA2311PDSTSTREF /* PrescriptionDisplayTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PrescriptionDisplayTests.swift; path = AmakaFlowCompanionTests/PrescriptionDisplayTests.swift; sourceTree = "<group>"; };
@@ -998,6 +1002,7 @@
 		MANCRFAVROWREF /* WorkoutTypeFavoritesRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutTypeFavoritesRow.swift; path = ../AmakaFlow/Views/EditorV2/WorkoutTypeFavoritesRow.swift; sourceTree = SOURCE_ROOT; };
 		AMA2304SHEETREF /* WorkoutTypeMatchSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutTypeMatchSheet.swift; path = ../AmakaFlow/Views/EditorV2/WorkoutTypeMatchSheet.swift; sourceTree = SOURCE_ROOT; };
 		AMA2304EV2SREF /* EditorV2View+Sheets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "EditorV2View+Sheets.swift"; path = "../AmakaFlow/Views/EditorV2/EditorV2View+Sheets.swift"; sourceTree = SOURCE_ROOT; };
+		AMA2443COACHREF /* EditorV2CoachSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = EditorV2CoachSheet.swift; path = ../AmakaFlow/Views/EditorV2/EditorV2CoachSheet.swift; sourceTree = SOURCE_ROOT; };
 		MANCRAIPROMPTREF /* CreateWithAIPromptView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CreateWithAIPromptView.swift; path = ../AmakaFlow/Views/CreateWithAIPromptView.swift; sourceTree = SOURCE_ROOT; };
 		AMA2373COPYREF /* CreateWithAICopy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CreateWithAICopy.swift; path = ../AmakaFlow/Models/CreateWithAICopy.swift; sourceTree = SOURCE_ROOT; };
 		AMA2373PRESREF /* CreateWithAIDraftPresentation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CreateWithAIDraftPresentation.swift; path = ../AmakaFlow/Models/CreateWithAIDraftPresentation.swift; sourceTree = SOURCE_ROOT; };
@@ -1031,6 +1036,7 @@
 		AMA2372GYMREF /* BuilderV3GymOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = BuilderV3GymOverlay.swift; path = ../AmakaFlow/Models/BuilderV3/BuilderV3GymOverlay.swift; sourceTree = SOURCE_ROOT; };
 		AMA2372SRCHREF /* BuilderV3ExerciseSearchClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = BuilderV3ExerciseSearchClient.swift; path = ../AmakaFlow/Models/BuilderV3/BuilderV3ExerciseSearchClient.swift; sourceTree = SOURCE_ROOT; };
 		AMA2372PICKREF /* BuilderV3TypePickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = BuilderV3TypePickerView.swift; path = ../AmakaFlow/Views/BuilderV3/BuilderV3TypePickerView.swift; sourceTree = SOURCE_ROOT; };
+		AMA24432BSUGREF /* BuilderV3ExerciseSuggestions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = BuilderV3ExerciseSuggestions.swift; path = ../AmakaFlow/Models/BuilderV3/BuilderV3ExerciseSuggestions.swift; sourceTree = SOURCE_ROOT; };
 		AMA2372EXPKREF /* BuilderV3ExercisePickerSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = BuilderV3ExercisePickerSheet.swift; path = ../AmakaFlow/Views/BuilderV3/BuilderV3ExercisePickerSheet.swift; sourceTree = SOURCE_ROOT; };
 		AMA2384EXPCREF /* BuilderV3ExercisePickerSheet+Content.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "BuilderV3ExercisePickerSheet+Content.swift"; path = "../AmakaFlow/Views/BuilderV3/BuilderV3ExercisePickerSheet+Content.swift"; sourceTree = SOURCE_ROOT; };
 		AMA2372RUNVREF /* BuilderV3RunStepBuilderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = BuilderV3RunStepBuilderView.swift; path = ../AmakaFlow/Views/BuilderV3/BuilderV3RunStepBuilderView.swift; sourceTree = SOURCE_ROOT; };
@@ -2421,6 +2427,7 @@
 				AMA2372GYMREF /* BuilderV3GymOverlay.swift */,
 				AMA2372SRCHREF /* BuilderV3ExerciseSearchClient.swift */,
 				AMA2372PICKREF /* BuilderV3TypePickerView.swift */,
+				AMA24432BSUGREF /* BuilderV3ExerciseSuggestions.swift */,
 				AMA2372EXPKREF /* BuilderV3ExercisePickerSheet.swift */,
 				AMA2384EXPCREF /* BuilderV3ExercisePickerSheet+Content.swift */,
 				AMA2372RUNVREF /* BuilderV3RunStepBuilderView.swift */,
@@ -2429,6 +2436,7 @@
 				MANCRFAVROWREF /* WorkoutTypeFavoritesRow.swift */,
 				AMA2304SHEETREF /* WorkoutTypeMatchSheet.swift */,
 				AMA2304EV2SREF /* EditorV2View+Sheets.swift */,
+				AMA2443COACHREF /* EditorV2CoachSheet.swift */,
 				AK00FIX014A /* ProgramDetailView.swift */,
 				AK00FIX015A /* ProgramsListView.swift */,
 				AK00FIX016A /* CalendarSyncView.swift */,
@@ -2459,6 +2467,7 @@
 				AMA2438CODECTESTREF /* EditorV2CodecTests.swift */,
 				AMA2372B3TSTREF /* BuilderV3Tests.swift */,
 				AMA2443B3MODEREF /* BuilderV3ExercisePickerModeTests.swift */,
+				AMA24432BSUGTSTREF /* BuilderV3ExerciseSuggestionsTests.swift */,
 				AMA2311PEDTSTREF /* PrescriptionEditorTests.swift */,
 				AMA2311PDEFTSTREF /* PrescriptionDefaultsTests.swift */,
 				AMA2311PDSTSTREF /* PrescriptionDisplayTests.swift */,
@@ -3181,6 +3190,7 @@
 				MANCRFAVROWBLD /* WorkoutTypeFavoritesRow.swift in Sources */,
 				AMA2304SHEETBLD /* WorkoutTypeMatchSheet.swift in Sources */,
 				AMA2304EV2SBLD /* EditorV2View+Sheets.swift in Sources */,
+				AMA2443COACHBLD /* EditorV2CoachSheet.swift in Sources */,
 				AMA2305VMXBLD /* SocialImportViewModel+StructureClarify.swift in Sources */,
 				AMA2308VMXBLD /* SocialImportViewModel+Failure.swift in Sources */,
 				AMA2305VWBLD /* StructureClarifyView.swift in Sources */,
@@ -3203,6 +3213,7 @@
 				AMA2372GYMBLD /* BuilderV3GymOverlay.swift in Sources */,
 				AMA2372SRCHBLD /* BuilderV3ExerciseSearchClient.swift in Sources */,
 				AMA2372PICKBLD /* BuilderV3TypePickerView.swift in Sources */,
+				AMA24432BSUGBLD /* BuilderV3ExerciseSuggestions.swift in Sources */,
 				AMA2372EXPKBLD /* BuilderV3ExercisePickerSheet.swift in Sources */,
 				AMA2384EXPCBLD /* BuilderV3ExercisePickerSheet+Content.swift in Sources */,
 				AMA2372RUNVBLD /* BuilderV3RunStepBuilderView.swift in Sources */,
@@ -3527,6 +3538,7 @@
 				AMA2438CODECTESTBLD /* EditorV2CodecTests.swift in Sources */,
 				AMA2372B3TSTBLD /* BuilderV3Tests.swift in Sources */,
 				AMA2443B3MODEBLD /* BuilderV3ExercisePickerModeTests.swift in Sources */,
+				AMA24432BSUGTSTBLD /* BuilderV3ExerciseSuggestionsTests.swift in Sources */,
 				AMA2311PEDTSTBLD /* PrescriptionEditorTests.swift in Sources */,
 				AMA2311PDEFTSTBLD /* PrescriptionDefaultsTests.swift in Sources */,
 				AMA2311PDSTSTBLD /* PrescriptionDisplayTests.swift in Sources */,

@@ -15,9 +15,15 @@
 #   diff-xctexpect     the diff must not ADD XCTExpectFailure lines
 #
 # Inputs (env):
-#   PR_HYGIENE_BODY   the PR body text (required for body checks)
-#   PR_HYGIENE_DIFF   unified diff text (required for the diff check)
-# Either may be omitted; only the checks with input run. CI passes both.
+#   PR_HYGIENE_BODY        the PR body text (required for body checks)
+#   PR_HYGIENE_DIFF        unified diff text (required for the diff check)
+#   PR_HYGIENE_BODY_FILE   path to a file holding the PR body text
+#   PR_HYGIENE_DIFF_FILE   path to a file holding the unified diff
+#                          Use the *_FILE forms when the text is too large for
+#                          an env string — a 169KB diff on PR #607 overflowed
+#                          exec's per-string limit (E2BIG). A *_FILE form wins
+#                          over its env-string counterpart when both are set.
+# Either input may be omitted; only the checks with input run. CI passes both.
 #
 # Exit: 0 clean, 1 violations (each printed as ::error).
 
@@ -27,6 +33,12 @@ FAIL=0
 
 body="${PR_HYGIENE_BODY:-}"
 diff="${PR_HYGIENE_DIFF:-}"
+if [[ -n "${PR_HYGIENE_BODY_FILE:-}" ]]; then
+  body="$(cat "$PR_HYGIENE_BODY_FILE")"
+fi
+if [[ -n "${PR_HYGIENE_DIFF_FILE:-}" ]]; then
+  diff="$(cat "$PR_HYGIENE_DIFF_FILE")"
+fi
 
 if [[ -n "$body" ]]; then
   # --- close-words guard ----------------------------------------------------
