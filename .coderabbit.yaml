@@ -3,6 +3,12 @@
 
 language: "en-US"
 
+# Max 250 chars. Mirrors CLAUDE.md: evidence over assertion.
+tone_instructions: >-
+  Be direct and specific. Cite file:line. Verify a finding against the current
+  code before raising it — a wrong finding that gets "fixed" breaks working
+  code. Say when you are unsure rather than asserting.
+
 reviews:
   profile: "assertive"
   # AMA-1592: at least 2 real reviews; pause after 2; a 3rd only via
@@ -14,10 +20,24 @@ reviews:
     auto_pause_after_reviewed_commits: 2
   request_changes_workflow: false
   high_level_summary: true
-  # AMA-2439: disable autofix to prevent agent ping-pong (same as amakaflow-docs #74)
-  finishing_touches:
-    autofix:
-      enabled: false
+  sequence_diagrams: true
+  estimate_code_review_effort: true
+
+  # Linear is already wired into knowledge_base, so these are close to free.
+  assess_linked_issues: true
+  related_issues: true
+  related_prs: true
+
+  suggested_reviewers: true
+  auto_assign_reviewers: false
+  suggested_labels: true
+  # DELIBERATELY FALSE. The `Sandcastle` label is a WORK QUEUE — applying it
+  # enqueues autonomous work on the PR. A label suggestion must never be able
+  # to start an agent. Suggest, never apply.
+  auto_apply_labels: false
+
+  poem: false
+
   # AMA: CodeRabbit is for CODE only. Doc-only PRs must not consume CR credits.
   path_filters:
     - "!**/*.md"
@@ -27,10 +47,171 @@ reviews:
     - "!**/LICENSE*"
     - "!**/*.txt"
 
+  # Rules that have actually cost us time. Each one is here because it was
+  # learned the expensive way, not because it sounded sensible.
+  path_instructions:
+    - path: "AmakaFlow/**/*.swift"
+      instructions: >-
+        NEW FILES MUST BE REGISTERED IN THE XCODE PROJECT. Sources under
+        AmakaFlow/ are referenced EXPLICITLY in
+        AmakaFlowCompanion/AmakaFlowCompanion.xcodeproj/project.pbxproj (they
+        are NOT in a synced root group). A new .swift file that is not added to
+        the PBXBuildFile / PBXFileReference / group / Sources-phase entries
+        compiles locally in some contexts but fails the app target. Flag any
+        added file under AmakaFlow/ with no corresponding pbxproj change. A
+        filename containing "+" must be QUOTED in the pbxproj or Xcode cannot
+        read the project at all.
+
+        SwiftLint runs --strict against .swiftlint-baseline.yml. The baseline
+        only exempts PRE-EXISTING violations, so NEW files get no grace: check
+        file_length (500), type_body_length (300) and cyclomatic_complexity
+        (10) on anything added.
+
+    - path: "AmakaFlow/Models/**/*.swift"
+      instructions: >-
+        DISPLAY LAYER MUST NOT RESHAPE STORED DATA. Presentation code may
+        restyle a workout but must never change its structure: no merging or
+        splitting blocks, no reordering, no moving exercises between sections,
+        no promoting a block into a warm-up, no inventing section names. One
+        stored block renders as one section, in source order, with the same
+        exercises. Flag any grouping/derivation that alters what the user
+        authored.
+
+        Structure vocabulary comes from the block's own `structure` field,
+        never inferred from its contents. A single exercise is straight sets —
+        never a circuit, whatever the stored structure claims. Absence of rest
+        carries NO structural meaning: most library workouts record no rest,
+        because rest is added when a workout is prepared for a watch.
+
+        SAMPLE / FIXTURE DATA MUST NOT LIVE HERE. Hardcoded demo records in
+        Models/ can reach a live dependency graph and be shown to a real user
+        as if real. Fixture data belongs in FixtureAPIService.
+
+    - path: "AmakaFlow/Views/**/*.swift"
+      instructions: >-
+        WATCH-PLAN MATERIAL MUST NOT LEAK INTO LIBRARY SURFACES. The Apple
+        Watch plan (WorkoutKitPlanStepSummary+Sections) has its own
+        conventions — "WU · <exercise>" ramp names, injected rest, reshaped
+        steps. Those are watch-prep artefacts, not library structure. Library
+        detail/list views must render the authored workout only. Flag any
+        library view that detects, folds, hoists or special-cases a watch
+        convention.
+
+        Accessibility identifiers must be stable and entity-scoped, and unique
+        within a screen — a circuit can legitimately repeat a movement.
+
+    - path: "AmakaFlow/**/{ViewModels,Services}/**/*.swift"
+      instructions: >-
+        `#if DEBUG` MUST NOT SILENTLY ALTER USER-VISIBLE DATA. Debug-only
+        seeding that mixes synthetic records into a real account is
+        indistinguishable from real data and has caused real debugging losses.
+        If a debug path injects data, it must be opt-IN, visibly marked in the
+        UI, and logged. Flag any `#if DEBUG` block that appends to or replaces
+        data fetched from the API.
+
+    - path: ".github/workflows/**"
+      instructions: >-
+        Actions must be pinned to a full commit SHA, not a tag. A workflow that
+        builds or uploads an artifact must record the commit it built (GIT_SHA)
+        and must fail rather than proceed if the working tree is dirty or the
+        checked-out commit differs from the triggering commit — otherwise a
+        shipped build cannot be traced to source. Check that secrets are passed
+        via `secrets.*` and never echoed.
+
+    - path: "AmakaFlowCompanion/AmakaFlowCompanionTests/**/*.swift"
+      instructions: >-
+        NEVER weaken, skip or rewrite a test to make a finding go away, and
+        never add XCTExpectFailure. If a test fails, the code is wrong until
+        proven otherwise. Assertions should state the behaviour in the message
+        so a failure explains itself. Prefer asserting a band/range over an
+        exact number where a constant is tunable.
+
+  finishing_touches:
+    # AMA-2439 disabled autofix because TWO agents were fixing each other's
+    # fixes. Both partners are now gone: the Cursor "CodeRabbit autofix
+    # (no ping-pong)" automation stopped running after PR #561, and the
+    # Claude auto-fix workflow is deleted in this PR. With a single fixer a
+    # loop cannot form, and `auto_pause_after_reviewed_commits: 2` above is
+    # the brake if one somehow starts.
+    autofix:
+      enabled: true
+    simplify:
+      enabled: true
+    docstrings:
+      enabled: true
+    unit_tests:
+      enabled: true
+    # Fires only on an actual conflict, so it cannot loop on a clean PR.
+    # Directly targets the same-file conflicts that Sandcastle drains hit.
+    resolve_merge_conflict:
+      enabled: true
+    # LEFT OFF DELIBERATELY. This is the closest feature to the autofix
+    # disabled in AMA-2439 — it writes commits in response to CI. Enable it on
+    # its own, once, and watch for ping-pong. One line to flip.
+    fix_ci:
+      enabled: false
+
+  pre_merge_checks:
+    # PR titles must carry the Linear key. Replaces a hand-rolled CI guard.
+    title:
+      mode: "warning"
+      requirements: >-
+        The title must contain a Linear issue key in the form AMA-NNNN, and
+        describe the change in plain language. Reject bare ticket numbers with
+        no description, and reject "fix", "update" or "wip" as a whole title.
+    description:
+      mode: "warning"
+    issue_assessment:
+      mode: "warning"
+    docstrings:
+      mode: "off"
+
+tools:
+  # Surfaces lint at REVIEW time instead of as a red CI check to reverse
+  # engineer. Uses the same config CI uses.
+  swiftlint:
+    enabled: true
+    config_file: ".swiftlint.yml"
+  actionlint:
+    enabled: true
+  yamllint:
+    enabled: true
+  shellcheck:
+    enabled: true
+  # Secret + workflow-security scanning. This repo carries Clerk publishable
+  # keys, App Store Connect API keys and signing certs through CI.
+  gitleaks:
+    enabled: true
+  trufflehog:
+    enabled: true
+  zizmor:
+    enabled: true
+  semgrep:
+    enabled: true
+  ast-grep:
+    enabled: true
+  github-checks:
+    enabled: true
+
+chat:
+  # Lets a PR comment file a Linear issue directly — useful when the Linear
+  # MCP is unavailable locally.
+  integrations:
+    linear:
+      usage: "enabled"
+  auto_reply: true
+  art: false
+
 knowledge_base:
   # AMA: org-wide learnings so a lesson taught on one repo applies everywhere.
   learnings:
     scope: global
+  issues:
+    scope: global
+  pull_requests:
+    scope: global
+  web_search:
+    enabled: true
   linear:
     usage: enabled
     team_keys:
@@ -42,3 +223,21 @@ knowledge_base:
     filePatterns:
       - "CLAUDE.md"
       - "docs/**/*.md"
+
+code_generation:
+  docstrings:
+    language: "en-US"
+    path_instructions:
+      - path: "AmakaFlow/**/*.swift"
+        instructions: >-
+          Explain WHY the code is the way it is, not what it does — the what is
+          readable from the code. Name the constraint, the bug, or the ticket
+          that forced the shape. Match the existing house style: short prose
+          comments referencing AMA-NNNN where relevant.
+  unit_tests:
+    path_instructions:
+      - path: "AmakaFlow/**/*.swift"
+        instructions: >-
+          Use XCTest and the existing helpers in AmakaFlowCompanionTests. State
+          the expected behaviour in the assertion message. Prefer a band over
+          an exact number when the value depends on a tunable constant.
