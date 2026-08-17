@@ -96,29 +96,32 @@ enum BuilderV3ExerciseSuggestions {
     }
     
     /// Simple Levenshtein distance for small strings (exercise names).
-    private static func levenshteinDistance(_ s1: String, _ s2: String) -> Int {
-        let a = Array(s1)
-        let b = Array(s2)
-        var dp = Array(repeating: Array(repeating: 0, count: b.count + 1), count: a.count + 1)
-        
-        for i in 0...a.count {
-            dp[i][0] = i
+    private static func levenshteinDistance(_ lhs: String, _ rhs: String) -> Int {
+        let source = Array(lhs)
+        let target = Array(rhs)
+        var distance = Array(
+            repeating: Array(repeating: 0, count: target.count + 1),
+            count: source.count + 1
+        )
+
+        for row in 0...source.count {
+            distance[row][0] = row
         }
-        for j in 0...b.count {
-            dp[0][j] = j
+        for column in 0...target.count {
+            distance[0][column] = column
         }
-        
-        for i in 1...a.count {
-            for j in 1...b.count {
-                let cost = a[i - 1] == b[j - 1] ? 0 : 1
-                dp[i][j] = min(
-                    dp[i - 1][j] + 1,
-                    dp[i][j - 1] + 1,
-                    dp[i - 1][j - 1] + cost
+
+        for row in 1...source.count {
+            for column in 1...target.count {
+                let cost = source[row - 1] == target[column - 1] ? 0 : 1
+                distance[row][column] = min(
+                    distance[row - 1][column] + 1,
+                    distance[row][column - 1] + 1,
+                    distance[row - 1][column - 1] + cost
                 )
             }
         }
-        
-        return dp[a.count][b.count]
+
+        return distance[source.count][target.count]
     }
 }
