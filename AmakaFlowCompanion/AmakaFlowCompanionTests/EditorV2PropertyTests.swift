@@ -56,7 +56,7 @@ final class EditorV2PropertyTests: XCTestCase {
     }
     
     private func randomCommand(session: EditorV2Session, rng: inout SeededRNG) -> EditorCommand {
-        let commandTypes: [Int] = [0, 1, 2, 3, 4, 5, 6]
+        let commandTypes: [Int] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
         let choice = commandTypes.randomElement(using: &rng)!
         
         switch choice {
@@ -108,11 +108,67 @@ final class EditorV2PropertyTests: XCTestCase {
             return .addExercises(names: ["Test"], into: nil)
             
         case 6:
-            // reorder - operates on order array, not exercises
+            // reorder
             if session.order.count >= 2 {
                 let idx = Int.random(in: 0..<session.order.count, using: &rng)
                 let toIdx = Int.random(in: 0...session.order.count, using: &rng)
                 return .reorder(fromOffsets: IndexSet(integer: idx), toOffset: toIdx)
+            }
+            return .addExercises(names: ["Test"], into: nil)
+            
+        case 7:
+            // setExerciseReps
+            let exs = Array(session.exercises.values)
+            if !exs.isEmpty, let ex = exs.randomElement(using: &rng) {
+                let reps = Int.random(in: 5...20, using: &rng)
+                return .setExerciseReps(ex.id, reps)
+            }
+            return .addExercises(names: ["Test"], into: nil)
+            
+        case 8:
+            // setExerciseSets
+            let exs = Array(session.exercises.values)
+            if !exs.isEmpty, let ex = exs.randomElement(using: &rng) {
+                let sets = Int.random(in: 1...10, using: &rng)
+                return .setExerciseSets(ex.id, sets)
+            }
+            return .addExercises(names: ["Test"], into: nil)
+            
+        case 9:
+            // setExerciseWeight
+            let exs = Array(session.exercises.values)
+            if !exs.isEmpty, let ex = exs.randomElement(using: &rng) {
+                let weight = Double.random(in: 20.0...200.0, using: &rng)
+                return .setExerciseWeight(ex.id, weight)
+            }
+            return .addExercises(names: ["Test"], into: nil)
+            
+        case 10:
+            // setExerciseRest
+            let exs = Array(session.exercises.values)
+            if !exs.isEmpty, let ex = exs.randomElement(using: &rng) {
+                let rest = Int.random(in: 30...180, using: &rng)
+                return .setExerciseRest(ex.id, rest)
+            }
+            return .addExercises(names: ["Test"], into: nil)
+            
+        case 11:
+            // setExerciseRepsRange
+            let exs = Array(session.exercises.values)
+            if !exs.isEmpty, let ex = exs.randomElement(using: &rng) {
+                let lower = Int.random(in: 5...10, using: &rng)
+                let upper = Int.random(in: lower...20, using: &rng)
+                let range = RepsRange(low: lower, high: upper, qualifier: nil)
+                return .setExerciseRepsRange(ex.id, range)
+            }
+            return .addExercises(names: ["Test"], into: nil)
+            
+        case 12:
+            // setExerciseBodyweight
+            let exs = Array(session.exercises.values)
+            if !exs.isEmpty, let ex = exs.randomElement(using: &rng) {
+                let isBodyweight = Bool.random(using: &rng)
+                return .setExerciseBodyweight(ex.id, isBodyweight)
             }
             return .addExercises(names: ["Test"], into: nil)
             

@@ -11,7 +11,16 @@ enum EditorCommand: Equatable, Sendable {
     case addExercises(names: [String], into: String?)
     case removeExercise(String)
     case replaceExercise(String, with: String)
-    case updatePrescription(String, EditorV2Exercise)
+    case setExerciseSets(String, Int?)
+    case setExerciseReps(String, Int?)
+    case setExerciseRepsRange(String, RepsRange?)
+    case setExerciseDuration(String, Int?)
+    case setExerciseDistance(String, Int?)
+    case setExerciseWeight(String, Double?)
+    case setExerciseBodyweight(String, Bool)
+    case setExerciseRest(String, Int?)
+    case setExerciseCalories(String, Int?)
+    case setExerciseOpenGoal(String, Bool)
     case pairSuperset(source: String, target: String)
     case removeFromGroup(String)
     case switchGroupType(String, EditorV2GroupType)
@@ -25,6 +34,12 @@ enum EditorCommand: Equatable, Sendable {
     case removeSoftSection(EditorV2GroupType, EnrichmentKind)
     case addSet(String)
 }
+
+// `updatePrescription` (whole-object replace) was REMOVED (AMA-2441): with only
+// a stale draft and no baseline it cannot distinguish user edits from concurrent
+// changes, so it is clobber-unsafe by construction. Sheet commits go through
+// `commitSheetEdit(exerciseID:baseline:sheetDraft:)`; everything else uses the
+// field-level commands above.
 
 enum ApplyResult: Equatable {
     case applied
