@@ -83,18 +83,20 @@ struct BuilderV3ExerciseFetchResult: Equatable, Sendable {
         error: Error,
         endpoint: String
     ) -> BuilderV3ExerciseFetchResult {
-        let isRouteMissing = APIError.coerce(error).category == .notFound
-        if isRouteMissing {
+        let reason = classify(error)
+        if reason == .routeMissing {
             assertionFailure(
                 "\(endpoint) returned 404 — wrong host or path. "
                     + "Exercise routes live on mobile-bff (APIService.bffURL), not mapper-api."
             )
         }
-        return BuilderV3ExerciseFetchResult(
-            items: items,
-            mode: .mock,
-            fallbackReason: isRouteMissing ? .routeMissing : .requestFailed
-        )
+        return BuilderV3ExerciseFetchResult(items: items, mode: .mock, fallbackReason: reason)
+    }
+
+    /// Split from `fallback` so the rule can be asserted directly — `fallback`
+    /// traps on `.routeMissing` by design, which a test cannot exercise.
+    static func classify(_ error: Error) -> BuilderV3ExerciseFallbackReason {
+        APIError.coerce(error).category == .notFound ? .routeMissing : .requestFailed
     }
 }
 
@@ -116,6 +118,39 @@ struct BuilderV3ExerciseSearchClient {
         self.useFixtures = useFixtures
     }
 
+    /// Request builders are split out so a test can assert the URL these
+    /// routes actually resolve to. Passing `headers` skips the auth round trip;
+    /// production leaves it nil and gets the real headers (AMA-2449).
+    func makeSearchRequest(
+        query: String,
+        limit: Int,
+        headers: [String: String]? = nil
+    ) async throws -> URLRequest {
+        try await apiService.makeAPIRequest(
+            baseURL: apiService.bffURL,
+            path: Self.searchPath,
+            queryItems: [
+                URLQueryItem(name: "q", value: query),
+                URLQueryItem(name: "limit", value: String(limit))
+            ],
+            method: "GET",
+            headers: headers
+        )
+    }
+
+    func makeListRequest(
+        queryItems: [URLQueryItem],
+        headers: [String: String]? = nil
+    ) async throws -> URLRequest {
+        try await apiService.makeAPIRequest(
+            baseURL: apiService.bffURL,
+            path: Self.listPath,
+            queryItems: queryItems,
+            method: "GET",
+            headers: headers
+        )
+    }
+
     /// Never throws. Failures are explicit through `.mock`; live empty stays empty.
     func search(query: String, limit: Int = 30) async -> BuilderV3ExerciseFetchResult {
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -134,15 +169,7 @@ struct BuilderV3ExerciseSearchClient {
             )
         }
         do {
-            let request = try await apiService.makeAPIRequest(
-                baseURL: apiService.bffURL,
-                path: Self.searchPath,
-                queryItems: [
-                    URLQueryItem(name: "q", value: trimmed),
-                    URLQueryItem(name: "limit", value: String(limit))
-                ],
-                method: "GET"
-            )
+            let request = try await makeSearchRequest(query: trimmed, limit: limit)
             // BFF already emits camelCase; use generated decoder (no snake_case).
             let response = try await apiService.request(
                 request,
@@ -253,12 +280,7 @@ struct BuilderV3ExerciseSearchClient {
         if let equipment {
             queryItems.append(URLQueryItem(name: "equipment", value: equipment))
         }
-        let request = try await apiService.makeAPIRequest(
-            baseURL: apiService.bffURL,
-            path: Self.listPath,
-            queryItems: queryItems,
-            method: "GET"
-        )
+        let request = try await makeListRequest(queryItems: queryItems)
         let response = try await apiService.request(
             request,
             decode: BuilderV3ExerciseListResponse.self,
