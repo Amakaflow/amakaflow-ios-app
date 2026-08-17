@@ -67,26 +67,41 @@ check na_row_allowed 0 \
   "| L1 (pytest) | N/A | Server-side |"
 
 # --- XCTExpectFailure guard -------------------------------------------------
+# Diffs carry +++ b/<path> headers; the guard only fires on ADDED lines in
+# .swift files — mentions in scripts/docs (like this corpus) must not trip it.
 check added_xctexpectfailure_blocked 1 "" \
-  '+        XCTExpectFailure("known broken", strict: false)'
+  '+++ b/AmakaFlowCompanion/AmakaFlowCompanionTests/FooTests.swift
++        XCTExpectFailure("known broken", strict: false)'
 
 check removed_xctexpectfailure_allowed 0 "" \
-  '-        XCTExpectFailure("UI architecture: sheet @State captures stale copy", strict: false)'
+  '+++ b/AmakaFlowCompanion/AmakaFlowCompanionTests/FooTests.swift
+-        XCTExpectFailure("UI architecture: sheet @State captures stale copy", strict: false)'
 
 check context_xctexpectfailure_allowed 0 "" \
-  '         XCTExpectFailure("unchanged context line")'
+  '+++ b/AmakaFlowCompanion/AmakaFlowCompanionTests/FooTests.swift
+         XCTExpectFailure("unchanged context line")'
+
+check nonswift_mention_allowed 0 "" \
+  '+++ b/.github/scripts/tests/pr-hygiene-corpus.sh
++  fixture line mentioning XCTExpectFailure inside a shell corpus'
+
+check docs_mention_allowed 0 "" \
+  '+++ b/.cursor/rules/verify-before-done.mdc
++- Never add XCTExpectFailure to green-wash broken behavior.'
 
 # --- combined ---------------------------------------------------------------
 check clean_pr_passes 0 \
   "- Part of AMA-2443
 
 | L2 | ✅ | local: see Verify by |" \
-  '+    func testNewThing() { XCTAssertTrue(true) }'
+  '+++ b/AmakaFlowCompanion/AmakaFlowCompanionTests/FooTests.swift
++    func testNewThing() { XCTAssertTrue(true) }'
 
 check both_violations_fail 1 \
   "Closes AMA-2443
 | L2 | ✅ Pass | trust me |" \
-  '+    XCTExpectFailure("later")'
+  '+++ b/AmakaFlowCompanion/AmakaFlowCompanionTests/FooTests.swift
++    XCTExpectFailure("later")'
 
 echo
 echo "corpus: $PASS passed, $FAIL failed"

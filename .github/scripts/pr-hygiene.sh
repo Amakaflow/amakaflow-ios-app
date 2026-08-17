@@ -55,9 +55,15 @@ fi
 
 if [[ -n "$diff" ]]; then
   # --- XCTExpectFailure guard ----------------------------------------------
-  # Only ADDED lines count; removing one is progress.
-  if echo "$diff" | grep -qE '^\+.*XCTExpectFailure'; then
-    echo "::error::Diff ADDS XCTExpectFailure. Broken behavior must be fixed or flagged in the PR — not shipped green-washed. (Removals are fine.)"
+  # Only ADDED lines in .swift files count; removing one is progress, and
+  # mentions in docs/scripts (including THIS guard's own corpus) are fine —
+  # the guard's first live run flagged its own fixtures (PR #601).
+  if echo "$diff" | awk '
+      /^\+\+\+ / { file = $2; sub(/^b\//, "", file); next }
+      /^\+/ && file ~ /\.swift$/ && /XCTExpectFailure/ { found = 1 }
+      END { exit found ? 0 : 1 }
+    '; then
+    echo "::error::Diff ADDS XCTExpectFailure in a .swift file. Broken behavior must be fixed or flagged in the PR — not shipped green-washed. (Removals are fine.)"
     FAIL=1
   fi
 fi
