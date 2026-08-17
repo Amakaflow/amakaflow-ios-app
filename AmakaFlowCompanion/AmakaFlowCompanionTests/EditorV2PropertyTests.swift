@@ -158,7 +158,7 @@ final class EditorV2PropertyTests: XCTestCase {
             if !exs.isEmpty, let ex = exs.randomElement(using: &rng) {
                 let lower = Int.random(in: 5...10, using: &rng)
                 let upper = Int.random(in: lower...20, using: &rng)
-                let range = RepsRange(lower: lower, upper: upper, qualifier: nil)
+                let range = RepsRange(low: lower, high: upper, qualifier: nil)
                 return .setExerciseRepsRange(ex.id, range)
             }
             return .addExercises(names: ["Test"], into: nil)

@@ -256,7 +256,7 @@ final class EditorV2CommandTests: XCTestCase {
     
     func testSetExerciseReps_clearsRepsRange() {
         var session = EditorV2Session()
-        let range = RepsRange(lower: 8, upper: 12, qualifier: nil)
+        let range = RepsRange(low: 8, high: 12, qualifier: nil)
         let ex1 = EditorV2Exercise(name: "Deadlift", sets: 3, repsRange: range)
         session.exercises = [ex1.id: ex1]
         session.order = [.loose(ex1.id)]
@@ -274,7 +274,7 @@ final class EditorV2CommandTests: XCTestCase {
         session.exercises = [ex1.id: ex1]
         session.order = [.loose(ex1.id)]
         
-        let range = RepsRange(lower: 8, upper: 12, qualifier: nil)
+        let range = RepsRange(low: 8, high: 12, qualifier: nil)
         let result = session.apply(.setExerciseRepsRange(ex1.id, range))
         
         XCTAssertEqual(result, .applied)
