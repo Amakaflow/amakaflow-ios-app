@@ -977,26 +977,31 @@ final class EditorV2CommandTests: XCTestCase {
     func testAddExercises_intoSpecificGroup_landsInThatGroup() {
         var session = EditorV2Session()
         let targetKey = "target1"
+        let seed = EditorV2Exercise(name: "Existing")
+        session.exercises[seed.id] = seed
         session.groups[targetKey] = EditorV2Group(
             id: targetKey,
             type: .superset,
-            memberIDs: []
+            memberIDs: [seed.id]
         )
         session.order = [.group(targetKey)]
         
         let result = session.apply(.addExercises(names: ["Squat", "Lunge"], into: targetKey))
         
         XCTAssertEqual(result, .applied)
-        XCTAssertEqual(session.groups[targetKey]?.memberIDs.count, 2)
+        XCTAssertEqual(session.groups[targetKey]?.memberIDs.count, 3)
         let members = session.groups[targetKey]?.memberIDs ?? []
-        XCTAssertEqual(session.exercises[members[0]]?.name, "Squat")
-        XCTAssertEqual(session.exercises[members[1]]?.name, "Lunge")
+        XCTAssertEqual(session.exercises[members[0]]?.name, "Existing")
+        XCTAssertEqual(session.exercises[members[1]]?.name, "Squat")
+        XCTAssertEqual(session.exercises[members[2]]?.name, "Lunge")
     }
     
     func testAddExercises_intoNonPinGroup_doesNotChangePin() {
         var session = EditorV2Session()
         let pinKey = "pin"
         let targetKey = "target"
+        let seed = EditorV2Exercise(name: "Existing")
+        session.exercises[seed.id] = seed
         session.groups[pinKey] = EditorV2Group(
             id: pinKey,
             type: .emom,
@@ -1005,7 +1010,7 @@ final class EditorV2CommandTests: XCTestCase {
         session.groups[targetKey] = EditorV2Group(
             id: targetKey,
             type: .superset,
-            memberIDs: []
+            memberIDs: [seed.id]
         )
         session.formatGroupKey = pinKey
         session.order = [.group(pinKey), .group(targetKey)]
@@ -1014,7 +1019,7 @@ final class EditorV2CommandTests: XCTestCase {
         
         XCTAssertEqual(result, .applied)
         XCTAssertEqual(session.formatGroupKey, pinKey)
-        XCTAssertEqual(session.groups[targetKey]?.memberIDs.count, 1)
+        XCTAssertEqual(session.groups[targetKey]?.memberIDs.count, 2)
         XCTAssertEqual(session.groups[pinKey]?.memberIDs.count, 0)
     }
     
@@ -1039,10 +1044,12 @@ final class EditorV2CommandTests: XCTestCase {
         var session = EditorV2Session()
         let targetKey = "target"
         let pinKey = "pin"
+        let seed = EditorV2Exercise(name: "Existing")
+        session.exercises[seed.id] = seed
         session.groups[targetKey] = EditorV2Group(
             id: targetKey,
             type: .superset,
-            memberIDs: []
+            memberIDs: [seed.id]
         )
         session.groups[pinKey] = EditorV2Group(
             id: pinKey,
@@ -1056,12 +1063,12 @@ final class EditorV2CommandTests: XCTestCase {
         let result = session.apply(.addExercises(names: ["Deadlift"], into: targetKey))
         
         XCTAssertEqual(result, .applied)
-        XCTAssertEqual(session.groups[targetKey]?.memberIDs.count, 1)
+        XCTAssertEqual(session.groups[targetKey]?.memberIDs.count, 2)
         XCTAssertEqual(session.formatGroupKey, pinKey)
         
         XCTAssertTrue(session.undo())
         XCTAssertEqual(session, stateBefore)
-        XCTAssertEqual(session.groups[targetKey]?.memberIDs.count, 0)
+        XCTAssertEqual(session.groups[targetKey]?.memberIDs.count, 1)
         XCTAssertEqual(session.formatGroupKey, pinKey)
     }
     
