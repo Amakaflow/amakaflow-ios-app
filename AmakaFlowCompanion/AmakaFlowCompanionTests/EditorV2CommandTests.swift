@@ -971,4 +971,127 @@ final class EditorV2CommandTests: XCTestCase {
         XCTAssertEqual(session, stateBefore)
         XCTAssertNil(session.formatGroupKey)
     }
+    
+    // MARK: - AMA-2443 slice 3 — explicit destination (into:)
+    
+    func testAddExercises_intoSpecificGroup_landsInThatGroup() {
+        var session = EditorV2Session()
+        let targetKey = "target1"
+        session.groups[targetKey] = EditorV2Group(
+            id: targetKey,
+            type: .superset,
+            memberIDs: []
+        )
+        session.order = [.group(targetKey)]
+        
+        let result = session.apply(.addExercises(names: ["Squat", "Lunge"], into: targetKey))
+        
+        XCTAssertEqual(result, .applied)
+        XCTAssertEqual(session.groups[targetKey]?.memberIDs.count, 2)
+        let members = session.groups[targetKey]?.memberIDs ?? []
+        XCTAssertEqual(session.exercises[members[0]]?.name, "Squat")
+        XCTAssertEqual(session.exercises[members[1]]?.name, "Lunge")
+    }
+    
+    func testAddExercises_intoNonPinGroup_doesNotChangePin() {
+        var session = EditorV2Session()
+        let pinKey = "pin"
+        let targetKey = "target"
+        session.groups[pinKey] = EditorV2Group(
+            id: pinKey,
+            type: .emom,
+            memberIDs: []
+        )
+        session.groups[targetKey] = EditorV2Group(
+            id: targetKey,
+            type: .superset,
+            memberIDs: []
+        )
+        session.formatGroupKey = pinKey
+        session.order = [.group(pinKey), .group(targetKey)]
+        
+        let result = session.apply(.addExercises(names: ["Bench"], into: targetKey))
+        
+        XCTAssertEqual(result, .applied)
+        XCTAssertEqual(session.formatGroupKey, pinKey)
+        XCTAssertEqual(session.groups[targetKey]?.memberIDs.count, 1)
+        XCTAssertEqual(session.groups[pinKey]?.memberIDs.count, 0)
+    }
+    
+    func testAddExercises_intoInvalidGroup_doesNotCommit() {
+        var session = EditorV2Session()
+        session.groups["valid"] = EditorV2Group(
+            id: "valid",
+            type: .circuit,
+            memberIDs: []
+        )
+        session.order = [.group("valid")]
+        
+        let result = session.apply(.addExercises(names: ["Squat"], into: "invalid"))
+        
+        XCTAssertEqual(result, .rejected(.unresolvedReferences))
+        XCTAssertEqual(session.exercises.count, 0)
+    }
+    
+    func testAddExercises_intoGroup_oneUndoRestoresBoth() {
+        var session = EditorV2Session()
+        let targetKey = "target"
+        let pinKey = "pin"
+        session.groups[targetKey] = EditorV2Group(
+            id: targetKey,
+            type: .superset,
+            memberIDs: []
+        )
+        session.groups[pinKey] = EditorV2Group(
+            id: pinKey,
+            type: .amrap,
+            memberIDs: []
+        )
+        session.formatGroupKey = pinKey
+        session.order = [.group(pinKey), .group(targetKey)]
+        
+        let stateBefore = session
+        let result = session.apply(.addExercises(names: ["Deadlift"], into: targetKey))
+        
+        XCTAssertEqual(result, .applied)
+        XCTAssertEqual(session.groups[targetKey]?.memberIDs.count, 1)
+        XCTAssertEqual(session.formatGroupKey, pinKey)
+        
+        XCTAssertTrue(session.undo())
+        XCTAssertEqual(session, stateBefore)
+        XCTAssertEqual(session.groups[targetKey]?.memberIDs.count, 0)
+        XCTAssertEqual(session.formatGroupKey, pinKey)
+    }
+    
+    func testAddExercises_intoWarmupGroup_isValid() {
+        var session = EditorV2Session()
+        let warmupKey = "warmup"
+        session.groups[warmupKey] = EditorV2Group(
+            id: warmupKey,
+            type: .warmup,
+            memberIDs: []
+        )
+        session.order = [.group(warmupKey)]
+        
+        let result = session.apply(.addExercises(names: ["Jumping Jacks"], into: warmupKey))
+        
+        XCTAssertEqual(result, .applied)
+        XCTAssertEqual(session.groups[warmupKey]?.memberIDs.count, 1)
+    }
+    
+    func testAddExercises_intoCooldownGroup_isValid() {
+        var session = EditorV2Session()
+        let cooldownKey = "cooldown"
+        session.groups[cooldownKey] = EditorV2Group(
+            id: cooldownKey,
+            type: .cooldown,
+            memberIDs: []
+        )
+        session.order = [.group(cooldownKey)]
+        
+        let result = session.apply(.addExercises(names: ["Stretch"], into: cooldownKey))
+        
+        XCTAssertEqual(result, .applied)
+        XCTAssertEqual(session.groups[cooldownKey]?.memberIDs.count, 1)
+    }
 }

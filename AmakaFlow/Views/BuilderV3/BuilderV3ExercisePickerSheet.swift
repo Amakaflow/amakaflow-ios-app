@@ -31,6 +31,8 @@ struct BuilderV3ExercisePickerSheet: View {
     var hasWarmupSection: Bool = false
     /// Whether the canvas already has a cool-down section.
     var hasCooldownSection: Bool = false
+    /// Hide quick-block chips when adding to a specific destination group.
+    var hideQuickBlocks: Bool = false
     var onAddExercises: ([String]) -> Void
     var onDone: () -> Void
     /// Callback when "Ask Amaka" is tapped with the typed query.
@@ -290,7 +292,7 @@ struct BuilderV3ExercisePickerSheet: View {
 extension BuilderV3ExercisePickerSheet {
     @ViewBuilder
     private var quickBlockChips: some View {
-        if tab == .all, trimmedQuery.isEmpty, selectedCategory == nil, case .add = mode {
+        if tab == .all, trimmedQuery.isEmpty, selectedCategory == nil, case .add = mode, !hideQuickBlocks {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
                     // Format chips: Superset, EMOM, AMRAP, Tabata, For time, Circuit

@@ -28,6 +28,12 @@ extension EditorV2View {
         return name.isEmpty ? group.type.label : name
     }
 
+    private func groupLabel(for groupID: String) -> String? {
+        guard let group = session.groups[groupID] else { return nil }
+        let name = group.name.trimmingCharacters(in: .whitespacesAndNewlines)
+        return name.isEmpty ? group.type.label : name
+    }
+
     private func isInSuperset(_ exercise: EditorV2Exercise) -> Bool {
         guard let key = exercise.groupKey else { return false }
         return session.groups[key]?.type == .superset
@@ -211,20 +217,22 @@ extension EditorV2View {
             )
             .presentationDetents([.large])
         } else {
+            let destLabel = addTargetGroupID.flatMap { groupLabel(for: $0) }
             BuilderV3ExercisePickerSheet(
-                formatLabel: formatLabel,
+                formatLabel: destLabel ?? formatLabel,
                 availableEquipmentKeys: gymEquipmentKeys,
                 mode: .add,
                 canvasExerciseNames: Array(session.exercises.values.map(\.name)),
                 hasWarmupSection: session.hasWarmupSection,
                 hasCooldownSection: session.hasCooldownSection,
+                hideQuickBlocks: addTargetGroupID != nil,
                 onAddExercises: { names in
-                    _ = session.apply(.addExercises(names: names, into: nil))
+                    _ = session.apply(.addExercises(names: names, into: addTargetGroupID))
                     guard !names.isEmpty else { return }
                     if names.count == 1, let name = names.first {
-                        let fmt = formatLabel
+                        let destName = destLabel ?? formatLabel
                         showToast(
-                            fmt.map { "\(name) added to the \($0)" }
+                            destName.map { "\(name) added to the \($0)" }
                                 ?? "\(name) added · 3×10 · 60s — tap to tweak"
                         )
                     } else {
@@ -233,13 +241,16 @@ extension EditorV2View {
                 },
                 onDone: {
                     addSheetOpen = false
+                    addTargetGroupID = nil
                 },
                 onAskAmaka: { query in
                     addSheetOpen = false
+                    addTargetGroupID = nil
                     presentCoachWithQuery(query)
                 },
                 onAddBlock: { type in
                     addSheetOpen = false
+                    addTargetGroupID = nil
                     _ = session.apply(.addBlock(type))
                     showToast("\(type.label) — add the moves, timing is set")
                     // Reopen picker to continue adding into the new block
@@ -247,6 +258,7 @@ extension EditorV2View {
                 },
                 onQuickAddSoftSection: { kind in
                     addSheetOpen = false
+                    addTargetGroupID = nil
                     quickAddSoftSection(kind)
                 }
             )

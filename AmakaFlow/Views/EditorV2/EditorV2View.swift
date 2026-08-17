@@ -35,6 +35,7 @@ struct EditorV2View: View {
     @State var pairSourceID: String?
     @State var addSheetOpen = false
     @State var replaceExerciseID: String?
+    @State var addTargetGroupID: String?
     @State var isMatchSheetPresented = false
     @State var showBuilderV3ChangeTypeConfirm = false
     /// AMA-2372 — gym overlay keys for the multi-select add sheet. `nil` = no
@@ -137,6 +138,12 @@ struct EditorV2View: View {
                             },
                             onAdd: {
                                 replaceExerciseID = nil
+                                addTargetGroupID = nil
+                                addSheetOpen = true
+                            },
+                            onAddHere: { groupID in
+                                replaceExerciseID = nil
+                                addTargetGroupID = groupID
                                 addSheetOpen = true
                             },
                             onStartFormat: { type in

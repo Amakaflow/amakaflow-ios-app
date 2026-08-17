@@ -14,6 +14,7 @@ struct EditorV2ContentActions {
     var onReorder: (IndexSet, Int) -> Void
     var onExitReorder: () -> Void
     var onAdd: () -> Void
+    var onAddHere: (String) -> Void = { _ in }
     var onStartFormat: (EditorV2GroupType) -> Void
     /// AMA-2336 — quick-add the session warm-up from `workout_preferences`.
     var onAddWarmup: () -> Void = {}
@@ -64,7 +65,8 @@ enum EditorV2Content {
                         isInsertionTarget: session.formatGroupKey == key,
                         onPill: { actions.onConfigGroup(key) },
                         onOpen: { actions.onOpen($0.id) },
-                        onMenu: { actions.onMenu($0.id) }
+                        onMenu: { actions.onMenu($0.id) },
+                        onAddHere: { actions.onAddHere(key) }
                     )
                 } else {
                     ForEach(run.exercises) { exercise in
