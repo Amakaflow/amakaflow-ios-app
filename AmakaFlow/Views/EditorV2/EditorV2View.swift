@@ -217,7 +217,7 @@ struct EditorV2View: View {
     /// picker into it. One `apply()`, so one undo takes back both the block
     /// and the pin move; nothing on the canvas is destroyed.
     private func beginFormatGroupAndAdd(_ type: EditorV2GroupType) {
-        let key = session.beginFormatGroup(type)
+        guard let key = session.beginFormatGroup(type) else { return }
         replaceExerciseID = nil
         addTargetGroupID = key
         addSheetOpen = true
@@ -237,7 +237,7 @@ struct EditorV2View: View {
             onBeginFormatGroup: { type in beginFormatGroupAndAdd(type) },
             onAddWarmup: { quickAddSoftSection(.sessionWarmup) },
             onAddCooldown: { quickAddSoftSection(.cooldown) },
-            onBeginNextSupersetGroup: { let key = session.beginNextSupersetGroup(); let name = session.groups[key]?.name ?? "Superset"; showToast("\(name) ready — add the next moves") }
+            onBeginNextSupersetGroup: { guard let key = session.beginNextSupersetGroup() else { return }; let name = session.groups[key]?.name ?? "Superset"; showToast("\(name) ready — add the next moves") }
         )
     }
 

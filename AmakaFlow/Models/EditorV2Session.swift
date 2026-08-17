@@ -400,19 +400,21 @@ extension EditorV2Session {
         return "fmt"
     }
     
-    mutating func beginNextSupersetGroup(preferredName: String? = nil) -> String {
+    mutating func beginNextSupersetGroup(preferredName: String? = nil) -> String? {
         beginFormatGroup(.superset, preferredName: preferredName)
     }
 
     /// AMA-2443 slice 4 — append a new empty format group of `type` and pin it.
     /// Non-destructive: existing rows are untouched, unlike `.addBlock`.
+    /// Returns the new group key on success, nil on rejection.
     @discardableResult
     mutating func beginFormatGroup(
         _ type: EditorV2GroupType,
         preferredName: String? = nil
-    ) -> String {
-        _ = apply(.beginFormatGroup(type: type, preferredName: preferredName))
-        return formatGroupKey ?? "fmt"
+    ) -> String? {
+        guard case .applied = apply(.beginFormatGroup(type: type, preferredName: preferredName)),
+              let key = formatGroupKey else { return nil }
+        return key
     }
     
     mutating func updateGroup(_ key: String, patch: (inout EditorV2Group) -> Void) {

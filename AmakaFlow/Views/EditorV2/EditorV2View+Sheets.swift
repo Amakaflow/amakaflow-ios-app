@@ -202,9 +202,9 @@ extension EditorV2View {
                 },
                 onAddBlock: { type in
                     addSheetOpen = false
-                    _ = session.apply(.addBlock(type))
-                    showToast("\(type.label) — add the moves, timing is set")
-                    // Reopen picker to continue adding into the new block
+                    guard let key = session.beginFormatGroup(type) else { return }
+                    addTargetGroupID = key
+                    showToast("\(type.label) added — pick the moves")
                     addSheetOpen = true
                 },
                 onQuickAddSoftSection: { kind in
@@ -243,10 +243,9 @@ extension EditorV2View {
                 },
                 onAddBlock: { type in
                     addSheetOpen = false
-                    addTargetGroupID = nil
-                    _ = session.apply(.addBlock(type))
-                    showToast("\(type.label) — add the moves, timing is set")
-                    // Reopen picker to continue adding into the new block
+                    guard let key = session.beginFormatGroup(type) else { return }
+                    addTargetGroupID = key
+                    showToast("\(type.label) added — pick the moves")
                     addSheetOpen = true
                 },
                 onQuickAddSoftSection: { kind in

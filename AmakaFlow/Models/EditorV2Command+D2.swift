@@ -541,6 +541,7 @@ extension EditorV2Session {
             return .applied
             
         case .beginFormatGroup(let type, let preferredName):
+            guard !type.isSoftSection else { return .rejected(.invalidState) }
             let key = "fg\(UUID().uuidString)"
             // Letters belong to the superset ladder only (A/B/C → tri-set,
             // giant set). Handing one to an EMOM would consume from that pool

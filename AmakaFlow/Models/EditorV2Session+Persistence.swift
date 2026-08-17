@@ -66,6 +66,9 @@ extension EditorV2Session {
             case .group(let key):
                 guard let group = groups[key] else { continue }
                 let members = group.memberIDs.compactMap { exercises[$0] }
+                // Skip empty groups (pre-existing via "＋ Another superset"; AMA-2443
+                // slice 4 widens it to picker dismiss). I2-legal in memory, illegal on save.
+                guard !members.isEmpty else { continue }
                 flushFlat()
                 let restSec: Int? = {
                     switch group.type {

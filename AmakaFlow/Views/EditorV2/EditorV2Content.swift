@@ -87,9 +87,9 @@ enum EditorV2Content {
             }
             // After ＋ Another tri-set / superset the new group is empty — draw the slot
             // so Add exercises has a visible destination (runs only include groups with moves).
-            if let fmtKey = session.formatGroupKey,
-               let group = session.groups[fmtKey],
-               !session.exercises.values.contains(where: { $0.groupKey == fmtKey }) {
+            if isPinnedGroupEmpty(session: session),
+               let fmtKey = session.formatGroupKey,
+               let group = session.groups[fmtKey] {
                 formatPinnedPlaceholder(group: group, key: fmtKey, onConfig: actions.onConfigGroup)
             }
             if shouldOfferNextSupersetGroup(session: session) {
@@ -99,9 +99,10 @@ enum EditorV2Content {
                 )
             }
             // AMA-2443 slice 4 — non-destructive mid-workout block. Hidden while
-            // the pin is an empty group: that block has no moves yet, so the
+            // the pin is an empty group OR when Another superset shows (conservative
+            // gate: avoid three stacked CTAs). That block has no moves yet, so the
             // next thing to do is fill it, not start another one.
-            if !isPinnedGroupEmpty(session: session) {
+            if !isPinnedGroupEmpty(session: session) && !shouldOfferNextSupersetGroup(session: session) {
                 EditorV2AddBlockButton(onSelect: actions.onBeginFormatGroup)
             }
             addExerciseButton(
@@ -115,16 +116,19 @@ enum EditorV2Content {
 
     /// True when the pin names a group with no moves yet — the canvas already
     /// draws `formatPinnedPlaceholder` for it and the user owes it exercises.
+    /// Source of truth is `memberIDs`, not derived `groupKey` field (which is
+    /// only populated after `syncGroupKeyFieldsD2` runs inside `apply()`).
     private static func isPinnedGroupEmpty(session: EditorV2Session) -> Bool {
-        guard let key = session.formatGroupKey, session.groups[key] != nil else { return false }
-        return !session.exercises.values.contains { $0.groupKey == key }
+        guard let key = session.formatGroupKey,
+              let group = session.groups[key] else { return false }
+        return group.memberIDs.isEmpty
     }
 
     private static func shouldOfferNextSupersetGroup(session: EditorV2Session) -> Bool {
         guard let key = session.formatGroupKey,
               let group = session.groups[key],
               group.type == .superset else { return false }
-        return session.exercises.values.contains { $0.groupKey == key }
+        return !group.memberIDs.isEmpty
     }
 
     private static func nextSupersetGroupLabel(session: EditorV2Session) -> String {
@@ -246,26 +250,10 @@ enum EditorV2Content {
                 .padding(.top, 18)
                 .padding(.bottom, 8)
 
-            EditorV2FlowWrap {
-                ForEach(EditorV2GroupType.formatChips, id: \.self) { type in
-                    Button {
-                        onStartFormat(type)
-                    } label: {
-                        Text(type.label)
-                            .ddDisplayText(12, weight: .bold)
-                            .foregroundColor(DailyDriver.foreground)
-                            .padding(.horizontal, 13)
-                            .padding(.vertical, 8)
-                            .background(DailyDriver.card2)
-                            .clipShape(Capsule())
-                            .overlay(
-                                Capsule().stroke(type.accentColor.opacity(0.45), lineWidth: 1)
-                            )
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityIdentifier("editor_v2_format_chip_\(type.rawValue)")
-                }
-            }
+            EditorV2FormatChipRow(
+                idPrefix: "editor_v2_format_chip_",
+                onSelect: onStartFormat
+            )
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 22)
