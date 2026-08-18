@@ -325,9 +325,11 @@ protocol APIServiceProviding: TelegramLinkAPIProviding, SocialImportAPIProviding
     func resendWatchDelivery(workoutId: String) async throws -> Components.Schemas.WatchResendResult
 
     /// First-push a Library workout to Garmin CIQ queue (AMA-2286 Start → Garmin).
+    /// AMA-2455: blocksJson optional derived plan array overlaying workout_data["blocks"].
     func pushWatchDelivery(
         workoutId: String,
-        displayPrefs: GarminWatchDisplayPrefs
+        displayPrefs: GarminWatchDisplayPrefs,
+        blocksJson: [[String: Any]]?
     ) async throws -> Components.Schemas.WatchResendResult
 
     // MARK: - Workout Enrichment (AMA-2336)
