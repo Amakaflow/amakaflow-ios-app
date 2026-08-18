@@ -889,14 +889,30 @@ final class EditorV2ReorderOrderTests: XCTestCase {
 
     /// Loose lifts, then a pinned group — the shape of David's "Hyrox
     /// technique upper" once flattened: several standalone rows plus a band.
+    /// Four loose exercises followed by a superset — the shape of David's
+    /// "Hyrox technique upper", and the shape the dictionary bug scrambled.
+    ///
+    /// Uses `beginNextSupersetGroup()`, NOT `startFormat(_:)`: `.addBlock`
+    /// resets `order` and `exercises` outright (EditorV2Command+D2.swift:284),
+    /// which would leave a single-row fixture that cannot exercise ordering
+    /// at all.
     private func mixedSession() -> EditorV2Session {
         var session = EditorV2Session(title: "Hyrox technique upper")
         for name in ["Dumbbell Gorilla Row", "GHD Sit-Up", "Medicine Ball Slam", "Weighted Pull-Up"] {
             _ = session.addExercise(named: name)
         }
-        _ = session.startFormat(.superset)
+        _ = session.beginNextSupersetGroup()
         _ = session.addExercise(named: "Ski Erg")
+        _ = session.addExercise(named: "Ring Row")
         return session
+    }
+
+    /// Guards the fixture itself: if it ever collapses to one row again, the
+    /// ordering tests below would pass vacuously.
+    func testFixtureHasEnoughRowsToExposeOrdering() {
+        let session = mixedSession()
+        XCTAssertEqual(session.order.count, 5, "4 loose rows + 1 superset row")
+        XCTAssertEqual(session.exercises.count, 6)
     }
 
     func testReorderRowsFollowAuthoredOrderNotDictionaryOrder() {
@@ -930,10 +946,12 @@ final class EditorV2ReorderOrderTests: XCTestCase {
     /// The dictionary-order bug was intermittent by nature — Swift's Dictionary
     /// ordering can differ per process. Repeated construction must be stable.
     func testReorderRowsAreStableAcrossRebuilds() {
-        let first = mixedSession().reorderRows.map(\.id)
+        // Titles, not IDs: each construction mints fresh UUIDs, so IDs are
+        // expected to differ. It is the SEQUENCE that must be identical.
+        let first = mixedSession().reorderRows.map(\.title)
         for _ in 0..<25 {
             XCTAssertEqual(
-                mixedSession().reorderRows.map(\.id), first,
+                mixedSession().reorderRows.map(\.title), first,
                 "reorder row order must be deterministic"
             )
         }
@@ -942,19 +960,28 @@ final class EditorV2ReorderOrderTests: XCTestCase {
     func testDragMovesTheRowTheUserDropped() {
         var session = mixedSession()
         let before = session.reorderRows.map(\.title)
+        let beforeIDs = session.reorderRows.map(\.id)
         guard let lastIndex = before.indices.last else { return XCTFail("no rows") }
 
         // Drag the last row to the top, exactly as SwiftUI's onMove reports it.
         session.reorder(fromOffsets: IndexSet(integer: lastIndex), toOffset: 0)
 
         let after = session.reorderRows.map(\.title)
+        let afterIDs = session.reorderRows.map(\.id)
         XCTAssertEqual(
             after.first, before[lastIndex],
             "the dragged row must land where it was dropped"
         )
+        // Compare IDs, not titles: two exercises may share a name, and a Set of
+        // titles would collapse a duplicate and hide exactly the loss this
+        // assertion exists to catch.
         XCTAssertEqual(
-            Set(after), Set(before),
-            "reordering must not add, drop or duplicate rows"
+            afterIDs.count, beforeIDs.count,
+            "reordering must not add or drop rows"
+        )
+        XCTAssertEqual(
+            Set(afterIDs), Set(beforeIDs),
+            "reordering must not substitute or duplicate rows"
         )
         XCTAssertEqual(
             session.reorderRows.map(\.id), session.order.map(\.id),
@@ -980,6 +1007,34 @@ final class EditorV2ReorderOrderTests: XCTestCase {
         XCTAssertTrue(
             groupRows.first?.memberNames.contains("Ring Row") == true,
             "the row must name the members that move with it: \(groupRows.first?.memberNames ?? [])"
+        )
+    }
+
+    /// A row whose exercise has gone missing must still occupy its slot. If it
+    /// were dropped, the displayed list would be shorter than `order` and every
+    /// index after it would address the wrong entry — the AMA-2459 bug again,
+    /// via a different route.
+    func testDanglingRowKeepsItsSlotSoOffsetsStayExact() {
+        var session = mixedSession()
+        let expected = session.order.count
+        let looseIndex = session.order.firstIndex { if case .loose = $0 { return true } else { return false } }
+        guard let victimIndex = looseIndex, case .loose(let victimID) = session.order[victimIndex] else {
+            return XCTFail("fixture must contain a loose row")
+        }
+
+        session.exercises[victimID] = nil
+
+        XCTAssertEqual(
+            session.reorderRows.count, expected,
+            "a dangling row must hold its place, not vanish"
+        )
+        XCTAssertEqual(
+            session.reorderRows.map(\.id), session.order.map(\.id),
+            "list and order must stay in lockstep even with a broken reference"
+        )
+        XCTAssertEqual(
+            session.reorderRows[victimIndex].title, EditorV2Session.missingRowTitle,
+            "the surviving row says it has no name rather than borrowing another's"
         )
     }
 }
