@@ -301,19 +301,25 @@ struct EditorV2GroupedRun: View {
 // MARK: - Reorder row
 
 struct EditorV2ReorderRow: View {
-    let exercise: EditorV2Exercise
-    let group: EditorV2Group?
+    let entry: EditorV2ReorderEntry
 
     var body: some View {
         HStack(spacing: 10) {
             VStack(alignment: .leading, spacing: 2) {
-                Text(exercise.name)
+                Text(entry.title)
                     .ddDisplayText(13, weight: .semibold)
                     .foregroundColor(DailyDriver.foreground)
-                if let group {
-                    Text(group.name.uppercased())
+                if let caption = entry.caption {
+                    Text(caption)
                         .font(.system(size: 8, weight: .bold, design: .monospaced))
-                        .foregroundColor(group.type.accentColor)
+                        .foregroundColor(entry.accent?.accentColor ?? DailyDriver.foregroundMuted)
+                }
+                // A group moves as one row, so name what travels with it.
+                if !entry.memberNames.isEmpty {
+                    Text("+ " + entry.memberNames.joined(separator: " · "))
+                        .font(.system(size: 9))
+                        .foregroundColor(DailyDriver.foregroundDim)
+                        .lineLimit(1)
                 }
             }
             Spacer(minLength: 0)
@@ -329,9 +335,9 @@ struct EditorV2ReorderRow: View {
                 .stroke(DailyDriver.border, lineWidth: 1)
         )
         .overlay(alignment: .leading) {
-            if let group {
+            if let accent = entry.accent {
                 RoundedRectangle(cornerRadius: 2)
-                    .fill(group.type.accentColor)
+                    .fill(accent.accentColor)
                     .frame(width: 3)
             }
         }

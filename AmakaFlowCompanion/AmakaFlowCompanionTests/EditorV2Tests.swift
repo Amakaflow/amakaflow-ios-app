@@ -878,3 +878,108 @@ final class EditorV2Tests: XCTestCase {
         XCTAssertEqual(exercise.fieldProvenance["reps"], .inferred)
     }
 }
+
+// MARK: - AMA-2459: reorder must operate on the authored order
+
+/// The reorder sheet used to iterate `exercises.values` — an unordered
+/// dictionary, at exercise rather than row granularity. That showed the user a
+/// different sequence than the editor AND made the drag offsets index a
+/// different collection than `.reorder` mutates.
+final class EditorV2ReorderOrderTests: XCTestCase {
+
+    /// Loose lifts, then a pinned group — the shape of David's "Hyrox
+    /// technique upper" once flattened: several standalone rows plus a band.
+    private func mixedSession() -> EditorV2Session {
+        var session = EditorV2Session(title: "Hyrox technique upper")
+        for name in ["Dumbbell Gorilla Row", "GHD Sit-Up", "Medicine Ball Slam", "Weighted Pull-Up"] {
+            _ = session.addExercise(named: name)
+        }
+        _ = session.startFormat(.superset)
+        _ = session.addExercise(named: "Ski Erg")
+        return session
+    }
+
+    func testReorderRowsFollowAuthoredOrderNotDictionaryOrder() {
+        let session = mixedSession()
+
+        XCTAssertEqual(
+            session.reorderRows.map(\.id), session.order.map(\.id),
+            "the reorder list must be the SAME sequence `.reorder` mutates — "
+                + "otherwise a drag lands somewhere the user did not choose"
+        )
+    }
+
+    /// Order fidelity, proven without depending on how `.addBlock` arranges
+    /// rows: with only loose exercises, the reorder list must read back in
+    /// exactly the sequence they were authored. The dictionary bug surfaced an
+    /// arbitrary permutation here.
+    func testLooseExercisesReadBackInAuthoredSequence() {
+        let names = [
+            "Dumbbell Gorilla Row", "GHD Sit-Up", "Medicine Ball Slam",
+            "Weighted Pull-Up", "Ski Erg"
+        ]
+        var session = EditorV2Session(title: "Loose only")
+        for name in names { _ = session.addExercise(named: name) }
+
+        XCTAssertEqual(
+            session.reorderRows.map(\.title), names,
+            "the reorder sheet must show exercises in the order they were added"
+        )
+    }
+
+    /// The dictionary-order bug was intermittent by nature — Swift's Dictionary
+    /// ordering can differ per process. Repeated construction must be stable.
+    func testReorderRowsAreStableAcrossRebuilds() {
+        let first = mixedSession().reorderRows.map(\.id)
+        for _ in 0..<25 {
+            XCTAssertEqual(
+                mixedSession().reorderRows.map(\.id), first,
+                "reorder row order must be deterministic"
+            )
+        }
+    }
+
+    func testDragMovesTheRowTheUserDropped() {
+        var session = mixedSession()
+        let before = session.reorderRows.map(\.title)
+        guard let lastIndex = before.indices.last else { return XCTFail("no rows") }
+
+        // Drag the last row to the top, exactly as SwiftUI's onMove reports it.
+        session.reorder(fromOffsets: IndexSet(integer: lastIndex), toOffset: 0)
+
+        let after = session.reorderRows.map(\.title)
+        XCTAssertEqual(
+            after.first, before[lastIndex],
+            "the dragged row must land where it was dropped"
+        )
+        XCTAssertEqual(
+            Set(after), Set(before),
+            "reordering must not add, drop or duplicate rows"
+        )
+        XCTAssertEqual(
+            session.reorderRows.map(\.id), session.order.map(\.id),
+            "list and order must stay in lockstep after a move"
+        )
+    }
+
+    /// A group is ONE entry in `order`, so it is one draggable row; its extra
+    /// members are surfaced on the row rather than becoming separate rows that
+    /// would desynchronise the offsets.
+    func testGroupIsASingleRowAndNamesWhatTravelsWithIt() {
+        var session = EditorV2Session(title: "Superset day")
+        _ = session.startFormat(.superset)
+        _ = session.addExercise(named: "Bench Press")
+        _ = session.addExercise(named: "Ring Row")
+
+        let groupRows = session.reorderRows.filter { $0.caption != nil }
+        XCTAssertEqual(groupRows.count, 1, "a group is one draggable row")
+        XCTAssertEqual(
+            session.reorderRows.count, session.order.count,
+            "one row per order entry — never one per exercise"
+        )
+        XCTAssertTrue(
+            groupRows.first?.memberNames.contains("Ring Row") == true,
+            "the row must name the members that move with it: \(groupRows.first?.memberNames ?? [])"
+        )
+    }
+}

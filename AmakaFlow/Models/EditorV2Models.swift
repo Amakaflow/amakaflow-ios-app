@@ -585,3 +585,16 @@ struct EditorV2LibraryItem: Equatable, Identifiable, Sendable {
         EditorV2LibraryItem(name: "Barbell back squat", meta: "STRENGTH · BARBELL — NOT IN YOUR GYM")
     ]
 }
+
+/// One draggable row in the reorder sheet. Mirrors an `EditorV2Row`, so the
+/// list the user drags is exactly the list `.reorder` mutates (AMA-2459).
+struct EditorV2ReorderEntry: Identifiable, Equatable {
+    let id: String
+    /// Lead line — the loose exercise, or a group's first member.
+    let title: String
+    /// Group name, when this row is a group.
+    let caption: String?
+    /// Remaining group members, so the user sees what moves with the row.
+    let memberNames: [String]
+    let accent: EditorV2GroupType?
+}
