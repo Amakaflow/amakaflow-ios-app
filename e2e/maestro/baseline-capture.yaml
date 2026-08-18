@@ -70,6 +70,40 @@ appId: com.myamaka.AmakaFlowCompanion
                 point: "50%,10%"
             - waitForAnimationToEnd:
                 timeout: 1500
+      # Editor with content (Edit) → Add-exercises sheet (AMA-2436 exsearch)
+      - runFlow:
+          when:
+            visible: "Edit"
+          commands:
+            - tapOn:
+                text: "Edit"
+            - waitForAnimationToEnd:
+                timeout: 3000
+            - takeScreenshot: docs/app-baseline/editor-content
+            - runFlow:
+                when:
+                  visible: "Add here"
+                commands:
+                  - tapOn:
+                      text: "Add here"
+                  - waitForAnimationToEnd:
+                      timeout: 3000
+                  - takeScreenshot: docs/app-baseline/add-exercises-sheet
+                  - tapOn:
+                      point: "50%,8%"
+                  - waitForAnimationToEnd:
+                      timeout: 1500
+            - back
+            - waitForAnimationToEnd:
+                timeout: 1500
+            - runFlow:
+                when:
+                  visible: "Discard"
+                commands:
+                  - tapOn:
+                      text: "Discard"
+                  - waitForAnimationToEnd:
+                      timeout: 1500
       # detail is a full-screen cover — dismiss via the X (top-left)
       - runFlow:
           when:
@@ -109,6 +143,23 @@ appId: com.myamaka.AmakaFlowCompanion
       - waitForAnimationToEnd:
           timeout: 3000
       - takeScreenshot: docs/app-baseline/watch-manager
+      - runFlow:
+          when:
+            visible: "ON WATCH"
+          commands:
+            - tapOn:
+                text: "ON WATCH"
+            - waitForAnimationToEnd:
+                timeout: 3000
+            - takeScreenshot: docs/app-baseline/watchitem-sheet
+            - runFlow:
+                when:
+                  visible: "Done"
+                commands:
+                  - tapOn:
+                      text: "Done"
+                  - waitForAnimationToEnd:
+                      timeout: 1500
       - back
       - waitForAnimationToEnd:
           timeout: 2000
