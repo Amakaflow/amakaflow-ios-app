@@ -18,6 +18,7 @@ extension BuilderV3ExercisePickerSheet {
                     }
                     categoryGrid
                         .drillInTransition()
+                    describeItCard
                 } else {
                     if tab == .all, trimmedQuery.isEmpty, let selectedCategory {
                         categoryHeader(selectedCategory)
@@ -270,6 +271,7 @@ extension BuilderV3ExercisePickerSheet {
                     .font(.system(size: 18))
                     .foregroundColor(selected ? DailyDriver.lime : DailyDriver.foregroundDim)
                     .accessibilityIdentifier("builder_v3_exercise_checkbox_\(item.name)")
+                exerciseIconChip(item)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(item.name)
                         .font(.system(size: 13.5, weight: .semibold))
@@ -284,6 +286,18 @@ extension BuilderV3ExercisePickerSheet {
         }
         .buttonStyle(.plain)
         .accessibilityIdentifier("builder_v3_exercise_row_\(item.name)")
+    }
+
+    /// Neutral tile behind an equipment glyph — the rig gives colour to category
+    /// cards, not to rows, so a long list stays calm.
+    func exerciseIconChip(_ item: BuilderV3ExerciseItem) -> some View {
+        Image(systemName: BuilderV3ExerciseIcon.systemImage(equipmentKey: item.equipmentKey))
+            .font(.system(size: 14, weight: .semibold))
+            .foregroundColor(DailyDriver.lime)
+            .frame(width: 32, height: 32)
+            .background(DailyDriver.card2)
+            .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
+            .accessibilityHidden(true)
     }
 
     func exerciseMetaLine(_ item: BuilderV3ExerciseItem, inGym: Bool) -> String {
