@@ -82,10 +82,10 @@ appId: com.myamaka.AmakaFlowCompanion
             - takeScreenshot: docs/app-baseline/editor-content
             - runFlow:
                 when:
-                  visible: "Add here"
+                  visible: ".*Add (here|exercises).*"
                 commands:
                   - tapOn:
-                      text: "Add here"
+                      text: ".*Add (here|exercises).*"
                   - waitForAnimationToEnd:
                       timeout: 3000
                   - takeScreenshot: docs/app-baseline/add-exercises-sheet
