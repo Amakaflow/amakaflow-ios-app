@@ -2,10 +2,11 @@
 #
 # App-baseline screenshot capture for the design-parity audit.
 # Boots the AF-Baseline sim, installs the current Debug-iphonesimulator
-# build, launches with the AMA-1843 mock session + fixtures via simctl
-# (Maestro 2.6.1 launchApp arguments do not reach UITestEnvironment —
-# simctl args do), then runs e2e/maestro/baseline-capture.yaml which
-# attaches to the running app and screenshots each surface.
+# build, launches it relying on the sim's PERSISTED real Clerk session
+# (baseline+clerk_test@amakaflow.dev — see AMA-2457; the AMA-1843 mock
+# bypass is launch-flaky and is deliberately NOT used) with fixture
+# flags, then runs e2e/maestro/baseline-capture.yaml which attaches to
+# the running app and screenshots each surface.
 #
 # Usage:
 #   ./scripts/capture-baseline.sh [output-dir]
@@ -28,6 +29,9 @@ fi
 echo "[baseline] sim $SIM_NAME ($UDID)"
 
 xcrun simctl boot "$UDID" 2>/dev/null || true
+# boot is async — wait for Booted before installing (60s cap)
+xcrun simctl bootstatus "$UDID" -b >/dev/null 2>&1 || {
+  echo "[baseline] ERROR: simulator $UDID failed to reach Booted" >&2; exit 1; }
 [[ -d "$APP_PATH" ]] || { echo "[baseline] ERROR: no sim build at $APP_PATH — build first" >&2; exit 1; }
 xcrun simctl install "$UDID" "$APP_PATH"
 # Auth (AMA-2457: the AMA-1843 mock bypass is launch-flaky — do NOT use it
@@ -40,7 +44,9 @@ xcrun simctl install "$UDID" "$APP_PATH"
 # see e2e/maestro/ signup notes in AMA-2457, or sign in manually with
 #   security find-generic-password -s amakaflow-baseline-sim -w
 authed() {
-  MAESTRO_CLI_NO_ANALYTICS=1 maestro --udid "$UDID" hierarchy 2>/dev/null | grep -q af_tabbar
+  # grep WITHOUT -q: drain the stream so maestro never dies on SIGPIPE
+  # (pipefail would turn that into a false "not authed").
+  MAESTRO_CLI_NO_ANALYTICS=1 maestro --udid "$UDID" hierarchy 2>/dev/null | grep -F af_tabbar >/dev/null
 }
 
 launched=0
