@@ -210,63 +210,27 @@ final class WorkoutEnrichmentPushCoordinator {
                 )
             }
 
-            var enrichNote: String?
-            var enrichFailed = false
-            var hasDerivedWatchPlan = false
-            if application.appliesAnything {
-                // Warm-up sets need exercise_id — mint before enrich (AMA-2363).
-                if application.prefs.exerciseWarmupSets.enabled {
-                    libraryBlocksJSON = WorkoutEnrichmentMutations.mintMissingExerciseIds(
-                        in: libraryBlocksJSON
-                    )
-                    planBlocksJSON = libraryBlocksJSON
-                }
-                // Narrow enrich failure: still persist reject tombstones so unchecked
-                // offers cannot reappear on the next push (AMA-2346).
-                do {
-                    let response = try await apiService.enrichWorkout(
-                        EnrichRequest(
-                            blocksJSON: planBlocksJSON,
-                            prefs: application.prefs,
-                            tombstones: application.tombstones,
-                            mode: .push
-                        )
-                    )
-                    if let summary = response.enrichmentApplied {
-                        if Self.isIncompleteEnrichment(application: application, summary: summary) {
-                            enrichNote = "Couldn’t add the warm-up/rest extras — fix and try again."
-                            enrichFailed = true
-                        } else {
-                            planBlocksJSON = response.blocksJSON
-                            hasDerivedWatchPlan = true
-                        }
-                    } else {
-                        enrichNote = "Couldn’t add the warm-up/rest extras — fix and try again."
-                        enrichFailed = true
-                    }
-                } catch {
-                    logger.error(
-                        "Enrich failed, persisting tombstones only for \(prepared.workoutId, privacy: .public): \(error.localizedDescription, privacy: .public)"
-                    )
-                    enrichNote = "Couldn’t add the warm-up/rest extras — fix and try again."
-                    enrichFailed = true
-                }
-            }
+            let enrichResult = await enrichDerivedWatchPlan(
+                application: application,
+                prepared: prepared,
+                libraryBlocksJSON: libraryBlocksJSON,
+                planBlocksJSON: planBlocksJSON
+            )
             // Persist tombstones and author opt-outs on the unenriched library only.
             try await apiService.saveWorkoutBlocksJSON(
                 workoutId: prepared.workoutId,
                 title: prepared.title,
-                blocksJSON: libraryBlocksJSON,
+                blocksJSON: enrichResult.libraryBlocksJSON,
                 tombstones: application.tombstones
             )
             return ApplyOutcome(
                 applied: true,
-                note: enrichNote,
-                enrichFailed: enrichFailed,
+                note: enrichResult.note,
+                enrichFailed: enrichResult.failed,
                 resetBlocksJSON: baseline,
                 resetTombstones: prepared.tombstones,
-                planBlocksJSON: enrichFailed ? nil : planBlocksJSON,
-                hasDerivedWatchPlan: hasDerivedWatchPlan
+                planBlocksJSON: enrichResult.failed ? nil : enrichResult.planBlocksJSON,
+                hasDerivedWatchPlan: enrichResult.hasDerivedWatchPlan
             )
         } catch {
             logger.error(
@@ -277,6 +241,80 @@ final class WorkoutEnrichmentPushCoordinator {
                 note: "Couldn’t add the warm-up/rest extras — sending your workout as it is."
             )
         }
+    }
+
+
+    private struct DerivedPlanEnrichResult {
+        let planBlocksJSON: [String: Any]
+        let libraryBlocksJSON: [String: Any]
+        let note: String?
+        let failed: Bool
+        let hasDerivedWatchPlan: Bool
+    }
+
+    private func enrichDerivedWatchPlan(
+        application: WorkoutEnrichmentPushPlanner.Application,
+        prepared: Prepared,
+        libraryBlocksJSON: [String: Any],
+        planBlocksJSON: [String: Any]
+    ) async -> DerivedPlanEnrichResult {
+        var library = libraryBlocksJSON
+        var plan = planBlocksJSON
+        var note: String?
+        var failed = false
+        var hasDerivedWatchPlan = false
+        guard application.appliesAnything else {
+            return DerivedPlanEnrichResult(
+                planBlocksJSON: plan,
+                libraryBlocksJSON: library,
+                note: nil,
+                failed: false,
+                hasDerivedWatchPlan: false
+            )
+        }
+        // Warm-up sets need exercise_id — mint before enrich (AMA-2363).
+        if application.prefs.exerciseWarmupSets.enabled {
+            library = WorkoutEnrichmentMutations.mintMissingExerciseIds(in: library)
+            plan = library
+        }
+        let enrichFailureNote = "Couldn’t add the warm-up/rest extras — fix and try again."
+        // Narrow enrich failure: still persist reject tombstones so unchecked
+        // offers cannot reappear on the next push (AMA-2346).
+        do {
+            let response = try await apiService.enrichWorkout(
+                EnrichRequest(
+                    blocksJSON: plan,
+                    prefs: application.prefs,
+                    tombstones: application.tombstones,
+                    mode: .push
+                )
+            )
+            if let summary = response.enrichmentApplied {
+                if Self.isIncompleteEnrichment(application: application, summary: summary) {
+                    note = enrichFailureNote
+                    failed = true
+                } else {
+                    plan = response.blocksJSON
+                    hasDerivedWatchPlan = true
+                }
+            } else {
+                note = enrichFailureNote
+                failed = true
+            }
+        } catch {
+            logger.error(
+                "Enrich failed, persisting tombstones only for \(prepared.workoutId, privacy: .public): \(error.localizedDescription, privacy: .public)"
+            )
+            note = enrichFailureNote
+            failed = true
+        }
+        return DerivedPlanEnrichResult(
+            planBlocksJSON: plan,
+            libraryBlocksJSON: library,
+            note: note,
+            failed: failed,
+            hasDerivedWatchPlan: hasDerivedWatchPlan
+        )
     }
 
     /// AMA-2365 — restore the pre-enrich baseline after Apple preview Cancel.
