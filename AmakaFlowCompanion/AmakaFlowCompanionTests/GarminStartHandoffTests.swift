@@ -145,3 +145,64 @@ final class GarminStartHandoffServiceTests: XCTestCase {
         XCTAssertTrue(result.message.localizedCaseInsensitiveContains("exercise"))
     }
 }
+
+// MARK: - AMA-2455: the derived plan must actually reach the push body
+
+/// The `hasDerivedWatchPlan` flag tests assert the DECISION; these assert the
+/// WIRING. Without them, deleting `blocksJson:` from the push call still passes
+/// every existing test — the same gap CodeRabbit flagged on #614.
+@MainActor
+final class GarminDerivedPlanPushTests: XCTestCase {
+
+    private func makeService(_ api: MockAPIService) -> GarminStartHandoffService {
+        GarminStartHandoffService(
+            apiService: api,
+            forceFailureCode: { nil },
+            handoffStore: GarminHandoffStateStore()
+        )
+    }
+
+    func testDerivedPlanBlocksReachTheGarminPushBody() async {
+        let api = MockAPIService()
+        let blocks: [[String: Any]] = [
+            ["label": "Warm-up", "exercises": [["name": "Ski Erg"]]],
+            ["label": "Main", "exercises": [["name": "Back Squat"]]]
+        ]
+
+        _ = await makeService(api).push(
+            workoutId: "wk-derived",
+            workoutName: "Engine EMOM",
+            gymTitle: "Home",
+            blocksJson: blocks
+        )
+
+        XCTAssertTrue(api.pushWatchDeliveryCalled, "the push must actually be attempted")
+        guard let sent = api.lastPushWatchDeliveryBlocksJson else {
+            return XCTFail("derived plan blocks were dropped before reaching the push body (AMA-2455)")
+        }
+        XCTAssertEqual(
+            sent.count, 2,
+            "every block of the derived plan must ride the push, not just the first"
+        )
+        XCTAssertEqual(
+            sent.compactMap { $0["label"] as? String }, ["Warm-up", "Main"],
+            "block order and content must survive the hop to the push body"
+        )
+    }
+
+    func testPushWithoutDerivedPlanSendsNoBlocks() async {
+        let api = MockAPIService()
+
+        _ = await makeService(api).push(
+            workoutId: "wk-plain",
+            workoutName: "Authored only",
+            gymTitle: "Home"
+        )
+
+        XCTAssertTrue(api.pushWatchDeliveryCalled)
+        XCTAssertNil(
+            api.lastPushWatchDeliveryBlocksJson,
+            "no derived plan → the body must omit blocksJson so the backend falls back to stored workout_data"
+        )
+    }
+}
