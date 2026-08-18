@@ -97,19 +97,43 @@ struct GarminWatchDeliveryPushBody: Encodable, Equatable, Sendable {
     /// AMA-2336: send the structural flag explicitly so the queued FIT always
     /// takes the enriched encode path instead of relying on a server default.
     let enriched: Bool
+    /// AMA-2455: optional derived plan blocks array overlaying workout_data["blocks"].
+    /// When present, BFF snapshot + CIQ FIT use this array. Library workout_data unchanged.
+    let blocksJson: [[String: Any]]?
 
     enum CodingKeys: String, CodingKey {
         case exerciseEnd = "exercise_end"
         case restMode = "rest_mode"
         case defaultRestSec = "default_rest_sec"
         case enriched
+        case blocksJson = "blocks_json"
     }
 
-    init(prefs: GarminWatchDisplayPrefs, enriched: Bool = true) {
+    init(prefs: GarminWatchDisplayPrefs, enriched: Bool = true, blocksJson: [[String: Any]]? = nil) {
         exerciseEnd = prefs.exerciseEnd.rawValue
         restMode = prefs.restMode.rawValue
         defaultRestSec = prefs.defaultRestSec
         self.enriched = enriched
+        self.blocksJson = blocksJson
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(exerciseEnd, forKey: .exerciseEnd)
+        try container.encode(restMode, forKey: .restMode)
+        try container.encode(defaultRestSec, forKey: .defaultRestSec)
+        try container.encode(enriched, forKey: .enriched)
+        if let blocksJson {
+            try container.encode(AnyCodable(blocksJson), forKey: .blocksJson)
+        }
+    }
+
+    static func == (lhs: GarminWatchDeliveryPushBody, rhs: GarminWatchDeliveryPushBody) -> Bool {
+        lhs.exerciseEnd == rhs.exerciseEnd
+            && lhs.restMode == rhs.restMode
+            && lhs.defaultRestSec == rhs.defaultRestSec
+            && lhs.enriched == rhs.enriched
+            && NSArray(array: lhs.blocksJson ?? []).isEqual(to: rhs.blocksJson ?? [])
     }
 }
 

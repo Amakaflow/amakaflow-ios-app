@@ -162,7 +162,7 @@ final class GarminStartHandoffService {
         }
     }
 
-    func push(workoutId: String, workoutName: String, gymTitle: String) async -> GarminStartHandoffResult {
+    func push(workoutId: String, workoutName: String, gymTitle: String, displayPrefs: GarminWatchDisplayPrefs? = nil, blocksJson: [[String: Any]]? = nil) async -> GarminStartHandoffResult {
         if let forced = forceFailureCode?() {
             return finish(
                 workoutId: workoutId,
@@ -176,7 +176,7 @@ final class GarminStartHandoffService {
         let displayTitle = workoutName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             ? gymTitle
             : workoutName
-        let prefs = GarminWatchDisplayPrefsStore.current
+        let prefs = displayPrefs ?? GarminWatchDisplayPrefsStore.current
         handoffStore.begin(workoutId: workoutId, gymTitle: gymTitle)
         GarminHandoffTelemetry.pushStarted(
             workoutId: workoutId,
@@ -187,7 +187,8 @@ final class GarminStartHandoffService {
         do {
             let pushResult = try await apiService.pushWatchDelivery(
                 workoutId: workoutId,
-                displayPrefs: prefs
+                displayPrefs: prefs,
+                blocksJson: blocksJson
             )
             guard pushResult.success else {
                 return finish(

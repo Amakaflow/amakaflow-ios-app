@@ -4123,6 +4123,15 @@
         "additionalProperties": false,
         "description": "Optional body for POST /v1/devices/watch-delivery/{workout_id}/push.\n\nOmit or send ``{}`` to fan out to every paired Garmin. Provide\n``device_token`` to target a single CIQ device.",
         "properties": {
+          "blocksJson": {
+            "default": null,
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Blocksjson",
+            "type": "array"
+          },
           "deviceToken": {
             "default": null,
             "title": "Devicetoken",

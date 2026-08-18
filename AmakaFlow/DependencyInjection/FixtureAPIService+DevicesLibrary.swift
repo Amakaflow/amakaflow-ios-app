@@ -106,7 +106,8 @@ extension FixtureAPIService {
 
     func pushWatchDelivery(
         workoutId: String,
-        displayPrefs: GarminWatchDisplayPrefs
+        displayPrefs: GarminWatchDisplayPrefs,
+        blocksJson: [[String: Any]]?
     ) async throws -> Components.Schemas.WatchResendResult {
         if let pushWatchDeliveryResult {
             return try pushWatchDeliveryResult.get()
@@ -118,7 +119,8 @@ extension FixtureAPIService {
             subtitle: "Sent to your watch — waiting for sync",
             title: "Sent to watch"
         )
-        print("[FixtureAPIService] Stub: pushWatchDelivery(\(workoutId), \(displayPrefs.summaryLine)) -> success")
+        let blocksNote = blocksJson.map { " (derived plan \($0.count) blocks)" } ?? ""
+        print("[FixtureAPIService] Stub: pushWatchDelivery(\(workoutId), \(displayPrefs.summaryLine)\(blocksNote)) -> success")
         return Components.Schemas.WatchResendResult(deliveryIds: ["fixture-push-\(workoutId)"], success: true)
     }
 

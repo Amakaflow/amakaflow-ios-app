@@ -1365,15 +1365,12 @@ extension UnifiedWorkoutDetailView {
                 prepared: prepared,
                 decision: decision
             )
-            var statusNotes = [outcome.note]
-            if outcome.hasDerivedWatchPlan {
-                statusNotes.append(WorkoutEnrichmentPushCopy.garminDerivedPlanDeferNote)
-            }
             let toastId = DDToastCenter.shared.beginPending(text: DDToastCopy.sendingToGarmin)
             await performGarminPush(
                 gymTitle: gymTitle,
-                statusNote: statusNotes.compactMap { $0 }.joined(separator: " "),
-                toastId: toastId
+                statusNote: outcome.note,
+                toastId: toastId,
+                planBlocksJSON: outcome.planBlocksJSON
             )
         }
     }
@@ -1431,21 +1428,30 @@ extension UnifiedWorkoutDetailView {
             : "Apple schedule canceled — couldn’t clear extras; Start again to reset."
     }
 
-    fileprivate func pushToGarmin(gymTitle: String, statusNote: String?) {
+    fileprivate func pushToGarmin(gymTitle: String, statusNote: String?, planBlocksJSON: [String: Any]? = nil) {
         handoffStatus = GarminLifecycleCopy.handoffQueueing
         // AMA-2383 — push morph: never claim success before the API returns.
         let toastId = DDToastCenter.shared.beginPending(text: DDToastCopy.sendingToGarmin)
         Task {
-            await performGarminPush(gymTitle: gymTitle, statusNote: statusNote, toastId: toastId)
+            await performGarminPush(gymTitle: gymTitle, statusNote: statusNote, toastId: toastId, planBlocksJSON: planBlocksJSON)
         }
     }
 
-    private func performGarminPush(gymTitle: String, statusNote: String?, toastId: UUID) async {
+    private func performGarminPush(gymTitle: String, statusNote: String?, toastId: UUID, planBlocksJSON: [String: Any]? = nil) async {
         pendingGarminGymTitle = nil
+        let prefs = GarminWatchDisplayPrefsStore.current
+        let blocksJson: [[String: Any]]? = {
+            guard let planBlocksJSON, let blocks = planBlocksJSON["blocks"] as? [[String: Any]], !blocks.isEmpty else {
+                return nil
+            }
+            return blocks
+        }()
         let result = await GarminStartHandoffService().push(
             workoutId: workout.id,
             workoutName: workout.name,
-            gymTitle: gymTitle
+            gymTitle: gymTitle,
+            displayPrefs: prefs,
+            blocksJson: blocksJson
         )
         handoffStatus = [statusNote, result.message].compactMap { $0 }.joined(separator: " ")
         let didSend = result.kind.telemetryOutcome.isTerminalGarminSentCardSuccess
