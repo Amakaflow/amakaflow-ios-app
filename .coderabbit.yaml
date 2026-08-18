@@ -39,6 +39,10 @@ reviews:
   poem: false
 
   # AMA: CodeRabbit is for CODE only. Doc-only PRs must not consume CR credits.
+  # NOTE (CodeRabbit support, 2026-08): these filters govern REVIEW scope only.
+  # Autofix and Fix CI run on a full checkout and CAN write to excluded paths.
+  # If write-scope control matters, use `@coderabbitai autofix stacked pr` so
+  # the fixes land on a reviewable branch instead of the PR branch.
   path_filters:
     - "!**/*.md"
     - "!**/*.mdx"
@@ -128,11 +132,17 @@ reviews:
 
   finishing_touches:
     # AMA-2439 disabled autofix because TWO agents were fixing each other's
-    # fixes. Both partners are now gone: the Cursor "CodeRabbit autofix
-    # (no ping-pong)" automation stopped running after PR #561, and the
-    # Claude auto-fix workflow is deleted in this PR. With a single fixer a
-    # loop cannot form, and `auto_pause_after_reviewed_commits: 2` above is
-    # the brake if one somehow starts.
+    # fixes. Both partners are now gone (Cursor automation stopped after
+    # PR #561; the Claude auto-fix workflow was deleted).
+    # Confirmed by CodeRabbit support (2026-08):
+    #   1. `enabled: true` does NOT run autofix automatically — it only makes
+    #      the `@coderabbitai autofix` / `autofix stacked pr` commands work.
+    #   2. CodeRabbit ignores the branch-update event from its OWN autofix
+    #      commit (self-commit detection), so an autofix commit cannot
+    #      re-trigger an incremental review. That — not
+    #      `auto_pause_after_reviewed_commits` — is what prevents a loop.
+    # Do not re-disable this out of loop caution; a CodeRabbit-only loop
+    # cannot form by construction.
     autofix:
       enabled: true
     simplify:
@@ -167,10 +177,13 @@ reviews:
       mode: "off"
 
 tools:
-  # Surfaces lint at REVIEW time instead of as a red CI check to reverse
-  # engineer. Uses the same config CI uses.
+  # DISABLED on CodeRabbit support's recommendation (2026-08). CodeRabbit runs
+  # SwiftLint 0.65.0 and the version cannot be pinned; CI pins 0.57.1 and local
+  # machines run 0.62.2. A third version produces violations neither CI nor
+  # local can reproduce. Re-enable only after CI/local standardize on a version
+  # close to CodeRabbit's.
   swiftlint:
-    enabled: true
+    enabled: false
     config_file: ".swiftlint.yml"
   actionlint:
     enabled: true
