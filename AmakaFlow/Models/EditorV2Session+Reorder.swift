@@ -47,7 +47,10 @@ extension EditorV2Session {
                         accent: nil
                     )
                 }
-                let members = group.memberIDs.compactMap { exercises[$0]?.name }
+                // Total for the same reason the outer map is: dropping a
+                // missing member would let a LATER member impersonate the row
+                // title and would hide the loss entirely.
+                let members = group.memberIDs.map { exercises[$0]?.name ?? Self.missingRowTitle }
                 return EditorV2ReorderEntry(
                     id: row.id,
                     title: members.first ?? group.name,

@@ -1010,6 +1010,32 @@ final class EditorV2ReorderOrderTests: XCTestCase {
         )
     }
 
+    /// A missing group member must not let a LATER member impersonate the row
+    /// title. That is the same failure the reorder bug produced on the canvas:
+    /// an exercise disappears and another one takes its label.
+    func testMissingGroupMemberDoesNotLetAnotherMemberTakeItsPlace() {
+        var session = EditorV2Session(title: "Superset day")
+        _ = session.beginNextSupersetGroup()
+        _ = session.addExercise(named: "Bench Press")
+        _ = session.addExercise(named: "Ring Row")
+
+        guard case .group(let key)? = session.order.last,
+              let firstMember = session.groups[key]?.memberIDs.first else {
+            return XCTFail("expected a superset row with members")
+        }
+        session.exercises[firstMember] = nil
+
+        guard let row = session.reorderRows.last else { return XCTFail("no rows") }
+        XCTAssertEqual(
+            row.title, EditorV2Session.missingRowTitle,
+            "the row must not adopt the second member's name"
+        )
+        XCTAssertEqual(
+            row.memberNames, ["Ring Row"],
+            "the surviving member stays listed, in its original slot"
+        )
+    }
+
     /// A row whose exercise has gone missing must still occupy its slot. If it
     /// were dropped, the displayed list would be shorter than `order` and every
     /// index after it would address the wrong entry — the AMA-2459 bug again,
