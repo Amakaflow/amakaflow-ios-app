@@ -119,7 +119,7 @@ extension FixtureAPIService {
             subtitle: "Sent to your watch — waiting for sync",
             title: "Sent to watch"
         )
-        let blocksNote = blocksJson != nil ? " (derived plan \(blocksJson!.count) blocks)" : ""
+        let blocksNote = blocksJson.map { " (derived plan \($0.count) blocks)" } ?? ""
         print("[FixtureAPIService] Stub: pushWatchDelivery(\(workoutId), \(displayPrefs.summaryLine)\(blocksNote)) -> success")
         return Components.Schemas.WatchResendResult(deliveryIds: ["fixture-push-\(workoutId)"], success: true)
     }
