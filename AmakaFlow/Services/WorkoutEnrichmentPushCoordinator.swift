@@ -243,7 +243,6 @@ final class WorkoutEnrichmentPushCoordinator {
         }
     }
 
-
     private struct DerivedPlanEnrichResult {
         let planBlocksJSON: [String: Any]
         let libraryBlocksJSON: [String: Any]

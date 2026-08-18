@@ -89,11 +89,31 @@ final class WorkoutEnrichmentV2CopyTests: XCTestCase {
     func testSheetIntroV2IsLocked() {
         XCTAssertEqual(
             WorkoutEnrichmentPushCopy.sheetIntroV2,
-            "Tap a row to shape what goes on your watch — your library workout stays as you wrote it."
+            "Tap a row to shape what goes on your watch — your library workout stays as you wrote it.",
+            "v2 sheet intro must promise the library stays as authored (AMA-2453)"
+        )
+    }
+
+    /// The footnote is target-specific because the claims differ: Apple gets
+    /// the derived plan; Garmin FIT builds from authored structure (AMA-2455).
+    func testSheetFootnoteV2IsLockedPerTarget() {
+        XCTAssertEqual(
+            WorkoutEnrichmentPushCopy.sheetFootnoteV2(target: .apple),
+            "These choices shape the Apple Watch plan at handoff — your saved workout stays unchanged.",
+            "Apple footnote must claim handoff-time composition, not a library edit"
         )
         XCTAssertEqual(
-            WorkoutEnrichmentPushCopy.sheetFootnoteV2,
-            "Your watch builds the file when you download — these choices don’t change your saved workout."
+            WorkoutEnrichmentPushCopy.sheetFootnoteV2(target: .garmin),
+            "Garmin builds from your workout as written — watch-ready extras aren’t on Garmin yet.",
+            "Garmin footnote must NOT claim the watch builds the derived file — FIT uses authored structure until AMA-2455"
+        )
+    }
+
+    func testGarminDerivedPlanDeferNoteIsLocked() {
+        XCTAssertEqual(
+            WorkoutEnrichmentPushCopy.garminDerivedPlanDeferNote,
+            "Watch-ready extras aren’t on Garmin yet — your library workout is unchanged; FIT uses authored structure until delivery accepts a derived plan.",
+            "Garmin defer status must disclose that the derived plan did not ride the push (AMA-2453)"
         )
     }
 

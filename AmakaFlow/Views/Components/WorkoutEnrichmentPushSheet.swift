@@ -159,7 +159,7 @@ extension WorkoutEnrichmentPushSheet {
                         offerRow(offer)
                     }
 
-                    Text(WorkoutEnrichmentPushCopy.sheetFootnoteV2)
+                    Text(WorkoutEnrichmentPushCopy.sheetFootnoteV2(target: target))
                         .font(.system(size: 10))
                         .foregroundColor(DailyDriver.foregroundDim)
                         .padding(.top, 2)

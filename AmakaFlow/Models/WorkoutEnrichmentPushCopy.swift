@@ -229,8 +229,17 @@ enum WorkoutEnrichmentPushCopy {
     /// v2 sheet intro (rows-as-doors) — AMA-2453: derived plan, library unchanged.
     static let sheetIntroV2 = "Tap a row to shape what goes on your watch — your library workout stays as you wrote it."
 
-    /// Footnote under offer rows — watch builds FIT/plan at handoff, not a library edit.
-    static let sheetFootnoteV2 = "Your watch builds the file when you download — these choices don’t change your saved workout."
+    /// Footnote under offer rows — target-specific because the claims differ:
+    /// Apple composes the derived plan at handoff; Garmin FIT still builds from
+    /// the authored structure until delivery accepts a derived plan (AMA-2455).
+    static func sheetFootnoteV2(target: EnrichmentPushTarget) -> String {
+        switch target {
+        case .apple:
+            return "These choices shape the Apple Watch plan at handoff — your saved workout stays unchanged."
+        case .garmin:
+            return "Garmin builds from your workout as written — watch-ready extras aren’t on Garmin yet."
+        }
+    }
 
     /// Garmin defer copy when a derived plan cannot ride the push body (AMA-2453).
     static let garminDerivedPlanDeferNote =
