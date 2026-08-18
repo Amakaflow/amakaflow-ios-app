@@ -46,7 +46,11 @@ private enum PreviewSectionBuilder {
 
     static func sections(from planJSON: Data) -> [PreviewSection] {
         guard let dto = try? WorkoutKitSync.default.parse(from: planJSON) else { return [] }
-        let nativeWarmupName = WorkoutKitPlanNativeWarmup.displayName(from: planJSON)
+        // This runs inside a SwiftUI sheet builder — only pay for the second
+        // raw decode when the plan actually has a warm-up interval to name.
+        let nativeWarmupName = WorkoutKitPlanStepSummary.hasWarmupInterval(dto.intervals)
+            ? WorkoutKitPlanNativeWarmup.displayName(from: planJSON)
+            : nil
         return buildSections(
             from: flatten(intervals: dto.intervals, nativeWarmupDisplayName: nativeWarmupName)
         )
@@ -57,17 +61,15 @@ private enum PreviewSectionBuilder {
         nativeWarmupDisplayName: String?
     ) -> [Atom] {
         var out: [Atom] = []
-        var consumedNativeWarmupName = false
         for interval in intervals {
             switch interval {
             case .warmup(let seconds, _):
                 let title = WorkoutKitPlanNativeWarmup.previewTitle(
-                    nativeWarmupDisplayName: nativeWarmupDisplayName,
-                    consumedNativeWarmupName: &consumedNativeWarmupName
+                    nativeWarmupDisplayName: nativeWarmupDisplayName
                 )
-                out.append(.mobility(title: title, detail: PreviewSectionWarmupHelpers.durationLabel(seconds)))
+                out.append(.mobility(title: title, detail: PreviewSectionLabelHelpers.durationLabel(seconds)))
             case .cooldown(let seconds, _):
-                out.append(.cooldown(detail: PreviewSectionWarmupHelpers.durationLabel(seconds)))
+                out.append(.cooldown(detail: PreviewSectionLabelHelpers.durationLabel(seconds)))
             case .repeatSet(let reps, let steps):
                 out.append(contentsOf: flattenRepeat(reps: max(reps, 1), steps: steps))
             case .step(let step):
@@ -248,7 +250,7 @@ private enum PreviewSectionBuilder {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
         let lower = trimmed.lowercased()
         let withoutPrefix: String
-        if let prefix = PreviewSectionWarmupHelpers.warmupPrefixes.first(where: { lower.hasPrefix($0) }) {
+        if let prefix = PreviewSectionLabelHelpers.warmupPrefixes.first(where: { lower.hasPrefix($0) }) {
             let stripped = String(trimmed.dropFirst(prefix.count))
                 .trimmingCharacters(in: .whitespacesAndNewlines)
             withoutPrefix = stripped.isEmpty ? trimmed : stripped
@@ -269,7 +271,7 @@ private enum PreviewSectionBuilder {
         // intensity / percent / "LIGHT|MODERATE|HEAVY" note).
         var kept: [String] = []
         for part in parts {
-            if PreviewSectionWarmupHelpers.isDetailSegment(part) { break }
+            if PreviewSectionLabelHelpers.isDetailSegment(part) { break }
             kept.append(part)
         }
         return kept.isEmpty ? parts[0] : kept.joined(separator: " · ")
@@ -277,7 +279,7 @@ private enum PreviewSectionBuilder {
 
     private static func isWarmupSetName(_ name: String) -> Bool {
         let lower = name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        return PreviewSectionWarmupHelpers.warmupPrefixes.contains { lower.hasPrefix($0) }
+        return PreviewSectionLabelHelpers.warmupPrefixes.contains { lower.hasPrefix($0) }
     }
 
     private static func isMobilityName(_ name: String) -> Bool {
@@ -333,15 +335,15 @@ private enum PreviewSectionBuilder {
     /// with "1 REPS" when the user set 11.
     private static func workDetail(for step: WKPlanDTO.Interval.Step) -> String? {
         if let reps = step.reps {
-            if reps == 1, let recovered = PreviewSectionWarmupHelpers.repsRecoveredFromWarmupLabel(step.name) {
+            if reps == 1, let recovered = PreviewSectionLabelHelpers.repsRecoveredFromWarmupLabel(step.name) {
                 return "\(recovered) reps"
             }
-            if reps == 1, let note = PreviewSectionWarmupHelpers.intensityNoteFromWarmupLabel(step.name) {
+            if reps == 1, let note = PreviewSectionLabelHelpers.intensityNoteFromWarmupLabel(step.name) {
                 return note
             }
             return "\(reps) reps"
         }
-        if let seconds = step.seconds { return PreviewSectionWarmupHelpers.durationLabel(seconds) }
+        if let seconds = step.seconds { return PreviewSectionLabelHelpers.durationLabel(seconds) }
         if let meters = step.meters, meters > 0 {
             return WorkoutHelpers.formatDistance(meters: Int(meters.rounded()))
         }
@@ -350,7 +352,7 @@ private enum PreviewSectionBuilder {
 }
 
 /// Warm-up label helpers split out of `PreviewSectionBuilder` for type_body_length.
-private enum PreviewSectionWarmupHelpers {
+private enum PreviewSectionLabelHelpers {
     /// Shared warm-up prefixes (lowercase). Detection and stripping must agree.
     static let warmupPrefixes = [
         "wu ·", "wu -", "wu –", "wu —", "wu·", "wu–", "wu—", "wu ",
@@ -395,7 +397,7 @@ private enum PreviewSectionWarmupHelpers {
     static func intensityNoteFromWarmupLabel(_ name: String?) -> String? {
         guard let name else { return nil }
         let lower = name.lowercased()
-        guard let prefix = PreviewSectionWarmupHelpers.warmupPrefixes.first(where: { lower.hasPrefix($0) }) else { return nil }
+        guard let prefix = PreviewSectionLabelHelpers.warmupPrefixes.first(where: { lower.hasPrefix($0) }) else { return nil }
         let withoutPrefix = String(name.dropFirst(prefix.count))
             .trimmingCharacters(in: .whitespacesAndNewlines)
         let parts = withoutPrefix
@@ -404,7 +406,7 @@ private enum PreviewSectionWarmupHelpers {
             .filter { !$0.isEmpty }
         guard parts.count >= 2 else { return nil }
         let detail = Array(parts.dropFirst())
-        guard let firstDetailIndex = detail.firstIndex(where: PreviewSectionWarmupHelpers.isDetailSegment) else {
+        guard let firstDetailIndex = detail.firstIndex(where: PreviewSectionLabelHelpers.isDetailSegment) else {
             return nil
         }
         let note = detail[firstDetailIndex...].joined(separator: " · ")

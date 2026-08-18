@@ -159,14 +159,25 @@ enum WorkoutKitSportLabel {
 }
 
 enum WorkoutKitPlanStepSummary {
+    /// True when the plan has a native warm-up interval — gates the second
+    /// raw decode of the plan JSON (the name lives on top-level
+    /// `warmup.displayName`, not on the interval). Lives in this base file so
+    /// every target that compiles `lines(from:)` has it.
+    static func hasWarmupInterval(_ intervals: [WKPlanDTO.Interval]) -> Bool {
+        intervals.contains { if case .warmup = $0 { return true } else { return false } }
+    }
+
     /// Short labels for preview (warmup / recovery / named work). `limit` is a hard cap.
     static func lines(from planJSON: Data, limit: Int = 12) -> [String] {
         guard limit > 0 else { return [] }
         guard let dto = try? WorkoutKitSync.default.parse(from: planJSON) else { return [] }
         var out: [String] = []
         let intervals = dto.intervals
-        let nativeWarmupName = WorkoutKitPlanNativeWarmup.displayName(from: planJSON)
-        var consumedNativeWarmupName = false
+        // Same gating as sections(from:): skip the second raw decode entirely
+        // when there is no warm-up interval to name.
+        let nativeWarmupName = hasWarmupInterval(intervals)
+            ? WorkoutKitPlanNativeWarmup.displayName(from: planJSON)
+            : nil
 
         for (index, interval) in intervals.enumerated() {
             let room = limit - out.count
@@ -192,8 +203,7 @@ enum WorkoutKitPlanStepSummary {
                 interval: interval,
                 into: &out,
                 budget: budget,
-                nativeWarmupDisplayName: nativeWarmupName,
-                consumedNativeWarmupName: &consumedNativeWarmupName
+                nativeWarmupDisplayName: nativeWarmupName
             )
             if out.count > limit {
                 out = Array(out.prefix(limit))
@@ -227,15 +237,13 @@ enum WorkoutKitPlanStepSummary {
         interval: WKPlanDTO.Interval,
         into out: inout [String],
         budget: Int,
-        nativeWarmupDisplayName: String?,
-        consumedNativeWarmupName: inout Bool
+        nativeWarmupDisplayName: String?
     ) -> Int {
         guard budget > 0 else { return labelCount(for: interval) }
         switch interval {
         case .warmup(let seconds, _):
             let title = WorkoutKitPlanNativeWarmup.previewTitle(
-                nativeWarmupDisplayName: nativeWarmupDisplayName,
-                consumedNativeWarmupName: &consumedNativeWarmupName
+                nativeWarmupDisplayName: nativeWarmupDisplayName
             )
             out.append("\(title) · \(seconds)s")
             return 0

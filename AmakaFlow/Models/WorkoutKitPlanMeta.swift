@@ -87,17 +87,12 @@ enum WorkoutKitPlanNativeWarmup {
         return trimmedDisplayName(payload.warmup?.displayName)
     }
 
-    /// Preview title for the first native `.warmup` interval row.
-    static func previewTitle(
-        nativeWarmupDisplayName: String?,
-        consumedNativeWarmupName: inout Bool
-    ) -> String {
-        if !consumedNativeWarmupName,
-           let name = trimmedDisplayName(nativeWarmupDisplayName) {
-            consumedNativeWarmupName = true
-            return name
-        }
-        return "Warm-up"
+    /// Preview title for a native `.warmup` interval row. Pure: the mapper's
+    /// `legacy_interval_models()` emits the singular warm-up block exactly once
+    /// (index 0), so there is no "second warmup" to guard against — the old
+    /// inout consumed-flag threading was dead defensiveness.
+    static func previewTitle(nativeWarmupDisplayName: String?) -> String {
+        trimmedDisplayName(nativeWarmupDisplayName) ?? "Warm-up"
     }
 
     private static func trimmedDisplayName(_ raw: String?) -> String? {
