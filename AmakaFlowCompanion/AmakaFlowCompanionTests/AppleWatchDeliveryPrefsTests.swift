@@ -428,4 +428,41 @@ final class AppleWatchDeliveryPrefsTests: XCTestCase {
         XCTAssertEqual(api.lastMapToWorkoutKitDeliveryPrefs?["exercise_end"] as? String, "tap")
         XCTAssertEqual(api.lastMapToWorkoutKitDeliveryPrefs?["rest_mode"] as? String, "timed")
     }
+
+    func testMapperProviderUsesDerivedPlanWithoutRefetch() async throws {
+        let api = MockAPIService()
+        api.fetchWorkoutBlocksJSONResult = .failure(
+            NSError(domain: "test", code: 1, userInfo: [NSLocalizedDescriptionKey: "should not fetch"])
+        )
+        let derived: [String: Any] = [
+            "title": "Strength",
+            "blocks": [
+                [
+                    "type": "warmup",
+                    "enrichment_kind": "session_warmup",
+                    "exercises": [["name": "Jump Rope"]]
+                ] as [String: Any]
+            ]
+        ]
+        let fixture = """
+        {"title":"Strength","sportType":"traditionalStrengthTraining","intervals":[{"kind":"work","name":"Jump Rope"}]}
+        """
+        api.mapToWorkoutKitResult = .success(Data(fixture.utf8))
+        let provider = MapperWorkoutKitPlanProvider(
+            api: api,
+            deliveryPrefs: nil,
+            planBlocksJSON: derived
+        )
+        _ = try await provider.fetchMapperPlanJSON(for: Workout(
+            id: "w1",
+            name: "Strength",
+            sport: .strength,
+            duration: 600,
+            intervals: [],
+            source: .manual
+        ))
+        XCTAssertNil(api.lastFetchWorkoutBlocksJSONWorkoutId)
+        XCTAssertTrue(api.mapToWorkoutKitCalled)
+        XCTAssertNotNil(api.lastMapToWorkoutKitBlocks?["blocks"])
+    }
 }

@@ -226,8 +226,15 @@ enum WorkoutEnrichmentPushCopy {
     // Design 2026-08-04 `make-it-watch-ready-v2-design.md` §Surfaces 1–5 +
     // §Validation matrix (copy-lock). Additive: v1 APIs above are untouched.
 
-    /// v2 sheet intro (rows-as-doors) — distinct from v1's `introText`.
-    static let sheetIntroV2 = "Tap a row to shape it — your picks are saved to this workout."
+    /// v2 sheet intro (rows-as-doors) — AMA-2453: derived plan, library unchanged.
+    static let sheetIntroV2 = "Tap a row to shape what goes on your watch — your library workout stays as you wrote it."
+
+    /// Footnote under offer rows — watch builds FIT/plan at handoff, not a library edit.
+    static let sheetFootnoteV2 = "Your watch builds the file when you download — these choices don’t change your saved workout."
+
+    /// Garmin defer copy when a derived plan cannot ride the push body (AMA-2453).
+    static let garminDerivedPlanDeferNote =
+        "Watch-ready extras aren’t on Garmin yet — your library workout is unchanged; FIT uses authored structure until delivery accepts a derived plan."
 
     /// Sequence builder screen header suffix — mobility runs first, cooldown runs last.
     static let mobilityHeaderSuffix = "RUNS BEFORE THE FIRST LIFT"

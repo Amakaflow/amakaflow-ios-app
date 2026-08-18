@@ -159,7 +159,7 @@ extension WorkoutEnrichmentPushSheet {
                         offerRow(offer)
                     }
 
-                    Text("Whatever you pick is saved to this workout — your watch builds the file when it downloads.")
+                    Text(WorkoutEnrichmentPushCopy.sheetFootnoteV2)
                         .font(.system(size: 10))
                         .foregroundColor(DailyDriver.foregroundDim)
                         .padding(.top, 2)

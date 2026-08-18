@@ -38,7 +38,7 @@ final class WorkoutEnrichmentPushCoordinator {
     }
 
     /// Outcome of applying the sheet. `note` is user-facing when something was
-    /// skipped — silence means the enriched structure is stored and ready to push.
+    /// skipped — silence means the derived watch plan is ready for handoff.
     struct ApplyOutcome: Equatable {
         var applied: Bool
         var note: String?
@@ -49,6 +49,11 @@ final class WorkoutEnrichmentPushCoordinator {
         var resetBlocksJSON: [String: Any]?
         /// Tombstones that belonged with `resetBlocksJSON` before this apply.
         var resetTombstones: [EnrichmentTombstone]?
+        /// AMA-2453 — in-memory watch plan from enrich. Never written to library.
+        /// Nil when enrich failed or the sheet was a tombstone-only no-op.
+        var planBlocksJSON: [String: Any]?
+        /// True when mapper enrich succeeded and a derived plan is available for handoff.
+        var hasDerivedWatchPlan: Bool = false
 
         /// Apple Start may compose only when persist/enrich succeeded, or when
         /// the sheet was a clean no-op (`applied == false` with no note).
@@ -62,9 +67,12 @@ final class WorkoutEnrichmentPushCoordinator {
             lhs.applied == rhs.applied
                 && lhs.note == rhs.note
                 && lhs.enrichFailed == rhs.enrichFailed
+                && lhs.hasDerivedWatchPlan == rhs.hasDerivedWatchPlan
                 && lhs.resetTombstones == rhs.resetTombstones
                 && NSDictionary(dictionary: lhs.resetBlocksJSON ?? [:])
                     .isEqual(to: rhs.resetBlocksJSON ?? [:])
+                && NSDictionary(dictionary: lhs.planBlocksJSON ?? [:])
+                    .isEqual(to: rhs.planBlocksJSON ?? [:])
         }
     }
 
@@ -144,10 +152,10 @@ final class WorkoutEnrichmentPushCoordinator {
         )
     }
 
-    /// Enrich, then store the result so the CIQ download builds the enriched FIT.
-    /// AMA-2346: also persists reject tombstones when the user unchecks offers
-    /// (including "Send as it is") so mobility/rest cannot sneak back in.
-    /// AMA-2365: strip enrichment-owned extras first so sync adds once, never stacks.
+    /// Build a derived watch plan in memory; persist only reject tombstones and
+    /// author opt-outs onto the unenriched library blocks (AMA-2453 shape A).
+    /// AMA-2346: reject tombstones still save so unchecked offers cannot sneak back.
+    /// AMA-2365: strip enrichment-owned extras before planning on Apple Start.
     func apply(
         prepared: Prepared,
         decision: WorkoutEnrichmentPushPlanner.Decision
@@ -168,16 +176,18 @@ final class WorkoutEnrichmentPushCoordinator {
                     softActivityNames: softNames
                 )
                 : prepared.blocksJSON
-            var blocksJSON = baseline
+            var libraryBlocksJSON = baseline
+            var planBlocksJSON = baseline
 
             // AMA-2390 — Rest offered + unchecked → strip block rest so Send as-is
             // / opt-out cannot leave Rest 01:00 on Apple Workout.
             var didClearRest = false
             if prepared.plan.offer(.betweenSetRest) != nil,
                !decision.checkedKinds.contains(.betweenSetRest) {
-                let cleared = WorkoutEnrichmentMutations.clearBlockRestIntent(in: blocksJSON)
-                didClearRest = !NSDictionary(dictionary: cleared).isEqual(to: blocksJSON)
-                blocksJSON = cleared
+                let cleared = WorkoutEnrichmentMutations.clearBlockRestIntent(in: libraryBlocksJSON)
+                didClearRest = !NSDictionary(dictionary: cleared).isEqual(to: libraryBlocksJSON)
+                libraryBlocksJSON = cleared
+                planBlocksJSON = cleared
             }
 
             // AMA-2423 — Transitions offered + unchecked → strip block
@@ -186,28 +196,37 @@ final class WorkoutEnrichmentPushCoordinator {
             var didClearTransition = false
             if prepared.plan.offer(.stationTransition) != nil,
                !decision.checkedKinds.contains(.stationTransition) {
-                let cleared = WorkoutEnrichmentMutations.clearBlockTransitionIntent(in: blocksJSON)
-                didClearTransition = !NSDictionary(dictionary: cleared).isEqual(to: blocksJSON)
-                blocksJSON = cleared
+                let cleared = WorkoutEnrichmentMutations.clearBlockTransitionIntent(in: libraryBlocksJSON)
+                didClearTransition = !NSDictionary(dictionary: cleared).isEqual(to: libraryBlocksJSON)
+                libraryBlocksJSON = cleared
+                planBlocksJSON = cleared
             }
 
             guard application.needsPersist || didClearRest || didClearTransition else {
-                return ApplyOutcome(applied: false, note: nil)
+                return ApplyOutcome(
+                    applied: false,
+                    note: nil,
+                    planBlocksJSON: baseline
+                )
             }
 
             var enrichNote: String?
             var enrichFailed = false
+            var hasDerivedWatchPlan = false
             if application.appliesAnything {
                 // Warm-up sets need exercise_id — mint before enrich (AMA-2363).
                 if application.prefs.exerciseWarmupSets.enabled {
-                    blocksJSON = WorkoutEnrichmentMutations.mintMissingExerciseIds(in: blocksJSON)
+                    libraryBlocksJSON = WorkoutEnrichmentMutations.mintMissingExerciseIds(
+                        in: libraryBlocksJSON
+                    )
+                    planBlocksJSON = libraryBlocksJSON
                 }
                 // Narrow enrich failure: still persist reject tombstones so unchecked
                 // offers cannot reappear on the next push (AMA-2346).
                 do {
                     let response = try await apiService.enrichWorkout(
                         EnrichRequest(
-                            blocksJSON: blocksJSON,
+                            blocksJSON: planBlocksJSON,
                             prefs: application.prefs,
                             tombstones: application.tombstones,
                             mode: .push
@@ -218,7 +237,8 @@ final class WorkoutEnrichmentPushCoordinator {
                             enrichNote = "Couldn’t add the warm-up/rest extras — fix and try again."
                             enrichFailed = true
                         } else {
-                            blocksJSON = response.blocksJSON
+                            planBlocksJSON = response.blocksJSON
+                            hasDerivedWatchPlan = true
                         }
                     } else {
                         enrichNote = "Couldn’t add the warm-up/rest extras — fix and try again."
@@ -232,11 +252,11 @@ final class WorkoutEnrichmentPushCoordinator {
                     enrichFailed = true
                 }
             }
-            // Enrich is read-only on tombstones — persist the sheet answer ourselves.
+            // Persist tombstones and author opt-outs on the unenriched library only.
             try await apiService.saveWorkoutBlocksJSON(
                 workoutId: prepared.workoutId,
                 title: prepared.title,
-                blocksJSON: blocksJSON,
+                blocksJSON: libraryBlocksJSON,
                 tombstones: application.tombstones
             )
             return ApplyOutcome(
@@ -244,7 +264,9 @@ final class WorkoutEnrichmentPushCoordinator {
                 note: enrichNote,
                 enrichFailed: enrichFailed,
                 resetBlocksJSON: baseline,
-                resetTombstones: prepared.tombstones
+                resetTombstones: prepared.tombstones,
+                planBlocksJSON: enrichFailed ? nil : planBlocksJSON,
+                hasDerivedWatchPlan: hasDerivedWatchPlan
             )
         } catch {
             logger.error(

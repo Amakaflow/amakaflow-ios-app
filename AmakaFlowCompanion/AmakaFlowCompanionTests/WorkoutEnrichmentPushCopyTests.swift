@@ -89,7 +89,11 @@ final class WorkoutEnrichmentV2CopyTests: XCTestCase {
     func testSheetIntroV2IsLocked() {
         XCTAssertEqual(
             WorkoutEnrichmentPushCopy.sheetIntroV2,
-            "Tap a row to shape it — your picks are saved to this workout."
+            "Tap a row to shape what goes on your watch — your library workout stays as you wrote it."
+        )
+        XCTAssertEqual(
+            WorkoutEnrichmentPushCopy.sheetFootnoteV2,
+            "Your watch builds the file when you download — these choices don’t change your saved workout."
         )
     }
 

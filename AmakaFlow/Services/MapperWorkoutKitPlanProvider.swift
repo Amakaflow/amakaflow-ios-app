@@ -7,7 +7,8 @@
 
 import Foundation
 
-/// Fetches mapper WKPlanDTO JSON (via BFF). Production uses stored blocks_json.
+/// Fetches mapper WKPlanDTO JSON (via BFF). Uses stored blocks_json unless a
+/// derived watch plan was supplied (AMA-2453).
 protocol WorkoutKitPlanProviding: Sendable {
     func fetchMapperPlanJSON(for workout: Workout) async throws -> Data
 }
@@ -15,14 +16,26 @@ protocol WorkoutKitPlanProviding: Sendable {
 struct MapperWorkoutKitPlanProvider: WorkoutKitPlanProviding {
     let api: any APIServiceProviding
     let deliveryPrefs: [String: Any]?
+    /// When set, compose from this derived plan instead of re-fetching stored workout_data.
+    let planBlocksJSON: [String: Any]?
 
-    init(api: any APIServiceProviding = AppDependencies.current.apiService, deliveryPrefs: [String: Any]? = nil) {
+    init(
+        api: any APIServiceProviding = AppDependencies.current.apiService,
+        deliveryPrefs: [String: Any]? = nil,
+        planBlocksJSON: [String: Any]? = nil
+    ) {
         self.api = api
         self.deliveryPrefs = deliveryPrefs
+        self.planBlocksJSON = planBlocksJSON
     }
 
     func fetchMapperPlanJSON(for workout: Workout) async throws -> Data {
-        var blocksJSON = try await api.fetchWorkoutBlocksJSON(workoutId: workout.id)
+        var blocksJSON: [String: Any]
+        if let planBlocksJSON {
+            blocksJSON = planBlocksJSON
+        } else {
+            blocksJSON = try await api.fetchWorkoutBlocksJSON(workoutId: workout.id)
+        }
         if blocksJSON["title"] == nil {
             blocksJSON["title"] = workout.name
         }
