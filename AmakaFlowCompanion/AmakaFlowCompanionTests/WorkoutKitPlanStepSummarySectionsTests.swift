@@ -11,11 +11,76 @@ import XCTest
 @testable import AmakaFlowCompanion
 
 final class WorkoutKitPlanStepSummarySectionsTests: XCTestCase {
-    private func plan(_ intervalsJSON: String, sportType: String = "traditionalStrengthTraining") -> Data {
-        Data("""
+    // MARK: - AMA-2454 named native warmup
+
+    func testNamedNativeWarmupIntervalShowsAuthoredExerciseInPreviewSections() {
+        let json = plan("""
+        { "kind": "warmup", "seconds": 300 }
+        """, warmupDisplayName: "Ski Erg")
+        let sections = WorkoutKitPlanStepSummary.sections(from: json)
+
+        guard let mobility = sections.first(where: { $0.accent == .mobility }) else {
+            return XCTFail("Expected mobility band for native warmup")
+        }
+        XCTAssertEqual(
+            mobility.steps.map(\.title), ["Ski Erg"],
+            "a named native warm-up must show the authored exercise, not generic Warm-up (AMA-2454)"
+        )
+        XCTAssertEqual(mobility.steps.first?.detail, "5 MIN", "warm-up detail stays the duration label")
+    }
+
+    func testNativeWarmupWithoutDisplayNameFallsBackToWarmUpTitle() {
+        let json = plan("""
+        { "kind": "warmup", "seconds": 300 }
+        """)
+        let sections = WorkoutKitPlanStepSummary.sections(from: json)
+
+        guard let mobility = sections.first(where: { $0.accent == .mobility }) else {
+            return XCTFail("Expected mobility band for native warmup")
+        }
+        XCTAssertEqual(
+            mobility.steps.map(\.title), ["Warm-up"],
+            "no authored name → the generic Warm-up title is unchanged"
+        )
+        XCTAssertEqual(mobility.steps.first?.detail, "5 MIN", "warm-up detail stays the duration label")
+    }
+
+    func testNamedNativeWarmupSummaryLineUsesAuthoredExercise() {
+        let json = plan("""
+        { "kind": "warmup", "seconds": 300 }
+        """, warmupDisplayName: "Ski Erg")
+        let lines = WorkoutKitPlanStepSummary.lines(from: json)
+        XCTAssertTrue(
+            lines.contains("Ski Erg · 300s"),
+            "the summary line must carry the authored warm-up exercise (AMA-2454)"
+        )
+        XCTAssertFalse(
+            lines.contains("Warm-up · 300s"),
+            "the generic label must not appear when an authored name exists"
+        )
+    }
+
+    private func plan(
+        _ intervalsJSON: String,
+        sportType: String = "traditionalStrengthTraining",
+        warmupDisplayName: String? = nil
+    ) -> Data {
+        let warmupBlock: String
+        if let warmupDisplayName {
+            warmupBlock = """
+            "warmup": {
+              "goal": { "kind": "time", "seconds": 300 },
+              "displayName": "\(warmupDisplayName)"
+            },
+            """
+        } else {
+            warmupBlock = ""
+        }
+        return Data("""
         {
           "title": "Test workout",
           "sportType": "\(sportType)",
+          \(warmupBlock)
           "intervals": [\(intervalsJSON)]
         }
         """.utf8)

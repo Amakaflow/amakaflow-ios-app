@@ -19,6 +19,39 @@ final class WorkoutKitPlanMetaTests: XCTestCase {
         XCTAssertEqual(meta.routingReason, "legacy_unspecified")
     }
 
+    func testNativeWarmupDisplayNameDecodesFromMapperJSON() {
+        let data = Data("""
+        {
+          "title": "Ski Erg opener",
+          "sportType": "traditionalStrengthTraining",
+          "warmup": {
+            "goal": { "kind": "time", "seconds": 300 },
+            "displayName": "Ski Erg"
+          },
+          "intervals": [{ "kind": "warmup", "seconds": 300 }]
+        }
+        """.utf8)
+        XCTAssertEqual(
+            WorkoutKitPlanNativeWarmup.displayName(from: data), "Ski Erg",
+            "the authored warm-up exercise name must decode from top-level warmup.displayName (AMA-2454)"
+        )
+    }
+
+    func testNativeWarmupDisplayNameIgnoresBlankStrings() {
+        let data = Data("""
+        {
+          "title": "Blank warmup",
+          "sportType": "traditionalStrengthTraining",
+          "warmup": { "displayName": "   " },
+          "intervals": [{ "kind": "warmup", "seconds": 300 }]
+        }
+        """.utf8)
+        XCTAssertNil(
+            WorkoutKitPlanNativeWarmup.displayName(from: data),
+            "a whitespace-only displayName must read as absent, not as a real label"
+        )
+    }
+
     func testCompositionLineHumanizesStrengthSets() {
         let meta = WorkoutKitPlanMeta(
             composition: "custom",

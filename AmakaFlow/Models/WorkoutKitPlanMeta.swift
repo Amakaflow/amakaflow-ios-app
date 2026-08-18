@@ -66,6 +66,42 @@ struct WorkoutKitPlanMeta: Equatable, Sendable {
     }
 }
 
+/// Mapper-native warmup block (`warmup.goal` + `warmup.displayName`). Compose
+/// keeps the name here; `legacy_interval_models()` emits only `{kind, seconds}`
+/// on `intervals`, so `WKPlanDTO.Interval.warmup` has no exercise label
+/// (AMA-2454). Raw-decode like `WorkoutKitSportLabel` / composition meta.
+enum WorkoutKitPlanNativeWarmup {
+    private struct BlockPayload: Decodable {
+        let displayName: String?
+    }
+
+    private struct PlanPayload: Decodable {
+        let warmup: BlockPayload?
+    }
+
+    /// Trimmed `warmup.displayName` when present on mapper JSON; otherwise nil.
+    static func displayName(from planJSON: Data) -> String? {
+        guard let payload = try? JSONDecoder().decode(PlanPayload.self, from: planJSON) else {
+            return nil
+        }
+        return trimmedDisplayName(payload.warmup?.displayName)
+    }
+
+    /// Preview title for a native `.warmup` interval row. Pure: the mapper's
+    /// `legacy_interval_models()` emits the singular warm-up block exactly once
+    /// (index 0), so there is no "second warmup" to guard against — the old
+    /// inout consumed-flag threading was dead defensiveness.
+    static func previewTitle(nativeWarmupDisplayName: String?) -> String {
+        trimmedDisplayName(nativeWarmupDisplayName) ?? "Warm-up"
+    }
+
+    private static func trimmedDisplayName(_ raw: String?) -> String? {
+        guard let raw else { return nil }
+        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
+    }
+}
+
 enum WorkoutKitRoutingCopy {
     /// Humanized preview line for Start sheet / post-schedule status.
     static func compositionLine(meta: WorkoutKitPlanMeta) -> String {
