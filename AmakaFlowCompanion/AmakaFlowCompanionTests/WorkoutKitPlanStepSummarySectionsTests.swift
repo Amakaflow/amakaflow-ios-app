@@ -22,8 +22,11 @@ final class WorkoutKitPlanStepSummarySectionsTests: XCTestCase {
         guard let mobility = sections.first(where: { $0.accent == .mobility }) else {
             return XCTFail("Expected mobility band for native warmup")
         }
-        XCTAssertEqual(mobility.steps.map(\.title), ["Ski Erg"])
-        XCTAssertEqual(mobility.steps.first?.detail, "5 MIN")
+        XCTAssertEqual(
+            mobility.steps.map(\.title), ["Ski Erg"],
+            "a named native warm-up must show the authored exercise, not generic Warm-up (AMA-2454)"
+        )
+        XCTAssertEqual(mobility.steps.first?.detail, "5 MIN", "warm-up detail stays the duration label")
     }
 
     func testNativeWarmupWithoutDisplayNameFallsBackToWarmUpTitle() {
@@ -35,8 +38,11 @@ final class WorkoutKitPlanStepSummarySectionsTests: XCTestCase {
         guard let mobility = sections.first(where: { $0.accent == .mobility }) else {
             return XCTFail("Expected mobility band for native warmup")
         }
-        XCTAssertEqual(mobility.steps.map(\.title), ["Warm-up"])
-        XCTAssertEqual(mobility.steps.first?.detail, "5 MIN")
+        XCTAssertEqual(
+            mobility.steps.map(\.title), ["Warm-up"],
+            "no authored name → the generic Warm-up title is unchanged"
+        )
+        XCTAssertEqual(mobility.steps.first?.detail, "5 MIN", "warm-up detail stays the duration label")
     }
 
     func testNamedNativeWarmupSummaryLineUsesAuthoredExercise() {
@@ -44,8 +50,14 @@ final class WorkoutKitPlanStepSummarySectionsTests: XCTestCase {
         { "kind": "warmup", "seconds": 300 }
         """, warmupDisplayName: "Ski Erg")
         let lines = WorkoutKitPlanStepSummary.lines(from: json)
-        XCTAssertTrue(lines.contains("Ski Erg · 300s"))
-        XCTAssertFalse(lines.contains("Warm-up · 300s"))
+        XCTAssertTrue(
+            lines.contains("Ski Erg · 300s"),
+            "the summary line must carry the authored warm-up exercise (AMA-2454)"
+        )
+        XCTAssertFalse(
+            lines.contains("Warm-up · 300s"),
+            "the generic label must not appear when an authored name exists"
+        )
     }
 
     private func plan(

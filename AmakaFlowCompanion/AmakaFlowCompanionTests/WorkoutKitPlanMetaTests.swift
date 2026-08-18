@@ -31,7 +31,10 @@ final class WorkoutKitPlanMetaTests: XCTestCase {
           "intervals": [{ "kind": "warmup", "seconds": 300 }]
         }
         """.utf8)
-        XCTAssertEqual(WorkoutKitPlanNativeWarmup.displayName(from: data), "Ski Erg")
+        XCTAssertEqual(
+            WorkoutKitPlanNativeWarmup.displayName(from: data), "Ski Erg",
+            "the authored warm-up exercise name must decode from top-level warmup.displayName (AMA-2454)"
+        )
     }
 
     func testNativeWarmupDisplayNameIgnoresBlankStrings() {
@@ -43,7 +46,10 @@ final class WorkoutKitPlanMetaTests: XCTestCase {
           "intervals": [{ "kind": "warmup", "seconds": 300 }]
         }
         """.utf8)
-        XCTAssertNil(WorkoutKitPlanNativeWarmup.displayName(from: data))
+        XCTAssertNil(
+            WorkoutKitPlanNativeWarmup.displayName(from: data),
+            "a whitespace-only displayName must read as absent, not as a real label"
+        )
     }
 
     func testCompositionLineHumanizesStrengthSets() {
