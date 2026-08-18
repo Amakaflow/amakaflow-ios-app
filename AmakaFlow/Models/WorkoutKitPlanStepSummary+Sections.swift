@@ -44,12 +44,6 @@ private enum PreviewSectionBuilder {
         case cooldown(detail: String)
     }
 
-    /// Shared warm-up prefixes (lowercase). Detection and stripping must agree.
-    private static let warmupPrefixes = [
-        "wu ·", "wu -", "wu –", "wu —", "wu·", "wu–", "wu—", "wu ",
-        "warm-up ·", "warm-up -", "warm up ·", "warm-up", "warmup"
-    ]
-
     static func sections(from planJSON: Data) -> [PreviewSection] {
         guard let dto = try? WorkoutKitSync.default.parse(from: planJSON) else { return [] }
         let nativeWarmupName = WorkoutKitPlanNativeWarmup.displayName(from: planJSON)
@@ -71,9 +65,9 @@ private enum PreviewSectionBuilder {
                     nativeWarmupDisplayName: nativeWarmupDisplayName,
                     consumedNativeWarmupName: &consumedNativeWarmupName
                 )
-                out.append(.mobility(title: title, detail: durationLabel(seconds)))
+                out.append(.mobility(title: title, detail: PreviewSectionWarmupHelpers.durationLabel(seconds)))
             case .cooldown(let seconds, _):
-                out.append(.cooldown(detail: durationLabel(seconds)))
+                out.append(.cooldown(detail: PreviewSectionWarmupHelpers.durationLabel(seconds)))
             case .repeatSet(let reps, let steps):
                 out.append(contentsOf: flattenRepeat(reps: max(reps, 1), steps: steps))
             case .step(let step):
@@ -254,7 +248,7 @@ private enum PreviewSectionBuilder {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
         let lower = trimmed.lowercased()
         let withoutPrefix: String
-        if let prefix = warmupPrefixes.first(where: { lower.hasPrefix($0) }) {
+        if let prefix = PreviewSectionWarmupHelpers.warmupPrefixes.first(where: { lower.hasPrefix($0) }) {
             let stripped = String(trimmed.dropFirst(prefix.count))
                 .trimmingCharacters(in: .whitespacesAndNewlines)
             withoutPrefix = stripped.isEmpty ? trimmed : stripped
@@ -275,24 +269,15 @@ private enum PreviewSectionBuilder {
         // intensity / percent / "LIGHT|MODERATE|HEAVY" note).
         var kept: [String] = []
         for part in parts {
-            if isDetailSegment(part) { break }
+            if PreviewSectionWarmupHelpers.isDetailSegment(part) { break }
             kept.append(part)
         }
         return kept.isEmpty ? parts[0] : kept.joined(separator: " · ")
     }
 
-    private static func isDetailSegment(_ part: String) -> Bool {
-        if Int(part) != nil { return true }
-        let upper = part.uppercased()
-        if upper.contains("%") { return true }
-        if upper.contains("~") { return true }
-        let intensityTokens = ["LIGHT", "MODERATE", "HEAVY", "EASY", "HARD"]
-        return intensityTokens.contains { upper == $0 || upper.hasPrefix($0 + " ") }
-    }
-
     private static func isWarmupSetName(_ name: String) -> Bool {
         let lower = name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        return warmupPrefixes.contains { lower.hasPrefix($0) }
+        return PreviewSectionWarmupHelpers.warmupPrefixes.contains { lower.hasPrefix($0) }
     }
 
     private static func isMobilityName(_ name: String) -> Bool {
@@ -348,19 +333,49 @@ private enum PreviewSectionBuilder {
     /// with "1 REPS" when the user set 11.
     private static func workDetail(for step: WKPlanDTO.Interval.Step) -> String? {
         if let reps = step.reps {
-            if reps == 1, let recovered = repsRecoveredFromWarmupLabel(step.name) {
+            if reps == 1, let recovered = PreviewSectionWarmupHelpers.repsRecoveredFromWarmupLabel(step.name) {
                 return "\(recovered) reps"
             }
-            if reps == 1, let note = intensityNoteFromWarmupLabel(step.name) {
+            if reps == 1, let note = PreviewSectionWarmupHelpers.intensityNoteFromWarmupLabel(step.name) {
                 return note
             }
             return "\(reps) reps"
         }
-        if let seconds = step.seconds { return durationLabel(seconds) }
+        if let seconds = step.seconds { return PreviewSectionWarmupHelpers.durationLabel(seconds) }
         if let meters = step.meters, meters > 0 {
             return WorkoutHelpers.formatDistance(meters: Int(meters.rounded()))
         }
         return "Open"
+    }
+}
+
+/// Warm-up label helpers split out of `PreviewSectionBuilder` for type_body_length.
+private enum PreviewSectionWarmupHelpers {
+    /// Shared warm-up prefixes (lowercase). Detection and stripping must agree.
+    static let warmupPrefixes = [
+        "wu ·", "wu -", "wu –", "wu —", "wu·", "wu–", "wu—", "wu ",
+        "warm-up ·", "warm-up -", "warm up ·", "warm-up", "warmup"
+    ]
+
+    static func isDetailSegment(_ part: String) -> Bool {
+        if Int(part) != nil { return true }
+        let upper = part.uppercased()
+        if upper.contains("%") { return true }
+        if upper.contains("~") { return true }
+        let intensityTokens = ["LIGHT", "MODERATE", "HEAVY", "EASY", "HARD"]
+        return intensityTokens.contains { upper == $0 || upper.hasPrefix($0 + " ") }
+    }
+
+    /// The legacy singular warmup/cooldown fields encode an open goal as
+    /// `seconds: 0` (mapper `legacy_interval_models()`) — a real 0s band
+    /// never happens, so 0 unambiguously means open here.
+    static func durationLabel(_ seconds: Int) -> String {
+        guard seconds > 0 else { return "Open" }
+        if seconds % 60 == 0 {
+            let minutes = seconds / 60
+            return "\(minutes) min"
+        }
+        return "\(seconds)s"
     }
 
     /// `"Warm-up · Incline Smith · 11"` → 11. Intensity-only labels → nil.
@@ -380,7 +395,7 @@ private enum PreviewSectionBuilder {
     static func intensityNoteFromWarmupLabel(_ name: String?) -> String? {
         guard let name else { return nil }
         let lower = name.lowercased()
-        guard let prefix = warmupPrefixes.first(where: { lower.hasPrefix($0) }) else { return nil }
+        guard let prefix = PreviewSectionWarmupHelpers.warmupPrefixes.first(where: { lower.hasPrefix($0) }) else { return nil }
         let withoutPrefix = String(name.dropFirst(prefix.count))
             .trimmingCharacters(in: .whitespacesAndNewlines)
         let parts = withoutPrefix
@@ -389,24 +404,10 @@ private enum PreviewSectionBuilder {
             .filter { !$0.isEmpty }
         guard parts.count >= 2 else { return nil }
         let detail = Array(parts.dropFirst())
-        // First intensity/detail segment and everything after — drop name tokens
-        // that sit between the exercise name and "LIGHT · ~40%".
-        guard let firstDetailIndex = detail.firstIndex(where: isDetailSegment) else {
+        guard let firstDetailIndex = detail.firstIndex(where: PreviewSectionWarmupHelpers.isDetailSegment) else {
             return nil
         }
         let note = detail[firstDetailIndex...].joined(separator: " · ")
         return note.isEmpty ? nil : note
-    }
-
-    /// The legacy singular warmup/cooldown fields encode an open goal as
-    /// `seconds: 0` (mapper `legacy_interval_models()`) — a real 0s band
-    /// never happens, so 0 unambiguously means open here.
-    private static func durationLabel(_ seconds: Int) -> String {
-        guard seconds > 0 else { return "Open" }
-        if seconds % 60 == 0 {
-            let minutes = seconds / 60
-            return "\(minutes) min"
-        }
-        return "\(seconds)s"
     }
 }
