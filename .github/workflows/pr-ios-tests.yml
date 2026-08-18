@@ -57,7 +57,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     env:
-      SWIFTLINT_VERSION: "0.57.1"
+      # AMA-2458: keep in lockstep with local dev machines. Bumping this
+      # requires regenerating .swiftlint-baseline.yml with the same version.
+      SWIFTLINT_VERSION: "0.62.2"
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -67,7 +69,7 @@ jobs:
       - name: Install SwiftLint ${{ env.SWIFTLINT_VERSION }}
         run: |
           curl -sSL \
-            "https://github.com/realm/SwiftLint/releases/download/${SWIFTLINT_VERSION}/swiftlint_linux.zip" \
+            "https://github.com/realm/SwiftLint/releases/download/${SWIFTLINT_VERSION}/swiftlint_linux_amd64.zip" \
             -o /tmp/swiftlint.zip
           unzip -q /tmp/swiftlint.zip -d /tmp/swiftlint-bin
           sudo mv /tmp/swiftlint-bin/swiftlint /usr/local/bin/swiftlint
