@@ -1,0 +1,372 @@
+# App-baseline screenshot capture — design-parity audit source.
+#
+# Walks every deterministically-reachable surface and screenshots each with
+# rig-matched names into docs/app-baseline/ (flow-relative); the wrapper
+# script scripts/capture-baseline.sh moves them into a dated folder.
+#
+# Auth: expects an ALREADY-AUTHED foreground app (persisted Clerk session
+# for baseline+clerk_test@amakaflow.dev — see scripts/capture-baseline.sh;
+# the AMA-1843 mock bypass is launch-flaky per AMA-2457).
+# NOTE: no launchApp here on purpose — Maestro attaches to the running app.
+# Tab taps are text-based: the tab bar exposes af_tabbar but no per-tab
+# ids on current main (2026-08-17).
+# Every section is a conditional runFlow so a missing surface skips
+# instead of failing the whole capture. Riskier deep-dives (editor,
+# match screen) run LAST so a stuck state cannot spoil earlier captures.
+appId: com.myamaka.AmakaFlowCompanion
+---
+# Foreground the app WITHOUT clearing state (persisted session must survive);
+# needed because Maestro driver setup can land on the home screen.
+- launchApp:
+    appId: com.myamaka.AmakaFlowCompanion
+    stopApp: false
+- extendedWaitUntil:
+    visible:
+      id: "af_tabbar"
+    timeout: 30000
+
+# ── Today ──────────────────────────────────────────────────────────────
+- takeScreenshot: docs/app-baseline/today-root
+
+# ── Library root ───────────────────────────────────────────────────────
+- tapOn:
+    text: "Library"
+- waitForAnimationToEnd:
+    timeout: 3000
+- takeScreenshot: docs/app-baseline/library-root
+
+# ── Collection → workout detail → Start sheet ─────────────────────────
+- runFlow:
+    when:
+      visible: "Uncategorized"
+    commands:
+      - tapOn:
+          text: "Uncategorized"
+      - waitForAnimationToEnd:
+          timeout: 3000
+      - takeScreenshot: docs/app-baseline/collection-view
+      - runFlow:
+          when:
+            visible:
+              id: "af_workout_detail_screen"
+          commands: []
+      # tap first workout row (below the header) — generic point tap
+      - tapOn:
+          point: "50%,35%"
+      - waitForAnimationToEnd:
+          timeout: 3000
+      - takeScreenshot: docs/app-baseline/detail-first
+      - runFlow:
+          when:
+            visible:
+              id: "af_workout_detail_start"
+          commands:
+            - tapOn:
+                id: "af_workout_detail_start"
+            - waitForAnimationToEnd:
+                timeout: 2000
+            - takeScreenshot: docs/app-baseline/detail-start-sheet
+            - tapOn:
+                point: "50%,10%"
+            - waitForAnimationToEnd:
+                timeout: 1500
+      # detail is a full-screen cover — dismiss via the X (top-left)
+      - runFlow:
+          when:
+            notVisible:
+              id: "af_tabbar"
+          commands:
+            - tapOn:
+                point: "8%,8%"
+            - waitForAnimationToEnd:
+                timeout: 1500
+      - runFlow:
+          when:
+            notVisible:
+              id: "af_tabbar"
+          commands:
+            - tapOn:
+                point: "8%,10%"
+            - waitForAnimationToEnd:
+                timeout: 1500
+      - runFlow:
+          when:
+            notVisible:
+              id: "af_tabbar"
+          commands:
+            - tapOn:
+                point: "8%,10%"
+            - waitForAnimationToEnd:
+                timeout: 1500
+
+# ── On your watches ────────────────────────────────────────────────────
+- runFlow:
+    when:
+      visible: "On your watches"
+    commands:
+      - tapOn:
+          text: "On your watches"
+      - waitForAnimationToEnd:
+          timeout: 3000
+      - takeScreenshot: docs/app-baseline/watch-manager
+      - back
+      - waitForAnimationToEnd:
+          timeout: 2000
+
+- runFlow:
+    when:
+      notVisible:
+        id: "af_tabbar"
+    commands:
+      - tapOn:
+          point: "8%,10%"
+      - waitForAnimationToEnd:
+          timeout: 1500
+- runFlow:
+    when:
+      notVisible:
+        id: "af_tabbar"
+    commands:
+      - tapOn:
+          point: "8%,10%"
+      - waitForAnimationToEnd:
+          timeout: 1500
+- runFlow:
+    when:
+      notVisible:
+        id: "af_tabbar"
+    commands:
+      - back
+      - waitForAnimationToEnd:
+          timeout: 1500
+# ── ＋ Add sheet + its doors ────────────────────────────────────────────
+- runFlow:
+    when:
+      visible:
+        id: "af_library_fab"
+    commands:
+      - tapOn:
+          id: "af_library_fab"
+      - waitForAnimationToEnd:
+          timeout: 2000
+      - takeScreenshot: docs/app-baseline/add-sheet
+      # From friends (receive door)
+      - runFlow:
+          when:
+            visible: "From friends"
+          commands:
+            - tapOn:
+                text: "From friends"
+            - waitForAnimationToEnd:
+                timeout: 3000
+            - takeScreenshot: docs/app-baseline/add-from-friends
+            - tapOn:
+                point: "50%,8%"
+            - waitForAnimationToEnd:
+                timeout: 2000
+# ＋ → Create with AI
+- runFlow:
+    when:
+      visible:
+        id: "af_library_fab"
+    commands:
+      - tapOn:
+          id: "af_library_fab"
+      - waitForAnimationToEnd:
+          timeout: 2000
+      - runFlow:
+          when:
+            visible: "Create with AI"
+          commands:
+            - tapOn:
+                text: "Create with AI"
+            - waitForAnimationToEnd:
+                timeout: 3000
+            - takeScreenshot: docs/app-baseline/add-create-ai
+            - tapOn:
+                point: "50%,8%"
+            - waitForAnimationToEnd:
+                timeout: 2000
+# ＋ → Import from URL
+- runFlow:
+    when:
+      visible:
+        id: "af_library_fab"
+    commands:
+      - tapOn:
+          id: "af_library_fab"
+      - waitForAnimationToEnd:
+          timeout: 2000
+      - runFlow:
+          when:
+            visible: "Import from URL"
+          commands:
+            - tapOn:
+                text: "Import from URL"
+            - waitForAnimationToEnd:
+                timeout: 3000
+            - takeScreenshot: docs/app-baseline/add-import-url
+            - tapOn:
+                point: "50%,8%"
+            - waitForAnimationToEnd:
+                timeout: 2000
+
+- runFlow:
+    when:
+      notVisible:
+        id: "af_tabbar"
+    commands:
+      - tapOn:
+          point: "8%,10%"
+      - waitForAnimationToEnd:
+          timeout: 1500
+- runFlow:
+    when:
+      notVisible:
+        id: "af_tabbar"
+    commands:
+      - tapOn:
+          point: "8%,10%"
+      - waitForAnimationToEnd:
+          timeout: 1500
+- runFlow:
+    when:
+      notVisible:
+        id: "af_tabbar"
+    commands:
+      - back
+      - waitForAnimationToEnd:
+          timeout: 1500
+# ── Profile hub / Friends / History / Settings ─────────────────────────
+- tapOn:
+    text: "Profile"
+- waitForAnimationToEnd:
+    timeout: 3000
+- takeScreenshot: docs/app-baseline/profile-hub
+- runFlow:
+    when:
+      visible: "Friends"
+    commands:
+      - tapOn:
+          text: "Friends"
+      - waitForAnimationToEnd:
+          timeout: 3000
+      - takeScreenshot: docs/app-baseline/friends-screen
+      - back
+      - waitForAnimationToEnd:
+          timeout: 2000
+- runFlow:
+    when:
+      visible: "History"
+    commands:
+      - tapOn:
+          text: "History"
+      - waitForAnimationToEnd:
+          timeout: 3000
+      - takeScreenshot: docs/app-baseline/history
+      - back
+      - waitForAnimationToEnd:
+          timeout: 2000
+- runFlow:
+    when:
+      visible:
+        id: "af_tabbar"
+    commands:
+      - tapOn:
+          point: "90%,10%"
+      - waitForAnimationToEnd:
+          timeout: 3000
+      - takeScreenshot: docs/app-baseline/settings
+      - back
+      - waitForAnimationToEnd:
+          timeout: 2000
+
+# ── RISKY LAST: builder shape picker → editor (discard-safe) ───────────
+- tapOn:
+    text: "Library"
+- waitForAnimationToEnd:
+    timeout: 2000
+- runFlow:
+    when:
+      visible:
+        id: "af_library_fab"
+    commands:
+      - tapOn:
+          id: "af_library_fab"
+      - waitForAnimationToEnd:
+          timeout: 2000
+      - runFlow:
+          when:
+            visible: "Build from scratch"
+          commands:
+            - tapOn:
+                text: "Build from scratch"
+            - waitForAnimationToEnd:
+                timeout: 3000
+            - takeScreenshot: docs/app-baseline/builder-shape-picker
+            - runFlow:
+                when:
+                  visible: "Straight sets"
+                commands:
+                  - tapOn:
+                      text: "Straight sets"
+                  - waitForAnimationToEnd:
+                      timeout: 3000
+                  - takeScreenshot: docs/app-baseline/editor-blank
+                  - back
+                  - waitForAnimationToEnd:
+                      timeout: 1500
+                  - runFlow:
+                      when:
+                        visible: "Discard"
+                      commands:
+                        - tapOn:
+                            text: "Discard"
+                        - waitForAnimationToEnd:
+                            timeout: 1500
+            - runFlow:
+                when:
+                  notVisible:
+                    id: "af_tabbar"
+                commands:
+                  - tapOn:
+                      point: "50%,8%"
+                  - waitForAnimationToEnd:
+                      timeout: 1500
+
+# ── RISKY LAST: Today session card → match screen (What was this?) ────
+- tapOn:
+    text: "Today"
+- waitForAnimationToEnd:
+    timeout: 2000
+- runFlow:
+    when:
+      visible: "What was this?"
+    commands:
+      - tapOn:
+          text: "What was this?"
+      - waitForAnimationToEnd:
+          timeout: 3000
+      - takeScreenshot: docs/app-baseline/match-map
+      - tapOn:
+          point: "50%,6%"
+      - waitForAnimationToEnd:
+          timeout: 1500
+      - back
+      - waitForAnimationToEnd:
+          timeout: 1500
+- runFlow:
+    when:
+      visible: "Log RPE"
+    commands:
+      - tapOn:
+          text: "Log RPE"
+      - waitForAnimationToEnd:
+          timeout: 3000
+      - takeScreenshot: docs/app-baseline/rpe-sheet
+      - tapOn:
+          point: "50%,6%"
+      - waitForAnimationToEnd:
+          timeout: 1500
+- tapOn:
+    text: "Today"
