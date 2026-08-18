@@ -84,10 +84,10 @@ extension APIService {
         return workoutData
     }
 
-    /// POST `/workouts/save` with an enriched `workout_data` verbatim.
+    /// POST `/workouts/save` with tombstones and author opt-outs on unenriched blocks.
     ///
-    /// Used after `/workout/enrich` on the push path: FIT is generated when the
-    /// CIQ widget downloads, so the enriched structure has to be the stored one.
+    /// AMA-2453: enriched watch-plan structure is never written here — only reject
+    /// tombstones, exercise_id minting, and explicit rest/transition opt-outs.
     func saveWorkoutBlocksJSON(
         workoutId: String,
         title: String,

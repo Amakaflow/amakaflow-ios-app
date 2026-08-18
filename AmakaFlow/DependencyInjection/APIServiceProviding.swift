@@ -345,8 +345,7 @@ protocol APIServiceProviding: TelegramLinkAPIProviding, SocialImportAPIProviding
     /// Stored `workout_data` for a saved workout — the enrich round-trip input.
     func fetchWorkoutBlocksJSON(workoutId: String) async throws -> [String: Any]
 
-    /// Persist an enriched `workout_data` in place (push path needs it stored).
-    /// Tombstones are written under `metadata` (WorkoutData forbids a top-level key).
+    /// Persist reject tombstones and author opt-outs on unenriched library blocks.
     func saveWorkoutBlocksJSON(
         workoutId: String,
         title: String,

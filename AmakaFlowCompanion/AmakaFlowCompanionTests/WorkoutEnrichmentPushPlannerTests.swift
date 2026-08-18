@@ -1259,7 +1259,81 @@ final class WorkoutEnrichmentPushPlannerTests: XCTestCase {
         )
     }
 
-    // MARK: - Coordinator apply (AMA-2346)
+    // MARK: - Coordinator apply (AMA-2346 / AMA-2453)
+
+    private func enrichmentOwnedBlockCount(in blocksJSON: [String: Any]) -> Int {
+        let blocks = blocksJSON["blocks"] as? [[String: Any]] ?? []
+        var count = 0
+        for block in blocks {
+            if block["enrichment_kind"] != nil { count += 1 }
+            let exercises = block["exercises"] as? [[String: Any]] ?? []
+            for exercise in exercises where exercise["warmup_sets"] != nil {
+                count += 1
+            }
+        }
+        return count
+    }
+
+    @MainActor
+    func testApplyDoesNotPersistEnrichedWarmupSets() async throws {
+        let mock = MockAPIService()
+        let enrichedBlocks: [String: Any] = [
+            "blocks": [
+                [
+                    "type": "warmup",
+                    "enrichment_kind": "session_warmup",
+                    "exercises": [["name": "Jump Rope"]]
+                ] as [String: Any],
+                [
+                    "type": "sets",
+                    "exercises": [
+                        [
+                            "name": "Bench Press",
+                            "sets": 4,
+                            "reps": 8,
+                            "exercise_id": "wex_bench",
+                            "warmup_sets": [
+                                ["reps": 8, "structure_source": "enrichment_default"]
+                            ]
+                        ] as [String: Any]
+                    ]
+                ] as [String: Any]
+            ]
+        ]
+        mock.enrichWorkoutResult = .success(
+            EnrichResponse(
+                blocksJSON: enrichedBlocks,
+                enrichmentApplied: EnrichmentAppliedSummary(
+                    prefsSource: "override",
+                    added: ["session_warmup", "exercise_warmup_sets"]
+                )
+            )
+        )
+        let plan = WorkoutEnrichmentPushPlanner.plan(
+            blocks: [benchBlock(exerciseId: "wex_bench")],
+            tombstones: [],
+            prefs: .defaults
+        )
+        let prepared = WorkoutEnrichmentPushCoordinator.Prepared(
+            workoutId: "w1",
+            title: "Push",
+            plan: plan,
+            prefs: .defaults,
+            tombstones: [],
+            blocksJSON: ["blocks": []],
+            target: .apple
+        )
+        let outcome = await WorkoutEnrichmentPushCoordinator(apiService: mock).apply(
+            prepared: prepared,
+            decision: WorkoutEnrichmentPushPlanner.Decision(
+                checkedKinds: [.sessionWarmup, .exerciseWarmupSets]
+            )
+        )
+        XCTAssertTrue(outcome.hasDerivedWatchPlan)
+        XCTAssertGreaterThan(enrichmentOwnedBlockCount(in: try XCTUnwrap(outcome.planBlocksJSON)), 0)
+        let saved = try XCTUnwrap(mock.savedWorkoutBlocksJSON.first?.blocksJSON)
+        XCTAssertEqual(enrichmentOwnedBlockCount(in: saved), 0)
+    }
 
     @MainActor
     func testApplyPersistsRejectTombstonesWhenEnrichFails() async {
@@ -1294,8 +1368,10 @@ final class WorkoutEnrichmentPushPlannerTests: XCTestCase {
         XCTAssertTrue(outcome.applied)
         XCTAssertTrue(outcome.enrichFailed)
         XCTAssertFalse(outcome.allowsAppleHandoff)
+        XCTAssertFalse(outcome.hasDerivedWatchPlan)
         XCTAssertNotNil(outcome.note)
         XCTAssertEqual(mock.savedWorkoutBlocksJSON.count, 1)
+        XCTAssertEqual(enrichmentOwnedBlockCount(in: mock.savedWorkoutBlocksJSON[0].blocksJSON), 0)
         let savedTombs = mock.savedWorkoutBlocksJSON[0].tombstones ?? []
         XCTAssertTrue(savedTombs.contains(where: { $0.kind == .sessionWarmup }))
     }
@@ -1327,7 +1403,9 @@ final class WorkoutEnrichmentPushPlannerTests: XCTestCase {
         XCTAssertEqual(mock.enrichWorkoutCallCount, 0)
         XCTAssertTrue(outcome.applied)
         XCTAssertNil(outcome.note)
+        XCTAssertFalse(outcome.hasDerivedWatchPlan)
         XCTAssertEqual(mock.savedWorkoutBlocksJSON.count, 1)
+        XCTAssertEqual(enrichmentOwnedBlockCount(in: mock.savedWorkoutBlocksJSON[0].blocksJSON), 0)
         let savedTombs = mock.savedWorkoutBlocksJSON[0].tombstones ?? []
         XCTAssertTrue(savedTombs.contains(where: { $0.kind == .sessionWarmup }))
         XCTAssertTrue(savedTombs.contains(where: { $0.kind == .betweenSetRest }))
@@ -1769,7 +1847,7 @@ final class WorkoutEnrichmentPushPlannerTests: XCTestCase {
     }
 
     @MainActor
-    func testApplyStripsBeforeEnrichAndRestoreClearsExtras() async {
+    func testApplyStripsBeforeEnrichAndRestoreClearsExtras() async throws {
         let mock = MockAPIService()
         let enrichedBlocks: [String: Any] = [
             "blocks": [
@@ -1865,6 +1943,10 @@ final class WorkoutEnrichmentPushPlannerTests: XCTestCase {
             )
         )
         XCTAssertTrue(outcome.allowsAppleHandoff)
+        XCTAssertTrue(outcome.hasDerivedWatchPlan)
+        XCTAssertGreaterThan(enrichmentOwnedBlockCount(in: try XCTUnwrap(outcome.planBlocksJSON)), 0)
+        let savedAfterApply = mock.savedWorkoutBlocksJSON.first?.blocksJSON
+        XCTAssertEqual(enrichmentOwnedBlockCount(in: savedAfterApply ?? [:]), 0)
         guard let resetBlocks = outcome.resetBlocksJSON else {
             XCTFail("expected reset baseline after apply")
             return

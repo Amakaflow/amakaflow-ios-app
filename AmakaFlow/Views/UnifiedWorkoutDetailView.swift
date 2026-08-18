@@ -1351,8 +1351,8 @@ extension UnifiedWorkoutDetailView {
         }
     }
 
-    /// AMA-2336/2346: store the enriched structure (and reject tombstones), then
-    /// push. A failed enrich still pushes — the note says what was skipped.
+    /// AMA-2336/2346/2453: build derived watch plan in memory, persist tombstones
+    /// only on unenriched library blocks, then push.
     fileprivate func applyEnrichmentThenPush(
         prepared: WorkoutEnrichmentPushCoordinator.Prepared,
         decision: WorkoutEnrichmentPushPlanner.Decision
@@ -1365,15 +1365,21 @@ extension UnifiedWorkoutDetailView {
                 prepared: prepared,
                 decision: decision
             )
-            if outcome.applied, let refreshed = await onEditorDismiss?() {
-                displayedWorkout = refreshed
+            var statusNotes = [outcome.note]
+            if outcome.hasDerivedWatchPlan {
+                statusNotes.append(WorkoutEnrichmentPushCopy.garminDerivedPlanDeferNote)
             }
             let toastId = DDToastCenter.shared.beginPending(text: DDToastCopy.sendingToGarmin)
-            await performGarminPush(gymTitle: gymTitle, statusNote: outcome.note, toastId: toastId)
+            await performGarminPush(
+                gymTitle: gymTitle,
+                statusNote: statusNotes.compactMap { $0 }.joined(separator: " "),
+                toastId: toastId
+            )
         }
     }
 
-    /// AMA-2360: apply enrichment answers, then mapper WorkoutKit compose + preview.
+    /// AMA-2360/2453: apply enrichment answers, then mapper WorkoutKit compose
+    /// from the in-memory derived plan (not a re-fetch of stored blocks).
     fileprivate func applyEnrichmentThenAppleHandoff(
         prepared: WorkoutEnrichmentPushCoordinator.Prepared,
         decision: WorkoutEnrichmentPushPlanner.Decision
@@ -1386,9 +1392,6 @@ extension UnifiedWorkoutDetailView {
                 prepared: prepared,
                 decision: decision
             )
-            if outcome.applied, let refreshed = await onEditorDismiss?() {
-                displayedWorkout = refreshed
-            }
             // AMA-2363: do not schedule when enrich/save failed (no-op still allowed).
             guard outcome.allowsAppleHandoff else {
                 appleEnrichmentReset = nil
@@ -1404,7 +1407,10 @@ extension UnifiedWorkoutDetailView {
                     tombstones: outcome.resetTombstones ?? prepared.tombstones
                 )
             }
-            beginAppleTryHandoff(statusNote: outcome.note)
+            beginAppleTryHandoff(
+                statusNote: outcome.note,
+                planBlocksJSON: outcome.planBlocksJSON
+            )
         }
     }
 
@@ -1518,7 +1524,10 @@ extension UnifiedWorkoutDetailView {
         }
     }
 
-    fileprivate func beginAppleTryHandoff(statusNote: String? = nil) {
+    fileprivate func beginAppleTryHandoff(
+        statusNote: String? = nil,
+        planBlocksJSON: [String: Any]? = nil
+    ) {
         guard !isAppleHandoffInFlight else { return }
         isAppleHandoffInFlight = true
         sentCardTarget = nil
@@ -1528,7 +1537,8 @@ extension UnifiedWorkoutDetailView {
             defer { isAppleHandoffInFlight = false }
             let service = AppleStartHandoffService(
                 planProvider: MapperWorkoutKitPlanProvider(
-                    deliveryPrefs: AppleWatchDeliveryPrefsStore.deliveryPrefsForMapper
+                    deliveryPrefs: AppleWatchDeliveryPrefsStore.deliveryPrefsForMapper,
+                    planBlocksJSON: planBlocksJSON
                 ),
                 scheduleCapReader: .automatic,
                 incompleteScheduleReplacer: .automatic
