@@ -19,6 +19,33 @@ final class WorkoutKitPlanMetaTests: XCTestCase {
         XCTAssertEqual(meta.routingReason, "legacy_unspecified")
     }
 
+    func testNativeWarmupDisplayNameDecodesFromMapperJSON() {
+        let data = Data("""
+        {
+          "title": "Ski Erg opener",
+          "sportType": "traditionalStrengthTraining",
+          "warmup": {
+            "goal": { "kind": "time", "seconds": 300 },
+            "displayName": "Ski Erg"
+          },
+          "intervals": [{ "kind": "warmup", "seconds": 300 }]
+        }
+        """.utf8)
+        XCTAssertEqual(WorkoutKitPlanNativeWarmup.displayName(from: data), "Ski Erg")
+    }
+
+    func testNativeWarmupDisplayNameIgnoresBlankStrings() {
+        let data = Data("""
+        {
+          "title": "Blank warmup",
+          "sportType": "traditionalStrengthTraining",
+          "warmup": { "displayName": "   " },
+          "intervals": [{ "kind": "warmup", "seconds": 300 }]
+        }
+        """.utf8)
+        XCTAssertNil(WorkoutKitPlanNativeWarmup.displayName(from: data))
+    }
+
     func testCompositionLineHumanizesStrengthSets() {
         let meta = WorkoutKitPlanMeta(
             composition: "custom",

@@ -165,6 +165,8 @@ enum WorkoutKitPlanStepSummary {
         guard let dto = try? WorkoutKitSync.default.parse(from: planJSON) else { return [] }
         var out: [String] = []
         let intervals = dto.intervals
+        let nativeWarmupName = WorkoutKitPlanNativeWarmup.displayName(from: planJSON)
+        var consumedNativeWarmupName = false
 
         for (index, interval) in intervals.enumerated() {
             let room = limit - out.count
@@ -186,7 +188,13 @@ enum WorkoutKitPlanStepSummary {
                 break
             }
 
-            let omittedNested = append(interval: interval, into: &out, budget: budget)
+            let omittedNested = append(
+                interval: interval,
+                into: &out,
+                budget: budget,
+                nativeWarmupDisplayName: nativeWarmupName,
+                consumedNativeWarmupName: &consumedNativeWarmupName
+            )
             if out.count > limit {
                 out = Array(out.prefix(limit))
             }
@@ -218,12 +226,18 @@ enum WorkoutKitPlanStepSummary {
     private static func append(
         interval: WKPlanDTO.Interval,
         into out: inout [String],
-        budget: Int
+        budget: Int,
+        nativeWarmupDisplayName: String?,
+        consumedNativeWarmupName: inout Bool
     ) -> Int {
         guard budget > 0 else { return labelCount(for: interval) }
         switch interval {
         case .warmup(let seconds, _):
-            out.append("Warm-up · \(seconds)s")
+            let title = WorkoutKitPlanNativeWarmup.previewTitle(
+                nativeWarmupDisplayName: nativeWarmupDisplayName,
+                consumedNativeWarmupName: &consumedNativeWarmupName
+            )
+            out.append("\(title) · \(seconds)s")
             return 0
         case .cooldown(let seconds, _):
             out.append("Cool-down · \(seconds)s")

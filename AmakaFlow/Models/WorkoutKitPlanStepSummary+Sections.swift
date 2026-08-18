@@ -52,15 +52,26 @@ private enum PreviewSectionBuilder {
 
     static func sections(from planJSON: Data) -> [PreviewSection] {
         guard let dto = try? WorkoutKitSync.default.parse(from: planJSON) else { return [] }
-        return buildSections(from: flatten(intervals: dto.intervals))
+        let nativeWarmupName = WorkoutKitPlanNativeWarmup.displayName(from: planJSON)
+        return buildSections(
+            from: flatten(intervals: dto.intervals, nativeWarmupDisplayName: nativeWarmupName)
+        )
     }
 
-    private static func flatten(intervals: [WKPlanDTO.Interval]) -> [Atom] {
+    private static func flatten(
+        intervals: [WKPlanDTO.Interval],
+        nativeWarmupDisplayName: String?
+    ) -> [Atom] {
         var out: [Atom] = []
+        var consumedNativeWarmupName = false
         for interval in intervals {
             switch interval {
             case .warmup(let seconds, _):
-                out.append(.mobility(title: "Warm-up", detail: durationLabel(seconds)))
+                let title = WorkoutKitPlanNativeWarmup.previewTitle(
+                    nativeWarmupDisplayName: nativeWarmupDisplayName,
+                    consumedNativeWarmupName: &consumedNativeWarmupName
+                )
+                out.append(.mobility(title: title, detail: durationLabel(seconds)))
             case .cooldown(let seconds, _):
                 out.append(.cooldown(detail: durationLabel(seconds)))
             case .repeatSet(let reps, let steps):
