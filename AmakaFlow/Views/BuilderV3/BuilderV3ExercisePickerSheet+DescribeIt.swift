@@ -11,11 +11,23 @@ extension BuilderV3ExercisePickerSheet {
     /// Tier-3 natural language, entered from browse rather than from a dead end.
     /// Reuses the same `onAskAmaka` path the did-you-mean state uses — the coach
     /// opens with an empty prefill, ready for a description (ADR-017).
+    /// Seed handed to the coach: empty, so it opens ready for a description
+    /// rather than sending anything.
+    static let describeItSeed = ""
+
+    /// Browse-stage entry only. Replace mode is a single swap, and without a
+    /// handler the card would be a dead tap.
+    var showsDescribeIt: Bool {
+        guard onAskAmaka != nil else { return false }
+        if case .add = mode { return true }
+        return false
+    }
+
     @ViewBuilder
     var describeItCard: some View {
-        if case .add = mode, onAskAmaka != nil {
+        if showsDescribeIt {
             Button {
-                onAskAmaka?("")
+                onAskAmaka?(Self.describeItSeed)
             } label: {
                 HStack(spacing: 10) {
                     Image(systemName: "sparkles")

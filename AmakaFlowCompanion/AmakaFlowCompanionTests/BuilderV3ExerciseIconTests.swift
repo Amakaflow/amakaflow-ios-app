@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import UIKit
 import XCTest
 @testable import AmakaFlowCompanion
 
