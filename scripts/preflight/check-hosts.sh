@@ -102,6 +102,29 @@ production_total=0
 echo "Resolving hosts from $env_file …"
 echo
 
+# Resolve a hostname with whatever DNS tool the machine already has.
+#
+# This used to call `dig` directly, which meant CI had to `apt-get install
+# dnsutils` first — and when the apt mirror was slow that single step blew the
+# job's 5-minute cap, cancelling the check before it resolved anything. Nothing
+# here needs dig specifically: one A record is one A record.
+#
+# Order: dig (fastest, has timeout flags) → host → getent (glibc, always on
+# Ubuntu). macOS has dig; Ubuntu runners have getent even with no extras.
+resolve_host() {
+    local host="$1"
+    if command -v dig >/dev/null 2>&1; then
+        dig +short +time=3 +tries=1 "$host" 2>/dev/null | head -1
+        return
+    fi
+    if command -v host >/dev/null 2>&1; then
+        host -W 3 "$host" 2>/dev/null \
+            | awk '/has address/ { print $NF; exit }'
+        return
+    fi
+    getent ahostsv4 "$host" 2>/dev/null | awk 'NR==1 { print $1 }'
+}
+
 for entry in "${entries[@]}"; do
     arm="${entry%%$'\t'*}"
     url="${entry#*$'\t'}"
@@ -112,7 +135,7 @@ for entry in "${entries[@]}"; do
         continue
     fi
 
-    answer=$(dig +short +time=3 +tries=1 "$host" 2>/dev/null | head -1)
+    answer=$(resolve_host "$host")
 
     if [[ "$arm" == "staging" ]]; then
         staging_total=$((staging_total + 1))
