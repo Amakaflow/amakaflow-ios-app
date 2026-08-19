@@ -74,6 +74,10 @@ if [[ "$launched" != "1" ]]; then
 fi
 
 mkdir -p "$OUT_DIR"
+# A previous run that died partway leaves PNGs here. The move below is a
+# wildcard sweep, so those strays would be folded into this run's dated
+# baseline — producing a baseline that looks complete but blends two runs.
+rm -f "$REPO_ROOT"/docs/app-baseline/*.png
 cd "$REPO_ROOT"
 MAESTRO_CLI_NO_ANALYTICS=1 maestro --udid "$UDID" test e2e/maestro/baseline-capture.yaml
 
