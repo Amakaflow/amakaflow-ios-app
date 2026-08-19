@@ -86,7 +86,7 @@ struct LogbookWheelSheet: View {
             }
 
             if isMetric {
-                Text("TIME · CAL — leave one blank if you only track one")
+                Text(LogbookCopy.metricHint(for: focusedEntry?.trackedFields ?? []))
                     .font(.system(size: 11, design: .monospaced))
                     .foregroundColor(DailyDriver.foregroundMuted)
                     .padding(.top, 4)
@@ -245,12 +245,14 @@ struct LogbookWheelSheet: View {
 
     private func commitAndAdvance() {
         if isMetric {
+            // AMA-2462: every untracked field commits as nil. Filtering only
+            // the wheels left the old value in the set, and the ghost read it
+            // back — "off" has to mean absent in the data too.
+            let entry = focusedEntry
             viewModel.applyMetric(
-                durationSeconds: durationSeconds,
-                calories: calories,
-                distanceMeters: (focusedEntry?.tracks(.distance) ?? false)
-                    ? Double(distanceMeters)
-                    : viewModel.focusedSet()?.set.distanceMeters,
+                durationSeconds: (entry?.tracks(.time) ?? true) ? durationSeconds : nil,
+                calories: (entry?.tracks(.calories) ?? true) ? calories : nil,
+                distanceMeters: (entry?.tracks(.distance) ?? false) ? Double(distanceMeters) : nil,
                 advance: true
             )
         } else {

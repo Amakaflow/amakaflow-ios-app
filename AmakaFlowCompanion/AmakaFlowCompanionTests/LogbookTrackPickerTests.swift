@@ -233,8 +233,9 @@ final class LogbookTrackPickerTests: XCTestCase {
         }
     }
 
-    /// A rower bout must be loggable, not merely displayable.
-    func testDistanceOnARowerRoundTripsThroughTheSet() {
+    /// A machine bout must be loggable, not merely displayable. (Fixture is
+    /// the Ski Erg; the behaviour is the same for any metric station.)
+    func testDistanceOnAMetricStationRoundTripsThroughTheSet() {
         let viewModel = makeViewModel([skiErg()])
         viewModel.openWheel(exerciseID: "ski_erg", setIndex: 1)
         viewModel.applyMetric(
@@ -243,6 +244,86 @@ final class LogbookTrackPickerTests: XCTestCase {
         XCTAssertEqual(
             entry(viewModel, "ski_erg")?.sets.first?.distanceMeters, 500,
             "metres entered on a machine must persist onto the set"
+        )
+    }
+
+    // MARK: - An untracked field must not be written
+
+    /// CodeRabbit's major finding. Filtering the wheels was not enough: the
+    /// commit still forwarded duration and calories and retained the old
+    /// distance, so a value the athlete had switched off stayed in the set and
+    /// came back as a ghost. "Off" has to mean absent in the data.
+    func testCaloriesAreNotWrittenOnceTheChipIsOff() {
+        let viewModel = makeViewModel([skiErg()])
+        // The fixture tracks time + distance, so calories must be switched ON
+        // before they can be logged and then switched off again.
+        viewModel.toggleTrackedField(exerciseID: "ski_erg", field: .calories)
+        viewModel.openWheel(exerciseID: "ski_erg", setIndex: 1)
+        viewModel.applyMetric(
+            durationSeconds: 112, calories: 30, distanceMeters: 500, advance: false
+        )
+        XCTAssertEqual(
+            entry(viewModel, "ski_erg")?.sets.first?.calories, 30,
+            "precondition: calories were logged while tracked"
+        )
+
+        viewModel.toggleTrackedField(exerciseID: "ski_erg", field: .calories)
+        XCTAssertFalse(
+            entry(viewModel, "ski_erg")?.tracks(.calories) ?? true,
+            "precondition: calories are now off"
+        )
+        // What the sheet now sends for an untracked field.
+        viewModel.applyMetric(
+            durationSeconds: 112, calories: nil, distanceMeters: 500, advance: false
+        )
+
+        XCTAssertNil(
+            entry(viewModel, "ski_erg")?.sets.first?.calories,
+            "a switched-off field must be cleared, not left behind in the set"
+        )
+        XCTAssertEqual(
+            entry(viewModel, "ski_erg")?.sets.first?.durationSeconds, 112,
+            "the fields still tracked are untouched"
+        )
+        XCTAssertNil(
+            viewModel.ghost(for: "ski_erg", setIndex: 1)?.calories,
+            "and it must not come back as a ghost"
+        )
+    }
+
+    func testDistanceOnlyStationCommitsNeitherTimeNorCalories() {
+        let viewModel = makeViewModel([skiErg()])
+        viewModel.toggleTrackedField(exerciseID: "ski_erg", field: .time)
+        XCTAssertEqual(
+            entry(viewModel, "ski_erg")?.trackedFields, [.distance],
+            "precondition: distance only"
+        )
+
+        viewModel.openWheel(exerciseID: "ski_erg", setIndex: 1)
+        viewModel.applyMetric(
+            durationSeconds: nil, calories: nil, distanceMeters: 500, advance: false
+        )
+
+        let set = entry(viewModel, "ski_erg")?.sets.first
+        XCTAssertEqual(set?.distanceMeters, 500, "the tracked field lands")
+        XCTAssertNil(set?.durationSeconds, "time is off — nothing written")
+        XCTAssertNil(set?.calories, "calories are off — nothing written")
+    }
+
+    /// The hint under the wheels must name the wheels on screen.
+    func testTheMetricHintNamesOnlyTheVisibleWheels() {
+        XCTAssertEqual(
+            LogbookCopy.metricHint(for: [.distance]),
+            "Leave blank if you did not track it",
+            "one wheel needs no leave-one-blank instruction"
+        )
+        XCTAssertTrue(
+            LogbookCopy.metricHint(for: [.time, .calories]).hasPrefix("TIME · CAL"),
+            "two wheels are named in order"
+        )
+        XCTAssertFalse(
+            LogbookCopy.metricHint(for: [.distance]).contains("CAL"),
+            "a station with no calorie wheel must not mention calories"
         )
     }
 }
