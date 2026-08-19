@@ -348,7 +348,9 @@ struct LogbookView: View {
             }
             .buttonStyle(.plain)
             .frame(width: 28)
-            .accessibilityIdentifier("af_logbook_edit_\(entry.id)_\(set.index)")
+            .accessibilityIdentifier(
+                "af_logbook_edit_\(entry.id)_\(set.isWarmup ? "w" : "s")\(set.index)"
+            )
         }
         .padding(.vertical, 6)
         .padding(.horizontal, 6)

@@ -81,7 +81,10 @@ final class LogbookEntryIsConfirmTests: XCTestCase {
             set(viewModel)?.isChecked ?? false,
             "and the set is logged — there is no separate tick to press"
         )
-        XCTAssertEqual(set(viewModel)?.checkedAt, fixedNow)
+        XCTAssertEqual(
+            set(viewModel)?.checkedAt, fixedNow,
+            "logged at the moment it was committed"
+        )
     }
 
     func testCommittingAMetricBoutLogsIt() {
@@ -90,7 +93,10 @@ final class LogbookEntryIsConfirmTests: XCTestCase {
 
         viewModel.applyMetric(durationSeconds: 118, calories: nil, distanceMeters: nil, advance: false)
 
-        XCTAssertEqual(set(viewModel)?.durationSeconds, 118)
+        XCTAssertEqual(
+            set(viewModel)?.durationSeconds, 118,
+            "the bout time lands"
+        )
         XCTAssertTrue(set(viewModel)?.isChecked ?? false, "a machine bout logs on commit too")
     }
 
@@ -117,7 +123,10 @@ final class LogbookEntryIsConfirmTests: XCTestCase {
         viewModel.confirmProposedRow(exerciseID: "row", setIndex: 1)
 
         XCTAssertEqual(set(viewModel)?.weightKg, 31.75, "the proposal becomes the record")
-        XCTAssertEqual(set(viewModel)?.reps, 10)
+        XCTAssertEqual(
+            set(viewModel)?.reps, 10,
+            "reps come from the proposal too"
+        )
         XCTAssertTrue(set(viewModel)?.isChecked ?? false, "one tap, logged")
     }
 
@@ -127,7 +136,10 @@ final class LogbookEntryIsConfirmTests: XCTestCase {
         viewModel.confirmProposedRow(exerciseID: "row", setIndex: 1)
         viewModel.confirmProposedRow(exerciseID: "row", setIndex: 1)
 
-        XCTAssertTrue(set(viewModel, 0)?.isChecked ?? false)
+        XCTAssertTrue(
+            set(viewModel, 0)?.isChecked ?? false,
+            "confirming twice leaves it logged, not toggled off"
+        )
         XCTAssertFalse(set(viewModel, 1)?.isChecked ?? true, "set 2 is untouched")
         XCTAssertFalse(set(viewModel, 2)?.isChecked ?? true, "set 3 is untouched")
     }
@@ -135,7 +147,10 @@ final class LogbookEntryIsConfirmTests: XCTestCase {
     func testConfirmingAnUnknownRowIsANoOp() {
         let viewModel = self.viewModel([strengthEntry()])
         viewModel.confirmProposedRow(exerciseID: "nope", setIndex: 1)
-        XCTAssertFalse(set(viewModel)?.isChecked ?? true)
+        XCTAssertFalse(
+            set(viewModel)?.isChecked ?? true,
+            "an unknown id must not log a real row"
+        )
     }
 
     // MARK: - It reaches the saved session
@@ -154,6 +169,9 @@ final class LogbookEntryIsConfirmTests: XCTestCase {
         }
         let row = session.exercises.first { $0.id == "row" }
         XCTAssertEqual(row?.actualSets, 1, "the entered set counts as logged")
-        XCTAssertTrue(row?.isLogged ?? false)
+        XCTAssertTrue(
+            row?.isLogged ?? false,
+            "no ticking and no confirm screen was needed to save it"
+        )
     }
 }
