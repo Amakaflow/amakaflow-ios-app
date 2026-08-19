@@ -282,7 +282,20 @@ struct LogbookExerciseEntry: Identifiable, Equatable, Codable {
     var cardioStrip: LogbookCardioStrip?
     /// AMA-2462 — backing store for `trackedFieldsOverride`. Nil means "never
     /// chosen", which is different from "chose nothing".
+    ///
+    /// Only ever written through `normalizedTrackedFields`. There are three
+    /// ways in — init, the setter and the decoder — and patching them one at a
+    /// time is how the empty-array case survived two rounds of review.
     private var storedTrackedFields: [LogbookTrackedField]?
+
+    /// Canonical order, and an empty selection collapsed to nil so the field
+    /// never has to mean both "chose nothing" and "never chosen".
+    private static func normalizedTrackedFields(
+        _ fields: [LogbookTrackedField]?
+    ) -> [LogbookTrackedField]? {
+        guard let canonical = fields?.canonical, !canonical.isEmpty else { return nil }
+        return canonical
+    }
 
     init(
         id: String,
@@ -313,11 +326,7 @@ struct LogbookExerciseEntry: Identifiable, Equatable, Codable {
         self.plannedCalories = plannedCalories
         self.plannedDistanceMeters = plannedDistanceMeters
         self.cardioStrip = cardioStrip
-        // Same clamp as `trackedFieldsOverride`'s setter: an empty array must
-        // never be stored, or the field means "chose nothing" here and
-        // "never chosen" there — and it would encode as "trackedFields": [].
-        let canonicalTracked = trackedFields?.canonical
-        self.storedTrackedFields = (canonicalTracked?.isEmpty ?? true) ? nil : canonicalTracked
+        self.storedTrackedFields = Self.normalizedTrackedFields(trackedFields)
     }
 
     enum CodingKeys: String, CodingKey {
@@ -343,8 +352,10 @@ struct LogbookExerciseEntry: Identifiable, Equatable, Codable {
         plannedCalories = try container.decodeIfPresent(Int.self, forKey: .plannedCalories)
         plannedDistanceMeters = try container.decodeIfPresent(Int.self, forKey: .plannedDistanceMeters)
         cardioStrip = try container.decodeIfPresent(LogbookCardioStrip.self, forKey: .cardioStrip)
-        storedTrackedFields = try container.decodeIfPresent(
-            [LogbookTrackedField].self, forKey: .storedTrackedFields
+        // Through the same normalizer: a draft holding "trackedFields": [] or
+        // a non-canonical order must not survive a decode/encode round trip.
+        storedTrackedFields = Self.normalizedTrackedFields(
+            try container.decodeIfPresent([LogbookTrackedField].self, forKey: .storedTrackedFields)
         )
     }
 
@@ -376,22 +387,16 @@ struct LogbookExerciseEntry: Identifiable, Equatable, Codable {
     /// existed carry no key and fall through to the derived defaults.
     var trackedFieldsOverride: [LogbookTrackedField]? {
         get { storedTrackedFields }
-        set {
-            // An empty set would leave a row with nowhere to log. Clamp to nil
-            // ("never chosen") so the flag never has to mean two things.
-            let canonical = newValue?.canonical
-            storedTrackedFields = (canonical?.isEmpty ?? true) ? nil : canonical
-        }
+        set { storedTrackedFields = Self.normalizedTrackedFields(newValue) }
     }
 
     /// What this exercise logs: the athlete's choice if they made one,
     /// otherwise what the plan proposes.
     var trackedFields: [LogbookTrackedField] {
-        if let storedTrackedFields, !storedTrackedFields.isEmpty {
-            return storedTrackedFields.canonical
+        if let storedTrackedFields {
+            return storedTrackedFields
         }
-        // Nil, or an empty array smuggled in by a decoder, both mean
-        // "never chosen" — fall through to what the plan proposes.
+        // Never chosen — fall through to what the plan proposes.
         return LogbookTrackedField.defaults(
             forExerciseNamed: name,
             loggingKind: loggingKind,

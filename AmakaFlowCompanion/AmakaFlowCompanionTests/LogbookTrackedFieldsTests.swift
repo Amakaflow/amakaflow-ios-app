@@ -148,11 +148,11 @@ final class LogbookTrackedFieldsTests: XCTestCase {
     /// Drafts written before this existed carry no key. They must decode and
     /// fall through to the derived defaults rather than throwing.
     func testDraftsWrittenBeforeTrackedFieldsStillDecode() throws {
-        let legacy = """
+        let legacy = try XCTUnwrap("""
         {"id":"chin_up","name":"Chin-Up",
          "planned":{"sets":3,"reps":10},
          "sets":[],"ghosts":[],"loggingKind":"strength"}
-        """.data(using: .utf8)!
+        """.data(using: .utf8))
         let decoded = try JSONDecoder().decode(LogbookExerciseEntry.self, from: legacy)
         XCTAssertEqual(
             decoded.trackedFields, [.reps],
@@ -239,10 +239,45 @@ final class LogbookTrackedFieldsTests: XCTestCase {
         XCTAssertNil(row.trackedFieldsOverride, "an empty set is never stored, whichever way in")
         XCTAssertEqual(row.trackedFields, [.reps], "it falls through to the plan's default")
 
-        let json = String(data: try JSONEncoder().encode(row), encoding: .utf8) ?? ""
+        let json = try XCTUnwrap(String(data: try JSONEncoder().encode(row), encoding: .utf8))
         XCTAssertFalse(
             json.contains("\"trackedFields\":[]"),
             "an empty array must not reach disk — got \(json)"
+        )
+    }
+
+    /// CodeRabbit, third time on this field: init and the setter clamped an
+    /// empty selection, the DECODER did not. A draft holding `"trackedFields":[]`
+    /// stayed non-nil and re-encoded as an empty override. All three ways in now
+    /// go through one normalizer.
+    func testDecodingNormalizesAnEmptyOrUnorderedSelection() throws {
+        let empty = try XCTUnwrap("""
+        {"id":"chin_up","name":"Chin-Up","planned":{"sets":3,"reps":10},
+         "sets":[],"ghosts":[],"loggingKind":"strength","trackedFields":[]}
+        """.data(using: .utf8))
+        let decodedEmpty = try JSONDecoder().decode(LogbookExerciseEntry.self, from: empty)
+        XCTAssertNil(
+            decodedEmpty.trackedFieldsOverride,
+            "an empty stored selection means never-chosen after decoding too"
+        )
+
+        let unordered = try XCTUnwrap("""
+        {"id":"chin_up","name":"Chin-Up","planned":{"sets":3,"reps":10},
+         "sets":[],"ghosts":[],"loggingKind":"strength",
+         "trackedFields":["reps","weight"]}
+        """.data(using: .utf8))
+        let decodedUnordered = try JSONDecoder().decode(LogbookExerciseEntry.self, from: unordered)
+        XCTAssertEqual(
+            decodedUnordered.trackedFieldsOverride, [.weight, .reps],
+            "a stored selection is canonicalised on the way in, not just on the way out"
+        )
+
+        let json = try XCTUnwrap(
+            String(data: try JSONEncoder().encode(decodedEmpty), encoding: .utf8)
+        )
+        XCTAssertFalse(
+            json.contains("\"trackedFields\":[]"),
+            "and an empty override must not survive a round trip — got \(json)"
         )
     }
 }
