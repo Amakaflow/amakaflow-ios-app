@@ -91,14 +91,18 @@ struct LogbookGhost: Equatable, Hashable, Codable {
     func displayLine(
         unit: WeightUnit,
         scale: LogbookDistanceScale = .road,
-        distanceUnit: DistanceUnit = .stored
+        distanceUnit: DistanceUnit = .stored,
+        addedLoad: Bool = false
     ) -> String {
         if durationSeconds != nil || calories != nil || distanceMeters != nil {
             return metricDisplayLine(scale: scale, distanceUnit: distanceUnit)
         }
         let weightText: String
         if let weightKg {
-            weightText = WeightUnitMath.formatWeight(kg: weightKg, unit: unit)
+            // AMA-2462: a bodyweight movement's load is ADDED — the grid, the
+            // ghost and the sheet must all say +25, never 200.
+            weightText = (addedLoad ? "+" : "")
+                + WeightUnitMath.formatWeight(kg: weightKg, unit: unit)
         } else {
             weightText = "—"
         }
@@ -276,6 +280,22 @@ struct LogbookExerciseEntry: Identifiable, Equatable, Codable {
     var plannedDistanceMeters: Int?
     /// Cardio strip (TIME/KM/CAL/HR) when device-filled — still editable unless noted.
     var cardioStrip: LogbookCardioStrip?
+    /// AMA-2462 — backing store for `trackedFieldsOverride`. Nil means "never
+    /// chosen", which is different from "chose nothing".
+    ///
+    /// Only ever written through `normalizedTrackedFields`. There are three
+    /// ways in — init, the setter and the decoder — and patching them one at a
+    /// time is how the empty-array case survived two rounds of review.
+    private var storedTrackedFields: [LogbookTrackedField]?
+
+    /// Canonical order, and an empty selection collapsed to nil so the field
+    /// never has to mean both "chose nothing" and "never chosen".
+    private static func normalizedTrackedFields(
+        _ fields: [LogbookTrackedField]?
+    ) -> [LogbookTrackedField]? {
+        guard let canonical = fields?.canonical, !canonical.isEmpty else { return nil }
+        return canonical
+    }
 
     init(
         id: String,
@@ -290,7 +310,8 @@ struct LogbookExerciseEntry: Identifiable, Equatable, Codable {
         plannedDurationSeconds: Int? = nil,
         plannedCalories: Int? = nil,
         plannedDistanceMeters: Int? = nil,
-        cardioStrip: LogbookCardioStrip? = nil
+        cardioStrip: LogbookCardioStrip? = nil,
+        trackedFields: [LogbookTrackedField]? = nil
     ) {
         self.id = id
         self.name = name
@@ -305,6 +326,7 @@ struct LogbookExerciseEntry: Identifiable, Equatable, Codable {
         self.plannedCalories = plannedCalories
         self.plannedDistanceMeters = plannedDistanceMeters
         self.cardioStrip = cardioStrip
+        self.storedTrackedFields = Self.normalizedTrackedFields(trackedFields)
     }
 
     enum CodingKeys: String, CodingKey {
@@ -312,6 +334,7 @@ struct LogbookExerciseEntry: Identifiable, Equatable, Codable {
         case structureHeader, structureBlockIndex, supersetPartner
         case loggingKind, plannedDurationSeconds, plannedCalories, plannedDistanceMeters
         case cardioStrip
+        case storedTrackedFields = "trackedFields"
     }
 
     init(from decoder: Decoder) throws {
@@ -329,6 +352,11 @@ struct LogbookExerciseEntry: Identifiable, Equatable, Codable {
         plannedCalories = try container.decodeIfPresent(Int.self, forKey: .plannedCalories)
         plannedDistanceMeters = try container.decodeIfPresent(Int.self, forKey: .plannedDistanceMeters)
         cardioStrip = try container.decodeIfPresent(LogbookCardioStrip.self, forKey: .cardioStrip)
+        // Through the same normalizer: a draft holding "trackedFields": [] or
+        // a non-canonical order must not survive a decode/encode round trip.
+        storedTrackedFields = Self.normalizedTrackedFields(
+            try container.decodeIfPresent([LogbookTrackedField].self, forKey: .storedTrackedFields)
+        )
     }
 
     func encode(to encoder: Encoder) throws {
@@ -346,12 +374,49 @@ struct LogbookExerciseEntry: Identifiable, Equatable, Codable {
         try container.encodeIfPresent(plannedCalories, forKey: .plannedCalories)
         try container.encodeIfPresent(plannedDistanceMeters, forKey: .plannedDistanceMeters)
         try container.encodeIfPresent(cardioStrip, forKey: .cardioStrip)
+        try container.encodeIfPresent(storedTrackedFields, forKey: .storedTrackedFields)
     }
 
     var isMetric: Bool { loggingKind == .metric }
 
     /// AMA-2462 — an erg reports metres whatever the athlete picked.
     var distanceScale: LogbookDistanceScale { .forExercise(named: name) }
+
+    /// AMA-2462 — the athlete's explicit choice, when they have made one.
+    /// Optional and decode-tolerant on purpose: drafts written before this
+    /// existed carry no key and fall through to the derived defaults.
+    var trackedFieldsOverride: [LogbookTrackedField]? {
+        get { storedTrackedFields }
+        set { storedTrackedFields = Self.normalizedTrackedFields(newValue) }
+    }
+
+    /// What this exercise logs: the athlete's choice if they made one,
+    /// otherwise what the plan proposes.
+    var trackedFields: [LogbookTrackedField] {
+        if let storedTrackedFields {
+            return storedTrackedFields
+        }
+        // Never chosen — fall through to what the plan proposes.
+        return LogbookTrackedField.defaults(
+            forExerciseNamed: name,
+            loggingKind: loggingKind,
+            prescription: LogbookPrescription(
+                weightKg: planned.weightKg,
+                durationSeconds: plannedDurationSeconds,
+                distanceMeters: plannedDistanceMeters,
+                calories: plannedCalories
+            )
+        )
+    }
+
+    func tracks(_ field: LogbookTrackedField) -> Bool { trackedFields.contains(field) }
+
+    /// A load on a movement that carries its own bodyweight is ADDED load —
+    /// `+25`, never `200`. The prefix is not decoration; without it Progress
+    /// would read a belted chin-up as an absolute lift.
+    var showsAddedLoad: Bool {
+        tracks(.weight) && LogbookMovementClass.isBodyweight(named: name)
+    }
 
     var plannedLine: String {
         if isMetric {

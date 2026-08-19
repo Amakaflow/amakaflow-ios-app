@@ -159,7 +159,7 @@ struct LogbookView: View {
             if entry.isMetric {
                 metricCard(entry)
             } else {
-                columnHeader
+                columnHeader(for: entry)
                 ForEach(entry.sets) { set in
                     setRow(entry: entry, set: set)
                         .id(Self.setAnchorID(
@@ -188,16 +188,24 @@ struct LogbookView: View {
         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 
-    private var columnHeader: some View {
+    /// AMA-2462 — the header shows only the columns this exercise tracks. A
+    /// field that is off is absent, not blank.
+    private func columnHeader(for entry: LogbookExerciseEntry) -> some View {
         HStack(spacing: 0) {
             Text(LogbookCopy.columnSet)
                 .frame(width: 36, alignment: .leading)
             Text(LogbookCopy.columnLast)
                 .frame(maxWidth: .infinity, alignment: .leading)
-            Text(LogbookCopy.columnWeight(for: viewModel.weightUnit))
+            if entry.tracks(.weight) {
+                Text(LogbookCopy.columnWeight(
+                    for: viewModel.weightUnit, added: entry.showsAddedLoad
+                ))
                 .frame(width: 52, alignment: .center)
-            Text(LogbookCopy.columnReps)
-                .frame(width: 44, alignment: .center)
+            }
+            if entry.tracks(.reps) {
+                Text(LogbookCopy.columnReps)
+                    .frame(width: 44, alignment: .center)
+            }
             Text("✓")
                 .frame(width: 28, alignment: .center)
         }
@@ -233,20 +241,31 @@ struct LogbookView: View {
             }
             .buttonStyle(.plain)
 
-            cellButton(
-                text: set.weightKg.map { WeightUnitMath.formatWeight(kg: $0, unit: viewModel.weightUnit) },
-                ghost: ghost.flatMap { $0.weightKg.map { WeightUnitMath.formatWeight(kg: $0, unit: viewModel.weightUnit) } },
-                width: 52
-            ) {
-                viewModel.openWheel(exerciseID: entry.id, setIndex: set.index, isWarmup: set.isWarmup)
+            if entry.tracks(.weight) {
+                let prefix = entry.showsAddedLoad ? "+" : ""
+                cellButton(
+                    text: set.weightKg.map {
+                        prefix + WeightUnitMath.formatWeight(kg: $0, unit: viewModel.weightUnit)
+                    },
+                    ghost: ghost.flatMap {
+                        $0.weightKg.map {
+                            prefix + WeightUnitMath.formatWeight(kg: $0, unit: viewModel.weightUnit)
+                        }
+                    },
+                    width: 52
+                ) {
+                    viewModel.openWheel(exerciseID: entry.id, setIndex: set.index, isWarmup: set.isWarmup)
+                }
             }
 
-            cellButton(
-                text: set.reps.map(String.init),
-                ghost: ghost.flatMap { $0.reps.map(String.init) },
-                width: 44
-            ) {
-                viewModel.openWheel(exerciseID: entry.id, setIndex: set.index, isWarmup: set.isWarmup)
+            if entry.tracks(.reps) {
+                cellButton(
+                    text: set.reps.map(String.init),
+                    ghost: ghost.flatMap { $0.reps.map(String.init) },
+                    width: 44
+                ) {
+                    viewModel.openWheel(exerciseID: entry.id, setIndex: set.index, isWarmup: set.isWarmup)
+                }
             }
 
             Button {
@@ -344,25 +363,31 @@ struct LogbookView: View {
                     .foregroundColor(DailyDriver.lime)
             }
             HStack(alignment: .center, spacing: 8) {
-                metricTapCell(
-                    label: LogbookCopy.columnTime,
-                    value: duration.map(LogbookMetricFormat.duration),
-                    focused: focused
-                ) {
-                    if let set {
-                        viewModel.openWheel(exerciseID: entry.id, setIndex: set.index, isWarmup: set.isWarmup)
+                // AMA-2462: only the fields this station tracks. A Ski Erg set
+                // to time must not carry a CAL cell it can never fill.
+                if entry.tracks(.time) {
+                    metricTapCell(
+                        label: LogbookCopy.columnTime,
+                        value: duration.map(LogbookMetricFormat.duration),
+                        focused: focused
+                    ) {
+                        if let set {
+                            viewModel.openWheel(exerciseID: entry.id, setIndex: set.index, isWarmup: set.isWarmup)
+                        }
                     }
                 }
-                metricTapCell(
-                    label: LogbookCopy.columnCal,
-                    value: calories.map { "\($0)" },
-                    focused: focused
-                ) {
-                    if let set {
-                        viewModel.openWheel(exerciseID: entry.id, setIndex: set.index, isWarmup: set.isWarmup)
+                if entry.tracks(.calories) {
+                    metricTapCell(
+                        label: LogbookCopy.columnCal,
+                        value: calories.map { "\($0)" },
+                        focused: focused
+                    ) {
+                        if let set {
+                            viewModel.openWheel(exerciseID: entry.id, setIndex: set.index, isWarmup: set.isWarmup)
+                        }
                     }
                 }
-                if distance != nil || entry.plannedDistanceMeters != nil {
+                if entry.tracks(.distance) {
                     metricTapCell(
                         label: LogbookCopy.distanceColumn(
                             scale: entry.distanceScale, unit: .stored
