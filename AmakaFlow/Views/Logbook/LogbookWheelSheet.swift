@@ -13,6 +13,9 @@ struct LogbookWheelSheet: View {
     @State private var reps: Int = 8
     @State private var durationSeconds: Int = 60
     @State private var calories: Int = 0
+    /// AMA-2462 — metres, so a Rower bout is actually loggable rather than
+    /// merely displayable. Ergs are metric by definition (LogbookDistanceScale).
+    @State private var distanceMeters: Int = 0
     /// Bumped to remount wheel pickers — UIPickerView often ignores programmatic selection changes.
     @State private var pickerEpoch: Int = 0
 
@@ -20,21 +23,20 @@ struct LogbookWheelSheet: View {
         viewModel.wheelFocus?.mode == .metric
     }
 
+    private var focusedEntry: LogbookExerciseEntry? {
+        guard let id = viewModel.wheelFocus?.exerciseID else { return nil }
+        return viewModel.draft.entries.first { $0.id == id }
+    }
+
     /// AMA-2462 — the sheet must state the load the same way the grid does.
     /// A belted chin-up reads +25 in both places or in neither.
-    private var showsAddedLoad: Bool {
-        guard let id = viewModel.wheelFocus?.exerciseID else { return false }
-        return viewModel.draft.entries.first { $0.id == id }?.showsAddedLoad ?? false
-    }
+    private var showsAddedLoad: Bool { focusedEntry?.showsAddedLoad ?? false }
 
     private var weightValues: [Double] {
         WeightUnitMath.wheelValues(unit: viewModel.weightUnit, fine: viewModel.fineSteps)
     }
 
     private var repsValues: [Int] { Array(1...40) }
-    private var durationValues: [Int] { Array(stride(from: 0, through: 60 * 60, by: 5)) }
-    /// Coarse calorie steps — same remount cost discipline as duration.
-    private var calorieValues: [Int] { Array(stride(from: 0, through: 2000, by: 5)) }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -55,9 +57,12 @@ struct LogbookWheelSheet: View {
 
             Group {
                 if isMetric {
+                    // Only the tracked fields get a wheel: a chip the athlete
+                    // can turn on must be one they can then enter.
                     HStack(spacing: 0) {
-                        durationWheel
-                        calorieWheel
+                        if focusedEntry?.tracks(.time) ?? true { durationWheel(selection: $durationSeconds) }
+                        if focusedEntry?.tracks(.distance) ?? false { distanceWheel(selection: $distanceMeters) }
+                        if focusedEntry?.tracks(.calories) ?? true { calorieWheel(selection: $calories) }
                     }
                 } else {
                     HStack(spacing: 0) {
@@ -81,7 +86,7 @@ struct LogbookWheelSheet: View {
             }
 
             if isMetric {
-                Text("TIME · CAL — leave one blank if you only track one")
+                Text(LogbookCopy.metricHint(for: focusedEntry?.trackedFields ?? []))
                     .font(.system(size: 11, design: .monospaced))
                     .foregroundColor(DailyDriver.foregroundMuted)
                     .padding(.top, 4)
@@ -168,6 +173,15 @@ struct LogbookWheelSheet: View {
             if durationSeconds > 0 {
                 parts.append(LogbookMetricFormat.duration(durationSeconds))
             }
+            if distanceMeters > 0, focused.entry.tracks(.distance) {
+                parts.append(
+                    LogbookMetricFormat.distance(
+                        meters: Double(distanceMeters),
+                        scale: focused.entry.distanceScale,
+                        unit: .stored
+                    )
+                )
+            }
             if calories > 0 {
                 parts.append("\(calories) CAL")
             }
@@ -180,8 +194,14 @@ struct LogbookWheelSheet: View {
                weightDisplay == 0 {
                 nowWeight = "—"
             } else {
-                nowWeight =
-                    "\(WeightUnitMath.formatWeight(kg: WeightUnitMath.kilograms(fromDisplay: weightDisplay, unit: viewModel.weightUnit), unit: viewModel.weightUnit)) \(viewModel.weightUnit.logbookLabel)"
+                // AMA-2462: the NOW line states added load the same way the
+                // grid, the ghost and the column header do.
+                let magnitude = WeightUnitMath.formatWeight(
+                    kg: WeightUnitMath.kilograms(fromDisplay: weightDisplay, unit: viewModel.weightUnit),
+                    unit: viewModel.weightUnit
+                )
+                nowWeight = (focused.entry.showsAddedLoad ? "+" : "")
+                    + "\(magnitude) \(viewModel.weightUnit.logbookLabel)"
             }
             nowText = "NOW \(nowWeight) × \(reps)"
         }
@@ -223,40 +243,16 @@ struct LogbookWheelSheet: View {
         .accessibilityIdentifier("af_logbook_reps_wheel")
     }
 
-    private var durationWheel: some View {
-        Picker(LogbookCopy.columnTime, selection: $durationSeconds) {
-            ForEach(durationValues, id: \.self) { value in
-                Text(value == 0 ? "—" : LogbookMetricFormat.duration(value))
-                    .font(.system(size: 22, weight: .semibold, design: .rounded))
-                    .foregroundColor(DailyDriver.foreground)
-                    .tag(value)
-            }
-        }
-        .pickerStyle(.wheel)
-        .frame(maxWidth: .infinity)
-        .accessibilityIdentifier("af_logbook_duration_wheel")
-    }
-
-    private var calorieWheel: some View {
-        Picker(LogbookCopy.columnCal, selection: $calories) {
-            ForEach(calorieValues, id: \.self) { value in
-                Text(value == 0 ? "—" : "\(value)")
-                    .font(.system(size: 22, weight: .semibold, design: .rounded))
-                    .foregroundColor(DailyDriver.foreground)
-                    .tag(value)
-            }
-        }
-        .pickerStyle(.wheel)
-        .frame(maxWidth: .infinity)
-        .accessibilityIdentifier("af_logbook_calorie_wheel")
-    }
-
     private func commitAndAdvance() {
         if isMetric {
+            // AMA-2462: every untracked field commits as nil. Filtering only
+            // the wheels left the old value in the set, and the ghost read it
+            // back — "off" has to mean absent in the data too.
+            let entry = focusedEntry
             viewModel.applyMetric(
-                durationSeconds: durationSeconds,
-                calories: calories,
-                distanceMeters: viewModel.focusedSet()?.set.distanceMeters,
+                durationSeconds: (entry?.tracks(.time) ?? true) ? durationSeconds : nil,
+                calories: (entry?.tracks(.calories) ?? true) ? calories : nil,
+                distanceMeters: (entry?.tracks(.distance) ?? false) ? Double(distanceMeters) : nil,
                 advance: true
             )
         } else {
@@ -275,6 +271,7 @@ struct LogbookWheelSheet: View {
         if isMetric {
             durationSeconds = ghost.durationSeconds ?? 0
             calories = ghost.calories ?? 0
+            distanceMeters = Int(ghost.distanceMeters ?? 0)
             return
         }
         weightDisplay = WeightUnitMath.nearestWheelValue(
@@ -303,6 +300,14 @@ struct LogbookWheelSheet: View {
                 ?? 0
             // Snap to 5-cal wheel steps.
             calories = (calories / 5) * 5
+            distanceMeters = Int(
+                focused.set.distanceMeters
+                    ?? ghost?.distanceMeters
+                    ?? focused.entry.plannedDistanceMeters.map(Double.init)
+                    ?? 0
+            )
+            // Snap to 50 m wheel steps.
+            distanceMeters = (distanceMeters / 50) * 50
         } else {
             let kilograms = focused.set.weightKg ?? ghost?.weightKg ?? focused.entry.planned.weightKg
             weightDisplay = WeightUnitMath.nearestWheelValue(

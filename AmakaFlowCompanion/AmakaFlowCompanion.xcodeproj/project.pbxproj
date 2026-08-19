@@ -28,6 +28,7 @@
 		AMA2426TSTBLD /* LogbookTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2426TSTREF /* LogbookTests.swift */; };
 		AMA2462TSTBLD /* LogbookUnitsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2462TSTREF /* LogbookUnitsTests.swift */; };
 		AMA2462FTSTBLD /* LogbookTrackedFieldsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2462FTSTREF /* LogbookTrackedFieldsTests.swift */; };
+		AMA2462PTSTBLD /* LogbookTrackPickerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2462PTSTREF /* LogbookTrackPickerTests.swift */; };
 		AMA2408SECTSACCBLD /* WorkoutKitPlanStepSummary+SectionAccumulator.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2408SECTSACCREF /* WorkoutKitPlanStepSummary+SectionAccumulator.swift */; };
 		AMA2408PUSHPREVBLD /* WorkoutEnrichmentPushSheet+Previews.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2408PUSHPREVREF /* WorkoutEnrichmentPushSheet+Previews.swift */; };
 		AMA2408REVEALBLD /* AppleWatchPreviewReveal.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2408REVEALREF /* AppleWatchPreviewReveal.swift */; };
@@ -41,6 +42,9 @@
 		AMA2459REBLD /* EditorV2Session+Reorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2459REREF /* EditorV2Session+Reorder.swift */; };
 		AMA2462SCALEBLD /* LogbookDistanceScale.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2462SCALEREF /* LogbookDistanceScale.swift */; };
 		AMA2462FLDBLD /* LogbookTrackedFields.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2462FLDREF /* LogbookTrackedFields.swift */; };
+		AMA2462GHOSTBLD /* LogbookGhostLookup.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2462GHOSTREF /* LogbookGhostLookup.swift */; };
+		AMA2462WHLBLD /* LogbookWheelSheet+MetricWheels.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2462WHLREF /* LogbookWheelSheet+MetricWheels.swift */; };
+		AMA2462SAVEBLD /* LogbookSaveResult.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2462SAVEREF /* LogbookSaveResult.swift */; };
 		AMA2393PICKBLD /* WorkoutSportPickerSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2393PICKREF /* WorkoutSportPickerSheet.swift */; };
 		AMA2393TSTBLD /* WorkoutSportHonestyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2393TSTREF /* WorkoutSportHonestyTests.swift */; };
 		AMA2395PACBLD /* WorkoutPaceTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2395PACREF /* WorkoutPaceTable.swift */; };
@@ -877,6 +881,7 @@
 		AMA2426TSTREF /* LogbookTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LogbookTests.swift; path = AmakaFlowCompanionTests/LogbookTests.swift; sourceTree = "<group>"; };
 		AMA2462TSTREF /* LogbookUnitsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LogbookUnitsTests.swift; path = AmakaFlowCompanionTests/LogbookUnitsTests.swift; sourceTree = SOURCE_ROOT; };
 		AMA2462FTSTREF /* LogbookTrackedFieldsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LogbookTrackedFieldsTests.swift; path = AmakaFlowCompanionTests/LogbookTrackedFieldsTests.swift; sourceTree = SOURCE_ROOT; };
+		AMA2462PTSTREF /* LogbookTrackPickerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LogbookTrackPickerTests.swift; path = AmakaFlowCompanionTests/LogbookTrackPickerTests.swift; sourceTree = SOURCE_ROOT; };
 		AMA2408SECTSACCREF /* WorkoutKitPlanStepSummary+SectionAccumulator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "WorkoutKitPlanStepSummary+SectionAccumulator.swift"; path = "../AmakaFlow/Models/WorkoutKitPlanStepSummary+SectionAccumulator.swift"; sourceTree = SOURCE_ROOT; };
 		AMA2408PUSHPREVREF /* WorkoutEnrichmentPushSheet+Previews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "WorkoutEnrichmentPushSheet+Previews.swift"; path = "../AmakaFlow/Views/Components/WorkoutEnrichmentPushSheet+Previews.swift"; sourceTree = SOURCE_ROOT; };
 		AMA2408REVEALREF /* AppleWatchPreviewReveal.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppleWatchPreviewReveal.swift; path = ../AmakaFlow/Views/AppleWatchPreviewReveal.swift; sourceTree = SOURCE_ROOT; };
@@ -888,6 +893,9 @@
 		AMA2459REREF /* EditorV2Session+Reorder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "EditorV2Session+Reorder.swift"; path = "../AmakaFlow/Models/EditorV2Session+Reorder.swift"; sourceTree = SOURCE_ROOT; };
 		AMA2462SCALEREF /* LogbookDistanceScale.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LogbookDistanceScale.swift; path = ../AmakaFlow/Models/LogbookDistanceScale.swift; sourceTree = SOURCE_ROOT; };
 		AMA2462FLDREF /* LogbookTrackedFields.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LogbookTrackedFields.swift; path = ../AmakaFlow/Models/LogbookTrackedFields.swift; sourceTree = SOURCE_ROOT; };
+		AMA2462GHOSTREF /* LogbookGhostLookup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LogbookGhostLookup.swift; path = ../AmakaFlow/ViewModels/LogbookGhostLookup.swift; sourceTree = SOURCE_ROOT; };
+		AMA2462WHLREF /* LogbookWheelSheet+MetricWheels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "LogbookWheelSheet+MetricWheels.swift"; path = "../AmakaFlow/Views/Logbook/LogbookWheelSheet+MetricWheels.swift"; sourceTree = SOURCE_ROOT; };
+		AMA2462SAVEREF /* LogbookSaveResult.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LogbookSaveResult.swift; path = ../AmakaFlow/ViewModels/LogbookSaveResult.swift; sourceTree = SOURCE_ROOT; };
 		AMA2393PICKREF /* WorkoutSportPickerSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutSportPickerSheet.swift; path = ../AmakaFlow/Views/WorkoutSportPickerSheet.swift; sourceTree = SOURCE_ROOT; };
 		AMA2393TSTREF /* WorkoutSportHonestyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutSportHonestyTests.swift; path = AmakaFlowCompanionTests/WorkoutSportHonestyTests.swift; sourceTree = "<group>"; };
 		AMA2395PACREF /* WorkoutPaceTable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutPaceTable.swift; path = ../AmakaFlow/Models/WorkoutPaceTable.swift; sourceTree = SOURCE_ROOT; };
@@ -2023,6 +2031,9 @@
 				AMA2459REREF /* EditorV2Session+Reorder.swift */,
 				AMA2462SCALEREF /* LogbookDistanceScale.swift */,
 				AMA2462FLDREF /* LogbookTrackedFields.swift */,
+				AMA2462GHOSTREF /* LogbookGhostLookup.swift */,
+				AMA2462WHLREF /* LogbookWheelSheet+MetricWheels.swift */,
+				AMA2462SAVEREF /* LogbookSaveResult.swift */,
 				AMA2395PACREF /* WorkoutPaceTable.swift */,
 				AMA2395ESTREF /* WorkoutDurationEstimate.swift */,
 				AMA2395ESRREF /* WorkoutDurationEstimator.swift */,
@@ -2508,6 +2519,7 @@
 				AMA2426TSTREF /* LogbookTests.swift */,
 				AMA2462TSTREF /* LogbookUnitsTests.swift */,
 				AMA2462FTSTREF /* LogbookTrackedFieldsTests.swift */,
+				AMA2462PTSTREF /* LogbookTrackPickerTests.swift */,
 				AMA2381HEROTESTREF /* UnifiedWorkoutDetailViewHeroTests.swift */,
 				AMA2316PREFTESTREF /* GarminWatchDisplayPrefsTests.swift */,
 				AMA2336TESTREF /* WorkoutEnrichmentModelsTests.swift */,
@@ -3053,6 +3065,9 @@
 				AMA2459REBLD /* EditorV2Session+Reorder.swift in Sources */,
 				AMA2462SCALEBLD /* LogbookDistanceScale.swift in Sources */,
 				AMA2462FLDBLD /* LogbookTrackedFields.swift in Sources */,
+				AMA2462GHOSTBLD /* LogbookGhostLookup.swift in Sources */,
+				AMA2462WHLBLD /* LogbookWheelSheet+MetricWheels.swift in Sources */,
+				AMA2462SAVEBLD /* LogbookSaveResult.swift in Sources */,
 				AMA2395PACBLD /* WorkoutPaceTable.swift in Sources */,
 				AMA2395ESTBLD /* WorkoutDurationEstimate.swift in Sources */,
 				AMA2395ESRBLD /* WorkoutDurationEstimator.swift in Sources */,
@@ -3589,6 +3604,7 @@
 				AMA2426TSTBLD /* LogbookTests.swift in Sources */,
 				AMA2462TSTBLD /* LogbookUnitsTests.swift in Sources */,
 				AMA2462FTSTBLD /* LogbookTrackedFieldsTests.swift in Sources */,
+				AMA2462PTSTBLD /* LogbookTrackPickerTests.swift in Sources */,
 				AMA2381HEROTESTBLD /* UnifiedWorkoutDetailViewHeroTests.swift in Sources */,
 				AMA2316PREFTESTBLD /* GarminWatchDisplayPrefsTests.swift in Sources */,
 				AMA2336TESTBLD /* WorkoutEnrichmentModelsTests.swift in Sources */,

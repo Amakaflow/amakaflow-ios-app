@@ -158,6 +158,7 @@ struct LogbookView: View {
 
             if entry.isMetric {
                 metricCard(entry)
+                trackRow(entry)
             } else {
                 columnHeader(for: entry)
                 ForEach(entry.sets) { set in
@@ -177,6 +178,7 @@ struct LogbookView: View {
                 }
                 .buttonStyle(.plain)
                 .padding(.top, 2)
+                trackRow(entry)
             }
         }
         .padding(14)
@@ -186,6 +188,53 @@ struct LogbookView: View {
                 .stroke(DailyDriver.border, lineWidth: 1)
         )
         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+    }
+
+    /// AMA-2462 — "what you track", as a chip row at the foot of the card.
+    /// Lit chips are on; dim `＋` chips are one tap from being added. The
+    /// control lives with the exercise it changes rather than behind a menu,
+    /// because the whole point is that turning distance off on the ski should
+    /// be as cheap as noticing you did not want it.
+    private func trackRow(_ entry: LogbookExerciseEntry) -> some View {
+        let offered = LogbookTrackedField.offered(
+            for: entry.loggingKind, tracking: entry.trackedFields
+        )
+        return HStack(spacing: 6) {
+            ForEach(offered, id: \.self) { field in
+                let isOn = entry.tracks(field)
+                let isLocked = isOn && entry.trackedFields.count == 1
+                Button {
+                    viewModel.toggleTrackedField(exerciseID: entry.id, field: field)
+                } label: {
+                    Text(LogbookCopy.trackChip(
+                        field, isOn: isOn, addedLoad: field == .weight && entry.showsAddedLoad
+                    ))
+                    .font(.system(size: 9, weight: .semibold, design: .monospaced))
+                    .foregroundColor(isOn ? DailyDriver.lime : DailyDriver.foregroundDim)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(
+                        Capsule().fill(
+                            isOn ? DailyDriver.lime.opacity(0.16) : Color.clear
+                        )
+                    )
+                    .overlay(
+                        Capsule().stroke(
+                            isOn ? DailyDriver.lime.opacity(0.45) : DailyDriver.borderStrong,
+                            lineWidth: 1
+                        )
+                    )
+                }
+                .buttonStyle(.plain)
+                .disabled(isLocked)
+                .opacity(isLocked ? 0.55 : 1)
+                .accessibilityIdentifier(
+                    "\(LogbookCopy.trackRowAccessibilityPrefix)\(entry.id)_\(field.rawValue)"
+                )
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.top, 4)
     }
 
     /// AMA-2462 — the header shows only the columns this exercise tracks. A
@@ -234,7 +283,13 @@ struct LogbookView: View {
             Button {
                 viewModel.copyGhost(exerciseID: entry.id, setIndex: set.index, isWarmup: set.isWarmup)
             } label: {
-                Text(ghost?.displayLine(unit: viewModel.weightUnit, scale: entry.distanceScale) ?? "—")
+                Text(
+                    ghost?.displayLine(
+                        unit: viewModel.weightUnit,
+                        scale: entry.distanceScale,
+                        addedLoad: entry.showsAddedLoad
+                    ) ?? "—"
+                )
                     .font(.system(size: 12, design: .monospaced))
                     .foregroundColor(DailyDriver.foregroundDim)
                     .frame(maxWidth: .infinity, alignment: .leading)

@@ -87,6 +87,19 @@ struct LogbookPrescription: Equatable {
 }
 
 extension LogbookTrackedField {
+    /// Chips to show on the card: everything currently tracked, plus the
+    /// additions that make sense for this kind of station. Deliberately not
+    /// all five everywhere — a barbell row does not need a CALORIES chip.
+    static func offered(
+        for loggingKind: LogbookLoggingKind,
+        tracking: [LogbookTrackedField]
+    ) -> [LogbookTrackedField] {
+        let suggestions: [LogbookTrackedField] = loggingKind == .metric
+            ? [.time, .distance, .calories]
+            : [.reps, .weight]  // the strength grid renders load × reps only
+        return (tracking + suggestions).canonical
+    }
+
     /// The opening state. Never binding — the athlete can change it, and
     /// `LogbookExerciseEntry.trackedFields` prefers their choice when present.
     static func defaults(

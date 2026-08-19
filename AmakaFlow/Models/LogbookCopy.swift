@@ -69,6 +69,39 @@ enum LogbookCopy {
         WeightUnitMath.unitLabel(unit)
     }
 
+    /// AMA-2462 — chip labels for the "what you track" control.
+    static func trackChip(_ field: LogbookTrackedField, isOn: Bool, addedLoad: Bool) -> String {
+        let name: String
+        switch field {
+        case .reps: name = "REPS"
+        case .weight: name = addedLoad ? "WEIGHT +" : "WEIGHT"
+        case .time: name = "TIME"
+        case .distance: name = "DIST"
+        case .calories: name = "CAL"
+        }
+        return isOn ? name : "＋ \(name)"
+    }
+
+    static let trackRowAccessibilityPrefix = "af_logbook_track_"
+
+    /// Wheel header for the metres wheel — ergs are always metric.
+    static let columnDistanceShort = "M"
+
+    /// AMA-2462 — the hint names the wheels actually on screen. It used to say
+    /// "TIME · CAL" even for a station tracking neither.
+    static func metricHint(for fields: [LogbookTrackedField]) -> String {
+        let names = fields.compactMap { field -> String? in
+            switch field {
+            case .time: return columnTime
+            case .distance: return columnDistanceShort
+            case .calories: return columnCal
+            case .reps, .weight: return nil
+            }
+        }
+        guard names.count > 1 else { return "Leave blank if you did not track it" }
+        return names.joined(separator: " · ") + " — leave one blank if you only track one"
+    }
+
     /// AMA-2462 — a load on a bodyweight movement is ADDED load, and the column
     /// has to say so. "+LB" is what stops a belted chin-up reading as 200 lb.
     static func columnWeight(for unit: WeightUnit, added: Bool) -> String {
