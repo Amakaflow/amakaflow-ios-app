@@ -91,14 +91,18 @@ struct LogbookGhost: Equatable, Hashable, Codable {
     func displayLine(
         unit: WeightUnit,
         scale: LogbookDistanceScale = .road,
-        distanceUnit: DistanceUnit = .stored
+        distanceUnit: DistanceUnit = .stored,
+        addedLoad: Bool = false
     ) -> String {
         if durationSeconds != nil || calories != nil || distanceMeters != nil {
             return metricDisplayLine(scale: scale, distanceUnit: distanceUnit)
         }
         let weightText: String
         if let weightKg {
-            weightText = WeightUnitMath.formatWeight(kg: weightKg, unit: unit)
+            // AMA-2462: a bodyweight movement's load is ADDED — the grid, the
+            // ghost and the sheet must all say +25, never 200.
+            weightText = (addedLoad ? "+" : "")
+                + WeightUnitMath.formatWeight(kg: weightKg, unit: unit)
         } else {
             weightText = "—"
         }
@@ -368,7 +372,12 @@ struct LogbookExerciseEntry: Identifiable, Equatable, Codable {
     /// existed carry no key and fall through to the derived defaults.
     var trackedFieldsOverride: [LogbookTrackedField]? {
         get { storedTrackedFields }
-        set { storedTrackedFields = newValue?.canonical }
+        set {
+            // An empty set would leave a row with nowhere to log. Clamp to nil
+            // ("never chosen") so the flag never has to mean two things.
+            let canonical = newValue?.canonical
+            storedTrackedFields = (canonical?.isEmpty ?? true) ? nil : canonical
+        }
     }
 
     /// What this exercise logs: the athlete's choice if they made one,
@@ -377,6 +386,8 @@ struct LogbookExerciseEntry: Identifiable, Equatable, Codable {
         if let storedTrackedFields, !storedTrackedFields.isEmpty {
             return storedTrackedFields.canonical
         }
+        // Nil, or an empty array smuggled in by a decoder, both mean
+        // "never chosen" — fall through to what the plan proposes.
         return LogbookTrackedField.defaults(
             forExerciseNamed: name,
             loggingKind: loggingKind,

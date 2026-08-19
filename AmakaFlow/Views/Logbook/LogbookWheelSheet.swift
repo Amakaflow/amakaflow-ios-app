@@ -20,6 +20,13 @@ struct LogbookWheelSheet: View {
         viewModel.wheelFocus?.mode == .metric
     }
 
+    /// AMA-2462 — the sheet must state the load the same way the grid does.
+    /// A belted chin-up reads +25 in both places or in neither.
+    private var showsAddedLoad: Bool {
+        guard let id = viewModel.wheelFocus?.exerciseID else { return false }
+        return viewModel.draft.entries.first { $0.id == id }?.showsAddedLoad ?? false
+    }
+
     private var weightValues: [Double] {
         WeightUnitMath.wheelValues(unit: viewModel.weightUnit, fine: viewModel.fineSteps)
     }
@@ -151,7 +158,7 @@ struct LogbookWheelSheet: View {
         let ghost = viewModel.ghost(for: focused.entry.id, setIndex: focused.set.index)
         let lastText: String
         if let ghost, !ghost.isEmpty {
-            lastText = "LAST TIME \(ghost.displayLine(unit: viewModel.weightUnit, scale: focused.entry.distanceScale))"
+            lastText = "LAST TIME \(ghost.displayLine(unit: viewModel.weightUnit, scale: focused.entry.distanceScale, addedLoad: focused.entry.showsAddedLoad))"
         } else {
             lastText = "LAST TIME —"
         }
@@ -186,7 +193,10 @@ struct LogbookWheelSheet: View {
     }
 
     private var weightWheel: some View {
-        Picker(LogbookCopy.columnWeight(for: viewModel.weightUnit), selection: $weightDisplay) {
+        Picker(
+            LogbookCopy.columnWeight(for: viewModel.weightUnit, added: showsAddedLoad),
+            selection: $weightDisplay
+        ) {
             ForEach(weightValues, id: \.self) { value in
                 Text(formatWheelWeight(value))
                     .font(.system(size: 22, weight: .semibold, design: .rounded))

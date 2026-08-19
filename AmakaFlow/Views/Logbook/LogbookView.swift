@@ -363,25 +363,31 @@ struct LogbookView: View {
                     .foregroundColor(DailyDriver.lime)
             }
             HStack(alignment: .center, spacing: 8) {
-                metricTapCell(
-                    label: LogbookCopy.columnTime,
-                    value: duration.map(LogbookMetricFormat.duration),
-                    focused: focused
-                ) {
-                    if let set {
-                        viewModel.openWheel(exerciseID: entry.id, setIndex: set.index, isWarmup: set.isWarmup)
+                // AMA-2462: only the fields this station tracks. A Ski Erg set
+                // to time must not carry a CAL cell it can never fill.
+                if entry.tracks(.time) {
+                    metricTapCell(
+                        label: LogbookCopy.columnTime,
+                        value: duration.map(LogbookMetricFormat.duration),
+                        focused: focused
+                    ) {
+                        if let set {
+                            viewModel.openWheel(exerciseID: entry.id, setIndex: set.index, isWarmup: set.isWarmup)
+                        }
                     }
                 }
-                metricTapCell(
-                    label: LogbookCopy.columnCal,
-                    value: calories.map { "\($0)" },
-                    focused: focused
-                ) {
-                    if let set {
-                        viewModel.openWheel(exerciseID: entry.id, setIndex: set.index, isWarmup: set.isWarmup)
+                if entry.tracks(.calories) {
+                    metricTapCell(
+                        label: LogbookCopy.columnCal,
+                        value: calories.map { "\($0)" },
+                        focused: focused
+                    ) {
+                        if let set {
+                            viewModel.openWheel(exerciseID: entry.id, setIndex: set.index, isWarmup: set.isWarmup)
+                        }
                     }
                 }
-                if distance != nil || entry.plannedDistanceMeters != nil {
+                if entry.tracks(.distance) {
                     metricTapCell(
                         label: LogbookCopy.distanceColumn(
                             scale: entry.distanceScale, unit: .stored

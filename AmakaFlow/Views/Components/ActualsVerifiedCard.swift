@@ -60,7 +60,9 @@ extension ExerciseActual {
         }
         if !checked.isEmpty {
             return Self.setBreakdownLine(
-                checked, scale: LogbookDistanceScale.forExercise(named: name)
+                checked,
+                scale: LogbookDistanceScale.forExercise(named: name),
+                addedLoad: LogbookMovementClass.isBodyweight(named: name)
             )
         }
         if let note = planned.note, !note.isEmpty, actualWeightKg == nil, planned.weightKg == nil {
@@ -85,7 +87,8 @@ extension ExerciseActual {
     /// Ski Erg actual must read 500 M, not 0.31 MI, for an athlete set to miles.
     static func setBreakdownLine(
         _ sets: [SetActual],
-        scale: LogbookDistanceScale = .road
+        scale: LogbookDistanceScale = .road,
+        addedLoad: Bool = false
     ) -> String {
         if sets.count == 1 {
             let only = sets[0]
@@ -113,9 +116,12 @@ extension ExerciseActual {
             }
             let weightText: String
             if let kilograms = set.weightKg {
-                weightText = kilograms == floor(kilograms)
+                let magnitude = kilograms == floor(kilograms)
                     ? "\(Int(kilograms))"
                     : String(format: "%.1f", kilograms)
+                // AMA-2462: verified history must not restate added load as
+                // absolute — a belted chin-up is +25 here as well.
+                weightText = (addedLoad ? "+" : "") + magnitude
             } else {
                 weightText = "—"
             }

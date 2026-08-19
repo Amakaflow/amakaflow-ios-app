@@ -169,4 +169,65 @@ final class LogbookTrackedFieldsTests: XCTestCase {
             "the athlete's choice must stick across a save and reopen"
         )
     }
+
+    // MARK: - CodeRabbit: a weighted pull-up is BOTH bodyweight and loaded
+
+    /// The flaw: one predicate was answering two different questions, so
+    /// "Weighted Pull-Up" fell out of the bodyweight class entirely and its
+    /// load rendered as absolute — 25, not +25.
+    func testWeightedBodyweightMovementStillReadsAsAddedLoad() {
+        let weighted = entry("Weighted Pull-Up")
+        XCTAssertTrue(weighted.tracks(.weight), "the name says it is loaded")
+        XCTAssertTrue(
+            weighted.showsAddedLoad,
+            "a weighted pull-up is still a bodyweight movement — the load is ADDED"
+        )
+        XCTAssertTrue(entry("Machine Dip").showsAddedLoad, "assisted/loaded dip is still added")
+    }
+
+    func testMovementClassAnswersTheTwoQuestionsSeparately() {
+        XCTAssertTrue(LogbookMovementClass.isBodyweight(named: "Weighted Pull-Up"))
+        XCTAssertTrue(LogbookMovementClass.nameImpliesLoad("Weighted Pull-Up"))
+        XCTAssertTrue(LogbookMovementClass.isBodyweight(named: "Chin-Up"))
+        XCTAssertFalse(LogbookMovementClass.nameImpliesLoad("Chin-Up"))
+        XCTAssertFalse(LogbookMovementClass.isBodyweight(named: "Back Squat"))
+    }
+
+    /// An empty choice would leave a row with nowhere to log, so it is never
+    /// stored — the flag means "never chosen" and nothing else.
+    func testTurningEverythingOffFallsBackRatherThanLeavingAnEmptyRow() {
+        var row = entry("Chin-Up")
+        row.trackedFieldsOverride = []
+        XCTAssertNil(row.trackedFieldsOverride, "an empty set is not stored")
+        XCTAssertFalse(row.trackedFields.isEmpty, "a row always has somewhere to log")
+    }
+
+    /// The ghost, the grid and the wheel sheet must agree.
+    func testGhostStatesAddedLoadWithThePrefix() {
+        // Derive the kilograms from 25 lb rather than hardcoding an approximation.
+        let twentyFivePounds = WeightUnitMath.kilograms(fromDisplay: 25, unit: .lbs)
+        let ghost = LogbookGhost(weightKg: twentyFivePounds, reps: 8, source: .lastActual)
+        XCTAssertEqual(
+            ghost.displayLine(unit: .lbs, addedLoad: true), "+25 × 8",
+            "an added-load ghost carries the +"
+        )
+        XCTAssertEqual(
+            ghost.displayLine(unit: .lbs, addedLoad: false), "25 × 8",
+            "an absolute-load ghost must not"
+        )
+    }
+
+    /// Verified history is where a mis-stated load does lasting damage.
+    func testVerifiedHistoryKeepsAddedLoadPrefix() {
+        let actual = ExerciseActual(
+            id: "chin_up",
+            name: "Chin-Up",
+            planned: ExerciseActualPlanned(sets: 1, reps: 8, weightKg: 11.3),
+            sets: [SetActual(index: 1, weightKg: 11.3, reps: 8, checkedAt: Date())]
+        )
+        XCTAssertTrue(
+            actual.actualDisplayLine.contains("+"),
+            "a belted chin-up must not read as an absolute lift — got \(actual.actualDisplayLine)"
+        )
+    }
 }

@@ -33,15 +33,26 @@ extension Array where Element == LogbookTrackedField {
 /// chin-up means ADDED weight (a belt or dumbbell), not absolute — a belted
 /// chin-up is `+25`, never `200`, and Progress must never read it as absolute.
 enum LogbookMovementClass {
-    /// Deliberately conservative: a false positive silently removes the load
-    /// column from a movement someone loads, which is worse than showing a
-    /// column they can turn off. Word-level matching for the same reason as
-    /// `LogbookDistanceScale` — no substrings.
+    /// Does the movement carry the athlete's own bodyweight? A weighted
+    /// pull-up still does — this asks about the MOVEMENT, not whether a load
+    /// happens to be attached, which is why `showsAddedLoad` uses this one.
+    ///
+    /// Word-level matching for the same reason as `LogbookDistanceScale`.
     static func isBodyweight(named name: String) -> Bool {
         let tokens = name.lowercased().split { !$0.isLetter && !$0.isNumber }.map(String.init)
         let joined = tokens.joined(separator: " ")
-        if loadedQualifiers.contains(where: tokens.contains) { return false }
         return bodyweightPhrases.contains { joined.contains($0) }
+    }
+
+    /// Does the NAME already say a load is attached? Separate question from
+    /// `isBodyweight`: a "Weighted Pull-Up" is both a bodyweight movement and
+    /// a loaded one, and conflating the two made it render `25` instead of
+    /// `+25`. Deliberately conservative — a false positive here silently
+    /// removes the load column from a movement someone loads, which is worse
+    /// than showing a column they can turn off.
+    static func nameImpliesLoad(_ name: String) -> Bool {
+        let tokens = name.lowercased().split { !$0.isLetter && !$0.isNumber }.map(String.init)
+        return loadedQualifiers.contains(where: tokens.contains)
     }
 
     /// If any of these appear, the athlete has already said it is loaded.
@@ -97,7 +108,9 @@ extension LogbookTrackedField {
         // Bodyweight and unloaded → reps only. The load column is absent rather
         // than sitting on a meaningless zero; `＋ Weight` promotes it in one tap.
         let bodyweightAndUnloaded =
-            LogbookMovementClass.isBodyweight(named: name) && prescription.weightKg == nil
+            LogbookMovementClass.isBodyweight(named: name)
+                && !LogbookMovementClass.nameImpliesLoad(name)
+                && prescription.weightKg == nil
         if !bodyweightAndUnloaded { fields.append(.weight) }
         return fields.canonical
     }
