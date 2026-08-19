@@ -53,6 +53,7 @@ struct ExerciseActualPlanDelta: Equatable {
 
 extension ExerciseActual {
     var actualDisplayLine: String {
+        guard isLogged else { return ActualsCopy.notLogged }
         // Logbook path: show every checked set (100×6 · 127.5×5 · 85×9), not one rollup weight.
         let checked = sets.filter(\.isChecked).sorted { lhs, rhs in
             if lhs.isWarmup != rhs.isWarmup { return lhs.isWarmup && !rhs.isWarmup }

@@ -161,6 +161,11 @@ enum LogbookRollup {
     }
 
     /// Actuals payload for save — checked sets only.
+    /// Checked sets only. An unchecked-but-filled set is a TARGET — it goes to
+    /// the load plan as next time's ghost (see `loadPlanTargets`), which is why
+    /// AMA-2472 does NOT widen this: the entered values were never lost, the
+    /// exercise was. AMA-2473 removes the tick entirely; that is where "filled
+    /// means logged" belongs, with its own design.
     static func actualsForSave(from entry: LogbookExerciseEntry) -> [SetActual] {
         entry.sets.filter(\.isChecked)
     }

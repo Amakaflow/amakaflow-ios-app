@@ -50,8 +50,12 @@ final class ActualsRepository: @unchecked Sendable {
         guard let rpe = session.rpe, (1...10).contains(rpe) else {
             throw ActualsRepositoryError.missingRPE
         }
+        // AMA-2472: a session keeps every exercise, including ones the athlete
+        // left blank — those are saved as NOT LOGGED rather than deleted, so
+        // "unconfirmed" is no longer a reason to refuse the whole session.
+        // The requirement is that SOMETHING was logged.
         let unconfirmed = session.exercises.filter { $0.confirmation == nil }.count
-        guard unconfirmed == 0, !session.exercises.isEmpty else {
+        guard session.exercises.contains(where: \.isLogged) else {
             throw ActualsRepositoryError.unconfirmedRows(unconfirmed)
         }
 
@@ -82,9 +86,10 @@ final class ActualsRepository: @unchecked Sendable {
                 .deleteAll(database)
 
             for (index, exercise) in session.exercises.enumerated() {
-                guard let confirmation = exercise.confirmation else {
-                    throw ActualsRepositoryError.unconfirmedRows(1)
-                }
+                // AMA-2472: an exercise with nothing recorded is stored as
+                // notLogged, not dropped and not refused.
+                let confirmation = exercise.confirmation
+                    ?? (exercise.isLogged ? .adjusted : .notLogged)
                 let rowId = "\(session.id)_\(exercise.id)"
                 var row = LocalActualsExerciseRow(
                     id: rowId,

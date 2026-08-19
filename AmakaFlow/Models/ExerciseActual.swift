@@ -10,6 +10,11 @@ import Foundation
 enum ExerciseActualConfirmation: String, Equatable, Codable {
     case asPlanned
     case adjusted
+    /// AMA-2472 — the athlete recorded nothing for this exercise. It stays in
+    /// the session and says so; it used to be deleted, which is how a six-move
+    /// workout saved as one. Rows stored before this case existed decode as
+    /// nil and are treated the same way.
+    case notLogged
 }
 
 struct ExerciseActualPlanned: Equatable, Codable {
@@ -268,5 +273,16 @@ struct ActualsStructureSection: Identifiable, Equatable {
         }
         flush()
         return result
+    }
+}
+
+extension ExerciseActual {
+    /// AMA-2472 — did the athlete record anything for this exercise? A saved
+    /// session keeps every exercise, so "present" and "logged" are no longer
+    /// the same question.
+    var isLogged: Bool {
+        if confirmation == .notLogged { return false }
+        if sets.contains(where: \.isChecked) { return true }
+        return actualSets > 0
     }
 }
