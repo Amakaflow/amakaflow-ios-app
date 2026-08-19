@@ -321,7 +321,7 @@ final class LogbookViewModel: ObservableObject { // swiftlint:disable:this type_
         // The gate moves from "every exercise logged" to "at least one" —
         // a session with nothing in it is still refused.
         guard session.exercises.contains(where: \.isLogged) else {
-            throw ActualsRepositoryError.unconfirmedRows(0)
+            throw ActualsRepositoryError.nothingLogged
         }
 
         session.rpe = rpe

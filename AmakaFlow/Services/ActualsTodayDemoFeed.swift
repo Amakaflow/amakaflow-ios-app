@@ -1078,7 +1078,15 @@ final class ActualsTodayDemoFeed: ObservableObject {
         // Unconditional: the session may no longer have a card in this list, and
         // the athlete's undo must still take effect.
         do {
-            try repository.unverifySession(id: sessionID)
+            // A missing row is ABSENCE, not failure: demo / in-memory cards
+            // never had one, and undo must still work for them (covered by
+            // testFeedApplyUnverifyMarksCardAsFillInDraft). Only a thrown
+            // write is a failure, and that must not be reported as an undo.
+            if try !repository.unverifySession(id: sessionID) {
+                actualsTodayDemoFeedLog.debug(
+                    "applyUnverify: no stored session for \(sessionID, privacy: .public) — in-memory card only"
+                )
+            }
         } catch {
             // The card must NOT flip to draft when the write failed — that is
             // the same lie as before, inverted: the UI would claim the undo

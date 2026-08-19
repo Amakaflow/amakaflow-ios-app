@@ -14,6 +14,10 @@ enum ActualsRepositoryError: LocalizedError, Equatable {
     case notReadyForVerifiedSave
     case missingRPE
     case unconfirmedRows(Int)
+    /// AMA-2472 — the session has exercises but the athlete logged none of
+    /// them. Distinct from `unconfirmedRows`, which reported "0 exercises
+    /// unconfirmed" here and explained nothing.
+    case nothingLogged
 
     var errorDescription: String? {
         switch self {
@@ -23,6 +27,8 @@ enum ActualsRepositoryError: LocalizedError, Equatable {
             return "RPE required"
         case .unconfirmedRows(let count):
             return "\(count) exercises unconfirmed"
+        case .nothingLogged:
+            return "Nothing logged yet"
         }
     }
 }
@@ -54,9 +60,8 @@ final class ActualsRepository: @unchecked Sendable {
         // left blank — those are saved as NOT LOGGED rather than deleted, so
         // "unconfirmed" is no longer a reason to refuse the whole session.
         // The requirement is that SOMETHING was logged.
-        let unconfirmed = session.exercises.filter { $0.confirmation == nil }.count
         guard session.exercises.contains(where: \.isLogged) else {
-            throw ActualsRepositoryError.unconfirmedRows(unconfirmed)
+            throw ActualsRepositoryError.nothingLogged
         }
 
         let timestamp = now()
@@ -300,13 +305,20 @@ final class ActualsRepository: @unchecked Sendable {
 
     /// Back to "Fill in" — actuals kept as a draft (exercise rows untouched), RPE
     /// cleared, and no longer counted as verified. Never deletes the session.
-    func unverifySession(id: String) throws {
+    /// AMA-2472 — returns whether a row was actually un-verified. A missing
+    /// session is not an error, but callers must not report an undo that never
+    /// touched storage, so silence is no longer indistinguishable from success.
+    @discardableResult
+    func unverifySession(id: String) throws -> Bool {
         try dbQueue.write { database in
-            guard var session = try LocalActualsSession.fetchOne(database, key: id) else { return }
+            guard var session = try LocalActualsSession.fetchOne(database, key: id) else {
+                return false
+            }
             session.verified = false
             session.rpe = nil
             session.isDraft = true
             try session.update(database)
+            return true
         }
     }
 

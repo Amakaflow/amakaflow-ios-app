@@ -337,20 +337,47 @@ final class LogbookSaveIntegrityTests: XCTestCase {
         )
     }
 
-    /// CodeRabbit: a failed write must not leave the UI claiming the undo
-    /// happened — that is the original bug inverted.
-    func testUndoDoesNotFlipTheCardWhenPersistenceFails() throws {
+    /// CodeRabbit wanted a card left untouched whenever no row was written.
+    /// Taken literally that breaks the demo / in-memory path, which never has
+    /// a row and must still un-verify — testFeedApplyUnverifyMarksCardAsFillInDraft
+    /// covers exactly that and fails under the literal rule. The real contract
+    /// is failure vs absence: a THROWN write must not be reported as an undo, a
+    /// missing row is simply nothing to persist. `unverifySession` now returns
+    /// which happened.
+    func testUnverifyReportsWhetherItChangedAStoredRow() throws {
         let repo = actualsRepo!
-        let feed = ActualsTodayDemoFeed(repository: repo)
-        feed.activateAfterConnect(sync: ActualsSyncProgressStore())
-        let before = feed.cards.map { $0.fillInSession?.verified }
+        let sessionID = "reports_\(UUID().uuidString)"
+        var session = ActualsFillInSession.lowerBodyPosteriorSample(id: sessionID)
+        session.rpe = 7
+        session.verified = true
+        session.exercises = session.exercises.map { exercise in
+            var copy = exercise
+            copy.confirmation = .asPlanned
+            return copy
+        }
+        try repo.saveVerifiedSession(session)
 
-        // No such session — unverifySession finds nothing to write.
-        feed.applyUnverify(sessionID: "does_not_exist_\(UUID().uuidString)")
-
-        XCTAssertEqual(
-            feed.cards.map { $0.fillInSession?.verified }, before,
-            "no card may change when nothing was persisted"
+        XCTAssertTrue(
+            try repo.unverifySession(id: sessionID),
+            "a stored row reports that it changed"
         )
+        XCTAssertFalse(
+            try repo.unverifySession(id: "no_such_\(UUID().uuidString)"),
+            "a missing row reports that nothing changed — silence is no longer success"
+        )
+    }
+
+    /// The "nothing logged" refusal now says so, instead of claiming
+    /// "0 exercises unconfirmed".
+    func testNothingLoggedReportsItsOwnError() {
+        let viewModel = self.viewModel([
+            entry("ski", "Ski Erg", checked: false, filled: false)
+        ])
+        XCTAssertThrowsError(try viewModel.saveVerified()) { error in
+            XCTAssertEqual(
+                error as? ActualsRepositoryError, .nothingLogged,
+                "a session with nothing logged says exactly that"
+            )
+        }
     }
 }
