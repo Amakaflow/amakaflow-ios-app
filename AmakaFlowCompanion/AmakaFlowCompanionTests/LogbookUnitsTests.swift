@@ -64,8 +64,8 @@ final class LogbookUnitsTests: XCTestCase {
     func testStoredUnitsHonourAnExplicitChoice() {
         UserDefaults.standard.set(WeightUnit.kg.rawValue, forKey: weightKey)
         UserDefaults.standard.set(DistanceUnit.km.rawValue, forKey: distanceKey)
-        XCTAssertEqual(WeightUnit.stored, .kg)
-        XCTAssertEqual(DistanceUnit.stored, .km)
+        XCTAssertEqual(WeightUnit.stored, .kg, "an explicit kg choice must win over the default")
+        XCTAssertEqual(DistanceUnit.stored, .km, "an explicit km choice must win over the default")
     }
 
     /// The two preferences are separate keys on purpose: training in kilograms while
@@ -88,7 +88,8 @@ final class LogbookUnitsTests: XCTestCase {
                 "\(name) must stay metres even for an athlete set to miles"
             )
             XCTAssertEqual(
-                LogbookMetricFormat.distance(meters: 500, scale: scale, unit: .km), "500 M"
+                LogbookMetricFormat.distance(meters: 500, scale: scale, unit: .km), "500 M",
+                "\(name) must stay metres for an athlete set to kilometres too"
             )
         }
     }
@@ -101,11 +102,13 @@ final class LogbookUnitsTests: XCTestCase {
             "a row is not a rower"
         )
         XCTAssertEqual(
-            LogbookDistanceScale.forExercise(named: "Barbell Bent-Over Row"), .road
+            LogbookDistanceScale.forExercise(named: "Barbell Bent-Over Row"), .road,
+            "a bent-over row is not a rower"
         )
         // "energy" contains the letters "erg".
         XCTAssertEqual(
-            LogbookDistanceScale.forExercise(named: "Energy System Intervals"), .road
+            LogbookDistanceScale.forExercise(named: "Energy System Intervals"), .road,
+            "\"energy\" contains the letters of \"erg\" — token matching must not be fooled"
         )
     }
 
@@ -113,19 +116,23 @@ final class LogbookUnitsTests: XCTestCase {
 
     func testRoadDistanceFollowsThePreference() {
         XCTAssertEqual(
-            LogbookMetricFormat.distance(meters: 8_046.72, scale: .road, unit: .mi), "5 MI"
+            LogbookMetricFormat.distance(meters: 8_046.72, scale: .road, unit: .mi), "5 MI",
+            "road distance must convert to the chosen unit"
         )
         XCTAssertEqual(
-            LogbookMetricFormat.distance(meters: 8_000, scale: .road, unit: .km), "8 KM"
+            LogbookMetricFormat.distance(meters: 8_000, scale: .road, unit: .km), "8 KM",
+            "road distance must convert to the chosen unit"
         )
     }
 
     func testRoadDistanceKeepsOneDecimalWhenItIsNotWhole() {
         XCTAssertEqual(
-            LogbookMetricFormat.distance(meters: 5_000, scale: .road, unit: .km), "5 KM"
+            LogbookMetricFormat.distance(meters: 5_000, scale: .road, unit: .km), "5 KM",
+            "a whole value drops the decimal"
         )
         XCTAssertEqual(
-            LogbookMetricFormat.distance(meters: 5_500, scale: .road, unit: .km), "5.5 KM"
+            LogbookMetricFormat.distance(meters: 5_500, scale: .road, unit: .km), "5.5 KM",
+            "a part value keeps one decimal"
         )
     }
 
@@ -133,11 +140,13 @@ final class LogbookUnitsTests: XCTestCase {
     func testGhostDistanceRendersInTheChosenScale() {
         let ghost = LogbookGhost(distanceMeters: 500, source: .prescription)
         XCTAssertEqual(
-            ghost.metricDisplayLine(scale: .machineMetres, distanceUnit: .mi), "500 M"
+            ghost.metricDisplayLine(scale: .machineMetres, distanceUnit: .mi), "500 M",
+            "an erg ghost stays metres"
         )
         let run = LogbookGhost(distanceMeters: 8_000, source: .prescription)
         XCTAssertEqual(
-            run.metricDisplayLine(scale: .road, distanceUnit: .km), "8 KM"
+            run.metricDisplayLine(scale: .road, distanceUnit: .km), "8 KM",
+            "a road ghost follows the preference"
         )
     }
 
@@ -155,6 +164,33 @@ final class LogbookUnitsTests: XCTestCase {
         XCTAssertEqual(
             entry.plannedLine, "PLANNED 500 M",
             "a prescribed erg distance is metres, not 0.31 miles"
+        )
+    }
+
+    /// CodeRabbit, correctly: the verified card defaulted to `.road`, so a
+    /// finished Ski Erg would read 0.31 MI for an athlete set to miles.
+    func testVerifiedErgActualReadsMetresNotMiles() {
+        UserDefaults.standard.set(DistanceUnit.mi.rawValue, forKey: distanceKey)
+        let actual = ExerciseActual(
+            id: "ski_erg",
+            name: "Ski Erg",
+            planned: ExerciseActualPlanned(sets: 1, reps: 1, weightKg: nil),
+            sets: [
+                SetActual(
+                    index: 1,
+                    durationSeconds: 112,
+                    distanceMeters: 500,
+                    checkedAt: Date()
+                )
+            ]
+        )
+        XCTAssertTrue(
+            actual.actualDisplayLine.contains("500 M"),
+            "a verified erg must report metres — got \(actual.actualDisplayLine)"
+        )
+        XCTAssertFalse(
+            actual.actualDisplayLine.contains("MI"),
+            "a verified erg must never be converted to miles"
         )
     }
 }
