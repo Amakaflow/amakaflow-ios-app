@@ -810,16 +810,25 @@ final class LogbookTests: XCTestCase {
         XCTAssertEqual(try draftRepo.loadPlan(workoutId: "ab_c", exerciseKey: "d")?.first?.weightKg, 50)
     }
 
-    func testSaveVerifiedThrowsWhenRPEMissing() {
+    /// AMA-2473 — RPE is no longer required to save: it is a question about a
+    /// session that already happened, and gating on it was part of the double
+    /// step David reported. An out-of-range value is still rejected, which is
+    /// what this now asserts.
+    func testSaveVerifiedRejectsAnOutOfRangeRPEButNotAMissingOne() {
+        var draft = sampleDraft()
+        draft.rpe = 99
         let vm = LogbookViewModel(
-            draft: sampleDraft(),
+            draft: draft,
             draftRepository: draftRepo,
             actualsRepository: actualsRepo,
             weightUnit: .kg,
             now: { self.fixedNow }
         )
         XCTAssertThrowsError(try vm.saveVerified()) { error in
-            XCTAssertEqual(error as? ActualsRepositoryError, .missingRPE)
+            XCTAssertEqual(
+                error as? ActualsRepositoryError, .missingRPE,
+                "an out-of-range RPE is still refused; a missing one is not"
+            )
         }
     }
 

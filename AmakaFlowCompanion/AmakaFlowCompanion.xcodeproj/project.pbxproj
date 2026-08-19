@@ -44,6 +44,7 @@
 		AMA2459REBLD /* EditorV2Session+Reorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2459REREF /* EditorV2Session+Reorder.swift */; };
 		AMA2462SCALEBLD /* LogbookDistanceScale.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2462SCALEREF /* LogbookDistanceScale.swift */; };
 		AMA2473STRIPBLD /* LogbookMetricStrip.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2473STRIPREF /* LogbookMetricStrip.swift */; };
+		AMA2473LOOKBLD /* LogbookViewModel+Lookups.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2473LOOKREF /* LogbookViewModel+Lookups.swift */; };
 		AMA2462FLDBLD /* LogbookTrackedFields.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2462FLDREF /* LogbookTrackedFields.swift */; };
 		AMA2462GHOSTBLD /* LogbookGhostLookup.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2462GHOSTREF /* LogbookGhostLookup.swift */; };
 		AMA2462WHLBLD /* LogbookWheelSheet+MetricWheels.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2462WHLREF /* LogbookWheelSheet+MetricWheels.swift */; };
@@ -899,6 +900,7 @@
 		AMA2459REREF /* EditorV2Session+Reorder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "EditorV2Session+Reorder.swift"; path = "../AmakaFlow/Models/EditorV2Session+Reorder.swift"; sourceTree = SOURCE_ROOT; };
 		AMA2462SCALEREF /* LogbookDistanceScale.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LogbookDistanceScale.swift; path = ../AmakaFlow/Models/LogbookDistanceScale.swift; sourceTree = SOURCE_ROOT; };
 		AMA2473STRIPREF /* LogbookMetricStrip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LogbookMetricStrip.swift; path = ../AmakaFlow/Services/LogbookMetricStrip.swift; sourceTree = SOURCE_ROOT; };
+		AMA2473LOOKREF /* LogbookViewModel+Lookups.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "LogbookViewModel+Lookups.swift"; path = "../AmakaFlow/ViewModels/LogbookViewModel+Lookups.swift"; sourceTree = SOURCE_ROOT; };
 		AMA2462FLDREF /* LogbookTrackedFields.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LogbookTrackedFields.swift; path = ../AmakaFlow/Models/LogbookTrackedFields.swift; sourceTree = SOURCE_ROOT; };
 		AMA2462GHOSTREF /* LogbookGhostLookup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LogbookGhostLookup.swift; path = ../AmakaFlow/ViewModels/LogbookGhostLookup.swift; sourceTree = SOURCE_ROOT; };
 		AMA2462WHLREF /* LogbookWheelSheet+MetricWheels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "LogbookWheelSheet+MetricWheels.swift"; path = "../AmakaFlow/Views/Logbook/LogbookWheelSheet+MetricWheels.swift"; sourceTree = SOURCE_ROOT; };
@@ -2039,6 +2041,7 @@
 				AMA2459REREF /* EditorV2Session+Reorder.swift */,
 				AMA2462SCALEREF /* LogbookDistanceScale.swift */,
 				AMA2473STRIPREF /* LogbookMetricStrip.swift */,
+				AMA2473LOOKREF /* LogbookViewModel+Lookups.swift */,
 				AMA2462FLDREF /* LogbookTrackedFields.swift */,
 				AMA2462GHOSTREF /* LogbookGhostLookup.swift */,
 				AMA2462WHLREF /* LogbookWheelSheet+MetricWheels.swift */,
@@ -3077,6 +3080,7 @@
 				AMA2459REBLD /* EditorV2Session+Reorder.swift in Sources */,
 				AMA2462SCALEBLD /* LogbookDistanceScale.swift in Sources */,
 				AMA2473STRIPBLD /* LogbookMetricStrip.swift in Sources */,
+				AMA2473LOOKBLD /* LogbookViewModel+Lookups.swift in Sources */,
 				AMA2462FLDBLD /* LogbookTrackedFields.swift in Sources */,
 				AMA2462GHOSTBLD /* LogbookGhostLookup.swift in Sources */,
 				AMA2462WHLBLD /* LogbookWheelSheet+MetricWheels.swift in Sources */,

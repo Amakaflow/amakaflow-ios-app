@@ -114,6 +114,24 @@ final class LogbookViewModel: ObservableObject { // swiftlint:disable:this type_
         touch()
     }
 
+    /// AMA-2473 — "Did it as written": every set in the session takes its
+    /// proposal and is logged, in one tap. The common case is that the athlete
+    /// did what the plan said; making them walk every row to say so is the
+    /// friction this ticket exists to remove.
+    @discardableResult
+    func logSessionAsWritten() -> Int {
+        var logged = 0
+        for entry in draft.entries {
+            for set in entry.sets where !set.isChecked {
+                confirmProposedRow(
+                    exerciseID: entry.id, setIndex: set.index, isWarmup: set.isWarmup
+                )
+                logged += 1
+            }
+        }
+        return logged
+    }
+
     /// AMA-2473 — the athlete taps the dim proposal (plan / last time) and it
     /// is logged as written. This is the "entered pre-weights before, just
     /// click confirm" case; the wheel is only for when the number differed.
@@ -318,7 +336,8 @@ final class LogbookViewModel: ObservableObject { // swiftlint:disable:this type_
     /// Companion-pending drafts persist only — reconcile / timeout create actuals.
     @discardableResult
     func saveVerified() throws -> LogbookSaveResult {
-        guard let rpe = draft.rpe, (1...10).contains(rpe) else {
+        // AMA-2473: Finish is never gated on RPE.
+        if let rpe = draft.rpe, !(1...10).contains(rpe) {
             throw ActualsRepositoryError.missingRPE
         }
 
@@ -349,7 +368,7 @@ final class LogbookViewModel: ObservableObject { // swiftlint:disable:this type_
             throw ActualsRepositoryError.nothingLogged
         }
 
-        session.rpe = rpe
+        session.rpe = draft.rpe
         session.verified = true
 
         try actualsRepository.saveVerifiedSession(session)
@@ -400,21 +419,6 @@ final class LogbookViewModel: ObservableObject { // swiftlint:disable:this type_
             break
         }
         return outcome
-    }
-
-    func ghost(for exerciseID: String, setIndex: Int) -> LogbookGhost? {
-        effectiveLastReference(exerciseID: exerciseID, setIndex: setIndex)
-    }
-
-    func focusedSet() -> (entry: LogbookExerciseEntry, set: SetActual)? {
-        guard let focus = wheelFocus,
-              let entry = draft.entries.first(where: { $0.id == focus.exerciseID }),
-              let set = entry.sets.first(where: {
-                  $0.index == focus.setIndex && $0.isWarmup == focus.isWarmup
-              }) else {
-            return nil
-        }
-        return (entry, set)
     }
 
     // MARK: - Private

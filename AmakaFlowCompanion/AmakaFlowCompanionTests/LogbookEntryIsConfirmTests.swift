@@ -174,4 +174,69 @@ final class LogbookEntryIsConfirmTests: XCTestCase {
             "no ticking and no confirm screen was needed to save it"
         )
     }
+
+    // MARK: - One tap for the whole session
+
+    /// "Did it as written — log": the common case should not cost a walk
+    /// through every row.
+    func testLoggingTheSessionAsWrittenLogsEverySet() throws {
+        let viewModel = self.viewModel([strengthEntry(), metricEntry()])
+
+        let logged = viewModel.logSessionAsWritten()
+
+        XCTAssertEqual(logged, 4, "3 strength sets + 1 machine bout")
+        XCTAssertTrue(
+            viewModel.draft.entries.allSatisfy { $0.sets.allSatisfy(\.isChecked) },
+            "every set is logged in one action"
+        )
+        XCTAssertEqual(
+            viewModel.draft.entries.first?.sets.first?.weightKg, 31.75,
+            "each set takes its proposal as the record"
+        )
+    }
+
+    func testLoggingAsWrittenLeavesAlreadyLoggedSetsAlone() {
+        let viewModel = self.viewModel([strengthEntry()])
+        viewModel.openWheel(exerciseID: "row", setIndex: 1)
+        viewModel.applyWheel(weightDisplay: 95, reps: 6, advance: false)
+
+        viewModel.logSessionAsWritten()
+
+        XCTAssertEqual(
+            set(viewModel)?.reps, 6,
+            "a set the athlete actually entered is not overwritten by the plan"
+        )
+        XCTAssertTrue(
+            set(viewModel, 1)?.isChecked ?? false,
+            "the untouched ones still get logged"
+        )
+    }
+
+    // MARK: - Finish is never gated on RPE
+
+    func testASessionSavesWithoutAnRPE() throws {
+        let viewModel = self.viewModel([strengthEntry()])
+        viewModel.logSessionAsWritten()
+
+        let result = try viewModel.saveVerified()
+
+        guard case .verified(let session) = result else {
+            return XCTFail("expected a verified session")
+        }
+        XCTAssertNil(session.rpe, "RPE is a question, not a toll")
+        XCTAssertTrue(session.verified, "the session still saved")
+    }
+
+    func testAnRPEStillSavesWhenGiven() throws {
+        let viewModel = self.viewModel([strengthEntry()])
+        viewModel.logSessionAsWritten()
+        viewModel.selectRPE(7)
+
+        let result = try viewModel.saveVerified()
+
+        guard case .verified(let session) = result else {
+            return XCTFail("expected a verified session")
+        }
+        XCTAssertEqual(session.rpe, 7, "an answer given is an answer kept")
+    }
 }

@@ -47,13 +47,17 @@ final class ActualsRepository: @unchecked Sendable {
         self.init(database: .shared, now: now)
     }
 
-    /// Persists a fully confirmed session with RPE. Sets `verified` only for
-    /// that complete payload — callers must pass `session.verified == true`.
+    /// Persists a logged session. Sets `verified` only for that payload —
+    /// callers must pass `session.verified == true`.
+    ///
+    /// AMA-2473: RPE is OPTIONAL. It is a question about a session that already
+    /// happened, so it must never block the save; a value that IS supplied
+    /// still has to be 1...10.
     func saveVerifiedSession(_ session: ActualsFillInSession) throws {
         guard session.verified else {
             throw ActualsRepositoryError.notReadyForVerifiedSave
         }
-        guard let rpe = session.rpe, (1...10).contains(rpe) else {
+        if let rpe = session.rpe, !(1...10).contains(rpe) {
             throw ActualsRepositoryError.missingRPE
         }
         // AMA-2472: a session keeps every exercise, including ones the athlete
@@ -70,7 +74,7 @@ final class ActualsRepository: @unchecked Sendable {
                 id: session.id,
                 title: session.title,
                 subtitle: session.subtitle,
-                rpe: rpe,
+                rpe: session.rpe,
                 verified: true,
                 savedAt: timestamp,
                 createdAt: timestamp,
