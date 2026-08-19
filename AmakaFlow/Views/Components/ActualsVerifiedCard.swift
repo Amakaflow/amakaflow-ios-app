@@ -87,7 +87,7 @@ extension ExerciseActual {
                     calories: only.calories,
                     distanceMeters: only.distanceMeters,
                     source: .lastActual
-                ).metricDisplayLine
+                ).metricDisplayLine()
             }
         }
         let parts = sets.map { set -> String in
@@ -101,7 +101,7 @@ extension ExerciseActual {
                     calories: set.calories,
                     distanceMeters: set.distanceMeters,
                     source: .lastActual
-                ).metricDisplayLine
+                ).metricDisplayLine()
             }
             let weightText: String
             if let kilograms = set.weightKg {

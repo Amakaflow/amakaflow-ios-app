@@ -151,7 +151,7 @@ struct LogbookWheelSheet: View {
         let ghost = viewModel.ghost(for: focused.entry.id, setIndex: focused.set.index)
         let lastText: String
         if let ghost, !ghost.isEmpty {
-            lastText = "LAST TIME \(ghost.displayLine(unit: viewModel.weightUnit))"
+            lastText = "LAST TIME \(ghost.displayLine(unit: viewModel.weightUnit, scale: focused.entry.distanceScale))"
         } else {
             lastText = "LAST TIME —"
         }
