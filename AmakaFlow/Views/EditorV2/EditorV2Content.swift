@@ -327,7 +327,11 @@ enum EditorV2Content {
             }
             .listStyle(.plain)
             .scrollContentBackground(.hidden)
-            .frame(minHeight: CGFloat(session.reorderRows.count) * 56)
+            // No fixed row-height math: group rows (title + caption + member
+            // names) are taller than loose rows, so a per-row estimate clips
+            // and lets Done overlap the list. The List owns scrolling; it is
+            // rendered outside the editor's ScrollView in reorder mode.
+            .frame(maxHeight: .infinity)
             .environment(\.editMode, .constant(.active))
 
             Button(action: actions.onExitReorder) {
