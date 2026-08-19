@@ -287,8 +287,10 @@ extension ExerciseActual {
     /// session keeps every exercise, so "present" and "logged" are no longer
     /// the same question.
     var isLogged: Bool {
-        if confirmation == .notLogged { return false }
-        if sets.contains(where: \.isChecked) { return true }
-        return actualSets > 0
+        // `actualSets` is NOT a witness: `init` defaults it to `planned.sets`,
+        // so an untouched exercise carries a non-zero count it never earned.
+        // Only a real confirmation or a checked set counts.
+        if let confirmation { return confirmation != .notLogged }
+        return sets.contains(where: \.isChecked)
     }
 }

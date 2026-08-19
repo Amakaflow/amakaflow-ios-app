@@ -322,4 +322,35 @@ final class LogbookSaveIntegrityTests: XCTestCase {
         )
         XCTAssertTrue(done.isConfirmed)
     }
+
+    /// CodeRabbit: `init` defaults `actualSets` to `planned.sets`, so an
+    /// untouched exercise would have reported itself as logged.
+    func testPlannedDefaultsDoNotCountAsLogged() {
+        let untouched = ExerciseActual(
+            id: "bench", name: "Bench Press",
+            planned: ExerciseActualPlanned(sets: 3, reps: 5, weightKg: 100)
+        )
+        XCTAssertEqual(untouched.actualSets, 3, "the planned default is still there")
+        XCTAssertFalse(
+            untouched.isLogged,
+            "but nothing was checked or confirmed, so nothing was logged"
+        )
+    }
+
+    /// CodeRabbit: a failed write must not leave the UI claiming the undo
+    /// happened — that is the original bug inverted.
+    func testUndoDoesNotFlipTheCardWhenPersistenceFails() throws {
+        let repo = actualsRepo!
+        let feed = ActualsTodayDemoFeed(repository: repo)
+        feed.activateAfterConnect(sync: ActualsSyncProgressStore())
+        let before = feed.cards.map { $0.fillInSession?.verified }
+
+        // No such session — unverifySession finds nothing to write.
+        feed.applyUnverify(sessionID: "does_not_exist_\(UUID().uuidString)")
+
+        XCTAssertEqual(
+            feed.cards.map { $0.fillInSession?.verified }, before,
+            "no card may change when nothing was persisted"
+        )
+    }
 }

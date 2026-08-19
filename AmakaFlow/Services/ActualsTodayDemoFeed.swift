@@ -1080,9 +1080,13 @@ final class ActualsTodayDemoFeed: ObservableObject {
         do {
             try repository.unverifySession(id: sessionID)
         } catch {
+            // The card must NOT flip to draft when the write failed — that is
+            // the same lie as before, inverted: the UI would claim the undo
+            // happened while the row stayed verified on disk.
             actualsTodayDemoFeedLog.error(
                 "applyUnverify failed to persist for \(sessionID, privacy: .public): \(String(describing: error), privacy: .public)"
             )
+            return
         }
         for index in cards.indices {
             guard let saved = cards[index].fillInSession, saved.id == sessionID
