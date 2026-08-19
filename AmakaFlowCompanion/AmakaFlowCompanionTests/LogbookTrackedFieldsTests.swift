@@ -230,4 +230,19 @@ final class LogbookTrackedFieldsTests: XCTestCase {
             "a belted chin-up must not read as an absolute lift — got \(actual.actualDisplayLine)"
         )
     }
+
+    /// CodeRabbit: the setter clamped empty to nil but the initializer did not,
+    /// so the same field could mean "chose nothing" one way in and "never
+    /// chosen" the other — and would persist as `"trackedFields": []`.
+    func testAnEmptyChoicePassedToTheInitializerIsNotStored() throws {
+        let row = entry("Chin-Up", tracked: [])
+        XCTAssertNil(row.trackedFieldsOverride, "an empty set is never stored, whichever way in")
+        XCTAssertEqual(row.trackedFields, [.reps], "it falls through to the plan's default")
+
+        let json = String(data: try JSONEncoder().encode(row), encoding: .utf8) ?? ""
+        XCTAssertFalse(
+            json.contains("\"trackedFields\":[]"),
+            "an empty array must not reach disk — got \(json)"
+        )
+    }
 }

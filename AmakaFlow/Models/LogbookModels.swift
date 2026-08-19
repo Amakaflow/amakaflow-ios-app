@@ -313,7 +313,11 @@ struct LogbookExerciseEntry: Identifiable, Equatable, Codable {
         self.plannedCalories = plannedCalories
         self.plannedDistanceMeters = plannedDistanceMeters
         self.cardioStrip = cardioStrip
-        self.storedTrackedFields = trackedFields?.canonical
+        // Same clamp as `trackedFieldsOverride`'s setter: an empty array must
+        // never be stored, or the field means "chose nothing" here and
+        // "never chosen" there — and it would encode as "trackedFields": [].
+        let canonicalTracked = trackedFields?.canonical
+        self.storedTrackedFields = (canonicalTracked?.isEmpty ?? true) ? nil : canonicalTracked
     }
 
     enum CodingKeys: String, CodingKey {
