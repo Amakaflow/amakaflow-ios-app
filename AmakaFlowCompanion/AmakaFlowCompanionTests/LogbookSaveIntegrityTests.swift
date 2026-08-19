@@ -164,4 +164,81 @@ final class LogbookSaveIntegrityTests: XCTestCase {
             "the plan's name survives the save"
         )
     }
+
+    // MARK: - Defect 3: undo must actually undo
+
+    /// Reported: "when you undo what is done it doesn't work, still stays in
+    /// the same state." `applyUnverify` rebuilt the in-memory card but never
+    /// told the repository, so the row stayed verified on disk and came back
+    /// verified on the next read.
+    func testUnverifyingAVerifiedSessionPersists() throws {
+        let repo = actualsRepo!
+        let sessionID = "undo_\(UUID().uuidString)"
+        var session = ActualsFillInSession.lowerBodyPosteriorSample(id: sessionID)
+        session.rpe = 7
+        session.verified = true
+        session.exercises = session.exercises.map { exercise in
+            var copy = exercise
+            copy.confirmation = .asPlanned
+            return copy
+        }
+        try repo.saveVerifiedSession(session)
+        XCTAssertEqual(
+            try repo.fetchSession(id: sessionID)?.verified, true,
+            "precondition: it is verified on disk"
+        )
+
+        let feed = ActualsTodayDemoFeed(repository: repo)
+        feed.activateAfterConnect(sync: ActualsSyncProgressStore())
+
+        feed.applyUnverify(sessionID: sessionID)
+
+        XCTAssertEqual(
+            try repo.fetchSession(id: sessionID)?.verified, false,
+            "and so does the stored session — otherwise undo is cosmetic"
+        )
+        XCTAssertNil(
+            try repo.fetchSession(id: sessionID)?.rpe,
+            "the RPE goes with it"
+        )
+    }
+
+    // MARK: - Defect 4: no load slot on a movement that cannot have one
+
+    /// Reported from the verified card: "Explosive Push-Up — −×12 · −×12".
+    /// A push-up has no external load, so the dash marks an empty slot that
+    /// does not exist.
+    func testBodyweightHistoryReadsAsRepsNotDashTimesReps() {
+        let actual = ExerciseActual(
+            id: "push",
+            name: "Explosive Push-Up",
+            planned: ExerciseActualPlanned(sets: 3, reps: 12, weightKg: nil),
+            sets: (1...2).map {
+                SetActual(index: $0, reps: 12, checkedAt: fixedNow)
+            }
+        )
+        XCTAssertEqual(
+            actual.actualDisplayLine, "12 · 12",
+            "no load slot on a bodyweight movement"
+        )
+        XCTAssertFalse(
+            actual.actualDisplayLine.contains("−×"),
+            "the reported string must not come back"
+        )
+    }
+
+    /// A loaded movement keeps its load slot, dash and all — the empty slot is
+    /// meaningful there.
+    func testLoadedHistoryStillShowsItsLoadSlot() {
+        let actual = ExerciseActual(
+            id: "row",
+            name: "Dumbbell Gorilla Row",
+            planned: ExerciseActualPlanned(sets: 1, reps: 10, weightKg: 31.75),
+            sets: [SetActual(index: 1, weightKg: 31.75, reps: 10, checkedAt: fixedNow)]
+        )
+        XCTAssertTrue(
+            actual.actualDisplayLine.contains("×"),
+            "a loaded movement still reads load × reps"
+        )
+    }
 }

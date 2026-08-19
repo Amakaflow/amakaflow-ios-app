@@ -63,7 +63,8 @@ extension ExerciseActual {
             return Self.setBreakdownLine(
                 checked,
                 scale: LogbookDistanceScale.forExercise(named: name),
-                addedLoad: LogbookMovementClass.isBodyweight(named: name)
+                addedLoad: LogbookMovementClass.isBodyweight(named: name),
+                bodyweight: LogbookMovementClass.isBodyweight(named: name)
             )
         }
         if let note = planned.note, !note.isEmpty, actualWeightKg == nil, planned.weightKg == nil {
@@ -89,7 +90,8 @@ extension ExerciseActual {
     static func setBreakdownLine(
         _ sets: [SetActual],
         scale: LogbookDistanceScale = .road,
-        addedLoad: Bool = false
+        addedLoad: Bool = false,
+        bodyweight: Bool = false
     ) -> String {
         if sets.count == 1 {
             let only = sets[0]
@@ -127,6 +129,12 @@ extension ExerciseActual {
                 weightText = "—"
             }
             let repsText = set.reps.map(String.init) ?? "—"
+            // AMA-2472: a bodyweight movement has no load slot to leave empty.
+            // "Explosive Push-Up — −×12" was reporting a dash where a weight
+            // would go on a movement that can never have one; it reads "12".
+            if set.weightKg == nil, bodyweight {
+                return prefix + repsText
+            }
             return "\(prefix)\(weightText)×\(repsText)"
         }
         let joined = parts.joined(separator: " · ")

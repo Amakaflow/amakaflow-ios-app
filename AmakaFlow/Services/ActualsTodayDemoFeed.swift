@@ -1072,6 +1072,18 @@ final class ActualsTodayDemoFeed: ObservableObject {
 
     /// AMA-2396 A3: un-verify — actuals kept as draft, RPE cleared, badge cleared.
     func applyUnverify(sessionID: String) {
+        // AMA-2472: undo has to reach storage. This used to rebuild the card in
+        // memory only, so the row stayed verified on disk and came back verified
+        // on the next read — "undo doesn't work, still stays in the same state".
+        // Unconditional: the session may no longer have a card in this list, and
+        // the athlete's undo must still take effect.
+        do {
+            try repository.unverifySession(id: sessionID)
+        } catch {
+            actualsTodayDemoFeedLog.error(
+                "applyUnverify failed to persist for \(sessionID, privacy: .public): \(String(describing: error), privacy: .public)"
+            )
+        }
         for index in cards.indices {
             guard let saved = cards[index].fillInSession, saved.id == sessionID
                     || cards[index].id == sessionID else { continue }
