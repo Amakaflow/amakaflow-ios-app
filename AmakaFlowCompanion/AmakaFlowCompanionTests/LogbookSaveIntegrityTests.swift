@@ -241,4 +241,85 @@ final class LogbookSaveIntegrityTests: XCTestCase {
             "a loaded movement still reads load × reps"
         )
     }
+
+    // MARK: - Keeping blanks must not leak into things that count real work
+
+    /// GUARD, not a reproduction. Unlogged exercises are now stored, so in
+    /// principle the newest row for a lift could be an empty one and the ghost
+    /// lookup could hand it back as "last time". I could NOT get that to happen
+    /// — with the SQL guard removed this test still passes, so the existing
+    /// ordering already favours the real result in this scenario. The guard in
+    /// `latestActual` is therefore defence-in-depth against a leak I have not
+    /// demonstrated, and this test locks in the behaviour either way.
+    func testABlankExerciseDoesNotBecomeNextTimesGhost() throws {
+        let repo = actualsRepo!
+        let key = "bench_press"
+
+        var real = ActualsFillInSession.lowerBodyPosteriorSample(id: "real_\(UUID().uuidString)")
+        real.rpe = 7
+        real.verified = true
+        real.exercises = [
+            ExerciseActual(
+                id: key, name: "Bench Press",
+                planned: ExerciseActualPlanned(sets: 3, reps: 5, weightKg: 100),
+                confirmation: .asPlanned, actualSets: 3, actualReps: 5, actualWeightKg: 100,
+                sets: [SetActual(index: 1, weightKg: 100, reps: 5, checkedAt: fixedNow)]
+            )
+        ]
+        try repo.saveVerifiedSession(real)
+        XCTAssertEqual(
+            try repo.latestActual(exerciseKey: key)?.weightKg, 100,
+            "precondition: the real lift is the ghost"
+        )
+
+        // A later session where the athlete left Bench Press blank.
+        var blank = ActualsFillInSession.lowerBodyPosteriorSample(id: "blank_\(UUID().uuidString)")
+        blank.rpe = 6
+        blank.verified = true
+        blank.exercises = [
+            ExerciseActual(
+                id: key, name: "Bench Press",
+                planned: ExerciseActualPlanned(sets: 3, reps: 5, weightKg: 100),
+                confirmation: .notLogged, actualSets: 0, actualReps: 5, actualWeightKg: nil
+            ),
+            ExerciseActual(
+                id: "squat", name: "Back Squat",
+                planned: ExerciseActualPlanned(sets: 3, reps: 5, weightKg: 80),
+                confirmation: .adjusted, actualSets: 3, actualReps: 5, actualWeightKg: 80,
+                sets: [SetActual(index: 1, weightKg: 80, reps: 5, checkedAt: fixedNow)]
+            )
+        ]
+        try repo.saveVerifiedSession(blank)
+
+        // Diagnostic: prove the blank row was actually stored and is the
+        // newest, otherwise this test cannot see the leak it claims to guard.
+        let stored = try repo.fetchSession(id: blank.id)
+        XCTAssertEqual(
+            stored?.exercises.first { $0.id == key }?.confirmation, .notLogged,
+            "the blank bench row must exist in the later session"
+        )
+        XCTAssertEqual(stored?.verified, true, "and that session must be verified")
+
+        XCTAssertEqual(
+            try repo.latestActual(exerciseKey: key)?.weightKg, 100,
+            "a blank row must never overwrite a real last-time ghost"
+        )
+    }
+
+    /// A blank exercise is an answer, not a confirmation.
+    func testNotLoggedDoesNotCountAsConfirmed() {
+        let blank = ExerciseActual(
+            id: "ski", name: "Ski Erg",
+            planned: ExerciseActualPlanned(sets: 3, reps: 1, weightKg: nil),
+            confirmation: .notLogged
+        )
+        XCTAssertFalse(blank.isConfirmed, "nothing was logged, so nothing was confirmed")
+
+        let done = ExerciseActual(
+            id: "push", name: "Explosive Push-Up",
+            planned: ExerciseActualPlanned(sets: 3, reps: 8, weightKg: nil),
+            confirmation: .adjusted
+        )
+        XCTAssertTrue(done.isConfirmed)
+    }
 }

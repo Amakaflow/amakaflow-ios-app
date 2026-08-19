@@ -102,7 +102,13 @@ struct ExerciseActual: Identifiable, Equatable, Codable {
         structureBlockIndex = try container.decodeIfPresent(Int.self, forKey: .structureBlockIndex)
     }
 
-    var isConfirmed: Bool { confirmation != nil }
+    /// AMA-2472: `.notLogged` is a recorded ANSWER, not a confirmation — the
+    /// athlete did not log this exercise. Counting it as confirmed would make
+    /// a blank row read as done in "n OF m CONFIRMED" and in `canSave`.
+    var isConfirmed: Bool {
+        guard let confirmation else { return false }
+        return confirmation != .notLogged
+    }
 
     var accessibilityRowID: String { "af_actuals_row_\(id)" }
     var accessibilityAsPlannedID: String { "af_actuals_row_\(id)_asplanned" }

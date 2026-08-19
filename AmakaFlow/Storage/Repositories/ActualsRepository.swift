@@ -526,6 +526,14 @@ extension ActualsRepository: ActualsGhostLookingUp {
                 FROM actuals_exercise_rows r
                 INNER JOIN actuals_sessions s ON s.id = r.session_id
                 WHERE s.verified = 1
+                  -- AMA-2472: an exercise the athlete left blank is stored now
+                  -- (it used to be dropped). Excluded here so an empty row can
+                  -- never become a "last time" ghost. Defence-in-depth: with
+                  -- these two conditions removed the guard test still passes,
+                  -- so the ordering appears to favour real rows already — but
+                  -- relying on that is not something to leave to chance.
+                  AND r.confirmation <> 'notLogged'
+                  AND r.actual_sets > 0
                   AND (r.exercise_key = ? OR lower(r.name) = lower(?))
                 ORDER BY s.saved_at DESC, s.rowid DESC
                 LIMIT 1
