@@ -92,7 +92,10 @@ final class LogbookTrackedFieldsTests: XCTestCase {
             belted.showsAddedLoad,
             "a belted chin-up logs +25, never 200 — Progress depends on this"
         )
-        XCTAssertEqual(LogbookCopy.columnWeight(for: .lbs, added: true), "+LB")
+        XCTAssertEqual(
+            LogbookCopy.columnWeight(for: .lbs, added: true), "+LB",
+            "the column header must say the load is added"
+        )
     }
 
     func testLoadOnABarbellMovementIsAbsoluteNotAdded() {
@@ -100,7 +103,10 @@ final class LogbookTrackedFieldsTests: XCTestCase {
             entry("Back Squat", weightKg: 100).showsAddedLoad,
             "a squat is absolute load — a + prefix would misstate it"
         )
-        XCTAssertEqual(LogbookCopy.columnWeight(for: .lbs, added: false), "LB")
+        XCTAssertEqual(
+            LogbookCopy.columnWeight(for: .lbs, added: false), "LB",
+            "absolute load carries no +"
+        )
     }
 
     // MARK: - Metric stations follow the plan
@@ -112,7 +118,10 @@ final class LogbookTrackedFieldsTests: XCTestCase {
 
     func testRowerPrescribedByDistanceTracksTimeAndDistance() {
         let rower = entry("Rower", kind: .metric, duration: 112, distance: 500)
-        XCTAssertEqual(rower.trackedFields, [.time, .distance])
+        XCTAssertEqual(
+            rower.trackedFields, [.time, .distance],
+            "a 500 m row is prescribed by distance and timed"
+        )
     }
 
     func testAssaultBikePrescribedByCaloriesTracksCalories() {

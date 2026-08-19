@@ -43,6 +43,7 @@
 		AMA2462SCALEBLD /* LogbookDistanceScale.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2462SCALEREF /* LogbookDistanceScale.swift */; };
 		AMA2462FLDBLD /* LogbookTrackedFields.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2462FLDREF /* LogbookTrackedFields.swift */; };
 		AMA2462GHOSTBLD /* LogbookGhostLookup.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2462GHOSTREF /* LogbookGhostLookup.swift */; };
+		AMA2462WHLBLD /* LogbookWheelSheet+MetricWheels.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2462WHLREF /* LogbookWheelSheet+MetricWheels.swift */; };
 		AMA2462SAVEBLD /* LogbookSaveResult.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2462SAVEREF /* LogbookSaveResult.swift */; };
 		AMA2393PICKBLD /* WorkoutSportPickerSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2393PICKREF /* WorkoutSportPickerSheet.swift */; };
 		AMA2393TSTBLD /* WorkoutSportHonestyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2393TSTREF /* WorkoutSportHonestyTests.swift */; };
@@ -893,6 +894,7 @@
 		AMA2462SCALEREF /* LogbookDistanceScale.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LogbookDistanceScale.swift; path = ../AmakaFlow/Models/LogbookDistanceScale.swift; sourceTree = SOURCE_ROOT; };
 		AMA2462FLDREF /* LogbookTrackedFields.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LogbookTrackedFields.swift; path = ../AmakaFlow/Models/LogbookTrackedFields.swift; sourceTree = SOURCE_ROOT; };
 		AMA2462GHOSTREF /* LogbookGhostLookup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LogbookGhostLookup.swift; path = ../AmakaFlow/ViewModels/LogbookGhostLookup.swift; sourceTree = SOURCE_ROOT; };
+		AMA2462WHLREF /* LogbookWheelSheet+MetricWheels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "LogbookWheelSheet+MetricWheels.swift"; path = "../AmakaFlow/Views/Logbook/LogbookWheelSheet+MetricWheels.swift"; sourceTree = SOURCE_ROOT; };
 		AMA2462SAVEREF /* LogbookSaveResult.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LogbookSaveResult.swift; path = ../AmakaFlow/ViewModels/LogbookSaveResult.swift; sourceTree = SOURCE_ROOT; };
 		AMA2393PICKREF /* WorkoutSportPickerSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutSportPickerSheet.swift; path = ../AmakaFlow/Views/WorkoutSportPickerSheet.swift; sourceTree = SOURCE_ROOT; };
 		AMA2393TSTREF /* WorkoutSportHonestyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutSportHonestyTests.swift; path = AmakaFlowCompanionTests/WorkoutSportHonestyTests.swift; sourceTree = "<group>"; };
@@ -2030,6 +2032,7 @@
 				AMA2462SCALEREF /* LogbookDistanceScale.swift */,
 				AMA2462FLDREF /* LogbookTrackedFields.swift */,
 				AMA2462GHOSTREF /* LogbookGhostLookup.swift */,
+				AMA2462WHLREF /* LogbookWheelSheet+MetricWheels.swift */,
 				AMA2462SAVEREF /* LogbookSaveResult.swift */,
 				AMA2395PACREF /* WorkoutPaceTable.swift */,
 				AMA2395ESTREF /* WorkoutDurationEstimate.swift */,
@@ -3063,6 +3066,7 @@
 				AMA2462SCALEBLD /* LogbookDistanceScale.swift in Sources */,
 				AMA2462FLDBLD /* LogbookTrackedFields.swift in Sources */,
 				AMA2462GHOSTBLD /* LogbookGhostLookup.swift in Sources */,
+				AMA2462WHLBLD /* LogbookWheelSheet+MetricWheels.swift in Sources */,
 				AMA2462SAVEBLD /* LogbookSaveResult.swift in Sources */,
 				AMA2395PACBLD /* WorkoutPaceTable.swift in Sources */,
 				AMA2395ESTBLD /* WorkoutDurationEstimate.swift in Sources */,

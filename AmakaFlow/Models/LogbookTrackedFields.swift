@@ -96,7 +96,7 @@ extension LogbookTrackedField {
     ) -> [LogbookTrackedField] {
         let suggestions: [LogbookTrackedField] = loggingKind == .metric
             ? [.time, .distance, .calories]
-            : [.reps, .weight, .time]
+            : [.reps, .weight]  // the strength grid renders load × reps only
         return (tracking + suggestions).canonical
     }
 

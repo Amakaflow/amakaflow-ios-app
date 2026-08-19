@@ -66,7 +66,10 @@ final class LogbookTrackPickerTests: XCTestCase {
     /// David's case: distance is not wanted on the ski, so it goes.
     func testTurningDistanceOffRemovesItFromTheSkiErg() {
         let viewModel = makeViewModel([skiErg()])
-        XCTAssertEqual(entry(viewModel, "ski_erg")?.trackedFields, [.time, .distance])
+        XCTAssertEqual(
+            entry(viewModel, "ski_erg")?.trackedFields, [.time, .distance],
+            "precondition: the plan proposes both"
+        )
 
         viewModel.toggleTrackedField(exerciseID: "ski_erg", field: .distance)
 
@@ -79,7 +82,10 @@ final class LogbookTrackPickerTests: XCTestCase {
 
     func testTurningAFieldOnAddsIt() {
         let viewModel = makeViewModel([chinUp()])
-        XCTAssertEqual(entry(viewModel, "chin_up")?.trackedFields, [.reps])
+        XCTAssertEqual(
+            entry(viewModel, "chin_up")?.trackedFields, [.reps],
+            "precondition: bodyweight, so reps only"
+        )
 
         viewModel.toggleTrackedField(exerciseID: "chin_up", field: .weight)
 
@@ -97,7 +103,10 @@ final class LogbookTrackPickerTests: XCTestCase {
         let viewModel = makeViewModel([skiErg()])
         viewModel.toggleTrackedField(exerciseID: "ski_erg", field: .distance)
         viewModel.toggleTrackedField(exerciseID: "ski_erg", field: .distance)
-        XCTAssertEqual(entry(viewModel, "ski_erg")?.trackedFields, [.time, .distance])
+        XCTAssertEqual(
+            entry(viewModel, "ski_erg")?.trackedFields, [.time, .distance],
+            "toggling twice returns to where it started"
+        )
     }
 
     // MARK: - A row always has somewhere to log
@@ -156,15 +165,16 @@ final class LogbookTrackPickerTests: XCTestCase {
         )
         XCTAssertEqual(
             LogbookTrackedField.offered(for: .strength, tracking: [.reps]),
-            [.weight, .reps, .time],
-            "a lift offers reps, load, and time for holds"
+            [.weight, .reps],
+            "a lift offers only what the strength grid can render — never a "
+                + "chip that leads to a field with no wheel behind it"
         )
     }
 
     func testAnActiveFieldIsAlwaysOfferedEvenIfUnusualForTheKind() {
         XCTAssertEqual(
             LogbookTrackedField.offered(for: .strength, tracking: [.reps, .calories]),
-            [.weight, .reps, .time, .calories],
+            [.weight, .reps, .calories],
             "a field already in use must never vanish from the control"
         )
     }
@@ -174,7 +184,10 @@ final class LogbookTrackPickerTests: XCTestCase {
     func testTogglingAnUnknownExerciseIsANoOp() {
         let viewModel = makeViewModel([chinUp()])
         viewModel.toggleTrackedField(exerciseID: "not_here", field: .weight)
-        XCTAssertEqual(entry(viewModel, "chin_up")?.trackedFields, [.reps])
+        XCTAssertEqual(
+            entry(viewModel, "chin_up")?.trackedFields, [.reps],
+            "an unknown id must not disturb a real entry"
+        )
     }
 
     // MARK: - The choice sticks
@@ -189,6 +202,47 @@ final class LogbookTrackPickerTests: XCTestCase {
         XCTAssertEqual(
             reloaded?.entries.first?.trackedFields, [.time],
             "the athlete's choice must be on disk, not just in memory"
+        )
+    }
+
+    // MARK: - No chip may lead nowhere
+
+    /// CodeRabbit's finding: a chip the athlete can turn on must be a field
+    /// they can then enter. The strength grid renders load and reps; the
+    /// machine sheet renders time, metres and calories. Offering anything else
+    /// creates a control that appears to work and silently does not.
+    func testEveryOfferedChipHasSomewhereToEnterIt() {
+        let strengthEditable: Set<LogbookTrackedField> = [.weight, .reps]
+        let metricEditable: Set<LogbookTrackedField> = [.time, .distance, .calories]
+
+        for tracking in [[LogbookTrackedField.reps], [.weight, .reps]] {
+            for field in LogbookTrackedField.offered(for: .strength, tracking: tracking) {
+                XCTAssertTrue(
+                    strengthEditable.contains(field),
+                    "\(field) is offered on a lift but the grid cannot enter it"
+                )
+            }
+        }
+        for tracking in [[LogbookTrackedField.time], [.time, .distance], [.calories]] {
+            for field in LogbookTrackedField.offered(for: .metric, tracking: tracking) {
+                XCTAssertTrue(
+                    metricEditable.contains(field),
+                    "\(field) is offered on a machine but the sheet cannot enter it"
+                )
+            }
+        }
+    }
+
+    /// A rower bout must be loggable, not merely displayable.
+    func testDistanceOnARowerRoundTripsThroughTheSet() {
+        let viewModel = makeViewModel([skiErg()])
+        viewModel.openWheel(exerciseID: "ski_erg", setIndex: 1)
+        viewModel.applyMetric(
+            durationSeconds: 112, calories: nil, distanceMeters: 500, advance: false
+        )
+        XCTAssertEqual(
+            entry(viewModel, "ski_erg")?.sets.first?.distanceMeters, 500,
+            "metres entered on a machine must persist onto the set"
         )
     }
 }

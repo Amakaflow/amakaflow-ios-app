@@ -283,7 +283,13 @@ struct LogbookView: View {
             Button {
                 viewModel.copyGhost(exerciseID: entry.id, setIndex: set.index, isWarmup: set.isWarmup)
             } label: {
-                Text(ghost?.displayLine(unit: viewModel.weightUnit, scale: entry.distanceScale) ?? "—")
+                Text(
+                    ghost?.displayLine(
+                        unit: viewModel.weightUnit,
+                        scale: entry.distanceScale,
+                        addedLoad: entry.showsAddedLoad
+                    ) ?? "—"
+                )
                     .font(.system(size: 12, design: .monospaced))
                     .foregroundColor(DailyDriver.foregroundDim)
                     .frame(maxWidth: .infinity, alignment: .leading)

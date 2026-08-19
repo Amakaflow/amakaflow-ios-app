@@ -84,6 +84,9 @@ enum LogbookCopy {
 
     static let trackRowAccessibilityPrefix = "af_logbook_track_"
 
+    /// Wheel header for the metres wheel — ergs are always metric.
+    static let columnDistanceShort = "M"
+
     /// AMA-2462 — a load on a bodyweight movement is ADDED load, and the column
     /// has to say so. "+LB" is what stops a belted chin-up reading as 200 lb.
     static func columnWeight(for unit: WeightUnit, added: Bool) -> String {
