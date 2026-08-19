@@ -68,4 +68,10 @@ enum LogbookCopy {
     static func columnWeight(for unit: WeightUnit) -> String {
         WeightUnitMath.unitLabel(unit)
     }
+
+    /// AMA-2462 — a load on a bodyweight movement is ADDED load, and the column
+    /// has to say so. "+LB" is what stops a belted chin-up reading as 200 lb.
+    static func columnWeight(for unit: WeightUnit, added: Bool) -> String {
+        added ? "+\(WeightUnitMath.unitLabel(unit))" : WeightUnitMath.unitLabel(unit)
+    }
 }
