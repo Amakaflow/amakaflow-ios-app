@@ -11,6 +11,22 @@
 import PhotosUI
 import SwiftUI
 
+/// AMA-2470 — small mono line so a reported failure maps to an `ingestion_attempts`
+/// row. Shown only when the server sent an attempt id; never a fabricated one.
+struct SocialImportAttemptIDLine: View {
+    let failure: SocialImportFailure
+
+    var body: some View {
+        if let attemptID = failure.attemptID {
+            Text("Report ID \(attemptID)")
+                .font(.system(size: 11, design: .monospaced))
+                .foregroundColor(Theme.Colors.textTertiary)
+                .textSelection(.enabled)
+                .accessibilityIdentifier("social_import_error_attempt_id")
+        }
+    }
+}
+
 struct SocialImportFlowView: View {
     enum Mode: Equatable {
         case url(platformHint: SocialImportPlatform?)
@@ -264,6 +280,19 @@ struct SocialImportFlowView: View {
             Text(failure.userMessage)
                 .font(Theme.Typography.caption)
                 .foregroundColor(Theme.Colors.textSecondary)
+            SocialImportAttemptIDLine(failure: failure)
+            // AMA-2470: the server's `retryable` decides the offer — never show a
+            // Retry that cannot succeed (private post, unsupported site, bad link).
+            if failure.isRetryable {
+                Button("Retry import") { startImport() }
+                    .buttonStyle(AFGhostButtonStyle(size: .sm, isWide: false))
+                    .disabled(!canSubmit || viewModel.phase == .importing)
+                    .accessibilityIdentifier("social_import_error_retry")
+            } else {
+                Button("Create manually") { dismiss() }
+                    .buttonStyle(AFGhostButtonStyle(size: .sm, isWide: false))
+                    .accessibilityIdentifier("social_import_error_create_manually")
+            }
         }
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -502,6 +531,9 @@ struct ImageImportView: View {
                         Text(failure.userMessage)
                             .font(Theme.Typography.caption)
                             .foregroundColor(Theme.Colors.textSecondary)
+                        // The picker above is the retry affordance here, so this
+                        // block only adds the report ID (AMA-2470).
+                        SocialImportAttemptIDLine(failure: failure)
                     }
                     .accessibilityIdentifier("image_import_error")
                 }

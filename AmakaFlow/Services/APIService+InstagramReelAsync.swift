@@ -197,7 +197,13 @@ extension APIService {
         case "completed":
             return try Self.workoutDataFromAsyncTaskResult(statusJSON["result"])
         case "failed":
+            // AMA-2470: the task body carries the same typed `failure` envelope as
+            // the sync path. Throw it directly so poll failures branch on a code
+            // instead of on prose; `error` remains the fallback for older servers.
             let message = (statusJSON["error"] as? String) ?? "Instagram reel import failed"
+            if let typed = IngestFailure.decode(fromEnvelope: statusJSON) {
+                throw SocialImportFailure.ingest(typed)
+            }
             throw APIError.serverErrorWithBody(400, message)
         default:
             return nil
