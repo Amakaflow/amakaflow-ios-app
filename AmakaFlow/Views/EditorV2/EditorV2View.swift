@@ -243,7 +243,7 @@ struct EditorV2View: View {
             onConfigGroup: { configGroupKey = $0 },
             onOpen: { editExerciseID = $0 },
             onMenu: { menuExerciseID = $0 },
-            onReorder: { _ = session.apply(.reorder(fromOffsets: $0, toOffset: $1)) },
+            onReorder: { session.reorderNested(fromOffsets: $0, toOffset: $1) },
             onExitReorder: { isReorderMode = false; showToast("Tap Save workout to keep changes") },
             onAdd: { replaceExerciseID = nil; addTargetGroupID = nil; addSheetOpen = true },
             onAddHere: { groupID in replaceExerciseID = nil; addTargetGroupID = groupID; addSheetOpen = true },

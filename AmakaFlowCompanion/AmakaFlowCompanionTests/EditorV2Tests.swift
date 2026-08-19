@@ -1064,3 +1064,95 @@ final class EditorV2ReorderOrderTests: XCTestCase {
         )
     }
 }
+
+// MARK: - Nested reorder (exercises inside a block)
+
+final class EditorV2NestedReorderTests: XCTestCase {
+    /// One circuit block holding three exercises — the single-block workout
+    /// that made the old sheet useless (one undraggable row).
+    private func circuitSession() -> EditorV2Session {
+        var session = EditorV2Session(title: "Bike ski row repeats")
+        _ = session.apply(.addBlock(.circuit))
+        _ = session.addExercise(named: "Ski Erg")
+        _ = session.addExercise(named: "Rowing Machine")
+        _ = session.addExercise(named: "Spin / Indoor Bike")
+        return session
+    }
+
+    /// Loose exercise + a superset pair — exercises both translation branches.
+    /// Built loose-first: `.addBlock` pins a format group that would absorb
+    /// every later add, leaving no loose row to drag.
+    private func mixedSession() -> EditorV2Session {
+        var session = EditorV2Session(title: "Mixed")
+        let skiErg = session.addExercise(named: "Ski Erg")
+        let row = session.addExercise(named: "Rowing Machine")
+        _ = session.addExercise(named: "Plank")
+        session.pairSuperset(sourceID: row.id, targetID: skiErg.id)
+        return session
+    }
+
+    func testNestedRowsExpandGroupMembers() {
+        let session = circuitSession()
+        let rows = session.reorderNestedRows
+        XCTAssertEqual(rows.count, 4, "1 group header + 3 member rows")
+        XCTAssertFalse(rows[0].isMember)
+        XCTAssertEqual(
+            rows.dropFirst().map(\.title),
+            ["Ski Erg", "Rowing Machine", "Spin / Indoor Bike"]
+        )
+        XCTAssertTrue(rows.dropFirst().allSatisfy(\.isMember))
+        let headerKey = rows[0].groupKey
+        XCTAssertNotNil(headerKey)
+        XCTAssertTrue(rows.dropFirst().allSatisfy { $0.groupKey == headerKey })
+    }
+
+    func testMemberDragReordersWithinGroup() {
+        var session = circuitSession()
+        // Drag "Spin / Indoor Bike" (flat 3) to the top of the members (flat 1).
+        let result = session.reorderNested(fromOffsets: IndexSet(integer: 3), toOffset: 1)
+        XCTAssertEqual(result, .applied)
+        XCTAssertEqual(
+            session.reorderNestedRows.dropFirst().map(\.title),
+            ["Spin / Indoor Bike", "Ski Erg", "Rowing Machine"]
+        )
+    }
+
+    func testMemberDragOutsideItsGroupIsRejected() {
+        var session = circuitSession()
+        let before = session.reorderNestedRows.map(\.id)
+        // Drop a member above the group header — nowhere legal to land.
+        let result = session.reorderNested(fromOffsets: IndexSet(integer: 2), toOffset: 0)
+        XCTAssertNotEqual(result, .applied)
+        XCTAssertEqual(session.reorderNestedRows.map(\.id), before, "a rejected drag must change nothing")
+    }
+
+    func testHeaderDragStillReordersTopLevelRows() {
+        var session = mixedSession()
+        let rows = session.reorderNestedRows
+        XCTAssertEqual(rows.count, 4, "group header + 2 members + 1 loose")
+        guard let plankFlat = rows.firstIndex(where: { $0.title == "Plank" && !$0.isMember }) else {
+            return XCTFail("fixture must contain a loose Plank row")
+        }
+        // Drag the loose "Plank" row to the very top.
+        let result = session.reorderNested(fromOffsets: IndexSet(integer: plankFlat), toOffset: 0)
+        XCTAssertEqual(result, .applied)
+        let after = session.reorderNestedRows
+        XCTAssertEqual(after.first?.title, "Plank")
+        // The superset stayed intact behind it: header then both members.
+        // Member sequence is pairSuperset's business, not this test's.
+        XCTAssertFalse(after[1].isMember, "row after Plank must be the group header, got \(after[1].title)")
+        XCTAssertEqual(
+            Set(after.dropFirst(2).map(\.title)), ["Ski Erg", "Rowing Machine"],
+            "both superset members must survive the drag"
+        )
+        XCTAssertTrue(after.dropFirst(2).allSatisfy(\.isMember))
+    }
+
+    func testMemberReorderSurvivesRoundTrip() {
+        var session = circuitSession()
+        _ = session.reorderNested(fromOffsets: IndexSet(integer: 3), toOffset: 1)
+        let key = session.reorderNestedRows[0].groupKey ?? ""
+        let memberNames = session.groups[key]?.memberIDs.compactMap { session.exercises[$0]?.name }
+        XCTAssertEqual(memberNames, ["Spin / Indoor Bike", "Ski Erg", "Rowing Machine"])
+    }
+}
