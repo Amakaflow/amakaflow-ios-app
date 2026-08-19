@@ -88,9 +88,13 @@ struct LogbookGhost: Equatable, Hashable, Codable {
             && distanceMeters == nil
     }
 
-    func displayLine(unit: WeightUnit) -> String {
+    func displayLine(
+        unit: WeightUnit,
+        scale: LogbookDistanceScale = .road,
+        distanceUnit: DistanceUnit = .stored
+    ) -> String {
         if durationSeconds != nil || calories != nil || distanceMeters != nil {
-            return metricDisplayLine
+            return metricDisplayLine(scale: scale, distanceUnit: distanceUnit)
         }
         let weightText: String
         if let weightKg {
@@ -102,7 +106,10 @@ struct LogbookGhost: Equatable, Hashable, Codable {
         return "\(weightText) × \(repsText)"
     }
 
-    var metricDisplayLine: String {
+    func metricDisplayLine(
+        scale: LogbookDistanceScale = .road,
+        distanceUnit: DistanceUnit = .stored
+    ) -> String {
         var parts: [String] = []
         if let durationSeconds {
             parts.append(LogbookMetricFormat.duration(durationSeconds))
@@ -111,7 +118,11 @@ struct LogbookGhost: Equatable, Hashable, Codable {
             parts.append("\(calories) CAL")
         }
         if let distanceMeters {
-            parts.append(LogbookMetricFormat.distanceKm(distanceMeters))
+            parts.append(
+                LogbookMetricFormat.distance(
+                    meters: distanceMeters, scale: scale, unit: distanceUnit
+                )
+            )
         }
         return parts.isEmpty ? "—" : parts.joined(separator: " · ")
     }
@@ -125,12 +136,32 @@ enum LogbookMetricFormat {
         return String(format: "%d:%02d", minutes, secs)
     }
 
-    static func distanceKm(_ meters: Double) -> String {
-        let kilometers = meters / 1000
-        if abs(kilometers - kilometers.rounded()) < 0.05 {
-            return "\(Int(kilometers.rounded())) KM"
+    static let metersPerMile = 1_609.344
+
+    /// AMA-2462 — distance rendered at the right SCALE for the station, then in
+    /// the athlete's unit. An erg is always metres; road-scale work follows the
+    /// `user.distanceUnit` preference, which nothing read before this.
+    static func distance(
+        meters: Double,
+        scale: LogbookDistanceScale,
+        unit: DistanceUnit
+    ) -> String {
+        switch scale {
+        case .machineMetres:
+            return "\(Int(meters.rounded())) M"
+        case .road:
+            switch unit {
+            case .km: return round1(meters / 1_000, suffix: "KM")
+            case .mi: return round1(meters / metersPerMile, suffix: "MI")
+            }
         }
-        return String(format: "%.1f KM", kilometers)
+    }
+
+    private static func round1(_ value: Double, suffix: String) -> String {
+        if abs(value - value.rounded()) < 0.05 {
+            return "\(Int(value.rounded())) \(suffix)"
+        }
+        return String(format: "%.1f \(suffix)", value)
     }
 }
 
@@ -319,6 +350,9 @@ struct LogbookExerciseEntry: Identifiable, Equatable, Codable {
 
     var isMetric: Bool { loggingKind == .metric }
 
+    /// AMA-2462 — an erg reports metres whatever the athlete picked.
+    var distanceScale: LogbookDistanceScale { .forExercise(named: name) }
+
     var plannedLine: String {
         if isMetric {
             if let plannedDurationSeconds {
@@ -328,7 +362,7 @@ struct LogbookExerciseEntry: Identifiable, Equatable, Codable {
                 return "PLANNED \(plannedCalories) CAL"
             }
             if let plannedDistanceMeters {
-                return "PLANNED \(LogbookMetricFormat.distanceKm(Double(plannedDistanceMeters)))"
+                return "PLANNED \(LogbookMetricFormat.distance(meters: Double(plannedDistanceMeters), scale: distanceScale, unit: .stored))"
             }
             return "PLANNED TIME / CAL"
         }

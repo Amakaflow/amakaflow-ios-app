@@ -123,11 +123,32 @@ extension WeightUnit {
     var logbookLabel: String { WeightUnitMath.unitLabel(self) }
 
     /// Settings preference — canonical storage stays kilograms.
+    ///
+    /// AMA-2462: the fallback MUST match `EditProfileView`'s
+    /// `@AppStorage(...) weightUnit: WeightUnit = .lbs`. `@AppStorage` writes
+    /// nothing until the picker is touched, so a different default here means
+    /// Profile displays "lbs" while the logbook renders kilograms — the screen
+    /// lying about its own setting.
     static var stored: WeightUnit {
         if let raw = UserDefaults.standard.string(forKey: DefaultsKey.userWeightUnit.rawValue),
            let parsed = WeightUnit(rawValue: raw) {
             return parsed
         }
-        return .kg
+        return .lbs
+    }
+}
+
+extension DistanceUnit {
+    /// Settings preference — canonical storage stays metres.
+    ///
+    /// AMA-2462: matches `EditProfileView`'s `distanceUnit: DistanceUnit = .mi`
+    /// for the same reason as `WeightUnit.stored`. Before this, nothing in the
+    /// app read `user.distanceUnit` at all — choosing miles changed nothing.
+    static var stored: DistanceUnit {
+        if let raw = UserDefaults.standard.string(forKey: DefaultsKey.userDistanceUnit.rawValue),
+           let parsed = DistanceUnit(rawValue: raw) {
+            return parsed
+        }
+        return .mi
     }
 }

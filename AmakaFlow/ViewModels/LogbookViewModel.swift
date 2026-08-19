@@ -445,7 +445,11 @@ final class LogbookViewModel: ObservableObject { // swiftlint:disable:this type_
         let existingNote = draft.entries[eIdx].cardioStrip?.sourceNote
         draft.entries[eIdx].cardioStrip = LogbookCardioStrip(
             timeText: duration.map(LogbookMetricFormat.duration),
-            distanceText: distance.map(LogbookMetricFormat.distanceKm),
+            distanceText: distance.map {
+                LogbookMetricFormat.distance(
+                    meters: $0, scale: draft.entries[eIdx].distanceScale, unit: .stored
+                )
+            },
             caloriesText: calories.map { "\($0)" },
             heartRateText: draft.entries[eIdx].cardioStrip?.heartRateText,
             sourceNote: existingNote

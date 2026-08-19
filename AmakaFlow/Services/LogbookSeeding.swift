@@ -191,7 +191,11 @@ enum LogbookSeeding { // swiftlint:disable:this type_body_length
                 return "\(calories) CAL"
             }
             if let meters = item.distanceMeters {
-                return LogbookMetricFormat.distanceKm(Double(meters))
+                return LogbookMetricFormat.distance(
+                    meters: Double(meters),
+                    scale: .forExercise(named: item.name),
+                    unit: .stored
+                )
             }
             return "TIME / CAL"
         }()
@@ -211,7 +215,13 @@ enum LogbookSeeding { // swiftlint:disable:this type_body_length
             plannedDistanceMeters: item.distanceMeters,
             cardioStrip: LogbookCardioStrip(
                 timeText: item.durationSeconds.map(LogbookMetricFormat.duration),
-                distanceText: item.distanceMeters.map { LogbookMetricFormat.distanceKm(Double($0)) },
+                distanceText: item.distanceMeters.map {
+                    LogbookMetricFormat.distance(
+                        meters: Double($0),
+                        scale: .forExercise(named: item.name),
+                        unit: .stored
+                    )
+                },
                 caloriesText: item.calories.map { "\($0)" },
                 heartRateText: nil,
                 sourceNote: nil

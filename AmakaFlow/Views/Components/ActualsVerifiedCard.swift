@@ -59,7 +59,9 @@ extension ExerciseActual {
             return lhs.index < rhs.index
         }
         if !checked.isEmpty {
-            return Self.setBreakdownLine(checked)
+            return Self.setBreakdownLine(
+                checked, scale: LogbookDistanceScale.forExercise(named: name)
+            )
         }
         if let note = planned.note, !note.isEmpty, actualWeightKg == nil, planned.weightKg == nil {
             // Preserve note-style lines when weight wasn't tracked (e.g. split squat 2×20).
@@ -78,7 +80,13 @@ extension ExerciseActual {
     }
 
     /// Per-set WHAT YOU DID line from logbook checks.
-    static func setBreakdownLine(_ sets: [SetActual]) -> String {
+    ///
+    /// AMA-2462: takes the scale rather than defaulting to `.road` — a verified
+    /// Ski Erg actual must read 500 M, not 0.31 MI, for an athlete set to miles.
+    static func setBreakdownLine(
+        _ sets: [SetActual],
+        scale: LogbookDistanceScale = .road
+    ) -> String {
         if sets.count == 1 {
             let only = sets[0]
             if only.durationSeconds != nil || only.calories != nil || only.distanceMeters != nil {
@@ -87,7 +95,7 @@ extension ExerciseActual {
                     calories: only.calories,
                     distanceMeters: only.distanceMeters,
                     source: .lastActual
-                ).metricDisplayLine
+                ).metricDisplayLine(scale: scale)
             }
         }
         let parts = sets.map { set -> String in
@@ -101,7 +109,7 @@ extension ExerciseActual {
                     calories: set.calories,
                     distanceMeters: set.distanceMeters,
                     source: .lastActual
-                ).metricDisplayLine
+                ).metricDisplayLine(scale: scale)
             }
             let weightText: String
             if let kilograms = set.weightKg {

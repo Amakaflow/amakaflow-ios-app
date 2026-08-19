@@ -226,7 +226,7 @@ struct LogbookView: View {
             Button {
                 viewModel.copyGhost(exerciseID: entry.id, setIndex: set.index, isWarmup: set.isWarmup)
             } label: {
-                Text(ghost?.displayLine(unit: viewModel.weightUnit) ?? "—")
+                Text(ghost?.displayLine(unit: viewModel.weightUnit, scale: entry.distanceScale) ?? "—")
                     .font(.system(size: 12, design: .monospaced))
                     .foregroundColor(DailyDriver.foregroundDim)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -364,8 +364,14 @@ struct LogbookView: View {
                 }
                 if distance != nil || entry.plannedDistanceMeters != nil {
                     metricTapCell(
-                        label: LogbookCopy.columnKm,
-                        value: distance.map(LogbookMetricFormat.distanceKm),
+                        label: LogbookCopy.distanceColumn(
+                            scale: entry.distanceScale, unit: .stored
+                        ),
+                        value: distance.map {
+                            LogbookMetricFormat.distance(
+                                meters: $0, scale: entry.distanceScale, unit: .stored
+                            )
+                        },
                         focused: focused
                     ) {
                         if let set {

@@ -40,6 +40,14 @@ enum LogbookCopy {
     static let columnTime = "TIME"
     static let columnCal = "CAL"
     static let columnKm = "KM"
+
+    /// AMA-2462 — the distance column names the unit it is actually showing.
+    static func distanceColumn(scale: LogbookDistanceScale, unit: DistanceUnit) -> String {
+        switch scale {
+        case .machineMetres: return "M"
+        case .road: return unit == .km ? "KM" : "MI"
+        }
+    }
     static let columnHr = "HR"
     static let notesPlaceholder = "NOTES"
     static let pickWorkoutTitle = "Pick a workout"
