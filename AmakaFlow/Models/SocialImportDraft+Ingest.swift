@@ -3,9 +3,17 @@
 //  AmakaFlow
 //
 //  AMA-2285 / AMA-2305 — lenient ingest JSON → draft.
+//  AMA-2470 — a SUCCESS payload that decodes to zero exercises is OUR contract
+//  bug, not a bad reel: report mobile_contract_mismatch, never content copy.
 //
 
 import Foundation
+import os.log
+
+private let ingestDeliveryLogger = Logger(
+    subsystem: "com.myamaka.AmakaFlowCompanion",
+    category: "IngestDeliveryContract"
+)
 
 extension SocialImportDraft {
     /// Lenient decode of ingestor JSON (title/name/blocks or thin title/source).
@@ -52,12 +60,13 @@ extension SocialImportDraft {
             }
         }
 
-        // AMA-2302: never invent placeholder exercises for thin ingest — recoverable parse.
+        // AMA-2302: never invent placeholder exercises for thin ingest.
+        // AMA-2470: the server owns thin-content verdicts (zero_exercises_extracted)
+        // and returns them as HTTP failures. Reaching here means a 2xx payload we
+        // could not read — a delivery-contract bug on our side. Say so honestly and
+        // report it; a successful parse must never be shown as a bad reel.
         if exercises.isEmpty {
-            let thinProvenance = Self.postProvenance(from: object)
-            throw SocialImportFailure.parse(
-                message: SocialImportFailure.thinContentUserMessage(provenance: thinProvenance)
-            )
+            throw Self.deliveryContractMismatch(object: object, sourceURL: sourceURL, platform: platform)
         }
 
         if parsedBlocks.isEmpty && !exercises.isEmpty {
@@ -89,6 +98,51 @@ extension SocialImportDraft {
         )
         PrescriptionDefaults.applyToDraft(&draft)
         return draft
+    }
+
+    /// AMA-2470 — telemetry + typed failure for a 2xx ingest payload we couldn't read.
+    /// Logged as `ingest_delivery_contract_mismatch` so the shape that broke is
+    /// countable, and reported to Sentry — this is an engineering bug, not a content one.
+    private static func deliveryContractMismatch(
+        object: [String: Any],
+        sourceURL: String?,
+        platform: SocialImportPlatform
+    ) -> SocialImportFailure {
+        let topLevelKeys = object.keys.sorted().joined(separator: ",")
+        let safeURL = SocialImportTransportDiagnostics.sanitizedTelemetryURL(sourceURL)
+        let attemptID = (object["attempt_id"] as? String) ?? (object["attemptId"] as? String)
+
+        ingestDeliveryLogger.error(
+            """
+            ingest_delivery_contract_mismatch platform=\(platform.rawValue, privacy: .public) \
+            source_url=\(safeURL, privacy: .public) \
+            top_level_keys=\(topLevelKeys, privacy: .public) \
+            attempt_id=\(attemptID ?? "none", privacy: .public)
+            """
+        )
+
+        let failure = IngestFailure(
+            code: .mobileContractMismatch,
+            stage: .deliveryContract,
+            retryable: false,
+            serverUserMessage: nil,
+            attemptID: attemptID
+        )
+        let reported = SocialImportFailure.ingest(failure)
+        Task { @MainActor in
+            SentryService.shared.captureError(
+                reported,
+                context: [
+                    "ingest_failure_code": IngestFailureCode.mobileContractMismatch.rawValue,
+                    "ingest_stage": IngestStage.deliveryContract.rawValue,
+                    "platform": platform.rawValue,
+                    "source_url": safeURL,
+                    "top_level_keys": topLevelKeys,
+                    "attempt_id": attemptID ?? "none"
+                ]
+            )
+        }
+        return reported
     }
 
     /// AMA-2414: map one ingest block JSON → one or more draft blocks.

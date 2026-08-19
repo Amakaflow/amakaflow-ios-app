@@ -177,10 +177,11 @@ final class SocialImportTests: XCTestCase {
         XCTAssertTrue(draft.equipmentEmpty)
     }
 
-    /// AMA-2302: title-only 200 JSON must not invent "Add exercises" — throw parse.
-    func testDraftDecodeThinPayloadThrowsParseFailure() {
+    /// AMA-2302 / AMA-2470: a 200 payload we can't read is OUR delivery-contract bug —
+    /// never "Add exercises", and never blamed on the post's content.
+    func testDraftDecodeZeroExerciseSuccessPayloadIsContractMismatchNotContentFailure() {
         let json = """
-        {"title":"Thin Import","source":"https://youtube.com/watch?v=1"}
+        {"title":"Thin Import","source":"https://youtube.com/watch?v=1","attempt_id":"att_123"}
         """.data(using: .utf8)!
         XCTAssertThrowsError(
             try SocialImportDraft.fromIngestJSON(
@@ -191,16 +192,31 @@ final class SocialImportTests: XCTestCase {
                 equipmentNote: nil
             )
         ) { error in
-            guard let failure = error as? SocialImportFailure,
-                  case .parse(let message) = failure else {
-                return XCTFail("Expected SocialImportFailure.parse, got \(error)")
+            guard let failure = error as? SocialImportFailure else {
+                return XCTFail("Expected SocialImportFailure, got \(error)")
             }
-            XCTAssertFalse(message.lowercased().contains("add exercises"))
-            XCTAssertTrue(
-                message.lowercased().contains("exercise")
-                    || message.lowercased().contains("couldn't find")
-                    || message.lowercased().contains("extract"),
-                "Expected honest thin-fail copy, got: \(message)"
+            XCTAssertEqual(
+                failure.ingestCode,
+                .mobileContractMismatch,
+                "A successful parse that decodes to zero exercises must report mobile_contract_mismatch"
+            )
+            XCTAssertFalse(
+                failure.isRetryable,
+                "A contract mismatch is our bug — retrying the same payload cannot fix it"
+            )
+            XCTAssertEqual(
+                failure.attemptID,
+                "att_123",
+                "attempt_id from the payload must survive so a report maps to an ingestion_attempts row"
+            )
+            let message = failure.userMessage.lowercased()
+            XCTAssertFalse(
+                message.contains("add exercises"),
+                "Must not invent placeholder-exercise copy: \(failure.userMessage)"
+            )
+            XCTAssertFalse(
+                message.contains("couldn't find enough exercises"),
+                "Must not blame the post's content for our decode bug: \(failure.userMessage)"
             )
         }
     }
@@ -241,8 +257,9 @@ final class SocialImportTests: XCTestCase {
         )
     }
 
-    /// AMA-2302: title-only 200 via ViewModel → .failed(.parse), no draft with placeholders.
-    func testImportURLThinSuccessJSONFailsWithoutPlaceholderExercises() async {
+    /// AMA-2302 / AMA-2470: title-only 200 via ViewModel → failed with a contract-mismatch
+    /// code, no draft with placeholders, and no copy blaming the reel.
+    func testImportURLZeroExerciseSuccessJSONFailsAsContractMismatch() async {
         mockAPI.ingestSocialURLResult = .success(
             #"{"title":"Nippard Thin","sport":"strength"}"#.data(using: .utf8)!
         )
@@ -252,17 +269,126 @@ final class SocialImportTests: XCTestCase {
         guard case .failed(let failure) = sut.phase else {
             return XCTFail("Expected failed, got \(sut.phase)")
         }
-        guard case .parse(let message) = failure else {
-            return XCTFail("Expected parse failure, got \(failure)")
-        }
-        XCTAssertNil(sut.draft)
-        XCTAssertTrue(
-            message.lowercased().contains("exercise")
-                || message.lowercased().contains("couldn't find")
-                || message.lowercased().contains("extract"),
-            "Expected thin-fail copy, got: \(message)"
+        XCTAssertEqual(
+            failure.ingestCode,
+            .mobileContractMismatch,
+            "A 2xx payload we can't decode must be reported as our contract bug"
         )
-        XCTAssertFalse(message.lowercased().contains("add exercises"))
+        XCTAssertNil(sut.draft, "No placeholder draft may survive a contract mismatch")
+        XCTAssertFalse(
+            failure.userMessage.lowercased().contains("add exercises"),
+            "Expected no placeholder copy, got: \(failure.userMessage)"
+        )
+    }
+
+    // MARK: - AMA-2470 typed ingest failure envelope
+
+    private func typedFailureBody(
+        code: String,
+        stage: String,
+        retryable: Bool,
+        userMessage: String,
+        debug: String = "{}"
+    ) -> String {
+        """
+        {"detail":"legacy prose the client must stop sniffing",
+         "failure":{"code":"\(code)","stage":"\(stage)","retryable":\(retryable),
+         "user_message":"\(userMessage)","debug":\(debug)}}
+        """
+    }
+
+    func testTypedPrivateContentFailureIsNotRetryableAndUsesServerCopy() {
+        let body = typedFailureBody(
+            code: "content_private_or_login_required",
+            stage: "fetch",
+            retryable: false,
+            userMessage: "This post is private, so we can't read it."
+        )
+        let mapped = SocialImportFailure.map(APIError.serverErrorWithBody(422, body))
+        guard let failure = mapped else {
+            return XCTFail("Expected a mapped failure for a typed 422 envelope")
+        }
+        XCTAssertEqual(
+            failure.ingestCode,
+            .contentPrivateOrLoginRequired,
+            "Typed code must drive the branch, not the legacy detail prose"
+        )
+        XCTAssertFalse(failure.isRetryable, "A private post cannot become readable by retrying")
+        XCTAssertEqual(
+            failure.userMessage,
+            "This post is private, so we can't read it.",
+            "The server's user_message must win over local copy"
+        )
+        XCTAssertFalse(
+            failure.userMessage.lowercased().contains("exercise"),
+            "Private content must not be reported as a thin caption: \(failure.userMessage)"
+        )
+    }
+
+    func testTypedFetchOutageIsRetryableAndDistinctFromThinContent() {
+        let body = typedFailureBody(
+            code: "apify_timeout",
+            stage: "fetch",
+            retryable: true,
+            userMessage: "Fetching this post took too long. Try again in a moment."
+        )
+        let mapped = SocialImportFailure.map(APIError.serverErrorWithBody(504, body))
+        guard let failure = mapped else {
+            return XCTFail("Expected a mapped failure for a typed 504 envelope")
+        }
+        XCTAssertEqual(failure.ingestCode, .apifyTimeout, "Fetch-stage outage must keep its own code")
+        XCTAssertTrue(failure.isRetryable, "Server said retryable — the sheet must offer Retry")
+        XCTAssertFalse(
+            failure.userMessage.lowercased().contains("internet"),
+            "A server-side fetch timeout must not read as an offline device: \(failure.userMessage)"
+        )
+    }
+
+    func testTypedFailureSurfacesAttemptIDFromDebug() {
+        let body = typedFailureBody(
+            code: "zero_exercises_extracted",
+            stage: "extract",
+            retryable: false,
+            userMessage: "We couldn't find enough exercises in this post.",
+            debug: #"{"attempt_id":"att_9f2"}"#
+        )
+        let mapped = SocialImportFailure.map(APIError.serverErrorWithBody(400, body))
+        XCTAssertEqual(
+            mapped?.attemptID,
+            "att_9f2",
+            "attempt_id must be surfaced so a user report maps to an ingestion_attempts row"
+        )
+        XCTAssertEqual(mapped?.ingestCode, .zeroExercisesExtracted)
+    }
+
+    func testUnknownWireCodeDecodesToUnknownRatherThanFallingBackToProse() {
+        let body = typedFailureBody(
+            code: "some_future_code",
+            stage: "some_future_stage",
+            retryable: true,
+            userMessage: "Import failed. Try again in a moment."
+        )
+        let mapped = SocialImportFailure.map(APIError.serverErrorWithBody(500, body))
+        XCTAssertEqual(
+            mapped?.ingestCode,
+            .unknown,
+            "An unrecognised code must decode to .unknown, never fail the decode"
+        )
+        XCTAssertEqual(mapped?.isRetryable, true, "Retryability still comes from the server flag")
+        XCTAssertFalse(
+            mapped?.userMessage.lowercased().contains("server error") ?? true,
+            "Typed envelope must win over the generic 5xx copy: \(String(describing: mapped?.userMessage))"
+        )
+    }
+
+    /// The sniffers stay alive for servers/endpoints that never send `failure`.
+    func testLegacyBodyWithoutFailureEnvelopeStillUsesSubstringFallback() {
+        let body = "{\"detail\":\"thin_payload: ladder finished with fewer than 2 exercises\"}"
+        let mapped = SocialImportFailure.map(APIError.serverErrorWithBody(400, body))
+        guard let failure = mapped, case .parse = failure else {
+            return XCTFail("Expected the legacy parse fallback, got \(String(describing: mapped))")
+        }
+        XCTAssertNil(failure.ingestCode, "A body without `failure` must not fabricate a typed code")
     }
 
     func testNormalizeReelsURLToReel() {
@@ -895,6 +1021,62 @@ final class APIServiceSocialImportContractTests: XCTestCase {
             XCTAssertTrue(body.contains("Apify scrape failed"), body)
         } catch {
             XCTFail("Expected APIError, got \(error)")
+        }
+    }
+
+    /// AMA-2470: the async poll body carries the same typed envelope as the sync path.
+    func testInstagramPollFailedStatusWithTypedFailureThrowsTypedIngestFailure() async {
+        APIService.resetSocialAsyncPollTimingOverridesForTests()
+        defer { APIService.resetSocialAsyncPollTimingOverridesForTests() }
+
+        MockURLProtocol.requestHandler = { request in
+            let path = request.url?.path ?? ""
+            let response = HTTPURLResponse(
+                url: request.url!,
+                statusCode: 200,
+                httpVersion: "HTTP/1.1",
+                headerFields: ["Content-Type": "application/json"]
+            )!
+
+            if path.contains("/ingest/instagram_reel/async") {
+                return (response, #"{"task_id":"task-typed","status":"queued"}"#.data(using: .utf8)!)
+            }
+
+            if path.contains("/tasks/") {
+                let data = """
+                {"status":"failed","error":"content unavailable",
+                 "failure":{"code":"content_unavailable","stage":"fetch","retryable":false,
+                 "user_message":"This post isn't available — it may have been removed.",
+                 "debug":{"attempt_id":"att_poll_1"}}}
+                """.data(using: .utf8)!
+                return (response, data)
+            }
+
+            XCTFail("Unexpected request path: \(path)")
+            return (response, Data())
+        }
+
+        do {
+            assertPairedForIngest()
+            _ = try await api.ingestSocialURL(
+                url: "https://www.instagram.com/reel/gone/",
+                platform: .instagram
+            )
+            XCTFail("Expected a typed failure from the poll to abort the import")
+        } catch let failure as SocialImportFailure {
+            XCTAssertEqual(
+                failure.ingestCode,
+                .contentUnavailable,
+                "The poll body's typed code must reach the client unchanged"
+            )
+            XCTAssertFalse(failure.isRetryable, "A removed post cannot be retried into existence")
+            XCTAssertEqual(
+                failure.attemptID,
+                "att_poll_1",
+                "Poll failures must carry attempt_id for the report line"
+            )
+        } catch {
+            XCTFail("Expected SocialImportFailure, got \(error)")
         }
     }
 

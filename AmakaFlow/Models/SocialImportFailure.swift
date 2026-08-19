@@ -26,6 +26,8 @@ enum SocialImportFailure: Error, Equatable {
     case parse(message: String)
     /// Offline, timeout, or transport failure.
     case network(message: String)
+    /// AMA-2470: server sent a typed ingest failure — branch on the code, don't sniff prose.
+    case ingest(IngestFailure)
 
     /// Short title for alerts / banners.
     var title: String {
@@ -34,6 +36,7 @@ enum SocialImportFailure: Error, Equatable {
         case .tier: return "Pro required"
         case .parse: return "Couldn't parse workout"
         case .network: return "Network error"
+        case .ingest(let failure): return failure.title
         }
     }
 
@@ -42,6 +45,8 @@ enum SocialImportFailure: Error, Equatable {
         switch self {
         case .auth(let message), .tier(let message), .parse(let message), .network(let message):
             return message
+        case .ingest(let failure):
+            return failure.userMessage
         }
     }
 
@@ -50,7 +55,23 @@ enum SocialImportFailure: Error, Equatable {
         case .auth, .tier: return false
         case .parse: return true
         case .network: return true
+        // The server owns retryability for typed failures (AMA-2470).
+        case .ingest(let failure): return failure.retryable
         }
+    }
+
+    /// `ingestion_attempts` row id when the server sent one — shown as a small mono
+    /// line so an athlete's report maps to a row (AMA-2465 / AMA-2470).
+    var attemptID: String? {
+        guard case .ingest(let failure) = self else { return nil }
+        guard let id = failure.attemptID, !id.isEmpty else { return nil }
+        return id
+    }
+
+    /// Typed code when the server provided one — nil for legacy / transport failures.
+    var ingestCode: IngestFailureCode? {
+        guard case .ingest(let failure) = self else { return nil }
+        return failure.code
     }
 
     /// Map API / URL / CTA errors into a social-import failure category.
@@ -109,6 +130,11 @@ enum SocialImportFailure: Error, Equatable {
     private static func mapHTTP(status: Int, body: String?) -> SocialImportFailure {
         if status == 401 {
             return .auth(message: "Session expired. Sign in again, then retry.")
+        }
+        // AMA-2470: typed envelope wins over every substring sniff below. The
+        // sniffers stay as the fallback for bodies without a `failure` object.
+        if let typed = IngestFailure.decode(fromBody: body) {
+            return .ingest(typed)
         }
         if status == 403 {
             let detail = body.flatMap { CTAError.extractField("detail", from: $0) }

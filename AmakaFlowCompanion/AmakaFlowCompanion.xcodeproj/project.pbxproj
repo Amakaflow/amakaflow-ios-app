@@ -160,6 +160,7 @@
 		AK00FIX003B /* WorkoutSaveRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = AK00FIX003A /* WorkoutSaveRequest.swift */; };
 		AMA2285DRFTBLD /* SocialImportDraft.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2285DRFTREF /* SocialImportDraft.swift */; };
 		AMA2285FAILBLD /* SocialImportFailure.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2285FAILREF /* SocialImportFailure.swift */; };
+		AMA2470INGFAILBLD /* IngestFailure.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2470INGFAILREF /* IngestFailure.swift */; };
 		AMA2285VMBLD /* SocialImportViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2285VMREF /* SocialImportViewModel.swift */; };
 		AMA2285FLOWBLD /* SocialImportFlowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2285FLOWREF /* SocialImportFlowView.swift */; };
 		AMA2285PREVBLD /* SocialImportPreviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2285PREVREF /* SocialImportPreviewView.swift */; };
@@ -998,6 +999,7 @@
 		AK00FIX003A /* WorkoutSaveRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutSaveRequest.swift; path = ../AmakaFlow/Models/WorkoutSaveRequest.swift; sourceTree = "<group>"; };
 		AMA2285DRFTREF /* SocialImportDraft.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SocialImportDraft.swift; path = ../AmakaFlow/Models/SocialImportDraft.swift; sourceTree = SOURCE_ROOT; };
 		AMA2285FAILREF /* SocialImportFailure.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SocialImportFailure.swift; path = ../AmakaFlow/Models/SocialImportFailure.swift; sourceTree = SOURCE_ROOT; };
+		AMA2470INGFAILREF /* IngestFailure.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = IngestFailure.swift; path = ../AmakaFlow/Models/IngestFailure.swift; sourceTree = SOURCE_ROOT; };
 		AMA2285VMREF /* SocialImportViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SocialImportViewModel.swift; path = ../AmakaFlow/ViewModels/SocialImportViewModel.swift; sourceTree = SOURCE_ROOT; };
 		AMA2285FLOWREF /* SocialImportFlowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SocialImportFlowView.swift; path = ../AmakaFlow/Views/SocialImport/SocialImportFlowView.swift; sourceTree = SOURCE_ROOT; };
 		AMA2285PREVREF /* SocialImportPreviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SocialImportPreviewView.swift; path = ../AmakaFlow/Views/SocialImport/SocialImportPreviewView.swift; sourceTree = SOURCE_ROOT; };
@@ -2428,6 +2430,7 @@
 				AMA2290BFILLREF /* StrengthBackfill.swift */,
 				AMA2289DETDTLREF /* WorkoutCompletionDetail+TodayDiary.swift */,
 				AMA2285FAILREF /* SocialImportFailure.swift */,
+				AMA2470INGFAILREF /* IngestFailure.swift */,
 				AK00FIX004A /* StravaService.swift */,
 				AK00FIX005A /* AnalyticsViewModel.swift */,
 				AK00FIX006A /* CalendarSyncViewModel.swift */,
@@ -3211,6 +3214,7 @@
 				AK00FIX003B /* WorkoutSaveRequest.swift in Sources */,
 				AMA2285DRFTBLD /* SocialImportDraft.swift in Sources */,
 				AMA2285FAILBLD /* SocialImportFailure.swift in Sources */,
+				AMA2470INGFAILBLD /* IngestFailure.swift in Sources */,
 				AMA2285VMBLD /* SocialImportViewModel.swift in Sources */,
 				AMA2285FLOWBLD /* SocialImportFlowView.swift in Sources */,
 				AMA2285PREVBLD /* SocialImportPreviewView.swift in Sources */,
