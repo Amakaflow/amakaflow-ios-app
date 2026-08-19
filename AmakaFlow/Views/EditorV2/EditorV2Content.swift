@@ -308,15 +308,18 @@ enum EditorV2Content {
         actions: EditorV2ContentActions
     ) -> some View {
         VStack(spacing: 6) {
+            // AMA-2459: iterate `session.reorderRows` — the SAME sequence
+            // `.reorder(fromOffsets:toOffset:)` mutates. This previously walked
+            // `exercises.values` (an unordered dictionary, at exercise rather
+            // than row granularity), so the sheet showed a different order than
+            // the editor and the drag offsets indexed a different collection
+            // than the command changed.
             List {
-                ForEach(Array(session.exercises.values)) { exercise in
-                    EditorV2ReorderRow(
-                        exercise: exercise,
-                        group: exercise.groupKey.flatMap { session.groups[$0] }
-                    )
-                    .listRowInsets(EdgeInsets(top: 3, leading: 0, bottom: 3, trailing: 0))
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
+                ForEach(session.reorderRows) { entry in
+                    EditorV2ReorderRow(entry: entry)
+                        .listRowInsets(EdgeInsets(top: 3, leading: 0, bottom: 3, trailing: 0))
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
                 }
                 .onMove { indices, offset in
                     actions.onReorder(indices, offset)
@@ -324,7 +327,7 @@ enum EditorV2Content {
             }
             .listStyle(.plain)
             .scrollContentBackground(.hidden)
-            .frame(minHeight: CGFloat(session.order.count) * 56)
+            .frame(minHeight: CGFloat(session.reorderRows.count) * 56)
             .environment(\.editMode, .constant(.active))
 
             Button(action: actions.onExitReorder) {
