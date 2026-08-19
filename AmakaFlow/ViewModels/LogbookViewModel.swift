@@ -8,13 +8,6 @@
 import Combine
 import Foundation
 
-enum LogbookSaveResult: Equatable {
-    /// Phone / after / live — verified actuals written.
-    case verified(ActualsFillInSession)
-    /// Companion notepad saved; draft stays pending until reconcile / timeout.
-    case companionPendingPersisted
-}
-
 @MainActor
 final class LogbookViewModel: ObservableObject { // swiftlint:disable:this type_body_length
     @Published private(set) var draft: LogDraft
@@ -211,12 +204,12 @@ final class LogbookViewModel: ObservableObject { // swiftlint:disable:this type_
     /// 1) Last verified actual  2) previous filled set in this exercise  3) prescription
     func effectiveLastReference(exerciseID: String, setIndex: Int) -> LogbookGhost? {
         guard let entry = draft.entries.first(where: { $0.id == exerciseID }) else { return nil }
-        if let historical = storedGhost(for: entry, setIndex: setIndex),
+        if let historical = LogbookGhostLookup.stored(for: entry, setIndex: setIndex),
            historical.source == .lastActual,
            !historical.isEmpty {
             return historical
         }
-        if let previous = previousFilledSet(in: entry, before: setIndex) {
+        if let previous = LogbookGhostLookup.previousFilledSet(in: entry, before: setIndex) {
             return LogbookGhost(
                 weightKg: previous.weightKg,
                 reps: previous.reps,
@@ -226,7 +219,7 @@ final class LogbookViewModel: ObservableObject { // swiftlint:disable:this type_
                 source: .lastActual
             )
         }
-        if let historical = storedGhost(for: entry, setIndex: setIndex), !historical.isEmpty {
+        if let historical = LogbookGhostLookup.stored(for: entry, setIndex: setIndex), !historical.isEmpty {
             return historical
         }
         return LogbookGhost(
@@ -237,6 +230,23 @@ final class LogbookViewModel: ObservableObject { // swiftlint:disable:this type_
             distanceMeters: entry.plannedDistanceMeters.map(Double.init),
             source: .prescription
         )
+    }
+
+    /// AMA-2462 — turn a field on or off for this exercise. `touch` persists,
+    /// so the choice survives a reopen. The last remaining field cannot be
+    /// removed: a row must always have somewhere to log.
+    func toggleTrackedField(exerciseID: String, field: LogbookTrackedField) {
+        guard let eIdx = draft.entries.firstIndex(where: { $0.id == exerciseID }) else { return }
+        var fields = draft.entries[eIdx].trackedFields
+        if fields.contains(field) {
+            guard fields.count > 1 else { return }
+            fields.removeAll { $0 == field }
+        } else {
+            fields.append(field)
+        }
+        draft.entries[eIdx].trackedFieldsOverride = fields
+        touch()
+        refreshMetricStrip(exerciseID: exerciseID)
     }
 
     func addSet(exerciseID: String) {
@@ -365,29 +375,6 @@ final class LogbookViewModel: ObservableObject { // swiftlint:disable:this type_
 
     func ghost(for exerciseID: String, setIndex: Int) -> LogbookGhost? {
         effectiveLastReference(exerciseID: exerciseID, setIndex: setIndex)
-    }
-
-    private func storedGhost(for entry: LogbookExerciseEntry, setIndex: Int) -> LogbookGhost? {
-        if let idx = entry.sets.firstIndex(where: { $0.index == setIndex }),
-           idx < entry.ghosts.count {
-            return entry.ghosts[idx]
-        }
-        return entry.ghosts.last
-    }
-
-    private func previousFilledSet(in entry: LogbookExerciseEntry, before setIndex: Int) -> SetActual? {
-        entry.sets
-            .filter { set in
-                set.index < setIndex
-                    && (
-                        set.weightKg != nil
-                            || set.reps != nil
-                            || set.durationSeconds != nil
-                            || set.calories != nil
-                            || set.distanceMeters != nil
-                    )
-            }
-            .max { $0.index < $1.index }
     }
 
     func focusedSet() -> (entry: LogbookExerciseEntry, set: SetActual)? {

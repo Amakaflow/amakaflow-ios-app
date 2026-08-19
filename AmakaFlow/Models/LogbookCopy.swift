@@ -69,6 +69,21 @@ enum LogbookCopy {
         WeightUnitMath.unitLabel(unit)
     }
 
+    /// AMA-2462 — chip labels for the "what you track" control.
+    static func trackChip(_ field: LogbookTrackedField, isOn: Bool, addedLoad: Bool) -> String {
+        let name: String
+        switch field {
+        case .reps: name = "REPS"
+        case .weight: name = addedLoad ? "WEIGHT +" : "WEIGHT"
+        case .time: name = "TIME"
+        case .distance: name = "DIST"
+        case .calories: name = "CAL"
+        }
+        return isOn ? name : "＋ \(name)"
+    }
+
+    static let trackRowAccessibilityPrefix = "af_logbook_track_"
+
     /// AMA-2462 — a load on a bodyweight movement is ADDED load, and the column
     /// has to say so. "+LB" is what stops a belted chin-up reading as 200 lb.
     static func columnWeight(for unit: WeightUnit, added: Bool) -> String {
