@@ -126,32 +126,14 @@ struct EditorV2View: View {
                         .padding(.horizontal, 18)
                         .padding(.top, 8)
                 }
+                // The reorder List scrolls itself — nesting it in the
+                // ScrollView collapses it to its minHeight and the Done
+                // button overlaps the rows.
                 if isReorderMode {
-                    // The reorder List scrolls itself — nesting it in the
-                    // ScrollView collapses it to its minHeight and the Done
-                    // button overlaps the rows.
-                    EditorV2Content.main(
-                        session: session,
-                        isReorderMode: true,
-                        actions: contentActions,
-                        builderV3Canvas: builderV3Seed != nil
-                    )
-                    .padding(.horizontal, 18)
-                    .padding(.top, 12)
-                    .frame(maxHeight: .infinity, alignment: .top)
+                    canvas.frame(maxHeight: .infinity, alignment: .top)
                 } else {
-                    ScrollView {
-                        EditorV2Content.main(
-                            session: session,
-                            isReorderMode: false,
-                            actions: contentActions,
-                            builderV3Canvas: builderV3Seed != nil
-                        )
-                        .padding(.horizontal, 18)
-                        .padding(.top, 12)
-                        .padding(.bottom, 120)
-                    }
-                    .scrollContentBackground(.hidden)
+                    ScrollView { canvas.padding(.bottom, 120) }
+                        .scrollContentBackground(.hidden)
                 }
             }
             if !isReorderMode, !session.order.isEmpty {
@@ -217,6 +199,12 @@ struct EditorV2View: View {
             guard !focused else { return }
             Task { await matchTitleIfNeeded() }
         }
+    }
+
+    private var canvas: some View {
+        EditorV2Content.main(session: session, isReorderMode: isReorderMode, actions: contentActions, builderV3Canvas: builderV3Seed != nil)
+            .padding(.horizontal, 18)
+            .padding(.top, 12)
     }
 
     private var accessibilityMarkers: some View {
