@@ -10,6 +10,11 @@ import Foundation
 enum ExerciseActualConfirmation: String, Equatable, Codable {
     case asPlanned
     case adjusted
+    /// AMA-2472 — the athlete recorded nothing for this exercise. It stays in
+    /// the session and says so; it used to be deleted, which is how a six-move
+    /// workout saved as one. Rows stored before this case existed decode as
+    /// nil and are treated the same way.
+    case notLogged
 }
 
 struct ExerciseActualPlanned: Equatable, Codable {
@@ -97,7 +102,13 @@ struct ExerciseActual: Identifiable, Equatable, Codable {
         structureBlockIndex = try container.decodeIfPresent(Int.self, forKey: .structureBlockIndex)
     }
 
-    var isConfirmed: Bool { confirmation != nil }
+    /// AMA-2472: `.notLogged` is a recorded ANSWER, not a confirmation — the
+    /// athlete did not log this exercise. Counting it as confirmed would make
+    /// a blank row read as done in "n OF m CONFIRMED" and in `canSave`.
+    var isConfirmed: Bool {
+        guard let confirmation else { return false }
+        return confirmation != .notLogged
+    }
 
     var accessibilityRowID: String { "af_actuals_row_\(id)" }
     var accessibilityAsPlannedID: String { "af_actuals_row_\(id)_asplanned" }
@@ -268,5 +279,18 @@ struct ActualsStructureSection: Identifiable, Equatable {
         }
         flush()
         return result
+    }
+}
+
+extension ExerciseActual {
+    /// AMA-2472 — did the athlete record anything for this exercise? A saved
+    /// session keeps every exercise, so "present" and "logged" are no longer
+    /// the same question.
+    var isLogged: Bool {
+        // `actualSets` is NOT a witness: `init` defaults it to `planned.sets`,
+        // so an untouched exercise carries a non-zero count it never earned.
+        // Only a real confirmation or a checked set counts.
+        if let confirmation { return confirmation != .notLogged }
+        return sets.contains(where: \.isChecked)
     }
 }

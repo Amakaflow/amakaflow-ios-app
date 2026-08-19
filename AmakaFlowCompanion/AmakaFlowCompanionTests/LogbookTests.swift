@@ -834,7 +834,10 @@ final class LogbookTests: XCTestCase {
             now: { self.fixedNow }
         )
         XCTAssertThrowsError(try vm.saveVerified()) { error in
-            XCTAssertEqual(error as? ActualsRepositoryError, .unconfirmedRows(0))
+            // AMA-2472: was `.unconfirmedRows(0)`, which rendered as
+            // "0 exercises unconfirmed" — accurate about nothing. The refusal
+            // now names itself.
+            XCTAssertEqual(error as? ActualsRepositoryError, .nothingLogged)
         }
     }
 

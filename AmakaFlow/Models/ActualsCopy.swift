@@ -8,6 +8,10 @@
 import Foundation
 
 enum ActualsCopy {
+    /// AMA-2472 — an exercise the athlete left blank. It stays in the saved
+    /// session and says so, rather than vanishing or reading as zeroes.
+    static let notLogged = "NOT LOGGED"
+
     // MARK: - Teach card (Today empty + never connected)
 
     static let teachHeadline = "Your finished workouts can land here by themselves"

@@ -14,6 +14,10 @@ enum ActualsRepositoryError: LocalizedError, Equatable {
     case notReadyForVerifiedSave
     case missingRPE
     case unconfirmedRows(Int)
+    /// AMA-2472 — the session has exercises but the athlete logged none of
+    /// them. Distinct from `unconfirmedRows`, which reported "0 exercises
+    /// unconfirmed" here and explained nothing.
+    case nothingLogged
 
     var errorDescription: String? {
         switch self {
@@ -23,6 +27,8 @@ enum ActualsRepositoryError: LocalizedError, Equatable {
             return "RPE required"
         case .unconfirmedRows(let count):
             return "\(count) exercises unconfirmed"
+        case .nothingLogged:
+            return "Nothing logged yet"
         }
     }
 }
@@ -50,9 +56,12 @@ final class ActualsRepository: @unchecked Sendable {
         guard let rpe = session.rpe, (1...10).contains(rpe) else {
             throw ActualsRepositoryError.missingRPE
         }
-        let unconfirmed = session.exercises.filter { $0.confirmation == nil }.count
-        guard unconfirmed == 0, !session.exercises.isEmpty else {
-            throw ActualsRepositoryError.unconfirmedRows(unconfirmed)
+        // AMA-2472: a session keeps every exercise, including ones the athlete
+        // left blank — those are saved as NOT LOGGED rather than deleted, so
+        // "unconfirmed" is no longer a reason to refuse the whole session.
+        // The requirement is that SOMETHING was logged.
+        guard session.exercises.contains(where: \.isLogged) else {
+            throw ActualsRepositoryError.nothingLogged
         }
 
         let timestamp = now()
@@ -82,9 +91,10 @@ final class ActualsRepository: @unchecked Sendable {
                 .deleteAll(database)
 
             for (index, exercise) in session.exercises.enumerated() {
-                guard let confirmation = exercise.confirmation else {
-                    throw ActualsRepositoryError.unconfirmedRows(1)
-                }
+                // AMA-2472: an exercise with nothing recorded is stored as
+                // notLogged, not dropped and not refused.
+                let confirmation = exercise.confirmation
+                    ?? (exercise.isLogged ? .adjusted : .notLogged)
                 let rowId = "\(session.id)_\(exercise.id)"
                 var row = LocalActualsExerciseRow(
                     id: rowId,
@@ -295,13 +305,20 @@ final class ActualsRepository: @unchecked Sendable {
 
     /// Back to "Fill in" — actuals kept as a draft (exercise rows untouched), RPE
     /// cleared, and no longer counted as verified. Never deletes the session.
-    func unverifySession(id: String) throws {
+    /// AMA-2472 — returns whether a row was actually un-verified. A missing
+    /// session is not an error, but callers must not report an undo that never
+    /// touched storage, so silence is no longer indistinguishable from success.
+    @discardableResult
+    func unverifySession(id: String) throws -> Bool {
         try dbQueue.write { database in
-            guard var session = try LocalActualsSession.fetchOne(database, key: id) else { return }
+            guard var session = try LocalActualsSession.fetchOne(database, key: id) else {
+                return false
+            }
             session.verified = false
             session.rpe = nil
             session.isDraft = true
             try session.update(database)
+            return true
         }
     }
 
@@ -521,6 +538,14 @@ extension ActualsRepository: ActualsGhostLookingUp {
                 FROM actuals_exercise_rows r
                 INNER JOIN actuals_sessions s ON s.id = r.session_id
                 WHERE s.verified = 1
+                  -- AMA-2472: an exercise the athlete left blank is stored now
+                  -- (it used to be dropped). Excluded here so an empty row can
+                  -- never become a "last time" ghost. Defence-in-depth: with
+                  -- these two conditions removed the guard test still passes,
+                  -- so the ordering appears to favour real rows already — but
+                  -- relying on that is not something to leave to chance.
+                  AND r.confirmation <> 'notLogged'
+                  AND r.actual_sets > 0
                   AND (r.exercise_key = ? OR lower(r.name) = lower(?))
                 ORDER BY s.saved_at DESC, s.rowid DESC
                 LIMIT 1

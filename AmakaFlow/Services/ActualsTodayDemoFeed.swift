@@ -1072,6 +1072,30 @@ final class ActualsTodayDemoFeed: ObservableObject {
 
     /// AMA-2396 A3: un-verify — actuals kept as draft, RPE cleared, badge cleared.
     func applyUnverify(sessionID: String) {
+        // AMA-2472: undo has to reach storage. This used to rebuild the card in
+        // memory only, so the row stayed verified on disk and came back verified
+        // on the next read — "undo doesn't work, still stays in the same state".
+        // Unconditional: the session may no longer have a card in this list, and
+        // the athlete's undo must still take effect.
+        do {
+            // A missing row is ABSENCE, not failure: demo / in-memory cards
+            // never had one, and undo must still work for them (covered by
+            // testFeedApplyUnverifyMarksCardAsFillInDraft). Only a thrown
+            // write is a failure, and that must not be reported as an undo.
+            if try !repository.unverifySession(id: sessionID) {
+                actualsTodayDemoFeedLog.debug(
+                    "applyUnverify: no stored session for \(sessionID, privacy: .public) — in-memory card only"
+                )
+            }
+        } catch {
+            // The card must NOT flip to draft when the write failed — that is
+            // the same lie as before, inverted: the UI would claim the undo
+            // happened while the row stayed verified on disk.
+            actualsTodayDemoFeedLog.error(
+                "applyUnverify failed to persist for \(sessionID, privacy: .public): \(String(describing: error), privacy: .public)"
+            )
+            return
+        }
         for index in cards.indices {
             guard let saved = cards[index].fillInSession, saved.id == sessionID
                     || cards[index].id == sessionID else { continue }

@@ -306,18 +306,22 @@ final class LogbookViewModel: ObservableObject { // swiftlint:disable:this type_
         }
 
         var session = LogbookRollup.fillInSession(from: draft, verified: false)
-        session.exercises = session.exercises.compactMap { exercise in
-            guard exercise.actualSets > 0 else { return nil }
+        // AMA-2472: NOTHING is dropped. This used to compactMap away every
+        // exercise with no checked sets, so entering values without ticking
+        // each row silently deleted the exercise from the saved session —
+        // the reported "1 OF 1 CONFIRMED" on a six-move workout.
+        session.exercises = session.exercises.map { exercise in
             var copy = exercise
             if copy.confirmation == nil {
-                copy.confirmation = .adjusted
+                copy.confirmation = copy.isLogged ? .adjusted : .notLogged
             }
-            copy.sets = copy.sets.filter(\.isChecked)
             return copy
         }
 
-        guard !session.exercises.isEmpty else {
-            throw ActualsRepositoryError.unconfirmedRows(0)
+        // The gate moves from "every exercise logged" to "at least one" —
+        // a session with nothing in it is still refused.
+        guard session.exercises.contains(where: \.isLogged) else {
+            throw ActualsRepositoryError.nothingLogged
         }
 
         session.rpe = rpe
