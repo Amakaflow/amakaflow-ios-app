@@ -2,12 +2,24 @@
 //  ActualsFillInFlowView.swift
 //  AmakaFlow
 //
-//  AMA-2426: Fill in › mode select → Quick (unchanged) or Set-by-set logbook.
+//  AMA-2473: the logbook IS the fill-in. There is no longer a mode door and no
+//  Quick confirm screen.
+//
+//  It used to open `ActualsModeSelectView` — "Quick — as planned / adjust" vs
+//  "Set by set — the logbook" — and Quick then asked the athlete to declare
+//  the session AGAIN as SETS/REPS steppers after they had already logged it.
+//  That was the double step David reported, and the screen where a six-move
+//  workout came back as "1 OF 1 CONFIRMED". Entry is the log now, so the
+//  second declaration has nothing left to do.
+//
+//  `startInQuick` is gone with it: nothing deep-linked to Quick.
 //
 
 import SwiftUI
 
-/// Wraps the shipped Quick fill-in with a mode door for the logbook.
+/// Opens the logbook for a session. Kept as a wrapper because callers pass
+/// `onSaved` / `onBack` / unverify + Strava hooks that the logbook itself
+/// does not own.
 struct ActualsFillInFlowView: View {
     @ObservedObject var viewModel: ActualsFillInViewModel
     var onSaved: (ActualsFillInSession) -> Void = { _ in }
@@ -16,57 +28,20 @@ struct ActualsFillInFlowView: View {
     var dismissOnSave: Bool = true
     var onUnverify: (() -> Void)?
     var onWriteBackDecoration: ((StravaDecorationState) -> Void)?
-    /// When true, skip mode select (e.g. deep-link straight to Quick).
-    var startInQuick: Bool = false
 
-    @State private var mode: ActualsLoggingMode?
     @State private var logbookVM: LogbookViewModel?
 
     var body: some View {
         Group {
-            if let mode {
-                switch mode {
-                case .quick:
-                    ActualsFillInView(
-                        viewModel: viewModel,
-                        onSaved: onSaved,
-                        onBack: {
-                            self.mode = nil
-                            onBack?()
-                        },
-                        presentsVerifiedOnSave: presentsVerifiedOnSave,
-                        dismissOnSave: dismissOnSave,
-                        onUnverify: onUnverify,
-                        onWriteBackDecoration: onWriteBackDecoration
-                    )
-                case .setBySet:
-                    if let logbookVM {
-                        LogbookView(
-                            viewModel: logbookVM,
-                            onBack: { self.mode = nil },
-                            onSaved: onSaved
-                        )
-                    } else {
-                        ProgressView()
-                            .task { bootstrapLogbook() }
-                    }
-                }
-            } else {
-                ActualsModeSelectView(
-                    subtitle: viewModel.session.subtitle,
-                    onSelect: { selected in
-                        if selected == .setBySet {
-                            bootstrapLogbook()
-                        }
-                        mode = selected
-                    },
-                    onBack: onBack
+            if let logbookVM {
+                LogbookView(
+                    viewModel: logbookVM,
+                    onBack: { onBack?() },
+                    onSaved: onSaved
                 )
-            }
-        }
-        .onAppear {
-            if startInQuick {
-                mode = .quick
+            } else {
+                ProgressView()
+                    .task { bootstrapLogbook() }
             }
         }
     }
