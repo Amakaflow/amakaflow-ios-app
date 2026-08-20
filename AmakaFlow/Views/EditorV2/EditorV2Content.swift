@@ -315,9 +315,14 @@ enum EditorV2Content {
             // the editor and the drag offsets indexed a different collection
             // than the command changed.
             List {
-                ForEach(session.reorderRows) { entry in
+                // Nested shape: group headers followed by their member rows,
+                // so exercises can be dragged WITHIN a block. The translation
+                // back to commands lives in `reorderNested` on the session.
+                ForEach(session.reorderNestedRows) { entry in
                     EditorV2ReorderRow(entry: entry)
-                        .listRowInsets(EdgeInsets(top: 3, leading: 0, bottom: 3, trailing: 0))
+                        .listRowInsets(EdgeInsets(
+                            top: 3, leading: entry.isMember ? 24 : 0, bottom: 3, trailing: 0
+                        ))
                         .listRowBackground(Color.clear)
                         .listRowSeparator(.hidden)
                 }

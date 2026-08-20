@@ -37,6 +37,9 @@ enum EditorCommand: Equatable, Sendable {
     case addBlock(EditorV2GroupType)
     case move(String, Int)
     case reorder(fromOffsets: IndexSet, toOffset: Int)
+    /// Reorder exercises INSIDE one block (mutates `memberIDs`); the block's
+    /// own position in `order` is untouched.
+    case reorderGroupMembers(key: String, fromOffsets: IndexSet, toOffset: Int)
     case quickAddSoftSection(EnrichmentKind, activities: [EnrichmentActivity], clearingTombstone: Bool)
     case removeSoftSection(EditorV2GroupType, EnrichmentKind)
     case addSet(String)

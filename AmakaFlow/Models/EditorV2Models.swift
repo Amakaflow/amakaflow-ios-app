@@ -597,4 +597,9 @@ struct EditorV2ReorderEntry: Identifiable, Equatable {
     /// Remaining group members, so the user sees what moves with the row.
     let memberNames: [String]
     let accent: EditorV2GroupType?
+    /// Set on group headers AND their member rows — the drag translator uses
+    /// it to keep a member inside its own block.
+    var groupKey: String?
+    /// True for an exercise row nested under a group header.
+    var isMember = false
 }

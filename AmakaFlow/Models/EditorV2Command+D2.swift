@@ -346,6 +346,26 @@ extension EditorV2Session {
             items.insert(contentsOf: moving, at: insertAt)
             order = items
             return .applied
+
+        case .reorderGroupMembers(let key, let fromOffsets, let toOffset):
+            guard var members = groups[key]?.memberIDs else {
+                return .rejected(.groupNotFound)
+            }
+            guard fromOffsets.allSatisfy({ members.indices.contains($0) }) else {
+                return .rejected(.invalidState)
+            }
+            let moving = fromOffsets.sorted().map { members[$0] }
+            for index in fromOffsets.sorted(by: >) {
+                members.remove(at: index)
+            }
+            var insertAt = toOffset
+            for index in fromOffsets where index < toOffset {
+                insertAt -= 1
+            }
+            insertAt = max(0, min(insertAt, members.count))
+            members.insert(contentsOf: moving, at: insertAt)
+            groups[key]?.memberIDs = members
+            return .applied
             
         case .addSet(let id):
             guard var exercise = exercises[id] else {
