@@ -589,9 +589,7 @@ struct TodayDiaryView: View {
                     actualsDestination = nil
                 },
                 presentsVerifiedOnSave: false,
-                dismissOnSave: false,
-                onUnverify: onUnverify,
-                onWriteBackDecoration: onWriteBackDecoration
+                onUnverify: onUnverify
             )
             .navigationBarBackButtonHidden(true)
         } else {

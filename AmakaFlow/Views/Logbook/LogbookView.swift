@@ -13,6 +13,12 @@ struct LogbookView: View {
     @ObservedObject var viewModel: LogbookViewModel
     var onBack: (() -> Void)?
     var onSaved: ((ActualsFillInSession) -> Void)?
+    /// AMA-2473: carried over from the fill-in wrapper when the confirm step
+    /// was deleted. Today and History pass this — dropping it silently broke
+    /// un-verify from this flow.
+    var onUnverify: (() -> Void)?
+    /// False when the caller shows its own verified screen afterwards.
+    var presentsVerifiedOnSave: Bool = true
 
     @State private var noteText: String = ""
     /// Sheet detent height — keep scroll inset + park slot in sync.
@@ -72,9 +78,16 @@ struct LogbookView: View {
         .sheet(isPresented: $viewModel.showRPE) {
             logbookRPESheet
         }
-        .fullScreenCover(isPresented: $viewModel.showVerifiedPayoff) {
+        // AMA-2473: gate the PRESENTATION, not just its content. Gating only
+        // the content still fired the cover for a caller passing
+        // `presentsVerifiedOnSave: false`, and the body resolved to EmptyView
+        // — a blank full-screen view over the caller's own verified screen.
+        .fullScreenCover(isPresented: Binding(
+            get: { viewModel.showVerifiedPayoff && presentsVerifiedOnSave },
+            set: { viewModel.showVerifiedPayoff = $0 }
+        )) {
             if let session = viewModel.lastVerifiedSession {
-                ActualsVerifiedView(session: session)
+                ActualsVerifiedView(session: session, onUnverify: onUnverify)
             }
         }
         .onAppear {
