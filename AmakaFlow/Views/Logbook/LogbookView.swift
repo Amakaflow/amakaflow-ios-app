@@ -78,8 +78,15 @@ struct LogbookView: View {
         .sheet(isPresented: $viewModel.showRPE) {
             logbookRPESheet
         }
-        .fullScreenCover(isPresented: $viewModel.showVerifiedPayoff) {
-            if let session = viewModel.lastVerifiedSession, presentsVerifiedOnSave {
+        // AMA-2473: gate the PRESENTATION, not just its content. Gating only
+        // the content still fired the cover for a caller passing
+        // `presentsVerifiedOnSave: false`, and the body resolved to EmptyView
+        // — a blank full-screen view over the caller's own verified screen.
+        .fullScreenCover(isPresented: Binding(
+            get: { viewModel.showVerifiedPayoff && presentsVerifiedOnSave },
+            set: { viewModel.showVerifiedPayoff = $0 }
+        )) {
+            if let session = viewModel.lastVerifiedSession {
                 ActualsVerifiedView(session: session, onUnverify: onUnverify)
             }
         }

@@ -62,8 +62,11 @@ final class LogbookFlowRouteTests: XCTestCase {
         )
     }
 
-    // Not tested here: constructing `LogbookView` directly. It crashes under
-    // XCTest (SwiftUI view + environment), and the forwarding it does is
-    // enforced by the compiler at the call site in ActualsFillInFlowView —
-    // a test that cannot run proves less than a build that cannot compile.
+    // Not tested here: anything requiring `LogbookView` to be instantiated.
+    // It crashes under XCTest (SwiftUI view + environment). That includes the
+    // `presentsVerifiedOnSave` gate — I wrote a test for it, found it could
+    // only restate `flag && false == false`, and deleted it: a tautology is
+    // not evidence, and a test that cannot run proves less than a build that
+    // cannot compile. The gate is a two-condition Binding in LogbookView and
+    // is verified by reading it, not by a green tick that means nothing.
 }
