@@ -46,16 +46,16 @@ jobs:
   check-hosts:
     name: Resolve every host in Environment.swift
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    # Was 5, with an `apt-get install dnsutils` step in front of it. A slow apt
+    # mirror ate the whole budget and the job was CANCELLED before it resolved
+    # a single host — twice on PR #630 — which reads as a red check caused by
+    # nothing. The install is gone (check-hosts.sh now uses whatever resolver
+    # the runner has) and the cap has headroom.
+    timeout-minutes: 8
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - name: Install dig
-        run: |
-          # Ubuntu runners ship with bind9-host; install dnsutils for `dig` proper.
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq dnsutils
       - name: Run check-hosts.sh
         env:
           STRICT_PRODUCTION: ${{ inputs.strict_production }}
