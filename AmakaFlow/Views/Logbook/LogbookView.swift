@@ -255,11 +255,25 @@ struct LogbookView: View {
                 Text(LogbookCopy.columnReps)
                     .frame(width: 44, alignment: .center)
             }
-            Text("✓")
-                .frame(width: 28, alignment: .center)
+            // AMA-2473: no ✓ column. Entering a value logs the set, so a tick
+            // only ever restated what the value already said.
+            Color.clear.frame(width: 28, height: 1)
         }
         .font(.system(size: 8.5, weight: .bold, design: .monospaced))
         .foregroundColor(DailyDriver.foregroundDim)
+    }
+
+    /// AMA-2473 — tapping an unlogged row's dim proposal LOGS it as written;
+    /// tapping a logged one opens the wheels to change it. Entry and confirm
+    /// are the same act, so there is nothing to press afterwards.
+    private func confirmOrEdit(entry: LogbookExerciseEntry, set: SetActual) {
+        if set.isChecked {
+            viewModel.openWheel(exerciseID: entry.id, setIndex: set.index, isWarmup: set.isWarmup)
+        } else {
+            viewModel.confirmProposedRow(
+                exerciseID: entry.id, setIndex: set.index, isWarmup: set.isWarmup
+            )
+        }
     }
 
     private func setRow(entry: LogbookExerciseEntry, set: SetActual) -> some View {
@@ -309,7 +323,7 @@ struct LogbookView: View {
                     },
                     width: 52
                 ) {
-                    viewModel.openWheel(exerciseID: entry.id, setIndex: set.index, isWarmup: set.isWarmup)
+                    confirmOrEdit(entry: entry, set: set)
                 }
             }
 
@@ -319,30 +333,24 @@ struct LogbookView: View {
                     ghost: ghost.flatMap { $0.reps.map(String.init) },
                     width: 44
                 ) {
-                    viewModel.openWheel(exerciseID: entry.id, setIndex: set.index, isWarmup: set.isWarmup)
+                    confirmOrEdit(entry: entry, set: set)
                 }
             }
 
+            // AMA-2473: the ✓ is gone. The pencil opens the wheels for a set
+            // whose number differed — changing a value, not confirming one.
             Button {
-                viewModel.toggleCheck(exerciseID: entry.id, setIndex: set.index, isWarmup: set.isWarmup)
+                viewModel.openWheel(exerciseID: entry.id, setIndex: set.index, isWarmup: set.isWarmup)
             } label: {
-                ZStack {
-                    Circle()
-                        .stroke(set.isChecked ? DailyDriver.lime : DailyDriver.borderStrong, lineWidth: 1.5)
-                        .frame(width: 22, height: 22)
-                    if set.isChecked {
-                        Circle()
-                            .fill(DailyDriver.lime)
-                            .frame(width: 22, height: 22)
-                        Image(systemName: "checkmark")
-                            .font(.system(size: 10, weight: .bold))
-                            .foregroundColor(DailyDriver.ink)
-                    }
-                }
+                Image(systemName: "pencil")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundColor(DailyDriver.foregroundDim)
             }
             .buttonStyle(.plain)
             .frame(width: 28)
-            .accessibilityIdentifier("af_logbook_check_\(entry.id)_\(set.index)")
+            .accessibilityIdentifier(
+                "af_logbook_edit_\(entry.id)_\(set.isWarmup ? "w" : "s")\(set.index)"
+            )
         }
         .padding(.vertical, 6)
         .padding(.horizontal, 6)

@@ -114,6 +114,40 @@ final class LogbookViewModel: ObservableObject { // swiftlint:disable:this type_
         touch()
     }
 
+    /// AMA-2473 — "Did it as written": every set in the session takes its
+    /// proposal and is logged, in one tap. The common case is that the athlete
+    /// did what the plan said; making them walk every row to say so is the
+    /// friction this ticket exists to remove.
+    @discardableResult
+    func logSessionAsWritten() -> Int {
+        var logged = 0
+        for entry in draft.entries {
+            for set in entry.sets where !set.isChecked {
+                confirmProposedRow(
+                    exerciseID: entry.id, setIndex: set.index, isWarmup: set.isWarmup
+                )
+                logged += 1
+            }
+        }
+        return logged
+    }
+
+    /// AMA-2473 — the athlete taps the dim proposal (plan / last time) and it
+    /// is logged as written. This is the "entered pre-weights before, just
+    /// click confirm" case; the wheel is only for when the number differed.
+    func confirmProposedRow(exerciseID: String, setIndex: Int, isWarmup: Bool = false) {
+        guard let eIdx = draft.entries.firstIndex(where: { $0.id == exerciseID }),
+              let sIdx = setRowIndex(
+                in: draft.entries[eIdx], setIndex: setIndex, isWarmup: isWarmup
+              ) else {
+            return
+        }
+        copyGhost(exerciseID: exerciseID, setIndex: setIndex, isWarmup: isWarmup)
+        draft.entries[eIdx].sets[sIdx].checkedAt = now()
+        touch()
+        refreshMetricStrip(exerciseID: exerciseID)
+    }
+
     func openWheel(exerciseID: String, setIndex: Int, isWarmup: Bool = false) {
         let mode: LogbookWheelMode = {
             if let entry = draft.entries.first(where: { $0.id == exerciseID }), entry.isMetric {
@@ -151,6 +185,10 @@ final class LogbookViewModel: ObservableObject { // swiftlint:disable:this type_
             draft.entries[eIdx].sets[sIdx].weightKg = kilograms
         }
         draft.entries[eIdx].sets[sIdx].reps = reps
+        // AMA-2473: entering a value IS logging it. This used to leave the row
+        // unchecked, so the athlete entered the numbers and then had to tick
+        // every row — the double step David reported.
+        draft.entries[eIdx].sets[sIdx].checkedAt = now()
         touch()
         if advance {
             advanceWheel(from: focus)
@@ -170,6 +208,11 @@ final class LogbookViewModel: ObservableObject { // swiftlint:disable:this type_
         draft.entries[eIdx].sets[sIdx].durationSeconds = durationSeconds.flatMap { $0 > 0 ? $0 : nil }
         draft.entries[eIdx].sets[sIdx].calories = calories.flatMap { $0 > 0 ? $0 : nil }
         draft.entries[eIdx].sets[sIdx].distanceMeters = distanceMeters.flatMap { $0 > 0 ? $0 : nil }
+        // AMA-2473: committing logs the bout — unless nothing was entered, in
+        // which case there is nothing to claim.
+        let bout = draft.entries[eIdx].sets[sIdx]
+        let entered = bout.durationSeconds != nil || bout.calories != nil || bout.distanceMeters != nil
+        draft.entries[eIdx].sets[sIdx].checkedAt = entered ? now() : nil
         touch()
         refreshMetricStrip(exerciseID: focus.exerciseID)
         if advance {
@@ -293,7 +336,8 @@ final class LogbookViewModel: ObservableObject { // swiftlint:disable:this type_
     /// Companion-pending drafts persist only — reconcile / timeout create actuals.
     @discardableResult
     func saveVerified() throws -> LogbookSaveResult {
-        guard let rpe = draft.rpe, (1...10).contains(rpe) else {
+        // AMA-2473: Finish is never gated on RPE.
+        if let rpe = draft.rpe, !(1...10).contains(rpe) {
             throw ActualsRepositoryError.missingRPE
         }
 
@@ -324,7 +368,7 @@ final class LogbookViewModel: ObservableObject { // swiftlint:disable:this type_
             throw ActualsRepositoryError.nothingLogged
         }
 
-        session.rpe = rpe
+        session.rpe = draft.rpe
         session.verified = true
 
         try actualsRepository.saveVerifiedSession(session)
@@ -377,21 +421,6 @@ final class LogbookViewModel: ObservableObject { // swiftlint:disable:this type_
         return outcome
     }
 
-    func ghost(for exerciseID: String, setIndex: Int) -> LogbookGhost? {
-        effectiveLastReference(exerciseID: exerciseID, setIndex: setIndex)
-    }
-
-    func focusedSet() -> (entry: LogbookExerciseEntry, set: SetActual)? {
-        guard let focus = wheelFocus,
-              let entry = draft.entries.first(where: { $0.id == focus.exerciseID }),
-              let set = entry.sets.first(where: {
-                  $0.index == focus.setIndex && $0.isWarmup == focus.isWarmup
-              }) else {
-            return nil
-        }
-        return (entry, set)
-    }
-
     // MARK: - Private
 
     private func setRowIndex(
@@ -422,29 +451,8 @@ final class LogbookViewModel: ObservableObject { // swiftlint:disable:this type_
     }
 
     private func refreshMetricStrip(exerciseID: String) {
-        guard let eIdx = draft.entries.firstIndex(where: { $0.id == exerciseID }),
-              draft.entries[eIdx].isMetric,
-              let set = draft.entries[eIdx].sets.first else {
-            return
-        }
-        let ghost = draft.entries[eIdx].ghosts.first
-        let duration = set.durationSeconds ?? ghost?.durationSeconds ?? draft.entries[eIdx].plannedDurationSeconds
-        let calories = set.calories ?? ghost?.calories ?? draft.entries[eIdx].plannedCalories
-        let distance = set.distanceMeters
-            ?? ghost?.distanceMeters
-            ?? draft.entries[eIdx].plannedDistanceMeters.map(Double.init)
-        let existingNote = draft.entries[eIdx].cardioStrip?.sourceNote
-        draft.entries[eIdx].cardioStrip = LogbookCardioStrip(
-            timeText: duration.map(LogbookMetricFormat.duration),
-            distanceText: distance.map {
-                LogbookMetricFormat.distance(
-                    meters: $0, scale: draft.entries[eIdx].distanceScale, unit: .stored
-                )
-            },
-            caloriesText: calories.map { "\($0)" },
-            heartRateText: draft.entries[eIdx].cardioStrip?.heartRateText,
-            sourceNote: existingNote
-        )
+        guard let eIdx = draft.entries.firstIndex(where: { $0.id == exerciseID }) else { return }
+        LogbookMetricStrip.refresh(&draft.entries[eIdx])
     }
 
     private func touch() {
