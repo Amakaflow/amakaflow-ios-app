@@ -27,6 +27,7 @@
 		AMA2426LWPBLD /* LogbookWorkoutPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2426LWPREF /* LogbookWorkoutPickerView.swift */; };
 		AMA2426TSTBLD /* LogbookTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2426TSTREF /* LogbookTests.swift */; };
 		AMA2473TSTBLD /* LogbookEntryIsConfirmTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2473TSTREF /* LogbookEntryIsConfirmTests.swift */; };
+		AMA2473RTEBLD /* LogbookFlowRouteTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2473RTEREF /* LogbookFlowRouteTests.swift */; };
 		AMA2472TSTBLD /* LogbookSaveIntegrityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2472TSTREF /* LogbookSaveIntegrityTests.swift */; };
 		AMA2462TSTBLD /* LogbookUnitsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2462TSTREF /* LogbookUnitsTests.swift */; };
 		AMA2462FTSTBLD /* LogbookTrackedFieldsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2462FTSTREF /* LogbookTrackedFieldsTests.swift */; };
@@ -885,6 +886,7 @@
 		AMA2426LWPREF /* LogbookWorkoutPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LogbookWorkoutPickerView.swift; path = ../AmakaFlow/Views/Logbook/LogbookWorkoutPickerView.swift; sourceTree = SOURCE_ROOT; };
 		AMA2426TSTREF /* LogbookTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LogbookTests.swift; path = AmakaFlowCompanionTests/LogbookTests.swift; sourceTree = "<group>"; };
 		AMA2473TSTREF /* LogbookEntryIsConfirmTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LogbookEntryIsConfirmTests.swift; path = AmakaFlowCompanionTests/LogbookEntryIsConfirmTests.swift; sourceTree = SOURCE_ROOT; };
+		AMA2473RTEREF /* LogbookFlowRouteTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LogbookFlowRouteTests.swift; path = AmakaFlowCompanionTests/LogbookFlowRouteTests.swift; sourceTree = SOURCE_ROOT; };
 		AMA2472TSTREF /* LogbookSaveIntegrityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LogbookSaveIntegrityTests.swift; path = AmakaFlowCompanionTests/LogbookSaveIntegrityTests.swift; sourceTree = SOURCE_ROOT; };
 		AMA2462TSTREF /* LogbookUnitsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LogbookUnitsTests.swift; path = AmakaFlowCompanionTests/LogbookUnitsTests.swift; sourceTree = SOURCE_ROOT; };
 		AMA2462FTSTREF /* LogbookTrackedFieldsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LogbookTrackedFieldsTests.swift; path = AmakaFlowCompanionTests/LogbookTrackedFieldsTests.swift; sourceTree = SOURCE_ROOT; };
@@ -2531,6 +2533,7 @@
 				AMA2420P2TSTREF /* WatchActualsDraftBuilderTests.swift */,
 				AMA2426TSTREF /* LogbookTests.swift */,
 				AMA2473TSTREF /* LogbookEntryIsConfirmTests.swift */,
+				AMA2473RTEREF /* LogbookFlowRouteTests.swift */,
 				AMA2472TSTREF /* LogbookSaveIntegrityTests.swift */,
 				AMA2462TSTREF /* LogbookUnitsTests.swift */,
 				AMA2462FTSTREF /* LogbookTrackedFieldsTests.swift */,
@@ -3621,6 +3624,7 @@
 				AMA2420P2TSTBLD /* WatchActualsDraftBuilderTests.swift in Sources */,
 				AMA2426TSTBLD /* LogbookTests.swift in Sources */,
 				AMA2473TSTBLD /* LogbookEntryIsConfirmTests.swift in Sources */,
+				AMA2473RTEBLD /* LogbookFlowRouteTests.swift in Sources */,
 				AMA2472TSTBLD /* LogbookSaveIntegrityTests.swift in Sources */,
 				AMA2462TSTBLD /* LogbookUnitsTests.swift in Sources */,
 				AMA2462FTSTBLD /* LogbookTrackedFieldsTests.swift in Sources */,

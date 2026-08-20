@@ -12,7 +12,12 @@
 //  workout came back as "1 OF 1 CONFIRMED". Entry is the log now, so the
 //  second declaration has nothing left to do.
 //
-//  `startInQuick` is gone with it: nothing deep-linked to Quick.
+//  `startInQuick` goes with it — nothing deep-linked to Quick. So do
+//  `dismissOnSave` and `onWriteBackDecoration`: both were fired only by the
+//  Quick screen's own machinery and were ALREADY never called on the
+//  set-by-set route, so they are inert here rather than a dropped feature.
+//  Strava write-back decoration therefore has no home on this flow — that
+//  needs re-homing onto the logbook as its own piece of work.
 //
 
 import SwiftUI
@@ -25,9 +30,7 @@ struct ActualsFillInFlowView: View {
     var onSaved: (ActualsFillInSession) -> Void = { _ in }
     var onBack: (() -> Void)?
     var presentsVerifiedOnSave: Bool = true
-    var dismissOnSave: Bool = true
     var onUnverify: (() -> Void)?
-    var onWriteBackDecoration: ((StravaDecorationState) -> Void)?
 
     @State private var logbookVM: LogbookViewModel?
 
@@ -36,8 +39,13 @@ struct ActualsFillInFlowView: View {
             if let logbookVM {
                 LogbookView(
                     viewModel: logbookVM,
-                    onBack: { onBack?() },
-                    onSaved: onSaved
+                    // Pass the optional straight through: wrapping it in a
+                    // closure made it always non-nil, so LogbookView's own
+                    // dismiss() fallback never ran for callers that pass none.
+                    onBack: onBack,
+                    onSaved: onSaved,
+                    onUnverify: onUnverify,
+                    presentsVerifiedOnSave: presentsVerifiedOnSave
                 )
             } else {
                 ProgressView()
