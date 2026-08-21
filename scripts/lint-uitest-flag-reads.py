@@ -19,11 +19,11 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-RESOLVER = "AmakaFlow/Services/UITestEnvironment.swift"
+RESOLVER = "AmakaFlow/Services/LaunchConfig.swift"
 
 FLAG = re.compile(r"UITEST_[A-Z0-9_]+|AMA\d{4}_[A-Z0-9_]+")
 READ = re.compile(
-    r"UITestEnvironment\.|"
+    r"LaunchConfig\.|"
     r"ProcessInfo\.processInfo\.environment\[|"
     r"UserDefaults\.standard\.(?:string|bool|object)\(forKey"
 )
