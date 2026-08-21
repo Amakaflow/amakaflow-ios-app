@@ -80,7 +80,7 @@ class PairingService: ObservableObject {
 
     func disableTestMode() {}
 
-    var isInTestMode: Bool { UITestEnvironment.shared.hasClerkTestUser }
+    var isInTestMode: Bool { LaunchConfig.active?.clerkTestUser == true }
     #endif
 }
 

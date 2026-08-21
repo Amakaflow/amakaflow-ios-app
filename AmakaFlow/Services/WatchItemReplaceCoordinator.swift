@@ -55,12 +55,12 @@ struct WatchItemReplaceCoordinator: WatchItemReplacing {
         isDemo: Bool? = nil
     ) {
         #if DEBUG
-        let envDelayMs = UITestEnvironment.value(for: "UITEST_WATCHITEM_REPLACE_DELAY_MS")
-            .flatMap(UInt64.init)
+        let envDelayMs = LaunchConfig.active?.watchItemReplaceDelayMilliseconds
+            .flatMap { UInt64(exactly: $0) }
         self.delayNanoseconds = delayNanoseconds
             ?? ((envDelayMs ?? 900) * 1_000_000)
         self.shouldFail = shouldFail
-            ?? UITestEnvironment.isTruthy("UITEST_WATCHITEM_REPLACE_FAIL")
+            ?? (LaunchConfig.active?.watchItemReplaceFails == true)
         self.isDemo = isDemo ?? OnYourWatchesDemoSupport.isEnabled
         #else
         self.delayNanoseconds = delayNanoseconds ?? 0

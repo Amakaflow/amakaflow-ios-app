@@ -157,8 +157,7 @@ struct CreateFlowSheetsModifier: ViewModifier {
     private var createSheetDetents: Set<PresentationDetent> {
         // AMA-2389: sheet a11y — large under UITEST (iOS 26.1 medium gap).
         #if DEBUG
-        if UITestEnvironment.isTruthy("UITEST_USE_FIXTURES")
-            || UITestEnvironment.isTruthy("UITEST_SKIP_ONBOARDING") {
+        if let config = LaunchConfig.active, config.useFixtures || config.skipOnboarding {
             return [.large, .medium]
         }
         #endif

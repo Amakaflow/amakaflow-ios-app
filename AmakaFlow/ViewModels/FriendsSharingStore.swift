@@ -33,7 +33,7 @@ final class FriendsSharingStore: ObservableObject {
     private static func makeDefaultService() -> FriendsSharingProviding {
         #if DEBUG
         let isPreview = ProcessInfo.processInfo.environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1"
-        if isPreview || UITestEnvironment.shared.useFixtures {
+        if isPreview || LaunchConfig.active?.useFixtures == true {
             return InMemoryFriendsSharingService()
         }
         #endif

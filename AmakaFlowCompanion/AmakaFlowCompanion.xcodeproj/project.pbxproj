@@ -315,6 +315,7 @@
 		AMA2386COPYTBLD /* WatchItemCopyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2386COPYTREF /* WatchItemCopyTests.swift */; };
 		AMA2386TRCKTBLD /* WatchItemChangeTrackerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2386TRCKTREF /* WatchItemChangeTrackerTests.swift */; };
 		AMA2386REPLTBLD /* WatchItemReplaceCoordinatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2386REPLTREF /* WatchItemReplaceCoordinatorTests.swift */; };
+		AMA2502LCFGTBLD /* LaunchConfigTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2502LCFGTREF /* LaunchConfigTests.swift */; };
 		AMA2387COPYBLD /* ActualsCopy.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2387COPYREF /* ActualsCopy.swift */; };
 		AMA2387STOREBLD /* ActualsSourceConnectionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2387STOREREF /* ActualsSourceConnectionStore.swift */; };
 		AMA2387TEACHBLD /* ActualsTeachCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2387TEACHREF /* ActualsTeachCard.swift */; };
@@ -620,7 +621,7 @@
 		AMA1620AUTHVM001B /* AuthViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1620AUTHVM001A /* AuthViewModel.swift */; };
 		AMA1620CLKKIT01B /* ClerkKit in Frameworks */ = {isa = PBXBuildFile; productRef = AMA1620CLKKIT01P /* ClerkKit */; };
 		AMA1620CLKUI001B /* ClerkKitUI in Frameworks */ = {isa = PBXBuildFile; productRef = AMA1620CLKUI001P /* ClerkKitUI */; };
-		AMA1620UITEST01B /* UITestEnvironment.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA1620UITEST01A /* UITestEnvironment.swift */; };
+		AMA2502LCFGBLD /* LaunchConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2502LCFGREF /* LaunchConfig.swift */; };
 		AMA2007SIGNUPVMBLD /* SignUpViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2007SIGNUPVMREF /* SignUpViewModel.swift */; };
 		AMA2007SIGNUPVIEWBLD /* SignUpView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2007SIGNUPVIEWREF /* SignUpView.swift */; };
 		AMA2910SUBVMBLD /* SubscriptionAccessViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2910SUBVMREF /* SubscriptionAccessViewModel.swift */; };
@@ -1134,6 +1135,7 @@
 		AMA2386COPYTREF /* WatchItemCopyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WatchItemCopyTests.swift; path = AmakaFlowCompanionTests/WatchItemCopyTests.swift; sourceTree = "<group>"; };
 		AMA2386TRCKTREF /* WatchItemChangeTrackerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WatchItemChangeTrackerTests.swift; path = AmakaFlowCompanionTests/WatchItemChangeTrackerTests.swift; sourceTree = "<group>"; };
 		AMA2386REPLTREF /* WatchItemReplaceCoordinatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WatchItemReplaceCoordinatorTests.swift; path = AmakaFlowCompanionTests/WatchItemReplaceCoordinatorTests.swift; sourceTree = "<group>"; };
+		AMA2502LCFGTREF /* LaunchConfigTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LaunchConfigTests.swift; path = AmakaFlowCompanionTests/LaunchConfigTests.swift; sourceTree = "<group>"; };
 		AMA2387COPYREF /* ActualsCopy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActualsCopy.swift; path = ../AmakaFlow/Models/ActualsCopy.swift; sourceTree = SOURCE_ROOT; };
 		AMA2387STOREREF /* ActualsSourceConnectionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActualsSourceConnectionStore.swift; path = ../AmakaFlow/Services/ActualsSourceConnectionStore.swift; sourceTree = SOURCE_ROOT; };
 		AMA2387TEACHREF /* ActualsTeachCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActualsTeachCard.swift; path = ../AmakaFlow/Views/Components/ActualsTeachCard.swift; sourceTree = SOURCE_ROOT; };
@@ -1469,7 +1471,7 @@
 		AMA1617TG001A /* TelegramSetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TelegramSetupView.swift; path = ../AmakaFlow/Views/TelegramSetupView.swift; sourceTree = SOURCE_ROOT; };
 		AMA1620AUTHINT01A /* ClerkAuthorizationInterceptor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ClerkAuthorizationInterceptor.swift; path = ../AmakaFlow/Services/ClerkAuthorizationInterceptor.swift; sourceTree = SOURCE_ROOT; };
 		AMA1620AUTHVM001A /* AuthViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AuthViewModel.swift; path = ../AmakaFlow/ViewModels/AuthViewModel.swift; sourceTree = SOURCE_ROOT; };
-		AMA1620UITEST01A /* UITestEnvironment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = UITestEnvironment.swift; path = ../AmakaFlow/Services/UITestEnvironment.swift; sourceTree = SOURCE_ROOT; };
+		AMA2502LCFGREF /* LaunchConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LaunchConfig.swift; path = ../AmakaFlow/Services/LaunchConfig.swift; sourceTree = SOURCE_ROOT; };
 		AMA2007SIGNUPVMREF /* SignUpViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SignUpViewModel.swift; path = ../AmakaFlow/ViewModels/SignUpViewModel.swift; sourceTree = SOURCE_ROOT; };
 		AMA2007SIGNUPVIEWREF /* SignUpView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SignUpView.swift; path = ../AmakaFlow/Views/SignUpView.swift; sourceTree = SOURCE_ROOT; };
 		AMA2910SUBVMREF /* SubscriptionAccessViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SubscriptionAccessViewModel.swift; path = ../AmakaFlow/ViewModels/SubscriptionAccessViewModel.swift; sourceTree = SOURCE_ROOT; };
@@ -2348,7 +2350,7 @@
 				AMA1620AUTHVM001A /* AuthViewModel.swift */,
 				AMA2007SIGNUPVMREF /* SignUpViewModel.swift */,
 				AMA1620AUTHINT01A /* ClerkAuthorizationInterceptor.swift */,
-				AMA1620UITEST01A /* UITestEnvironment.swift */,
+				AMA2502LCFGREF /* LaunchConfig.swift */,
 				F1XTUR3L0AD3R0000001 /* FixtureLoader.swift */,
 				F1XTUR34P15RV0000001 /* FixtureAPIService.swift */,
 				AMA2285FIXREF /* FixtureAPIService+SocialImport.swift */,
@@ -2551,6 +2553,7 @@
 				AMA2388RDYTREF /* WatchItemReadinessStoreTests.swift */,
 				AMA2388CTATREF /* WatchItemViewModelCTATests.swift */,
 				AMA2386REPLTREF /* WatchItemReplaceCoordinatorTests.swift */,
+				AMA2502LCFGTREF /* LaunchConfigTests.swift */,
 				AMA2387STORETREF /* ActualsSourceConnectionStoreTests.swift */,
 				AMA2387TEACHTREF /* ActualsTeachCardVisibilityTests.swift */,
 				AMA2393TSTREF /* WorkoutSportHonestyTests.swift */,
@@ -2984,7 +2987,7 @@
 				CA268753E918494FAD7CCD56 /* PairingService.swift in Sources */,
 				AMA1620AUTHVM001B /* AuthViewModel.swift in Sources */,
 				AMA1620AUTHINT01B /* ClerkAuthorizationInterceptor.swift in Sources */,
-				AMA1620UITEST01B /* UITestEnvironment.swift in Sources */,
+				AMA2502LCFGBLD /* LaunchConfig.swift in Sources */,
 				F1XTUR3L0AD3R0000002 /* FixtureLoader.swift in Sources */,
 				F1XTUR34P15RV0000002 /* FixtureAPIService.swift in Sources */,
 				B69E1808FE344A15848A3B67 /* WorkoutCompletionService.swift in Sources */,
@@ -3641,6 +3644,7 @@
 				AMA2388CTATBLD /* WatchItemViewModelCTATests.swift in Sources */,
 				AMA2386TRCKTBLD /* WatchItemChangeTrackerTests.swift in Sources */,
 				AMA2386REPLTBLD /* WatchItemReplaceCoordinatorTests.swift in Sources */,
+				AMA2502LCFGTBLD /* LaunchConfigTests.swift in Sources */,
 				AMA2387STORETBLD /* ActualsSourceConnectionStoreTests.swift in Sources */,
 				AMA2387TEACHTBLD /* ActualsTeachCardVisibilityTests.swift in Sources */,
 				AMA2393TSTBLD /* WorkoutSportHonestyTests.swift in Sources */,

@@ -22,22 +22,17 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
 
         // Skip push registration in E2E test mode / visual hosts
     #if DEBUG
-    if UITestEnvironment.shared.hasClerkTestUser
-        || UITestEnvironment.shared.useFixtures
-        || UITestEnvironment.shared.showCreateWithAIGeneratingHost
-        || UITestEnvironment.shared.showActualsDogfoodHost {
-      print("[AppDelegate] Test mode — skipping push notification registration")
-    }
-    if AuthViewModel.uiTestRealSessionRequested() {
-      let pwdPresent = UITestEnvironment.value(for: "UITEST_CLERK_PASSWORD") != nil
-      print("[AppDelegate] UITest launch probe: realSession=1 pwdKey=\(pwdPresent)")
-    }
-    if UITestEnvironment.shared.hasClerkTestUser
-        || UITestEnvironment.shared.useFixtures
-        || UITestEnvironment.shared.showCreateWithAIGeneratingHost
-        || UITestEnvironment.shared.showActualsDogfoodHost
-        || AuthViewModel.uiTestRealSessionRequested() {
-      return true
+    if let config = LaunchConfig.active {
+      let isHarness = config.clerkTestUser || config.useFixtures || config.demoHost != nil
+      if isHarness {
+        print("[AppDelegate] Test mode — skipping push notification registration")
+      }
+      if let email = config.realClerkEmail {
+        print("[AppDelegate] UITest launch probe: realSession=1 pwdKey=\(config.clerkPassword != nil) email=\(email)")
+      }
+      if isHarness || config.realClerkEmail != nil {
+        return true
+      }
     }
     #endif
 

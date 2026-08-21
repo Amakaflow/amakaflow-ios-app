@@ -117,7 +117,7 @@ struct UnifiedWorkoutDetailView: View {
     private var garminPaired: Bool {
         if let garminPairedOverride { return garminPairedOverride }
         #if DEBUG
-        if UITestEnvironment.isTruthy("UITEST_GARMIN_PAIRED") {
+        if LaunchConfig.active?.isGarminPaired == true {
             return true
         }
         #endif

@@ -987,7 +987,7 @@ class WorkoutEngine: ObservableObject {
 
         #if DEBUG
         // Check if running with a Clerk test user during UI tests
-        if UITestEnvironment.shared.hasClerkTestUser {
+        if LaunchConfig.active?.clerkTestUser == true {
             // Generate realistic mock health data for E2E tests
             // Average HR varies by workout intensity - use 130-150 bpm range for strength training
             let baseHR = 140

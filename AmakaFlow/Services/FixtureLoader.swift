@@ -15,24 +15,20 @@ enum FixtureLoader {
 
     /// Load workouts based on UITEST_FIXTURES and UITEST_FIXTURE_STATE env vars
     static func loadWorkouts() throws -> [Workout] {
-        let uiTestEnvironment = UITestEnvironment.shared
+        let config = LaunchConfig.active
 
-        // Handle special states
-        if let state = uiTestEnvironment.fixtureState {
-            switch state {
-            case "empty":
-                print("[FixtureLoader] UITEST_FIXTURE_STATE=empty, returning empty workouts")
-                return []
-            case "error":
-                print("[FixtureLoader] UITEST_FIXTURE_STATE=error, simulating API failure")
-                throw APIError.serverError(500)
-            default:
-                print("[FixtureLoader] Unknown UITEST_FIXTURE_STATE=\(state), ignoring")
-            }
+        if config?.isLibraryEmpty == true {
+            print("[FixtureLoader] empty-library scenario, returning empty workouts")
+            return []
+        }
+
+        if config?.libraryLoadFails == true {
+            print("[FixtureLoader] library-load-failure scenario, simulating API failure")
+            throw APIError.serverError(500)
         }
 
         // Load specific fixtures or all
-        if let names = uiTestEnvironment.fixtureNames {
+        if let names = config?.fixtureNames {
             print("[FixtureLoader] Loading specific fixtures: \(names.joined(separator: ", "))")
             return try names.compactMap { name in
                 try loadFixture(named: name)

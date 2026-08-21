@@ -210,7 +210,7 @@ final class ActualsTodayDemoFeed: ObservableObject {
     /// Launch flag: skip empty teach and land populated Actuals Today immediately.
     static var shouldAutoActivate: Bool {
         #if DEBUG
-        UITestEnvironment.shared.actualsTodayDemo
+        LaunchConfig.active?.actualsTodayDemo == true
         #else
         false
         #endif

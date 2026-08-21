@@ -94,26 +94,19 @@ final class AuthViewModel: ObservableObject {
   /// Anything non-empty enables the bypass — payload fields are
   /// optional and fall back to a synthetic test identity.
   static func uiTestBypassRequested() -> Bool {
-    !(UITestEnvironment.value(for: "UITEST_CLERK_TEST_SESSION") ?? "").isEmpty
+    switch LaunchConfig.active?.session {
+    case .legacyBoolean, .identity: return true
+    case .realClerk, nil: return false
+    }
   }
 
   private func applyUITestBypass() {
-    let raw = UITestEnvironment.value(for: "UITEST_CLERK_TEST_SESSION") ?? ""
-    var fields: [String: String] = [:]
-    for pair in raw.split(separator: ",") {
-      let kv = pair.split(separator: "=", maxSplits: 1).map(String.init)
-      if kv.count == 2 {
-        fields[kv[0].trimmingCharacters(in: .whitespaces)] = kv[1].trimmingCharacters(in: .whitespaces)
-      }
-    }
-    let mockId = fields["user_id"] ?? "user_uitest_ama1843"
-    let mockEmail = fields["email"] ?? "claude+clerk_test@amakaflow.dev"
-    let mockName = fields["name"] ?? "UITest User"
+    guard let identity = LaunchConfig.active?.session?.identity else { return }
 
     userProfile = UserProfile(
-      id: mockId,
-      email: mockEmail,
-      name: mockName,
+      id: identity.userID,
+      email: identity.email,
+      name: identity.displayName,
       avatarUrl: nil
     )
     isAuthenticated = true
@@ -128,19 +121,19 @@ final class AuthViewModel: ObservableObject {
   /// (the `+clerk_test` subaddress is how Clerk routes to its universal
   /// test code 424242 on dev/staging instances.)
   static func uiTestRealSessionRequested() -> Bool {
-    !(UITestEnvironment.value(for: "UITEST_CLERK_REAL_SESSION_EMAIL") ?? "").isEmpty
+    LaunchConfig.active?.realClerkEmail != nil
   }
 
   /// Poll briefly so CI password bypass does not race an empty Maestro launch-arg read.
   private func uiTestClerkPassword(maxWaitSeconds: TimeInterval = 10) async -> String? {
     let deadline = Date().addingTimeInterval(maxWaitSeconds)
     while Date() < deadline {
-      if let password = UITestEnvironment.value(for: "UITEST_CLERK_PASSWORD"), !password.isEmpty {
+      if let password = LaunchConfig.live()?.clerkPassword, !password.isEmpty {
         return password
       }
       try? await Task.sleep(nanoseconds: 200_000_000)
     }
-    return UITestEnvironment.value(for: "UITEST_CLERK_PASSWORD")
+    return LaunchConfig.live()?.clerkPassword
   }
 
   /// AMA-1849: bypass that creates a REAL Clerk session via the
@@ -169,7 +162,7 @@ final class AuthViewModel: ObservableObject {
       }
     }
 
-    let email = UITestEnvironment.value(for: "UITEST_CLERK_REAL_SESSION_EMAIL") ?? ""
+    let email = LaunchConfig.active?.realClerkEmail ?? ""
     let password = await uiTestClerkPassword()
 
     guard !email.isEmpty else {
@@ -179,7 +172,7 @@ final class AuthViewModel: ObservableObject {
 
     let hasPassword = password?.isEmpty == false
     #if DEBUG
-    let pwdKeyPresent = UITestEnvironment.value(for: "UITEST_CLERK_PASSWORD") != nil
+    let pwdKeyPresent = LaunchConfig.active?.clerkPassword != nil
     print("[AuthViewModel] AMA-1849 bypass starting for \(email) (password=\(hasPassword), pwdKeyPresent=\(pwdKeyPresent))")
     #else
     print("[AuthViewModel] AMA-1849 bypass starting for \(email) (password=\(hasPassword))")

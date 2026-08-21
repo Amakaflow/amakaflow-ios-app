@@ -19,11 +19,18 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-RESOLVER = "AmakaFlow/Services/UITestEnvironment.swift"
+RESOLVER = "AmakaFlow/Services/LaunchConfig.swift"
 
 FLAG = re.compile(r"UITEST_[A-Z0-9_]+|AMA\d{4}_[A-Z0-9_]+")
+# An accessor read names no flag string, so requiring a literal below would miss
+# it entirely. That blind spot hid the worst leak this lint exists to catch:
+# `UITestEnvironment.shared.skipOnboarding` at AmakaFlowCompanionApp.swift:251
+# matched the read pattern but carried no `UITEST_` literal, so the guard passed
+# it for months while it compiled into Release.
+CONFIG_READ = re.compile(r"\bLaunchConfig\.")
+
 READ = re.compile(
-    r"UITestEnvironment\.|"
+    r"LaunchConfig\.|"
     r"ProcessInfo\.processInfo\.environment\[|"
     r"UserDefaults\.standard\.(?:string|bool|object)\(forKey"
 )
@@ -60,7 +67,7 @@ def scan(paths, arg_flags):
             if ENDIF.match(line):
                 depth = max(0, depth - 1)
                 continue
-            if depth == 0 and READ.search(line) and FLAG.search(line):
+            if depth == 0 and (CONFIG_READ.search(line) or (READ.search(line) and FLAG.search(line))):
                 ungated.append(f"{rel}:{n}:{line.strip()}")
             hit = ENV_READ.search(line)
             if hit and hit.group(1) in arg_flags:

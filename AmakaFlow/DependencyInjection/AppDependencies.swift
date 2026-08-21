@@ -118,7 +118,7 @@ struct AppDependencies {
     /// nonisolated so it can be used as a default parameter value in
     /// @MainActor ViewModel inits without requiring a concurrent call site.
     static var current: AppDependencies {
-        if UITestEnvironment.shared.useFixtures {
+        if LaunchConfig.active?.useFixtures == true {
             return .fixture
         }
         return .live

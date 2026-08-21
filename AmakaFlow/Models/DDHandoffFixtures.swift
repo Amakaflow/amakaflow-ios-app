@@ -11,7 +11,7 @@ enum DDHandoffFixtures {
     /// When true, Profile/Today/Settings may show design-handoff fixture rows for verification.
     static var isEnabled: Bool {
         #if DEBUG
-        return UITestEnvironment.shared.useFixtures
+        return LaunchConfig.active?.useFixtures == true
             || ProcessInfo.processInfo.environment["AF_USE_HANDOFF_FIXTURES"] == "1"
         #else
         return false
