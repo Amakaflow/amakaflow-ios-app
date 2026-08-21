@@ -10,6 +10,18 @@ import Sentry
 import ClerkKit
 
 @main
+/// Wrapped rather than read inline: a `UserDefaults` key must never be able to
+/// skip the mental-model gate in a shipping build (AMA-2502).
+private enum OnboardingGate {
+    static var isSkipped: Bool {
+        #if DEBUG
+        return LaunchConfig.active?.skipOnboarding == true
+        #else
+        return false
+        #endif
+    }
+}
+
 struct AmakaFlowCompanionApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @StateObject private var authViewModel = AuthViewModel.shared
@@ -248,8 +260,7 @@ struct AmakaFlowCompanionApp: App {
         let _ = mentalModelGateRefresh
         let userId = pairingService.userProfile?.id ?? UIDevice.current.identifierForVendor?.uuidString ?? "device"
         let seenKey = DefaultsKey.mentalModelSeen(userID: userId)
-        let mentalModelSeen = UserDefaults.standard.bool(forKey: seenKey)
-            || LaunchConfig.active?.skipOnboarding == true
+        let mentalModelSeen = UserDefaults.standard.bool(forKey: seenKey) || OnboardingGate.isSkipped
 
         if mentalModelSeen {
             SignUpView()
