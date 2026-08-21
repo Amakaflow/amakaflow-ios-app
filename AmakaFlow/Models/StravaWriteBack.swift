@@ -574,10 +574,10 @@ final class BFFStravaWriteBackProvider: StravaWriteBackProviding {
 enum StravaWriteBackFactory {
     @MainActor
     static func makeDefault() -> any StravaWriteBackProviding {
-        if ProcessInfo.processInfo.environment["UITEST_USE_FIXTURES"] == "1" {
+        #if DEBUG
+        if UITestEnvironment.shared.useFixtures {
             return StubStravaWriteBackProvider()
         }
-        #if DEBUG
         if ProcessInfo.processInfo.environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1" {
             return StubStravaWriteBackProvider()
         }

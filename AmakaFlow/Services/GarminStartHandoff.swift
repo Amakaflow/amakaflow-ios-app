@@ -151,7 +151,7 @@ final class GarminStartHandoffService {
         self.handoffStore = handoffStore
         self.forceFailureCode = forceFailureCode ?? {
             #if DEBUG
-            if let raw = ProcessInfo.processInfo.environment["UITEST_GARMIN_PUSH_FAIL"]?
+            if let raw = UITestEnvironment.value(for: "UITEST_GARMIN_PUSH_FAIL")?
                 .trimmingCharacters(in: .whitespacesAndNewlines),
                !raw.isEmpty {
                 return GarminStartHandoffFailureCode(rawValue: raw)
