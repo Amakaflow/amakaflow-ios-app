@@ -9,7 +9,6 @@ import SwiftUI
 import Sentry
 import ClerkKit
 
-@main
 /// Wrapped rather than read inline: a `UserDefaults` key must never be able to
 /// skip the mental-model gate in a shipping build (AMA-2502).
 private enum OnboardingGate {
@@ -22,6 +21,7 @@ private enum OnboardingGate {
     }
 }
 
+@main
 struct AmakaFlowCompanionApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @StateObject private var authViewModel = AuthViewModel.shared

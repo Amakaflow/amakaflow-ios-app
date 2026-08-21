@@ -54,6 +54,7 @@ struct LaunchConfig: Equatable, Sendable {
 
     enum FaultScenario: Hashable, Sendable {
         case emptyLibrary
+        case libraryLoadFails
         case garminPaired
         case garminPushFails(reason: String)
         case watchItemReplaceFails
@@ -113,8 +114,10 @@ struct LaunchConfig: Equatable, Sendable {
 
         let fixtureNames = source.list(for: "UITEST_FIXTURES")
         var faults: Set<FaultScenario> = []
-        if source.fixtureState(hasFixtureNames: fixtureNames != nil) == "empty" {
-            faults.insert(.emptyLibrary)
+        switch source.fixtureState(hasFixtureNames: fixtureNames != nil) {
+        case "empty": faults.insert(.emptyLibrary)
+        case "error": faults.insert(.libraryLoadFails)
+        default: break
         }
         if source.isTruthy("UITEST_GARMIN_PAIRED") {
             faults.insert(.garminPaired)
@@ -168,6 +171,7 @@ struct LaunchConfig: Equatable, Sendable {
 
 extension LaunchConfig {
     var isLibraryEmpty: Bool { faults.contains(.emptyLibrary) }
+    var libraryLoadFails: Bool { faults.contains(.libraryLoadFails) }
     var isGarminPaired: Bool { faults.contains(.garminPaired) }
     var isWatchManagerDemo: Bool { faults.contains(.watchManagerDemo) }
     var watchItemReplaceFails: Bool { faults.contains(.watchItemReplaceFails) }

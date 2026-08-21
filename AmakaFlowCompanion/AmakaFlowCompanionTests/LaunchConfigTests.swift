@@ -261,5 +261,21 @@ final class LaunchConfigTests: XCTestCase {
             XCTAssertNil(decode(environment: ["UITEST_SIM_SPEED": raw]), "\(raw) should not activate")
         }
     }
+
+    func testFixtureStateErrorDecodesToLibraryLoadFailure() {
+        let config = decode(
+            argv: ["app", "-UITEST_USE_FIXTURES", "true", "-UITEST_FIXTURE_STATE", "error"]
+        )
+        XCTAssertEqual(config?.libraryLoadFails, true)
+        XCTAssertEqual(config?.isLibraryEmpty, false)
+    }
+
+    func testFixtureStateEmptyAndErrorAreDistinct() {
+        let empty = decode(
+            argv: ["app", "-UITEST_USE_FIXTURES", "true", "-UITEST_FIXTURE_STATE", "empty"]
+        )
+        XCTAssertEqual(empty?.isLibraryEmpty, true)
+        XCTAssertEqual(empty?.libraryLoadFails, false)
+    }
 }
 #endif

@@ -22,6 +22,11 @@ enum FixtureLoader {
             return []
         }
 
+        if config?.libraryLoadFails == true {
+            print("[FixtureLoader] library-load-failure scenario, simulating API failure")
+            throw APIError.serverError(500)
+        }
+
         // Load specific fixtures or all
         if let names = config?.fixtureNames {
             print("[FixtureLoader] Loading specific fixtures: \(names.joined(separator: ", "))")
