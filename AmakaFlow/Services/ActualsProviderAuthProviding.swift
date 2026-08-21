@@ -5,7 +5,7 @@
 //  AMA-2387 / AMA-2391: Strava / Garmin OAuth via BFF.
 //  Default scope is read-only; AMA-2396 write-back reconnect requests
 //  activity:write via `includeWrite: true` on authorize.
-//  Live: `BFFActualsProviderAuth`. Stub: previews + UITEST_USE_FIXTURES.
+//  Live: `BFFActualsProviderAuth`. Stub: previews + AF_USE_FIXTURES.
 //
 
 import Foundation

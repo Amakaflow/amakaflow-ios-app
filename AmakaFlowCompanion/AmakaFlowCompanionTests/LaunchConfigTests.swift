@@ -33,11 +33,11 @@ final class LaunchConfigTests: XCTestCase {
 
     func testEachDeliveryMechanismEnablesFixturesOnItsOwn() {
         let cases: [(String, LaunchConfig?)] = [
-            ("argv", decode(argv: ["-UITEST_USE_FIXTURES", "true"])),
-            ("bare argv", decode(argv: ["UITEST_USE_FIXTURES", "true"])),
-            ("defaults", decode(defaults: ["UITEST_USE_FIXTURES": "true"])),
-            ("dashed defaults", decode(defaults: ["-UITEST_USE_FIXTURES": "true"])),
-            ("environment", decode(environment: ["UITEST_USE_FIXTURES": "true"]))
+            ("argv", decode(argv: ["-AF_USE_FIXTURES", "true"])),
+            ("bare argv", decode(argv: ["AF_USE_FIXTURES", "true"])),
+            ("defaults", decode(defaults: ["AF_USE_FIXTURES": "true"])),
+            ("dashed defaults", decode(defaults: ["-AF_USE_FIXTURES": "true"])),
+            ("environment", decode(environment: ["AF_USE_FIXTURES": "true"]))
         ]
         for (name, config) in cases {
             XCTAssertEqual(config?.useFixtures, true, "\(name) should enable fixtures")
@@ -47,14 +47,14 @@ final class LaunchConfigTests: XCTestCase {
     func testTruthinessAcceptsTrueOneAndYesCaseInsensitively() {
         for raw in ["true", "TRUE", "1", "yes", "YES"] {
             XCTAssertEqual(
-                decode(environment: ["UITEST_SKIP_ONBOARDING": raw])?.skipOnboarding,
+                decode(environment: ["AF_SKIP_ONBOARDING": raw])?.skipOnboarding,
                 true,
                 "\(raw) should be truthy"
             )
         }
         for raw in ["false", "0", "no", "", "maybe"] {
             XCTAssertNotEqual(
-                decode(environment: ["UITEST_SKIP_ONBOARDING": raw])?.skipOnboarding,
+                decode(environment: ["AF_SKIP_ONBOARDING": raw])?.skipOnboarding,
                 true,
                 "\(raw) should not be truthy"
             )
@@ -62,37 +62,37 @@ final class LaunchConfigTests: XCTestCase {
     }
 
     func testBareFlagFollowedByAnotherFlagCountsAsEnabled() {
-        let config = decode(argv: ["-UITEST_USE_FIXTURES", "-UITEST_SKIP_ONBOARDING", "true"])
+        let config = decode(argv: ["-AF_USE_FIXTURES", "-AF_SKIP_ONBOARDING", "true"])
         XCTAssertEqual(config?.useFixtures, true)
         XCTAssertEqual(config?.skipOnboarding, true)
     }
 
     func testTrailingBareFlagCountsAsEnabled() {
-        XCTAssertEqual(decode(argv: ["-UITEST_USE_FIXTURES"])?.useFixtures, true)
+        XCTAssertEqual(decode(argv: ["-AF_USE_FIXTURES"])?.useFixtures, true)
     }
 
     // MARK: - Precedence
 
     func testLaunchArgumentsWinOverStaleSimulatorEnvironment() {
         let config = decode(
-            argv: ["-UITEST_USE_FIXTURES", "true"],
-            environment: ["UITEST_USE_FIXTURES": "false"]
+            argv: ["-AF_USE_FIXTURES", "true"],
+            environment: ["AF_USE_FIXTURES": "false"]
         )
         XCTAssertEqual(config?.useFixtures, true)
     }
 
     func testAppDefaultsWinOverStaleSimulatorEnvironment() {
         let config = decode(
-            defaults: ["UITEST_USE_FIXTURES": "true"],
-            environment: ["UITEST_USE_FIXTURES": "false"]
+            defaults: ["AF_USE_FIXTURES": "true"],
+            environment: ["AF_USE_FIXTURES": "false"]
         )
         XCTAssertEqual(config?.useFixtures, true)
     }
 
     func testEmptyDefaultsValueFallsThroughToEnvironment() {
         let config = decode(
-            defaults: ["UITEST_USE_FIXTURES": ""],
-            environment: ["UITEST_USE_FIXTURES": "true"]
+            defaults: ["AF_USE_FIXTURES": ""],
+            environment: ["AF_USE_FIXTURES": "true"]
         )
         XCTAssertEqual(config?.useFixtures, true)
     }
@@ -100,7 +100,7 @@ final class LaunchConfigTests: XCTestCase {
     // MARK: - Session
 
     func testLegacyBooleanSessionForm() {
-        let config = decode(environment: ["UITEST_CLERK_TEST_SESSION": "true"])
+        let config = decode(environment: ["AF_SESSION_IDENTITY": "true"])
         XCTAssertEqual(config?.session, .legacyBoolean)
         let identity = config?.session?.identity
         XCTAssertEqual(identity?.userID, "user_uitest_ama1843")
@@ -110,7 +110,7 @@ final class LaunchConfigTests: XCTestCase {
 
     func testCommaPayloadSessionForm() {
         let config = decode(argv: [
-            "-UITEST_CLERK_TEST_SESSION",
+            "-AF_SESSION_IDENTITY",
             "user_id=user_ama2383_ai,email=claude+clerk_test@amakaflow.dev,name=AMA2383 AI"
         ])
         XCTAssertEqual(
@@ -124,7 +124,7 @@ final class LaunchConfigTests: XCTestCase {
     }
 
     func testPartialPayloadFallsBackToSyntheticIdentity() {
-        let identity = decode(environment: ["UITEST_CLERK_TEST_SESSION": "user_id=only_id"])?
+        let identity = decode(environment: ["AF_SESSION_IDENTITY": "user_id=only_id"])?
             .session?.identity
         XCTAssertEqual(identity?.userID, "only_id")
         XCTAssertEqual(identity?.email, "claude+clerk_test@amakaflow.dev")
@@ -133,9 +133,9 @@ final class LaunchConfigTests: XCTestCase {
 
     func testRealClerkSessionWinsOverMockSession() {
         let config = decode(environment: [
-            "UITEST_CLERK_TEST_SESSION": "true",
-            "UITEST_CLERK_REAL_SESSION_EMAIL": "claude+clerk_test@amakaflow.dev",
-            "UITEST_CLERK_PASSWORD": "hunter2"
+            "AF_SESSION_IDENTITY": "true",
+            "AF_SESSION_CLERK_EMAIL": "claude+clerk_test@amakaflow.dev",
+            "AF_CLERK_PASSWORD": "hunter2"
         ])
         XCTAssertEqual(
             config?.session,
@@ -148,17 +148,17 @@ final class LaunchConfigTests: XCTestCase {
     /// `clerkTestUser` must not be derived from `session`.
     func testClerkTestUserNeedsAllThreeCredentialsAndNoSession() {
         let config = decode(environment: [
-            "UITEST_CLERK_EMAIL": "claude+clerk_test@amakaflow.dev",
-            "UITEST_CLERK_PASSWORD": "hunter2",
-            "UITEST_CLERK_PUBLISHABLE_KEY": "pk_test_x"
+            "AF_CLERK_EMAIL": "claude+clerk_test@amakaflow.dev",
+            "AF_CLERK_PASSWORD": "hunter2",
+            "AF_CLERK_PUBLISHABLE_KEY": "pk_test_x"
         ])
         XCTAssertEqual(config?.clerkTestUser, true)
         XCTAssertNil(config?.session)
 
         XCTAssertNotEqual(
             decode(environment: [
-                "UITEST_CLERK_EMAIL": "claude+clerk_test@amakaflow.dev",
-                "UITEST_CLERK_PASSWORD": "hunter2"
+                "AF_CLERK_EMAIL": "claude+clerk_test@amakaflow.dev",
+                "AF_CLERK_PASSWORD": "hunter2"
             ])?.clerkTestUser,
             true
         )
@@ -168,30 +168,30 @@ final class LaunchConfigTests: XCTestCase {
 
     func testFixtureNamesSplitOnCommas() {
         XCTAssertEqual(
-            decode(environment: ["UITEST_FIXTURES": " strength_block_w1 , emom_strength "])?.fixtures,
+            decode(environment: ["AF_FIXTURE_NAMES": " strength_block_w1 , emom_strength "])?.fixtures,
             .named(["strength_block_w1", "emom_strength"])
         )
-        XCTAssertEqual(decode(environment: ["UITEST_USE_FIXTURES": "true"])?.fixtures, .all)
+        XCTAssertEqual(decode(environment: ["AF_USE_FIXTURES": "true"])?.fixtures, .all)
     }
 
     func testEmptyLibraryScenario() {
-        XCTAssertEqual(decode(environment: ["UITEST_FIXTURE_STATE": "empty"])?.isLibraryEmpty, true)
+        XCTAssertEqual(decode(environment: ["AF_FIXTURE_STATE": "empty"])?.isLibraryEmpty, true)
     }
 
     /// Stale simulator env must not empty a dogfood launch that named fixtures.
     func testNamedFixturesIgnoreStaleEmptyStateFromEnvironment() {
         let config = decode(
-            argv: ["-UITEST_FIXTURES", "strength_block_w1"],
-            environment: ["UITEST_FIXTURE_STATE": "empty"]
+            argv: ["-AF_FIXTURE_NAMES", "strength_block_w1"],
+            environment: ["AF_FIXTURE_STATE": "empty"]
         )
         XCTAssertNotEqual(config?.isLibraryEmpty, true)
     }
 
     func testWatchManagerDemoAndReplaceFaultsCoexist() {
         let config = decode(environment: [
-            "AMA2375_DEMO": "true",
-            "UITEST_WATCHITEM_REPLACE_FAIL": "1",
-            "UITEST_WATCHITEM_REPLACE_DELAY_MS": "1500"
+            "AF_DEMO_WATCH_MANAGER": "true",
+            "AF_FAULT_WATCH_REPLACE_FAIL": "1",
+            "AF_FAULT_WATCH_REPLACE_DELAY_MS": "1500"
         ])
         XCTAssertEqual(config?.isWatchManagerDemo, true)
         XCTAssertEqual(config?.watchItemReplaceFails, true)
@@ -199,9 +199,9 @@ final class LaunchConfigTests: XCTestCase {
     }
 
     func testGarminFaults() {
-        XCTAssertEqual(decode(environment: ["UITEST_GARMIN_PAIRED": "1"])?.isGarminPaired, true)
+        XCTAssertEqual(decode(environment: ["AF_FAULT_GARMIN_PAIRED": "1"])?.isGarminPaired, true)
         XCTAssertEqual(
-            decode(environment: ["UITEST_GARMIN_PUSH_FAIL": " watch_full "])?.garminPushFailureReason,
+            decode(environment: ["AF_FAULT_GARMIN_PUSH_FAIL": " watch_full "])?.garminPushFailureReason,
             "watch_full"
         )
     }
@@ -209,7 +209,7 @@ final class LaunchConfigTests: XCTestCase {
     // MARK: - Demo hosts
 
     func testActualsDogfoodHostFromAnyOfItsThreeFlags() {
-        for flag in ["AMA2387_DEMO", "AMA2426_DEMO", "UITEST_SHOW_ACTUALS_DOGFOOD"] {
+        for flag in ["AF_DEMO_ACTUALS_HUB"] {
             XCTAssertEqual(
                 decode(environment: [flag: "true"])?.demoHost,
                 .actualsDogfood(autorun: nil),
@@ -219,7 +219,7 @@ final class LaunchConfigTests: XCTestCase {
     }
 
     func testActualsDogfoodAutorunModes() {
-        let base = ["AMA2426_DEMO": "true", "AMA2426_AUTORUN": "true"]
+        let base = ["AF_DEMO_ACTUALS_HUB": "true", "AMA2426_AUTORUN": "true"]
         XCTAssertEqual(decode(environment: base)?.demoHost, .actualsDogfood(autorun: .fixture))
         XCTAssertEqual(
             decode(environment: base.merging(["AMA2426_LIVE": "true"]) { _, new in new })?.demoHost,
@@ -237,13 +237,13 @@ final class LaunchConfigTests: XCTestCase {
 
     func testCreateWithAIGeneratingHost() {
         XCTAssertEqual(
-            decode(environment: ["UITEST_SHOW_CREATE_WITH_AI_GENERATING": "true"])?.demoHost,
+            decode(environment: ["AF_DEMO_CREATE_WITH_AI": "true"])?.demoHost,
             .createWithAIGenerating
         )
     }
 
     func testActualsTodayDemoIsNotAHost() {
-        let config = decode(environment: ["AMA2387_TODAY_DEMO": "true"])
+        let config = decode(environment: ["AF_DEMO_ACTUALS_TODAY": "true"])
         XCTAssertEqual(config?.actualsTodayDemo, true)
         XCTAssertNil(config?.demoHost)
     }
@@ -251,20 +251,19 @@ final class LaunchConfigTests: XCTestCase {
     // MARK: - Misc
 
     func testSkipAppleWatchIsSetByEitherFlag() {
-        XCTAssertEqual(decode(environment: ["UITEST_SKIP_APPLE_WATCH": "true"])?.skipAppleWatch, true)
-        XCTAssertEqual(decode(environment: ["UITEST_FAKE_WATCH": "true"])?.skipAppleWatch, true)
+        XCTAssertEqual(decode(environment: ["AF_SKIP_APPLE_WATCH": "true"])?.skipAppleWatch, true)
     }
 
     func testSimulationSpeedRejectsNonPositiveAndUnparseableValues() {
-        XCTAssertEqual(decode(environment: ["UITEST_SIM_SPEED": "2.5"])?.simulationSpeed, 2.5)
+        XCTAssertEqual(decode(environment: ["AF_SIM_SPEED": "2.5"])?.simulationSpeed, 2.5)
         for raw in ["0", "-1", "fast"] {
-            XCTAssertNil(decode(environment: ["UITEST_SIM_SPEED": raw]), "\(raw) should not activate")
+            XCTAssertNil(decode(environment: ["AF_SIM_SPEED": raw]), "\(raw) should not activate")
         }
     }
 
     func testFixtureStateErrorDecodesToLibraryLoadFailure() {
         let config = decode(
-            argv: ["app", "-UITEST_USE_FIXTURES", "true", "-UITEST_FIXTURE_STATE", "error"]
+            argv: ["app", "-AF_USE_FIXTURES", "true", "-AF_FIXTURE_STATE", "error"]
         )
         XCTAssertEqual(config?.libraryLoadFails, true)
         XCTAssertEqual(config?.isLibraryEmpty, false)
@@ -272,7 +271,7 @@ final class LaunchConfigTests: XCTestCase {
 
     func testFixtureStateEmptyAndErrorAreDistinct() {
         let empty = decode(
-            argv: ["app", "-UITEST_USE_FIXTURES", "true", "-UITEST_FIXTURE_STATE", "empty"]
+            argv: ["app", "-AF_USE_FIXTURES", "true", "-AF_FIXTURE_STATE", "empty"]
         )
         XCTAssertEqual(empty?.isLibraryEmpty, true)
         XCTAssertEqual(empty?.libraryLoadFails, false)

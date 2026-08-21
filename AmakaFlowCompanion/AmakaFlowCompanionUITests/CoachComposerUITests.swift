@@ -18,13 +18,13 @@ final class CoachComposerUITests: XCTestCase {
         app = XCUIApplication()
         app.launchArguments = ["--uitesting"]
         app.launchEnvironment = [
-            "UITEST_CLERK_TEST_SESSION": "user_id=user_ama2065,email=ama2065@example.test,name=AMA2065",
-            "UITEST_CLERK_EMAIL": "ama2065@example.test",
-            "UITEST_CLERK_PASSWORD": "unused-mock-session",
-            "UITEST_CLERK_PUBLISHABLE_KEY": ProcessInfo.processInfo.environment["UITEST_CLERK_PUBLISHABLE_KEY"] ?? "pk_test_cnVsaW5nLW1pdGUtODQuY2xlcmsuYWNjb3VudHMuZGV2JA",
-            "UITEST_SKIP_ONBOARDING": "true",
-            "UITEST_SKIP_APPLE_WATCH": "true",
-            "UITEST_USE_FIXTURES": "true"
+            "AF_SESSION_IDENTITY": "user_id=user_ama2065,email=ama2065@example.test,name=AMA2065",
+            "AF_CLERK_EMAIL": "ama2065@example.test",
+            "AF_CLERK_PASSWORD": "unused-mock-session",
+            "AF_CLERK_PUBLISHABLE_KEY": ProcessInfo.processInfo.environment["AF_CLERK_PUBLISHABLE_KEY"] ?? "pk_test_cnVsaW5nLW1pdGUtODQuY2xlcmsuYWNjb3VudHMuZGV2JA",
+            "AF_SKIP_ONBOARDING": "true",
+            "AF_SKIP_APPLE_WATCH": "true",
+            "AF_USE_FIXTURES": "true"
         ]
         app.launch()
         dismissBlockingModalsIfPresent()

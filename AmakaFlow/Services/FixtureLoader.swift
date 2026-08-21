@@ -10,10 +10,10 @@
 import Foundation
 
 /// Loads workout data from bundled JSON fixture files
-/// Used when UITEST_USE_FIXTURES=true to provide deterministic test data
+/// Used when AF_USE_FIXTURES=true to provide deterministic test data
 enum FixtureLoader {
 
-    /// Load workouts based on UITEST_FIXTURES and UITEST_FIXTURE_STATE env vars
+    /// Load workouts based on AF_FIXTURE_NAMES and AF_FIXTURE_STATE env vars
     static func loadWorkouts() throws -> [Workout] {
         let config = LaunchConfig.active
 

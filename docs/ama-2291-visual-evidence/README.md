@@ -5,13 +5,13 @@
 | File | Meaning |
 | --- | --- |
 | `01-detail-social.png` | Instagram-sourced workout unified detail (credit row + Edit/Start) |
-| `02-start-sheet-garmin-default.png` | Start sheet with gym + Garmin/Apple/Phone; Garmin Default when `UITEST_GARMIN_PAIRED` |
+| `02-start-sheet-garmin-default.png` | Start sheet with gym + Garmin/Apple/Phone; Garmin Default when `AF_FAULT_GARMIN_PAIRED` |
 | `03-edit-open.png` | Edit opens structure editor (AI never gatekeeps) |
 | `04-detail-manual.png` | Manual-sourced workout same detail chrome |
 
 ## Auth path used
 
-`UITEST_CLERK_TEST_SESSION` + `UITEST_SKIP_ONBOARDING=true` + `UITEST_USE_FIXTURES=true` + `UITEST_GARMIN_PAIRED=true`.
+`AF_SESSION_IDENTITY` + `AF_SKIP_ONBOARDING=true` + `AF_USE_FIXTURES=true` + `AF_FAULT_GARMIN_PAIRED=true`.
 
 ## Re-run
 

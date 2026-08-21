@@ -43,7 +43,7 @@ protocol WatchItemReplacing: Sendable {
 }
 
 /// Demo / live hybrid. When watch-manager demo is on, sleeps then succeeds
-/// (or fails if `UITEST_WATCHITEM_REPLACE_FAIL=true`).
+/// (or fails if `AF_FAULT_WATCH_REPLACE_FAIL=true`).
 struct WatchItemReplaceCoordinator: WatchItemReplacing {
     var delayNanoseconds: UInt64
     var shouldFail: Bool
@@ -82,13 +82,13 @@ struct WatchItemReplaceCoordinator: WatchItemReplacing {
             }
             if Task.isCancelled { return .failure(.cancelled) }
             if shouldFail {
-                return .failure(.underlying("Demo replace failed (UITEST_WATCHITEM_REPLACE_FAIL)."))
+                return .failure(.underlying("Demo replace failed (AF_FAULT_WATCH_REPLACE_FAIL)."))
             }
             return .success(())
         }
 
         // Live Apple same-slot / Garmin id-stable replace is a follow-up.
         // Sheet CTA is demo-gated so users never hit this path in product UI.
-        return .failure(.underlying("Live replace is not wired yet — enable AMA2375_DEMO for Simulator."))
+        return .failure(.underlying("Live replace is not wired yet — enable AF_DEMO_WATCH_MANAGER for Simulator."))
     }
 }

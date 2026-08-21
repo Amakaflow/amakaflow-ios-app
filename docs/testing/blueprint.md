@@ -49,7 +49,7 @@ Current entries:
 
 | Journey step | Vendor SDK | Limitation | Fallback in use | Upstream | Workaround ticket |
 |---|---|---|---|---|---|
-| CJ-01 sign-in | clerk-ios (`ClerkKitUI.AuthView`) | WebView-hosted form, zero `accessibilityIdentifier` annotations, `SignIn.create` is internal access (not callable from app code) | `UITEST_CLERK_TEST_SESSION` env-var bypass in `AuthViewModel` (AMA-1843, DEBUG-only) — skips Clerk subscription, mocks `isAuthenticated=true` + a synthetic `UserProfile`. Lets XCUITest drive past the auth gate but **no real Clerk JWT**, so backend API calls 401. UI-navigation evidence only. | [clerk-ios#413](https://github.com/clerk/clerk-ios/issues/413) | AMA-1843 (mock bypass — landed); follow-up for real-session bypass via raw Clerk Frontend API |
+| CJ-01 sign-in | clerk-ios (`ClerkKitUI.AuthView`) | WebView-hosted form, zero `accessibilityIdentifier` annotations, `SignIn.create` is internal access (not callable from app code) | `AF_SESSION_IDENTITY` env-var bypass in `AuthViewModel` (AMA-1843, DEBUG-only) — skips Clerk subscription, mocks `isAuthenticated=true` + a synthetic `UserProfile`. Lets XCUITest drive past the auth gate but **no real Clerk JWT**, so backend API calls 401. UI-navigation evidence only. | [clerk-ios#413](https://github.com/clerk/clerk-ios/issues/413) | AMA-1843 (mock bypass — landed); follow-up for real-session bypass via raw Clerk Frontend API |
 
 #### CJ-01 sign-in bypass usage
 
@@ -57,7 +57,7 @@ XCUITest opts in by setting the env var on the launched app under test:
 
 ```swift
 let app = XCUIApplication()
-app.launchEnvironment["UITEST_CLERK_TEST_SESSION"] = "user_id=user_3DPjPhIrk4X7JDQQsi7PH63Iurd,email=claude+clerk_test@amakaflow.dev"
+app.launchEnvironment["AF_SESSION_IDENTITY"] = "user_id=user_3DPjPhIrk4X7JDQQsi7PH63Iurd,email=claude+clerk_test@amakaflow.dev"
 app.launch()
 ```
 

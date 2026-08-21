@@ -123,10 +123,10 @@ For Maestro E2E tests, use `UITEST_*` variables instead of `TEST_*`. These are p
 | `UITEST_AUTH_SECRET` | Bypasses JWT auth (same as TEST_AUTH_SECRET) | `e2e-test-secret-dev-only` |
 | `UITEST_USER_ID` | Sets the authenticated user ID | `user_37lZCcU9AJ9b7MX2H71dZ2CuX2u` |
 | `UITEST_USER_EMAIL` | Sets the user's email for profile display | `soopergeri+e2etest@gmail.com` |
-| `UITEST_ENVIRONMENT` | Sets app environment (development/staging/production) | `development` |
-| `UITEST_API_BASE_URL` | Overrides the API base URL | `http://localhost:8001` |
-| `UITEST_USE_FIXTURES` | Load mock/fixture data instead of calling API | `true` |
-| `UITEST_SKIP_ONBOARDING` | Skip onboarding screens (forward-compatible) | `true` |
+| `AF_ENVIRONMENT` | Sets app environment (development/staging/production) | `development` |
+| `AF_API_BASE_URL` | Overrides the API base URL | `http://localhost:8001` |
+| `AF_USE_FIXTURES` | Load mock/fixture data instead of calling API | `true` |
+| `AF_SKIP_ONBOARDING` | Skip onboarding screens (forward-compatible) | `true` |
 | `UITEST_MODE` | General flag indicating UITEST mode | `true` |
 
 ### Priority Order
@@ -153,7 +153,7 @@ maestro test flows/ios/smoke.yaml
 2. `TestAuthStore` reads `UITEST_AUTH_SECRET` / `UITEST_USER_ID` (highest priority)
 3. `PairingService.init()` detects valid credentials and sets `isPaired = true`
 4. App shows `ContentView` (home screen) instead of `PairingView`
-5. If `UITEST_USE_FIXTURES=true`, `WorkoutsViewModel` loads mock data instead of calling the API
+5. If `AF_USE_FIXTURES=true`, `WorkoutsViewModel` loads mock data instead of calling the API
 
 ### Security
 

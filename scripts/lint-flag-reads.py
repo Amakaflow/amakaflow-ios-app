@@ -5,8 +5,8 @@
    existed at 74d2c250, one of which let a UserDefaults key skip the
    mental-model onboarding gate in a shipping build.
 2. A flag read straight from the process environment never sees a value that
-   Maestro passed as a launch argument. That is why UITEST_MODE,
-   UITEST_GARMIN_PUSH_FAIL, and UITEST_START_SCREEN were set by flows and
+   Maestro passed as a launch argument. That is why AF_MODE,
+   AF_FAULT_GARMIN_PUSH_FAIL, and AF_START_SCREEN were set by flows and
    never once fired.
 
 Scope is app-target Swift only. Test targets are the callers; they set these
@@ -21,11 +21,11 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 RESOLVER = "AmakaFlow/Services/LaunchConfig.swift"
 
-FLAG = re.compile(r"UITEST_[A-Z0-9_]+|AMA\d{4}_[A-Z0-9_]+")
+FLAG = re.compile(r"AF_[A-Z0-9_]+")
 # An accessor read names no flag string, so requiring a literal below would miss
 # it entirely. That blind spot hid the worst leak this lint exists to catch:
 # `UITestEnvironment.shared.skipOnboarding` at AmakaFlowCompanionApp.swift:251
-# matched the read pattern but carried no `UITEST_` literal, so the guard passed
+# matched the read pattern but carried no flag literal, so the guard passed
 # it for months while it compiled into Release.
 CONFIG_READ = re.compile(r"\bLaunchConfig\.")
 

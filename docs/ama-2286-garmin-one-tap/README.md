@@ -36,7 +36,7 @@ for Start → Garmin. Those only wake `openApp`; queue fan-out needs a mapper
 - [ ] CIQ widget paired (Profile → Devices + code on watch)
 - [ ] Strength push: status shows Sent/Queued (not “stub”); names visible on watch after CIQ download
 - [ ] Interval push: lap structure usable in native player
-- [ ] Forced fail: `UITEST_GARMIN_PUSH_FAIL=not_paired` or unpaired account → clear what+why ≤ few seconds
+- [ ] Forced fail: `AF_FAULT_GARMIN_PUSH_FAIL=not_paired` or unpaired account → clear what+why ≤ few seconds
 - [ ] Storage stress: ~20 workouts — cleanup / “storage full” copy if watched
 
 ## BLOCKED (device verify)

@@ -21,13 +21,13 @@ final class AuthViewModel: ObservableObject {
   func start() {
     guard authEventsTask == nil else { return }
 
-    // AMA-1843: UITest mock bypass. When `UITEST_CLERK_TEST_SESSION`
+    // AMA-1843: UITest mock bypass. When `AF_SESSION_IDENTITY`
     // is set on a DEBUG build, skip Clerk entirely and pretend the
     // user is signed in. No real JWT — backend API calls return 401.
     // Useful for UI-only journey validation.
     //
     // AMA-1849: UITest REAL-session bypass. When
-    // `UITEST_CLERK_REAL_SESSION_EMAIL` is set on a DEBUG build,
+    // `AF_SESSION_CLERK_EMAIL` is set on a DEBUG build,
     // create an actual Clerk session via the Frontend API (using
     // Clerk's universal test code 424242) and plumb it into
     // `Clerk.shared` via the public `setActive(sessionId:)` API.
@@ -89,7 +89,7 @@ final class AuthViewModel: ObservableObject {
 
   #if DEBUG
   /// AMA-1843: env-var probe + payload parser.
-  /// Format: `UITEST_CLERK_TEST_SESSION=user_id=<id>,email=<email>`
+  /// Format: `AF_SESSION_IDENTITY=user_id=<id>,email=<email>`
   /// (commas in values are not supported; not needed for sign-in mock).
   /// Anything non-empty enables the bypass — payload fields are
   /// optional and fall back to a synthetic test identity.
@@ -117,7 +117,7 @@ final class AuthViewModel: ObservableObject {
   }
 
   /// AMA-1849: real-session bypass probe. Format:
-  ///   `UITEST_CLERK_REAL_SESSION_EMAIL=claude+clerk_test@amakaflow.dev`
+  ///   `AF_SESSION_CLERK_EMAIL=claude+clerk_test@amakaflow.dev`
   /// (the `+clerk_test` subaddress is how Clerk routes to its universal
   /// test code 424242 on dev/staging instances.)
   static func uiTestRealSessionRequested() -> Bool {
@@ -166,7 +166,7 @@ final class AuthViewModel: ObservableObject {
     let password = await uiTestClerkPassword()
 
     guard !email.isEmpty else {
-      print("[AuthViewModel] AMA-1849 bypass FAILED: UITEST_CLERK_REAL_SESSION_EMAIL is empty")
+      print("[AuthViewModel] AMA-1849 bypass FAILED: AF_SESSION_CLERK_EMAIL is empty")
       return
     }
 
@@ -200,7 +200,7 @@ final class AuthViewModel: ObservableObject {
         // AMA-2271: HTTP email_code bypass races Maestro Clerk UI on fresh CI sims and
         // leaves expired verifications. When password is unavailable, defer to the
         // Maestro UI fallback in clerk-signin.yaml instead of opening a sign-in here.
-        print("[AuthViewModel] AMA-1849 bypass deferred — no UITEST_CLERK_PASSWORD (Maestro UI)")
+        print("[AuthViewModel] AMA-1849 bypass deferred — no AF_CLERK_PASSWORD (Maestro UI)")
         return
       }
 

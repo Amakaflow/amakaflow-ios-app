@@ -63,7 +63,7 @@
 
 **Files:**
 - Create: `AmakaFlow/Services/WatchItemReplaceCoordinator.swift`
-- Modify: `AmakaFlow/Services/UITestEnvironment.swift` — optional `UITEST_WATCHITEM_REPLACE_DELAY_MS`
+- Modify: `AmakaFlow/Services/UITestEnvironment.swift` — optional `AF_FAULT_WATCH_REPLACE_DELAY_MS`
 - Modify: `WatchItemSheet` / VM to call coordinator
 - Create: `AmakaFlowCompanion/AmakaFlowCompanionTests/WatchItemReplaceCoordinatorTests.swift`
 

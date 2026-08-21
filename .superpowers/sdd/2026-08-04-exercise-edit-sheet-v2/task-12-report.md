@@ -20,8 +20,8 @@ human follow-up.
 | 3 | Re-open → `af_exsheet_rest_open` → cycle all five `af_exsheet_target_*` chips → assert `af_exsheet_rest_open_caption` / `af_exsheet_rest_duration` unchanged |
 | 4 | Triceps Pushdown → screenshot each TARGET kind + SETS/REST grid (`docs/ama-2379-visual-evidence/`) |
 
-Auth scaffold matches ama-2372 visual flows (`UITEST_CLERK_TEST_SESSION`,
-`UITEST_SKIP_ONBOARDING`, `UITEST_USE_FIXTURES`).
+Auth scaffold matches ama-2372 visual flows (`AF_SESSION_IDENTITY`,
+`AF_SKIP_ONBOARDING`, `AF_USE_FIXTURES`).
 
 ### Static mockup-parity checklist
 

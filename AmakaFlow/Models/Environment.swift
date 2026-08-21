@@ -15,7 +15,7 @@ enum AppEnvironment: String, CaseIterable {
         get {
             // E2E Test override (AMA-232) - check launch environment first
             #if DEBUG
-            if let testEnv = ProcessInfo.processInfo.environment["UITEST_ENVIRONMENT"],
+            if let testEnv = ProcessInfo.processInfo.environment["AF_ENVIRONMENT"],
                let env = AppEnvironment(rawValue: testEnv) {
                 return env
             }
@@ -60,9 +60,9 @@ enum AppEnvironment: String, CaseIterable {
     }
 
     var mapperAPIURL: String {
-        // Allow override via UITEST_API_BASE_URL / TEST_API_BASE_URL for E2E testing
+        // Allow override via AF_API_BASE_URL / TEST_API_BASE_URL for E2E testing
         #if DEBUG
-        if let testBaseURL = ProcessInfo.processInfo.environment["UITEST_API_BASE_URL"],
+        if let testBaseURL = ProcessInfo.processInfo.environment["AF_API_BASE_URL"],
            !testBaseURL.isEmpty {
             return testBaseURL
         }
@@ -86,7 +86,7 @@ enum AppEnvironment: String, CaseIterable {
     /// longer require an iOS release. See AMA-1817 epic.
     var mobileBFFURL: String {
         #if DEBUG
-        if let testBaseURL = ProcessInfo.processInfo.environment["UITEST_BFF_BASE_URL"],
+        if let testBaseURL = ProcessInfo.processInfo.environment["AF_BFF_BASE_URL"],
            !testBaseURL.isEmpty {
             return testBaseURL
         }
@@ -125,7 +125,7 @@ enum AppEnvironment: String, CaseIterable {
 
     var mcpAPIURL: String {
         #if DEBUG
-        if let testBaseURL = ProcessInfo.processInfo.environment["UITEST_API_BASE_URL"],
+        if let testBaseURL = ProcessInfo.processInfo.environment["AF_API_BASE_URL"],
            !testBaseURL.isEmpty {
             return testBaseURL
         }
@@ -146,7 +146,7 @@ enum AppEnvironment: String, CaseIterable {
     /// Values must be supplied by build settings/Info.plist or process environment, never hardcoded.
     var clerkPublishableKey: String {
         #if DEBUG
-        if let override = ProcessInfo.processInfo.environment["UITEST_CLERK_PUBLISHABLE_KEY"], !override.isEmpty {
+        if let override = ProcessInfo.processInfo.environment["AF_CLERK_PUBLISHABLE_KEY"], !override.isEmpty {
             return override
         }
         if let override = ProcessInfo.processInfo.environment["CLERK_PUBLISHABLE_KEY"], !override.isEmpty {
@@ -216,9 +216,9 @@ enum AppEnvironment: String, CaseIterable {
     }
 
     var displayName: String {
-        // Show custom API URL hostname when using UITEST_API_BASE_URL / TEST_API_BASE_URL override
+        // Show custom API URL hostname when using AF_API_BASE_URL / TEST_API_BASE_URL override
         #if DEBUG
-        let testBaseURL = ProcessInfo.processInfo.environment["UITEST_API_BASE_URL"]
+        let testBaseURL = ProcessInfo.processInfo.environment["AF_API_BASE_URL"]
             ?? ProcessInfo.processInfo.environment["TEST_API_BASE_URL"]
         if let testBaseURL, !testBaseURL.isEmpty,
            let url = URL(string: testBaseURL),

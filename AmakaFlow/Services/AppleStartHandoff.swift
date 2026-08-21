@@ -215,7 +215,7 @@ final class AppleStartHandoffService { // swiftlint:disable:this type_body_lengt
 
     private static func defaultForceFailureCode() -> AppleStartHandoffFailureCode? {
         #if DEBUG
-        if let raw = ProcessInfo.processInfo.environment["UITEST_APPLE_TRY_FAIL"]?
+        if let raw = ProcessInfo.processInfo.environment["AF_FAULT_APPLE_START_FAIL"]?
             .trimmingCharacters(in: .whitespacesAndNewlines),
            !raw.isEmpty {
             return AppleStartHandoffFailureCode(rawValue: raw) ?? .unknown

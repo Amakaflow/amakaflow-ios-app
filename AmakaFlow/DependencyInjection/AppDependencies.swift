@@ -113,7 +113,7 @@ struct AppDependencies {
     )
 
     /// Returns the appropriate dependencies based on environment:
-    /// - `.fixture` when UITEST_USE_FIXTURES=true
+    /// - `.fixture` when AF_USE_FIXTURES=true
     /// - `.live` otherwise
     /// nonisolated so it can be used as a default parameter value in
     /// @MainActor ViewModel inits without requiring a concurrent call site.

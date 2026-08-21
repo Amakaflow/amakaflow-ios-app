@@ -23,7 +23,7 @@ final class StrengthBackfillTests: XCTestCase {
     func testFixtureLoaderLoadsNamedEmom() throws {
         #if DEBUG
         let workouts = try FixtureLoader.loadWorkouts()
-        // When UITEST_FIXTURES unset in unit test host, expect all known fixtures or empty+no crash.
+        // When AF_FIXTURE_NAMES unset in unit test host, expect all known fixtures or empty+no crash.
         _ = workouts
         let named = try FixtureLoader.loadFixture(named: "emom_strength")
         XCTAssertFalse(named.intervals.isEmpty)

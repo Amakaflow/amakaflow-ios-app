@@ -1,6 +1,6 @@
 # AMA-2260 — PendingAction confirm/reject with fixture stream (warn-only)
 #
-# Real Clerk session (password bypass) + UITEST_USE_FIXTURES so the AMA-2230
+# Real Clerk session (password bypass) + AF_USE_FIXTURES so the AMA-2230
 # fixture pending action surfaces without a live LLM call.
 
 appId: com.myamaka.AmakaFlowCompanion

@@ -8,7 +8,7 @@
 # copies are not touched.
 #
 # Externals: no mapper/BFF needed — UITEST fixtures back the push, and
-# UITEST_GARMIN_PUSH_FAIL covers the failure branch. Nothing here 500s when
+# AF_FAULT_GARMIN_PUSH_FAIL covers the failure branch. Nothing here 500s when
 # Garmin Connect Mobile or the CIQ widget are absent.
 appId: com.myamaka.AmakaFlowCompanion
 ---
@@ -17,10 +17,10 @@ appId: com.myamaka.AmakaFlowCompanion
 - launchApp:
     clearState: true
     arguments:
-      UITEST_USE_FIXTURES: "1"
-      UITEST_FIXTURES: "strength_block_w1"
-      UITEST_SKIP_ONBOARDING: "true"
-      UITEST_GARMIN_PAIRED: "1"
+      AF_USE_FIXTURES: "1"
+      AF_FIXTURE_NAMES: "strength_block_w1"
+      AF_SKIP_ONBOARDING: "true"
+      AF_FAULT_GARMIN_PAIRED: "1"
 - tapOn:
     id: "library_tab"
 - tapOn:
@@ -48,10 +48,10 @@ appId: com.myamaka.AmakaFlowCompanion
 - launchApp:
     clearState: true
     arguments:
-      UITEST_USE_FIXTURES: "1"
-      UITEST_FIXTURES: "strength_block_w1"
-      UITEST_SKIP_ONBOARDING: "true"
-      UITEST_GARMIN_PAIRED: "1"
+      AF_USE_FIXTURES: "1"
+      AF_FIXTURE_NAMES: "strength_block_w1"
+      AF_SKIP_ONBOARDING: "true"
+      AF_FAULT_GARMIN_PAIRED: "1"
 - tapOn:
     id: "library_tab"
 - tapOn:
@@ -83,9 +83,9 @@ appId: com.myamaka.AmakaFlowCompanion
 - launchApp:
     clearState: true
     arguments:
-      UITEST_USE_FIXTURES: "1"
-      UITEST_FIXTURES: "strength_block_w1"
-      UITEST_SKIP_ONBOARDING: "true"
+      AF_USE_FIXTURES: "1"
+      AF_FIXTURE_NAMES: "strength_block_w1"
+      AF_SKIP_ONBOARDING: "true"
 - tapOn:
     id: "library_tab"
 - tapOn:
@@ -135,9 +135,9 @@ appId: com.myamaka.AmakaFlowCompanion
 - launchApp:
     clearState: true
     arguments:
-      UITEST_USE_FIXTURES: "1"
-      UITEST_FIXTURES: "strength_block_w1"
-      UITEST_SKIP_ONBOARDING: "true"
+      AF_USE_FIXTURES: "1"
+      AF_FIXTURE_NAMES: "strength_block_w1"
+      AF_SKIP_ONBOARDING: "true"
 - tapOn:
     id: "library_tab"
 - tapOn:

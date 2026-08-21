@@ -55,7 +55,7 @@ struct AmakaFlowCompanionApp: App {
         Clerk.configure(publishableKey: AppEnvironment.current.clerkPublishableKey)
         AuthViewModel.shared.start()
 
-        // Wire up fixture dependencies when UITEST_USE_FIXTURES=true (AMA-544)
+        // Wire up fixture dependencies when AF_USE_FIXTURES=true (AMA-544)
         #if DEBUG
         if LaunchConfig.active?.useFixtures == true {
             _workoutsViewModel = StateObject(wrappedValue: WorkoutsViewModel(dependencies: .fixture))
@@ -313,7 +313,7 @@ struct AmakaFlowCompanionApp: App {
                 }
 
                 // Initialize WatchConnectivity asynchronously (non-blocking)
-                // Skip when UITEST_SKIP_APPLE_WATCH=true to avoid system permission modal (AMA-549)
+                // Skip when AF_SKIP_APPLE_WATCH=true to avoid system permission modal (AMA-549)
                 #if DEBUG
                 if LaunchConfig.active?.skipAppleWatch != true {
                     watchConnectivity.activate()
@@ -420,7 +420,7 @@ struct AmakaFlowCompanionApp: App {
 
 #if DEBUG
 /// Visual host for Create-with-AI generating spinner verification (AMA-2373).
-/// Launch with `SIMCTL_CHILD_UITEST_SHOW_CREATE_WITH_AI_GENERATING=true`.
+/// Launch with `SIMCTL_CHILD_AF_DEMO_CREATE_WITH_AI=true`.
 private struct CreateWithAIGeneratingHostView: View {
     var body: some View {
         ZStack {

@@ -11,9 +11,9 @@
 
 ## Auth path used
 
-`UITEST_CLERK_TEST_SESSION` (AMA-1843 UI mock) + `UITEST_SKIP_ONBOARDING=true`.
+`AF_SESSION_IDENTITY` (AMA-1843 UI mock) + `AF_SKIP_ONBOARDING=true`.
 
-`UITEST_CLERK_PASSWORD` was **not** available in this environment (Infisical: no valid login session; GitHub Actions secrets are write-only). Real Clerk JWT path remains the preferred CI gate once the secret is injectable.
+`AF_CLERK_PASSWORD` was **not** available in this environment (Infisical: no valid login session; GitHub Actions secrets are write-only). Real Clerk JWT path remains the preferred CI gate once the secret is injectable.
 
 ## Re-run
 

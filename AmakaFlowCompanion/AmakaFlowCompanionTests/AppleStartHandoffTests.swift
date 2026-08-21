@@ -256,8 +256,8 @@ final class AppleStartHandoffServiceTests: XCTestCase {
     }
 
     func testForcedFailureEnvironment() async {
-        setenv("UITEST_APPLE_TRY_FAIL", "authorization_denied", 1)
-        defer { unsetenv("UITEST_APPLE_TRY_FAIL") }
+        setenv("AF_FAULT_APPLE_START_FAIL", "authorization_denied", 1)
+        defer { unsetenv("AF_FAULT_APPLE_START_FAIL") }
         let service = AppleStartHandoffService(
             pairingReader: MockPairingReader(read: .unknown),
             workoutKitSaver: .injected(MockWorkoutKitSaver()),
@@ -373,8 +373,8 @@ final class AppleStartHandoffServiceTests: XCTestCase {
     }
 
     func testForcedFailureEnvironmentTakesPriorityOverCapPreflight() async {
-        setenv("UITEST_APPLE_TRY_FAIL", "watch_not_reachable", 1)
-        defer { unsetenv("UITEST_APPLE_TRY_FAIL") }
+        setenv("AF_FAULT_APPLE_START_FAIL", "watch_not_reachable", 1)
+        defer { unsetenv("AF_FAULT_APPLE_START_FAIL") }
         let saver = MockWorkoutKitSaver()
         let reader = MockScheduleCapReader(scheduledCount: 15, maxAllowedCount: 15)
         let service = AppleStartHandoffService(
@@ -430,8 +430,8 @@ final class AppleStartHandoffServiceTests: XCTestCase {
     }
 
     func testForcedScheduleCapReachedShowsManageScheduledPlans() async {
-        setenv("UITEST_APPLE_TRY_FAIL", "schedule_cap_reached", 1)
-        defer { unsetenv("UITEST_APPLE_TRY_FAIL") }
+        setenv("AF_FAULT_APPLE_START_FAIL", "schedule_cap_reached", 1)
+        defer { unsetenv("AF_FAULT_APPLE_START_FAIL") }
         let service = AppleStartHandoffService(
             pairingReader: MockPairingReader(read: .unknown),
             workoutKitSaver: .injected(MockWorkoutKitSaver()),
@@ -443,8 +443,8 @@ final class AppleStartHandoffServiceTests: XCTestCase {
     }
 
     func testForcedOtherFailureDoesNotShowManageScheduledPlans() async {
-        setenv("UITEST_APPLE_TRY_FAIL", "authorization_denied", 1)
-        defer { unsetenv("UITEST_APPLE_TRY_FAIL") }
+        setenv("AF_FAULT_APPLE_START_FAIL", "authorization_denied", 1)
+        defer { unsetenv("AF_FAULT_APPLE_START_FAIL") }
         let service = AppleStartHandoffService(
             pairingReader: MockPairingReader(read: .unknown),
             workoutKitSaver: .injected(MockWorkoutKitSaver()),

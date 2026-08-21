@@ -11,7 +11,7 @@ enum ClerkLaunchPreflight {
     static var hasPublishableKey: Bool {
         let env = ProcessInfo.processInfo.environment
         return [
-            "UITEST_CLERK_PUBLISHABLE_KEY",
+            "AF_CLERK_PUBLISHABLE_KEY",
             "CLERK_PUBLISHABLE_KEY",
             "CLERK_PUBLISHABLE_KEY_DEV",
             "CLERK_PUBLISHABLE_KEY_STAGING",
@@ -31,7 +31,7 @@ enum ClerkLaunchPreflight {
         guard hasPublishableKey || isCI else {
             throw XCTSkip(
                 "Skipping launch screenshot locally because no Clerk publishable key is configured. " +
-                "Set UITEST_CLERK_PUBLISHABLE_KEY or CLERK_PUBLISHABLE_KEY_STAGING to run it. CI does not skip this guard."
+                "Set AF_CLERK_PUBLISHABLE_KEY or CLERK_PUBLISHABLE_KEY_STAGING to run it. CI does not skip this guard."
             )
         }
     }
@@ -39,7 +39,7 @@ enum ClerkLaunchPreflight {
     static func propagateKeys(to app: XCUIApplication) {
         var launchEnvironment = app.launchEnvironment
         for key in [
-            "UITEST_CLERK_PUBLISHABLE_KEY",
+            "AF_CLERK_PUBLISHABLE_KEY",
             "CLERK_PUBLISHABLE_KEY",
             "CLERK_PUBLISHABLE_KEY_DEV",
             "CLERK_PUBLISHABLE_KEY_STAGING",

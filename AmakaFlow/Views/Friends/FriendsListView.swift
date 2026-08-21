@@ -310,7 +310,7 @@ struct FriendsListView: View {
     }
 }
 
-/// UITEST / iOS 26.1 medium-detent a11y gap — prefer large when any UITEST_* is set.
+/// iOS 26.1 medium-detent a11y gap — prefer large under any UI-test launch config.
 var friendsSheetDetents: Set<PresentationDetent> {
     #if DEBUG
     if let config = LaunchConfig.active, config.useFixtures || config.skipOnboarding {

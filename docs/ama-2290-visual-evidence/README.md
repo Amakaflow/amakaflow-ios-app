@@ -12,7 +12,7 @@
 
 ## Auth path used
 
-`UITEST_CLERK_TEST_SESSION` + `UITEST_SKIP_ONBOARDING=true` + `UITEST_USE_FIXTURES=true` + `UITEST_SKIP_APPLE_WATCH=true` (+ `UITEST_FIXTURES=emom_strength` for Library EMOM seed).
+`AF_SESSION_IDENTITY` + `AF_SKIP_ONBOARDING=true` + `AF_USE_FIXTURES=true` + `AF_SKIP_APPLE_WATCH=true` (+ `AF_FIXTURE_NAMES=emom_strength` for Library EMOM seed).
 
 ## Reuse
 

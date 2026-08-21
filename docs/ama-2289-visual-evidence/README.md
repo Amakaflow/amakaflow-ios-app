@@ -19,7 +19,7 @@ maestro test e2e/maestro/ama-2289-visual-today-diary-empty.yaml
 maestro test e2e/maestro/ama-2289-visual-today-diary-populated.yaml
 ```
 
-Auth: `UITEST_CLERK_TEST_SESSION` + `UITEST_SKIP_ONBOARDING` + `UITEST_USE_FIXTURES`.
+Auth: `AF_SESSION_IDENTITY` + `AF_SKIP_ONBOARDING` + `AF_USE_FIXTURES`.
 
 ## Deferred
 

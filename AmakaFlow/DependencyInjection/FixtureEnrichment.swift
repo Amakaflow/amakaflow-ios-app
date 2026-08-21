@@ -2,7 +2,7 @@
 //  FixtureEnrichment.swift
 //  AmakaFlow
 //
-//  AMA-2408 — local enrich + WorkoutKit compose for UITEST_USE_FIXTURES dogfood.
+//  AMA-2408 — local enrich + WorkoutKit compose for AF_USE_FIXTURES dogfood.
 //  Mirrors mapper behavior closely enough to validate opt-in ramps in sim.
 //
 

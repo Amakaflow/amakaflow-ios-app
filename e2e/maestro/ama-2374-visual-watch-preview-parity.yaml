@@ -1,7 +1,7 @@
 # AMA-2374 visual — Start session + Enhance + Apple Watch preview
 #
 # Captures the three screens that diverged from the AMA-2369 redesign mockups.
-# Auth: UITEST fixtures (no live mapper/Clerk). UITEST_SKIP_APPLE_WATCH is true
+# Auth: UITEST fixtures (no live mapper/Clerk). AF_SKIP_APPLE_WATCH is true
 # to avoid the Health/Watch permission modal. It only skips WCSession
 # activation, so Apple handoff still runs via fixtures (mapper stub + preview
 # sheet).
@@ -13,11 +13,11 @@ appId: com.myamaka.AmakaFlowCompanion
     permissions:
       notifications: deny
     arguments:
-      UITEST_CLERK_TEST_SESSION: "user_id=user_ama2374_visual,email=claude+clerk_test@amakaflow.dev,name=AMA2374 Visual"
-      UITEST_SKIP_ONBOARDING: "true"
-      UITEST_SKIP_APPLE_WATCH: "true"
-      UITEST_USE_FIXTURES: "true"
-      UITEST_GARMIN_PAIRED: "true"
+      AF_SESSION_IDENTITY: "user_id=user_ama2374_visual,email=claude+clerk_test@amakaflow.dev,name=AMA2374 Visual"
+      AF_SKIP_ONBOARDING: "true"
+      AF_SKIP_APPLE_WATCH: "true"
+      AF_USE_FIXTURES: "true"
+      AF_FAULT_GARMIN_PAIRED: "true"
 - waitForAnimationToEnd:
     timeout: 5000
 - extendedWaitUntil:
