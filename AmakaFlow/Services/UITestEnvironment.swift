@@ -7,7 +7,14 @@
 
 import Foundation
 
-/// Centralized management of UITEST environment variables
+/// Centralized management of UITEST environment variables.
+///
+/// Every read funnels through `value(for:)`, `argumentValue(for:)`, or
+/// `fixtureState`, and all three compile to `return nil` outside Debug. A
+/// Release binary therefore reports every flag as off no matter what the
+/// launch arguments, app defaults, or process environment say. Three call
+/// sites were previously reachable in Release, one of which let a defaults
+/// key skip the mental-model onboarding gate in a shipping build.
 class UITestEnvironment {
     static let shared = UITestEnvironment()
     
@@ -21,6 +28,9 @@ class UITestEnvironment {
     /// process environment — stale `simctl`/scheme env (e.g.
     /// `UITEST_USE_FIXTURES=false`) otherwise shadows intentional dogfood launches.
     static func value(for key: String) -> String? {
+        #if !DEBUG
+        return nil
+        #else
         if let fromArgs = argumentValue(for: key) {
             return fromArgs
         }
@@ -34,11 +44,15 @@ class UITestEnvironment {
             return env
         }
         return nil
+        #endif
     }
 
     /// `simctl launch … -FLAG true` sometimes drops the value token; a bare
     /// `-FLAG` followed by another `-Next` still means the flag was requested.
     private static func argumentValue(for key: String) -> String? {
+        #if !DEBUG
+        return nil
+        #else
         let args = ProcessInfo.processInfo.arguments
         for index in args.indices {
             let token = args[index]
@@ -51,6 +65,7 @@ class UITestEnvironment {
             return "true"
         }
         return nil
+        #endif
     }
 
     static func isTruthy(_ key: String) -> Bool {
@@ -96,6 +111,9 @@ class UITestEnvironment {
     /// Ignore stale simulator env `empty` when launch args/defaults name fixtures —
     /// otherwise dogfood launches load zero workouts while Library still looks "live".
     var fixtureState: String? {
+        #if !DEBUG
+        return nil
+        #else
         if Self.argumentValue(for: "UITEST_FIXTURE_STATE") != nil {
             let state = Self.argumentValue(for: "UITEST_FIXTURE_STATE")
             return state?.isEmpty == false ? state : nil
@@ -108,6 +126,7 @@ class UITestEnvironment {
         }
         let state = ProcessInfo.processInfo.environment["UITEST_FIXTURE_STATE"]
         return state?.isEmpty == false ? state : nil
+        #endif
     }
 
     /// Skip onboarding/mental model gates during UI tests.
