@@ -318,14 +318,18 @@ private struct Source {
         return nil
     }
 
+    /// One four-valued choice, not four booleans. The old encoding spread it across
+    /// AMA2426_AUTORUN, _LIVE, _COMPANION, and AMA2387_AUTORUN, whose only legal
+    /// combinations were the four values below — every other combination decoded to
+    /// something nobody intended.
     private func autorun() -> LaunchConfig.AutorunMode? {
-        if isTruthy("AMA2426_AUTORUN") {
-            if isTruthy("AMA2426_LIVE") { return .live }
-            if isTruthy("AMA2426_COMPANION") { return .companion }
-            return .fixture
+        switch value(for: "AF_DEMO_AUTORUN")?.lowercased() {
+        case "live": return .live
+        case "companion": return .companion
+        case "fixture": return .fixture
+        case "walkthrough": return .walkthrough
+        default: return nil
         }
-        if isTruthy("AMA2387_AUTORUN") { return .walkthrough }
-        return nil
     }
 
     func simulationSpeed() -> Double {

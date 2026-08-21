@@ -153,19 +153,19 @@ case "$MODE" in
     case "$MODE" in
       live)
         echo "[ama2426] launching dogfood → LIVE logbook…"
-        EXTRA_ENV+=(SIMCTL_CHILD_AMA2426_LIVE=true)
+        EXTRA_ENV+=(SIMCTL_CHILD_AF_DEMO_AUTORUN=live)
         ;;
       companion)
         echo "[ama2426] launching dogfood → COMPANION logbook…"
-        EXTRA_ENV+=(SIMCTL_CHILD_AMA2426_COMPANION=true)
+        EXTRA_ENV+=(SIMCTL_CHILD_AF_DEMO_AUTORUN=companion)
         ;;
       *)
-        echo "[ama2426] launching dogfood hub → Logbook (AMA2426_AUTORUN)…"
+        echo "[ama2426] launching dogfood hub → Logbook…"
+        EXTRA_ENV+=(SIMCTL_CHILD_AF_DEMO_AUTORUN=fixture)
         ;;
     esac
     env \
-      SIMCTL_CHILD_AMA2426_DEMO=true \
-      SIMCTL_CHILD_AMA2426_AUTORUN=true \
+      SIMCTL_CHILD_AF_DEMO_ACTUALS_HUB=true \
       "${EXTRA_ENV[@]+"${EXTRA_ENV[@]}"}" \
       SIMCTL_CHILD_AF_SKIP_ONBOARDING=true \
       SIMCTL_CHILD_AF_SKIP_APPLE_WATCH=true \
@@ -181,7 +181,7 @@ case "$MODE" in
     ;;
   hub)
     echo "[ama2426] launching dogfood hub menu…"
-    SIMCTL_CHILD_AMA2426_DEMO=true \
+    SIMCTL_CHILD_AF_DEMO_ACTUALS_HUB=true \
     SIMCTL_CHILD_AF_SKIP_ONBOARDING=true \
     SIMCTL_CHILD_AF_SKIP_APPLE_WATCH=true \
     xcrun simctl launch "$SIM_UDID" "$BUNDLE_ID"
@@ -194,7 +194,7 @@ case "$MODE" in
     SIMCTL_CHILD_AF_SKIP_APPLE_WATCH=true \
     SIMCTL_CHILD_AF_USE_FIXTURES=true \
     SIMCTL_CHILD_AF_FIXTURE_STATE=empty \
-    SIMCTL_CHILD_AMA2387_TODAY_DEMO=true \
+    SIMCTL_CHILD_AF_DEMO_ACTUALS_TODAY=true \
     xcrun simctl launch "$SIM_UDID" "$BUNDLE_ID"
     echo "[ama2426] Today → Fill in › → Set by set — the logbook."
     ;;

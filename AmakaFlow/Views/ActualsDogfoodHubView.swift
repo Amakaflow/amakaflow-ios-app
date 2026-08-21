@@ -4,9 +4,8 @@
 //
 //  AMA-2387 DEBUG: simulator walkthrough — teach → connect → merge → map →
 //  fill-in → verified (no Clerk / live OAuth required).
-//  Launch: SIMCTL_CHILD_AMA2387_DEMO=true
-//  AMA-2426: SIMCTL_CHILD_AMA2426_DEMO=true (same hub + Logbook step)
-//  Optional: SIMCTL_CHILD_AMA2426_AUTORUN=true jumps straight into Logbook.
+//  Launch: SIMCTL_CHILD_AF_DEMO_ACTUALS_HUB=true
+//  Optional: SIMCTL_CHILD_AF_DEMO_AUTORUN=fixture jumps straight into Logbook.
 //
 
 #if DEBUG

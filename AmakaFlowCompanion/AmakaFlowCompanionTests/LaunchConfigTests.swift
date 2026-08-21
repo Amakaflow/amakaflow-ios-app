@@ -219,19 +219,25 @@ final class LaunchConfigTests: XCTestCase {
     }
 
     func testActualsDogfoodAutorunModes() {
-        let base = ["AF_DEMO_ACTUALS_HUB": "true", "AMA2426_AUTORUN": "true"]
-        XCTAssertEqual(decode(environment: base)?.demoHost, .actualsDogfood(autorun: .fixture))
+        let expected: [(String, LaunchConfig.AutorunMode)] = [
+            ("live", .live),
+            ("companion", .companion),
+            ("fixture", .fixture),
+            ("walkthrough", .walkthrough)
+        ]
+        for (raw, mode) in expected {
+            XCTAssertEqual(
+                decode(environment: ["AF_DEMO_ACTUALS_HUB": "true", "AF_DEMO_AUTORUN": raw])?.demoHost,
+                .actualsDogfood(autorun: mode),
+                "AF_DEMO_AUTORUN=\(raw)"
+            )
+        }
+    }
+
+    func testUnknownAutorunValueIsNotAMode() {
         XCTAssertEqual(
-            decode(environment: base.merging(["AMA2426_LIVE": "true"]) { _, new in new })?.demoHost,
-            .actualsDogfood(autorun: .live)
-        )
-        XCTAssertEqual(
-            decode(environment: base.merging(["AMA2426_COMPANION": "true"]) { _, new in new })?.demoHost,
-            .actualsDogfood(autorun: .companion)
-        )
-        XCTAssertEqual(
-            decode(environment: ["AMA2387_DEMO": "true", "AMA2387_AUTORUN": "true"])?.demoHost,
-            .actualsDogfood(autorun: .walkthrough)
+            decode(environment: ["AF_DEMO_ACTUALS_HUB": "true", "AF_DEMO_AUTORUN": "nonsense"])?.demoHost,
+            .actualsDogfood(autorun: nil)
         )
     }
 
