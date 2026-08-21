@@ -16,7 +16,7 @@ enum ActualsProviderAuthFactory {
     static func makeDefault() -> any ActualsProviderAuthProviding {
         #if DEBUG
         let isPreview = ProcessInfo.processInfo.environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1"
-        if isPreview || UITestEnvironment.shared.useFixtures {
+        if isPreview || LaunchConfig.active?.useFixtures == true {
             return StubActualsProviderAuth()
         }
         #endif

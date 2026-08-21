@@ -56,20 +56,15 @@ struct ActualsDogfoodHubView: View {
         .ddToastHost()
         .accessibilityIdentifier("af_actuals_dogfood_hub")
         .task {
-            // Optional: SIMCTL_CHILD_AMA2426_AUTORUN=true jumps straight into Logbook.
-            if UITestEnvironment.isTruthy("AMA2426_AUTORUN"), path.isEmpty {
-                if UITestEnvironment.isTruthy("AMA2426_LIVE") {
-                    open(.logbookLive)
-                } else if UITestEnvironment.isTruthy("AMA2426_COMPANION") {
-                    open(.logbookCompanion)
-                } else {
-                    open(.logbook)
-                }
-                return
-            }
-            // Optional: SIMCTL_CHILD_AMA2387_AUTORUN=true jumps straight into teach.
-            if UITestEnvironment.isTruthy("AMA2387_AUTORUN"), path.isEmpty {
-                runWalkthrough()
+            guard path.isEmpty,
+                  case .actualsDogfood(let autorun)? = LaunchConfig.active?.demoHost
+            else { return }
+            switch autorun {
+            case .live: open(.logbookLive)
+            case .companion: open(.logbookCompanion)
+            case .fixture: open(.logbook)
+            case .walkthrough: runWalkthrough()
+            case nil: break
             }
         }
     }

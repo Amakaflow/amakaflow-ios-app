@@ -22,7 +22,7 @@ extension FixtureAPIService {
 
     /// Fixture completions for Today diary — empty when `UITEST_FIXTURE_STATE=empty`.
     static func diaryCompletions(limit: Int, offset: Int) -> [WorkoutCompletion] {
-        if UITestEnvironment.shared.fixtureState == "empty" {
+        if LaunchConfig.active?.isLibraryEmpty == true {
             print("[FixtureAPIService] UITEST_FIXTURE_STATE=empty → no completions")
             return []
         }

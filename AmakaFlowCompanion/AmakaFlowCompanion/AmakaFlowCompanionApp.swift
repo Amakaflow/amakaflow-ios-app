@@ -45,7 +45,7 @@ struct AmakaFlowCompanionApp: App {
 
         // Wire up fixture dependencies when UITEST_USE_FIXTURES=true (AMA-544)
         #if DEBUG
-        if UITestEnvironment.shared.useFixtures {
+        if LaunchConfig.active?.useFixtures == true {
             _workoutsViewModel = StateObject(wrappedValue: WorkoutsViewModel(dependencies: .fixture))
             _coachSessionStore = StateObject(wrappedValue: CoachSessionStore(dependencies: .fixture))
             print("[AmakaFlowCompanionApp] Fixture mode: using FixtureAPIService")
@@ -54,9 +54,9 @@ struct AmakaFlowCompanionApp: App {
             _coachSessionStore = StateObject(wrappedValue: CoachSessionStore(dependencies: .current))
         }
 
-        if UITestEnvironment.shared.hasClerkTestUser {
+        if let config = LaunchConfig.active, config.clerkTestUser {
             print("[AmakaFlowCompanionApp] UITEST Clerk test user configured")
-            print("[AmakaFlowCompanionApp] useFixtures=\(UITestEnvironment.shared.useFixtures), skipOnboarding=\(UITestEnvironment.shared.skipOnboarding)")
+            print("[AmakaFlowCompanionApp] useFixtures=\(config.useFixtures), skipOnboarding=\(config.skipOnboarding)")
         }
         #else
         _workoutsViewModel = StateObject(wrappedValue: WorkoutsViewModel())
@@ -207,11 +207,12 @@ struct AmakaFlowCompanionApp: App {
     @ViewBuilder
     private var rootContent: some View {
         #if DEBUG
-        if UITestEnvironment.shared.showActualsDogfoodHost {
+        switch LaunchConfig.active?.demoHost {
+        case .actualsDogfood:
             ActualsDogfoodHubView()
-        } else if UITestEnvironment.shared.showCreateWithAIGeneratingHost {
+        case .createWithAIGenerating:
             CreateWithAIGeneratingHostView()
-        } else {
+        case nil:
             productionRootContent
         }
         #else
@@ -248,7 +249,7 @@ struct AmakaFlowCompanionApp: App {
         let userId = pairingService.userProfile?.id ?? UIDevice.current.identifierForVendor?.uuidString ?? "device"
         let seenKey = DefaultsKey.mentalModelSeen(userID: userId)
         let mentalModelSeen = UserDefaults.standard.bool(forKey: seenKey)
-            || UITestEnvironment.shared.skipOnboarding
+            || LaunchConfig.active?.skipOnboarding == true
 
         if mentalModelSeen {
             SignUpView()
@@ -303,7 +304,7 @@ struct AmakaFlowCompanionApp: App {
                 // Initialize WatchConnectivity asynchronously (non-blocking)
                 // Skip when UITEST_SKIP_APPLE_WATCH=true to avoid system permission modal (AMA-549)
                 #if DEBUG
-                if !UITestEnvironment.shared.skipAppleWatch {
+                if LaunchConfig.active?.skipAppleWatch != true {
                     watchConnectivity.activate()
                 }
                 #else

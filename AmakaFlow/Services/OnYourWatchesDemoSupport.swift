@@ -10,7 +10,11 @@ import Foundation
 
 enum OnYourWatchesDemoSupport {
     static var isEnabled: Bool {
-        UITestEnvironment.shared.forceWatchManagerDemo
+        #if DEBUG
+        return LaunchConfig.active?.isWatchManagerDemo == true
+        #else
+        return false
+        #endif
     }
 
     static var snapshot: OnYourWatchesSnapshot {

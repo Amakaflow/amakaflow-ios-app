@@ -344,7 +344,7 @@ class ActivityHistoryViewModel: ObservableObject {
 #if DEBUG
     /// AMA-2387: empty fixture dogfood must stay empty so the teach card can appear.
     private var shouldSuppressDebugTodaySeed: Bool {
-        UITestEnvironment.shared.fixtureState == "empty"
+        LaunchConfig.active?.isLibraryEmpty == true
     }
 
     private func seedDebugTodayDiarySample(reason: String, clearError: Bool = false) {

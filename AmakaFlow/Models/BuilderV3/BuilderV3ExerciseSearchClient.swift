@@ -112,10 +112,14 @@ struct BuilderV3ExerciseSearchClient {
 
     init(
         apiService: APIService = .shared,
-        useFixtures: Bool = UITestEnvironment.shared.useFixtures
+        useFixtures: Bool? = nil
     ) {
         self.apiService = apiService
-        self.useFixtures = useFixtures
+        #if DEBUG
+        self.useFixtures = useFixtures ?? (LaunchConfig.active?.useFixtures == true)
+        #else
+        self.useFixtures = useFixtures ?? false
+        #endif
     }
 
     /// Request builders are split out so a test can assert the URL these
