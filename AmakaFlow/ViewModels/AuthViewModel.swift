@@ -335,6 +335,13 @@ final class AuthViewModel: ObservableObject {
   #endif
 
   func refreshFromClerk() {
+    #if DEBUG
+    // The UI-test bypass owns auth state; Clerk has no session under it. Any
+    // authenticated call reaches token(), whose no-session path calls straight
+    // back here, which would recompute isAuthenticated from Clerk and route the
+    // app to sign-in mid-session. AMA-2457.
+    if AuthViewModel.uiTestBypassRequested() { return }
+    #endif
     let clerkUser = Clerk.shared.user
     isAuthenticated = Clerk.shared.session != nil && clerkUser != nil
     hasResolvedInitialSession = true
