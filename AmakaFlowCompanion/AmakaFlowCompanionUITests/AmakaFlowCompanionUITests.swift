@@ -572,8 +572,7 @@ final class ConnectionsHubVisualE2ETests: XCTestCase {
             "UITEST_SKIP_ONBOARDING": "true",
             "UITEST_SKIP_APPLE_WATCH": "true",
             "UITEST_USE_FIXTURES": "true",
-            "UITEST_FIXTURE_STATE": "empty",
-            "UITEST_MODE": "true"
+            "UITEST_FIXTURE_STATE": "empty"
         ]
         app.launch()
     }

@@ -5,7 +5,6 @@ appId: com.myamaka.AmakaFlowCompanion
 - launchApp:
     clearState: true
     arguments:
-      UITEST_MODE: "1"
       UITEST_USE_FIXTURES: "1"
       UITEST_FIXTURES: "strength_block_w1"
       UITEST_SKIP_ONBOARDING: "true"

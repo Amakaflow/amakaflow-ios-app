@@ -36,9 +36,6 @@ final class AmakaFlowWatch_Watch_AppUITests: XCTestCase {
             "--uitesting",
             "--reset-state"
         ]
-        app.launchEnvironment = [
-            "UITEST_MODE": "1"
-        ]
 
         // Dismiss system dialogs (HealthKit, notifications)
         addUIInterruptionMonitor(withDescription: "HealthKit Authorization") { alert in

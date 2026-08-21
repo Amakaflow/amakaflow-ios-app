@@ -24,8 +24,7 @@ final class CoachComposerUITests: XCTestCase {
             "UITEST_CLERK_PUBLISHABLE_KEY": ProcessInfo.processInfo.environment["UITEST_CLERK_PUBLISHABLE_KEY"] ?? "pk_test_cnVsaW5nLW1pdGUtODQuY2xlcmsuYWNjb3VudHMuZGV2JA",
             "UITEST_SKIP_ONBOARDING": "true",
             "UITEST_SKIP_APPLE_WATCH": "true",
-            "UITEST_USE_FIXTURES": "true",
-            "UITEST_MODE": "true"
+            "UITEST_USE_FIXTURES": "true"
         ]
         app.launch()
         dismissBlockingModalsIfPresent()

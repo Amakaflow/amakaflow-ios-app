@@ -36,9 +36,6 @@ final class WatchGoldenPathTests: XCTestCase {
             "--uitesting",
             "--reset-state"
         ]
-        app.launchEnvironment = [
-            "UITEST_MODE": "1"
-        ]
 
         addUIInterruptionMonitor(withDescription: "HealthKit Authorization") { alert in
             let allowButton = alert.buttons["Allow"]

@@ -53,7 +53,7 @@ def _maestro(text, rel):
                 break
             pairs[hit.group(1)] = hit.group(2).strip('"\'')
         if pairs:
-            out.append((f"{rel}:{i + 1}", _argv_record(pairs)))
+            out.append((f"{rel}#{len(out)}", _argv_record(pairs)))
     return out
 
 
@@ -74,7 +74,7 @@ def _swift(text, rel):
     for i, line in enumerate(lines):
         hit = re.search(r'launchEnvironment\s*\[\s*"([A-Z0-9_]+)"\s*\]\s*=\s*(.+?)\s*$', line)
         if hit:
-            out.append((f"{rel}:{i + 1}", {"argv": [], "defaults": {},
+            out.append((f"{rel}#{len(out)}", {"argv": [], "defaults": {},
                                            "env": {hit.group(1): _swift_value(hit.group(2))}}))
             continue
         if re.search(r"launchEnvironment\s*(?::\s*\[String\s*:\s*String\])?\s*=\s*\[", line):
@@ -86,7 +86,7 @@ def _swift(text, rel):
             literal[key] = _swift_value(value)
         if depth <= 0:
             if literal:
-                out.append((f"{rel}:{start}", {"argv": [], "defaults": {}, "env": literal}))
+                out.append((f"{rel}#{len(out)}", {"argv": [], "defaults": {}, "env": literal}))
             start = None
     return out
 
@@ -114,7 +114,9 @@ def _shell(text, rel):
 
 
 def producers(read):
-    """read(rel) -> text or None. Returns {key: record}."""
+    """read(rel) -> text or None. Returns {key: record}, keyed by file and
+    ordinal within that file. Line numbers would shift under the rename and
+    report every site as absent rather than as changed."""
     found = {}
     for rel in tracked():
         text = read(rel)

@@ -169,7 +169,6 @@ case "$MODE" in
       "${EXTRA_ENV[@]+"${EXTRA_ENV[@]}"}" \
       SIMCTL_CHILD_UITEST_SKIP_ONBOARDING=true \
       SIMCTL_CHILD_UITEST_SKIP_APPLE_WATCH=true \
-      SIMCTL_CHILD_UITEST_DISABLE_SENTRY=true \
       xcrun simctl launch "$SIM_UDID" "$BUNDLE_ID"
     echo "[ama2426] You should see the Logbook grid (lower-body sample)."
     echo "         Tap KG/REPS → wheels · ✓ sets · Save log → RPE → Verified."
@@ -185,7 +184,6 @@ case "$MODE" in
     SIMCTL_CHILD_AMA2426_DEMO=true \
     SIMCTL_CHILD_UITEST_SKIP_ONBOARDING=true \
     SIMCTL_CHILD_UITEST_SKIP_APPLE_WATCH=true \
-    SIMCTL_CHILD_UITEST_DISABLE_SENTRY=true \
     xcrun simctl launch "$SIM_UDID" "$BUNDLE_ID"
     echo "[ama2426] Pick Live / Companion / Mock Logbook from the hub."
     ;;
@@ -197,7 +195,6 @@ case "$MODE" in
     SIMCTL_CHILD_UITEST_USE_FIXTURES=true \
     SIMCTL_CHILD_UITEST_FIXTURE_STATE=empty \
     SIMCTL_CHILD_AMA2387_TODAY_DEMO=true \
-    SIMCTL_CHILD_UITEST_DISABLE_SENTRY=true \
     xcrun simctl launch "$SIM_UDID" "$BUNDLE_ID"
     echo "[ama2426] Today → Fill in › → Set by set — the logbook."
     ;;
