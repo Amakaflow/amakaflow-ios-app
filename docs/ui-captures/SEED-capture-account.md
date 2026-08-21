@@ -1,4 +1,6 @@
-# `design_capture_v1` seed
+# Capture account seed
+
+Account: `baseline+clerk_test@amakaflow.dev`.
 
 The seed is the data every v1 capture is taken against. It has to be deterministic,
 reproducible from scratch, and identical whether the app is reading staging or reading
@@ -9,8 +11,7 @@ can attribute.
 
 The seed is defined once, as data, and consumed twice.
 
-- The staging seeder writes it into the `design_capture_v1` account on Clerk instance
-  `ruling-mite-84`.
+- The seeder writes it into the `baseline+clerk_test@amakaflow.dev` account.
 - The app reads the same data locally under the debug fixture seam (AMA-2502) when a
   capture needs a state the backend cannot be pushed into on demand.
 
@@ -52,9 +53,13 @@ baseline with holes it would have to mark UNKNOWN.
 
 ## Status
 
+The account exists and needs no creation. It was made 2026-08-17 for this purpose, its
+password is in the macOS login keychain under service `amakaflow-baseline-sim`, and the
+`AF-Baseline` simulator holds a persisted session. What remains is seeding it to the
+content below.
+
 Content and rules are fixed here. The serialized format is deliberately not specified yet:
 it has to match the fixture-loading shape chosen in AMA-2502, and picking it first would
 force that design instead of following it.
 
-The staging half is blocked. The capture machine has no staging Clerk admin credentials
-and no route to the machine holding them.
+Automated capture is blocked on AMA-2457, not on credentials.

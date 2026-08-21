@@ -16,12 +16,20 @@ Change a value here only by opening a new baseline version, never by editing in 
 | Appearance | Dark |
 | Dynamic Type | Default (Large) |
 | Locale | en-US |
-| Account | `design_capture_v1` (staging Clerk, instance `ruling-mite-84`) |
+| Account | `baseline+clerk_test@amakaflow.dev` |
 | Environment | staging |
 
-`design_capture_v1` is a dedicated non-personal account. It replaces David's personal
-account in every capture workflow. Captures leave the device, so a sanitized account is
-the privacy boundary, not a convenience.
+`baseline+clerk_test@amakaflow.dev` is a dedicated non-personal account created
+2026-08-17 for exactly this purpose. It is never David's personal account. Captures leave
+the device, so a sanitized account is the privacy boundary, not a convenience.
+
+It is not `claude+clerk_test@amakaflow.dev`. That one is the CI identity, hardcoded as the
+fallback in `AuthViewModel.swift:110` and named across many Maestro flows. Reusing it
+would couple this baseline to CI.
+
+The account's password lives in the macOS login keychain under service
+`amakaflow-baseline-sim`. The `AF-Baseline` simulator holds a persisted real Clerk
+session, so a plain launch restores it and no auth bypass is needed.
 
 ## Why the simulator, and why this device
 
@@ -42,7 +50,7 @@ A screen with no runtime capture is UNKNOWN. It is never filled in from a mock.
 | Item | Status |
 | --- | --- |
 | Capture conditions fixed | done |
-| `design_capture_v1` account created | BLOCKED (needs staging Clerk credentials, see below) |
+| Capture account exists | done (`baseline+clerk_test@amakaflow.dev`, 2026-08-17) |
 | Seed data defined and reproducible | TODO (AMA-2501) |
 | `uiTestMode` fixture seam | TODO (AMA-2502) |
 | Screen registry | TODO (AMA-2503/2504) |
@@ -56,6 +64,8 @@ require those credentials is being built regardless.
 
 ## Prior art
 
-`docs/app-baseline/2026-08-17/` and `docs/app-baseline/2026-08-18/` hold hand-taken
-captures from David's personal account. They are useful reference and are not part of this
-baseline. They are not reproducible and the account is wrong.
+`docs/app-baseline/2026-08-17/` and `docs/app-baseline/2026-08-18/` hold 6 and 19 captures
+taken with this same account via `scripts/capture-baseline.sh`. The account was right. What
+keeps them out of this baseline is that the conditions above were not recorded at the time,
+so a capture cannot be attributed to a device, OS, appearance, or build. They stay as
+reference.
