@@ -131,8 +131,6 @@ struct SettingsView: View {
     private var usesHandoffFixture: Bool { DDHandoffFixtures.isEnabled }
     @State private var showingErrorLogSheet = false
     @State private var showDebugSettings = false
-    @State private var debugTapCount = 0
-    @State private var debugTapResetTask: DispatchWorkItem?
     @State private var showingGarminDeliveryLab = false
     @State private var showingTelegramSetup = false
     @State private var showingPaywall = false
@@ -146,6 +144,7 @@ struct SettingsView: View {
     @EnvironmentObject private var pairingService: PairingService
     @EnvironmentObject private var workoutsViewModel: WorkoutsViewModel
     @EnvironmentObject private var subscriptionAccess: SubscriptionAccessViewModel
+    @EnvironmentObject private var supportDiagnostics: SupportDiagnosticsViewModel
 
     var body: some View {
         ScrollView {
@@ -254,6 +253,16 @@ struct SettingsView: View {
                             }
                         }
                 }
+            }
+            .sheet(isPresented: Binding(
+                get: { supportDiagnostics.isPresented },
+                set: { isPresented in
+                    if !isPresented {
+                        supportDiagnostics.dismissCenter()
+                    }
+                }
+            )) {
+                SupportDiagnosticsCenterView(viewModel: supportDiagnostics)
             }
             #if DEBUG
             .sheet(isPresented: $showDebugSettings) {
@@ -2843,7 +2852,7 @@ struct SettingsView: View {
                 }
                 #endif
 
-                // App version (hidden 7-tap gesture for debug settings - AMA-271)
+                // AMA-2510: Release-safe hidden entry. The server grant remains the authority.
                 HStack {
                     Image(systemName: "info.circle")
                         .font(.system(size: 14))
@@ -2852,36 +2861,13 @@ struct SettingsView: View {
                         .font(Theme.Typography.caption)
                         .foregroundColor(Theme.Colors.textTertiary)
                     Spacer()
-                    #if DEBUG
-                    // Show tap progress hint after 3 taps
-                    if debugTapCount >= 3 && debugTapCount < 7 {
-                        Text("\(7 - debugTapCount) more...")
-                            .font(.system(size: 9))
-                            .foregroundColor(Theme.Colors.textTertiary.opacity(0.5))
-                    }
-                    #endif
                 }
-                #if DEBUG
                 .contentShape(Rectangle())
                 .onTapGesture {
-                    // Cancel any pending reset
-                    debugTapResetTask?.cancel()
-
-                    debugTapCount += 1
-                    if debugTapCount >= 7 {
-                        debugTapCount = 0
-                        showDebugSettings = true
-                        return
+                    Task {
+                        await supportDiagnostics.registerVersionTap()
                     }
-
-                    // Schedule reset after 2 seconds of inactivity
-                    let task = DispatchWorkItem { [self] in
-                        debugTapCount = 0
-                    }
-                    debugTapResetTask = task
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 2, execute: task)
                 }
-                #endif
 
                 #if DEBUG
                 // Debug: Copy API token for testing
@@ -4020,6 +4006,7 @@ private struct CoachKnowledgeResolveView: View {
         .environmentObject(GarminConnectManager.shared)
         .environmentObject(PairingService.shared)
         .environmentObject(WorkoutsViewModel())
+        .environmentObject(SupportDiagnosticsViewModel.live())
         .preferredColorScheme(.dark)
 }
 
