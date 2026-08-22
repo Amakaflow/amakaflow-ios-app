@@ -1,8 +1,8 @@
 # Capture manifest — run-3-library-seeded
 
-- build: `5db972e7`
+- build: `f47e38c7` (build the app was compiled from, supplied explicitly)
 - device: AF-Baseline · iOS-26-1
-- artifacts: `docs/ui-captures/5db972e7/run-3-library-seeded/`
+- artifacts: `docs/ui-captures/f47e38c7/run-3-library-seeded/`
 - auth: persisted real Clerk session, baseline+clerk_test@amakaflow.dev
 
 Navigation is by accessibility identifier, not screen coordinates, so a

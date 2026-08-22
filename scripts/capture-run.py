@@ -51,6 +51,22 @@ def run(command: list[str], timeout: int) -> subprocess.CompletedProcess | None:
         return None
 
 
+def build_sha(explicit: str | None) -> tuple[str, str] | None:
+    """The build the evidence belongs to, and how confident we are in it.
+
+    The app does not embed its git SHA yet, and HEAD moves whenever anything
+    is committed between runs. Filing captures under HEAD therefore names a
+    build the running binary may not have come from — run 3 was filed under a
+    commit made after its own build. Pass --build-sha when you know it.
+    """
+    if explicit:
+        return explicit, "build the app was compiled from, supplied explicitly"
+    sha = head_sha()
+    if sha is None:
+        return None
+    return sha, "checkout HEAD at capture time — verify it matches the build"
+
+
 def head_sha() -> str | None:
     """None when git cannot say. Evidence filed under an unverifiable build is
     worse than no evidence: it cannot be tied back to what was running, and a
@@ -194,6 +210,10 @@ def main() -> int:
     parser.add_argument("--run", required=True, help="run id, e.g. run-0-structure")
     parser.add_argument("--screens", nargs="+")
     parser.add_argument(
+        "--build-sha",
+        help="git sha the running app was built from; defaults to HEAD",
+    )
+    parser.add_argument(
         "--probes",
         choices=sorted(PROBE_DIRS),
         default="fixtures",
@@ -205,10 +225,11 @@ def main() -> int:
         print(f"invalid --run {args.run!r}: use letters, digits, dot, dash, underscore", file=sys.stderr)
         return 1
 
-    sha = head_sha()
-    if sha is None:
+    resolved = build_sha(args.build_sha)
+    if resolved is None:
         print("cannot resolve HEAD — refusing to file evidence against an unknown build", file=sys.stderr)
         return 1
+    sha, provenance = resolved
 
     out_dir = CAPTURES / sha / args.run
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -239,7 +260,7 @@ def main() -> int:
     manifest = [
         f"# Capture manifest — {args.run}",
         "",
-        f"- build: `{sha}`",
+        f"- build: `{sha}` ({provenance})",
         f"- device: {device_name(args.udid)}",
         f"- artifacts: `docs/ui-captures/{sha}/{args.run}/`",
         f"- auth: {auth_mode(args.probes)}",
