@@ -1,0 +1,16 @@
+3 of 3 Wi-Fi bars
+PopoverDismissRegion
+af_start_device_apple
+af_start_device_garmin
+af_start_device_phone
+af_start_gym_commercial
+af_start_gym_home
+af_start_gym_hotel
+af_start_gym_unset
+af_start_settings_pointer
+af_start_sheet
+af_start_sheet_close
+af_workout_log_past_session
+applewatch
+chevron.right
+message.fill
