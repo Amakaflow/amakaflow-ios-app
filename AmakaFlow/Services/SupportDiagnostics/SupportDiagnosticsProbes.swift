@@ -12,89 +12,6 @@ nonisolated enum SupportDiagnosticsProbes {
         "Strava API"
     ]
 
-    static let approvedLiveFieldLabels: [SupportDiagnosticsProbeID: [String]] = [
-        .appBuildDevice: [
-            "App version",
-            "Build",
-            "Bundle ID",
-            "Distribution",
-            "Device model",
-            "System",
-            "Locale",
-            "Timezone"
-        ],
-        .configuredHosts: [
-            "Environment",
-            "Mobile BFF",
-            "Mapper API",
-            "Ingestor API",
-            "Calendar API",
-            "Chat API",
-            "MCP API",
-            "Strava API"
-        ],
-        .clerkSession: [
-            "Resolved initial session",
-            "Authenticated",
-            "Active SDK session",
-            "Needs reauth",
-            "Token expiry",
-            "Last token refresh",
-            "User ID hash"
-        ],
-        .reachabilityHealth: approvedReachabilityServiceNames.flatMap {
-            ["\($0) host", "\($0) outcome", "\($0) latency"]
-        },
-        .watchConnectivity: [
-            "Supported",
-            "Paired",
-            "Watch app installed",
-            "Reachable",
-            "Activation",
-            "Last transfer result"
-        ],
-        .healthKitAuthorization: [
-            "Health data available",
-            "Actuals workout read",
-            "Protein write",
-            "Water write",
-            "Body mass write",
-            "Read status disclosure"
-        ],
-        .queues: [
-            "Sync pending",
-            "Sync in flight",
-            "Sync failed",
-            "Sync poison",
-            "Oldest sync queue age",
-            "Last sync attempt",
-            "Last safe sync error",
-            "Completion pending"
-        ],
-        .databaseHealth: [
-            "Database readable",
-            "Local schema version",
-            "Migration table",
-            "Applied migrations",
-            "Migration health",
-            "Schema tables"
-        ],
-        .grantState: [
-            "Role",
-            "Capability count",
-            "Capability wire list",
-            "Expires",
-            "Expired",
-            "Simulation state",
-            "Allowlisted feature overrides"
-        ],
-        .correlationIDs: [
-            "Existing request ID",
-            "Existing Sentry event ID",
-            "Existing Sentry trace ID"
-        ]
-    ]
-
     static func live(
         authorization: SupportDiagnosticsAuthorization,
         dependencies: SupportDiagnosticsProbeDependencies = .live
@@ -123,22 +40,59 @@ nonisolated struct SupportDiagnosticsProbeDependencies: Sendable {
     let allowlistedFeatureOverrides: @Sendable () async -> SupportDiagnosticsFeatureOverrideState
 
     static let live = SupportDiagnosticsProbeDependencies(
-        correlationIdentifiers: { .noneRecorded },
-        lastWatchTransferState: { .noneRecorded },
-        allowlistedFeatureOverrides: { .noneConfigured }
+        correlationIdentifiers: {
+            var identifiers = SupportDiagnosticsRuntimeState.shared.correlationIdentifiers()
+            let loggedIdentifiers = await MainActor.run {
+                SupportDiagnosticsCorrelationIdentifiers.fromDebugLogEntries(DebugLogService.shared.entries)
+            }
+            identifiers.mergeMissing(with: loggedIdentifiers)
+            return identifiers
+        },
+        lastWatchTransferState: {
+            SupportDiagnosticsRuntimeState.shared.lastWatchTransferState()
+        },
+        allowlistedFeatureOverrides: {
+            await SupportDiagnosticsFeatureOverrideReader.live.state()
+        }
     )
 }
 
 nonisolated struct SupportDiagnosticsCorrelationIdentifiers: Equatable, Sendable {
-    let requestID: String?
-    let sentryEventID: String?
-    let sentryTraceID: String?
+    var requestID: String?
+    var sentryEventID: String?
+    var sentryTraceID: String?
 
     static let noneRecorded = SupportDiagnosticsCorrelationIdentifiers(
         requestID: nil,
         sentryEventID: nil,
         sentryTraceID: nil
     )
+
+    mutating func mergeMissing(with other: SupportDiagnosticsCorrelationIdentifiers) {
+        requestID = requestID ?? other.requestID
+        sentryEventID = sentryEventID ?? other.sentryEventID
+        sentryTraceID = sentryTraceID ?? other.sentryTraceID
+    }
+
+    static func fromDebugLogEntries(_ entries: [DebugLogEntry]) -> SupportDiagnosticsCorrelationIdentifiers {
+        var requestID: String?
+        var traceID: String?
+        for entry in entries {
+            guard let metadata = entry.metadata else { continue }
+            requestID = requestID
+                ?? metadata["request_id"]
+                ?? metadata["requestId"]
+            traceID = traceID
+                ?? metadata["trace_id"]
+                ?? metadata["traceId"]
+            if requestID != nil, traceID != nil { break }
+        }
+        return SupportDiagnosticsCorrelationIdentifiers(
+            requestID: requestID,
+            sentryEventID: nil,
+            sentryTraceID: traceID
+        )
+    }
 }
 
 nonisolated enum SupportDiagnosticsWatchTransferState: Equatable, Sendable {
@@ -149,6 +103,131 @@ nonisolated enum SupportDiagnosticsWatchTransferState: Equatable, Sendable {
 nonisolated enum SupportDiagnosticsFeatureOverrideState: Equatable, Sendable {
     case noneConfigured
     case configured([String])
+}
+
+nonisolated final class SupportDiagnosticsRuntimeState: @unchecked Sendable {
+    static let shared = SupportDiagnosticsRuntimeState()
+
+    private let lock = NSLock()
+    private var requestID: String?
+    private var sentryEventID: String?
+    private var sentryTraceID: String?
+    private var watchTransferState: SupportDiagnosticsWatchTransferState = .noneRecorded
+    private var fallbackCorrelationID: String?
+
+    private init() {}
+
+    func recordRequestID(_ id: String?) {
+        guard let id, !id.isEmpty else { return }
+        lock.withLock { requestID = id }
+    }
+
+    func recordSentryEventID(_ id: String?) {
+        guard let id, !id.isEmpty else { return }
+        lock.withLock { sentryEventID = id }
+    }
+
+    func recordSentryTraceID(_ id: String?) {
+        guard let id, !id.isEmpty else { return }
+        lock.withLock { sentryTraceID = id }
+    }
+
+    func recordWatchTransfer(action: String, outcome: String) {
+        guard !action.isEmpty, !outcome.isEmpty else { return }
+        lock.withLock {
+            watchTransferState = .recorded(action: action, outcome: outcome)
+        }
+    }
+
+    func correlationIdentifiers() -> SupportDiagnosticsCorrelationIdentifiers {
+        lock.withLock {
+            SupportDiagnosticsCorrelationIdentifiers(
+                requestID: requestID,
+                sentryEventID: sentryEventID,
+                sentryTraceID: sentryTraceID
+            )
+        }
+    }
+
+    func lastWatchTransferState() -> SupportDiagnosticsWatchTransferState {
+        lock.withLock { watchTransferState }
+    }
+
+    func safeCorrelationID() -> String {
+        lock.withLock {
+            if let requestID { return requestID }
+            if let sentryEventID { return sentryEventID }
+            if let fallbackCorrelationID { return fallbackCorrelationID }
+            let generated = "diag-\(UUID().uuidString)"
+            fallbackCorrelationID = generated
+            return generated
+        }
+    }
+
+    func resetForTests() {
+        lock.withLock {
+            requestID = nil
+            sentryEventID = nil
+            sentryTraceID = nil
+            watchTransferState = .noneRecorded
+            fallbackCorrelationID = nil
+        }
+    }
+
+    func setFallbackCorrelationIDForTests(_ id: String) {
+        lock.withLock { fallbackCorrelationID = id }
+    }
+}
+
+nonisolated struct SupportDiagnosticsFeatureOverrideReader: Sendable {
+    private let environment: [String: String]
+    private let explicitStates: [String: Bool]
+
+    init(
+        environment: [String: String] = ProcessInfo.processInfo.environment,
+        explicitStates: [String: Bool] = [:]
+    ) {
+        self.environment = environment
+        self.explicitStates = explicitStates
+    }
+
+    static var live: SupportDiagnosticsFeatureOverrideReader {
+        var states: [String: Bool] = [:]
+        if UserDefaults.standard.object(forKey: DefaultsKey.strengthAutoCaptureExperimental.rawValue) != nil {
+            states["strength_auto_capture"] = StrengthAutoCaptureSettings.isEnabled
+        }
+        return SupportDiagnosticsFeatureOverrideReader(explicitStates: states)
+    }
+
+    func state() async -> SupportDiagnosticsFeatureOverrideState {
+        var overrides: [String] = []
+        let allowlistedEnvironment = [
+            "AMAKAFLOW_PROGRAM_WIZARD": "program_wizard",
+            "AMAKAFLOW_PAYWALL_GATE": "paywall_gate",
+            "AMAKAFLOW_NON_MVP": "non_mvp"
+        ]
+        for (key, label) in allowlistedEnvironment {
+            guard let value = environment[key],
+                  let parsed = Self.parseBoolean(value)
+            else { continue }
+            overrides.append("\(label)=\(parsed ? "enabled" : "disabled")")
+        }
+        for (label, isEnabled) in explicitStates {
+            overrides.append("\(label)=\(isEnabled ? "enabled" : "disabled")")
+        }
+        return overrides.isEmpty ? .noneConfigured : .configured(overrides)
+    }
+
+    private static func parseBoolean(_ value: String) -> Bool? {
+        switch value.lowercased() {
+        case "1", "true", "yes", "enabled":
+            return true
+        case "0", "false", "no", "disabled":
+            return false
+        default:
+            return nil
+        }
+    }
 }
 
 nonisolated enum SupportDiagnosticsSafeSummaries {
@@ -186,8 +265,14 @@ nonisolated enum SupportDiagnosticsSafeSummaries {
         }
     }
 
+    static func tokenExpirySummary(_ expiresAt: Date?, now: Date = Date()) -> String {
+        guard let expiresAt else { return "None" }
+        let formatted = supportDiagnosticsFormatted(expiresAt)
+        return expiresAt <= now ? "Expired \(formatted)" : formatted
+    }
+
     private static func sanitizedToken(_ token: String) -> String {
-        let allowed = CharacterSet.alphanumerics.union(CharacterSet(charactersIn: ".:_-"))
+        let allowed = CharacterSet.alphanumerics.union(CharacterSet(charactersIn: ".:_-="))
         let scalars = token.unicodeScalars.map { scalar in
             allowed.contains(scalar) ? Character(scalar) : "_"
         }

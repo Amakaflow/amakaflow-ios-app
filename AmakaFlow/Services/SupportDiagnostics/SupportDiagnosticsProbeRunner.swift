@@ -12,7 +12,9 @@ nonisolated struct SupportDiagnosticsProbeRunner: Sendable {
         sleep: @escaping @Sendable (Duration) async throws -> Void = { duration in
             try await Task.sleep(for: duration)
         },
-        correlationIDProvider: @escaping @Sendable () -> String? = { nil }
+        correlationIDProvider: @escaping @Sendable () -> String? = {
+            SupportDiagnosticsRuntimeState.shared.safeCorrelationID()
+        }
     ) {
         self.probes = probes
         self.now = now

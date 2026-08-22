@@ -362,3 +362,168 @@ Output: none. Exit code: 0.
 - Clerk token expiry is reported as `Not reported by SDK` because the safe SDK/session metadata used here does not expose expiry; the implementation intentionally does not parse JWT bytes.
 - Live correlation IDs, Watch last transfer result, and allowlisted feature overrides default to typed none states until safe recorders/providers are wired outside these owned Task 3 files.
 - xcodebuild still emits existing duplicate synchronized test build-file warnings. They are outside this fix scope and were not introduced by the new test file.
+
+## Fix round 2
+
+### Implementation
+
+- Replaced the Clerk token-expiry placeholder with a safe SDK metadata read from `Clerk.shared.session?.expireAt`; no JWT body, token bytes, or raw claims are parsed or rendered.
+- Added a thread-safe `SupportDiagnosticsRuntimeState` for privacy-safe request ID, Sentry event ID, Sentry trace ID, fallback correlation ID, and sanitized Watch transfer action/outcome summaries.
+- Wired live correlation state from API transport, DebugLogService request IDs, Sentry capture/transaction IDs, and existing DebugLog metadata keys; generic runner failures/timeouts now use the same safe fallback by default and the Status view passes it explicitly.
+- Wired WatchConnectivity lifecycle points to record only safe action/outcome states such as `syncWorkouts: queued`; no message payloads, health values, or bodies are stored.
+- Added an allowlisted feature override reader that reports only approved override keys from explicit settings/UserDefaults-backed strength auto-capture state and allowlisted process environment names.
+- Removed the static approved live field labels map and replaced tests with actual probe execution assertions.
+- Kept the probe split under the 300-line guidance after round 2: `SupportDiagnosticsProbes.swift` 297 lines, `SupportDiagnosticsEnvironmentProbes.swift` 268 lines, `SupportDiagnosticsSystemProbes.swift` 229 lines.
+
+### Files changed
+
+- `AmakaFlow/Services/APITransport.swift`
+- `AmakaFlow/Services/DebugLogService.swift`
+- `AmakaFlow/Services/SentryService.swift`
+- `AmakaFlow/Services/SupportDiagnostics/SupportDiagnosticsEnvironmentProbes.swift`
+- `AmakaFlow/Services/SupportDiagnostics/SupportDiagnosticsProbeRunner.swift`
+- `AmakaFlow/Services/SupportDiagnostics/SupportDiagnosticsProbes.swift`
+- `AmakaFlow/Services/SupportDiagnostics/SupportDiagnosticsSystemProbes.swift`
+- `AmakaFlow/Services/WatchConnectivityManager.swift`
+- `AmakaFlow/Views/SupportDiagnostics/SupportDiagnosticsStatusView.swift`
+- `AmakaFlowCompanion/AmakaFlowCompanionTests/SupportDiagnosticsProbeTests.swift`
+
+### RED evidence
+
+Focused probe tests failed before production implementation with the new round 2 tests in place:
+
+```bash
+SIM_NAME=$(xcrun simctl list devices available | awk '!found && match($0, /iPhone [^(]*/) {name = substr($0, RSTART, RLENGTH); sub(/[[:space:]]+$/, "", name); print name; found = 1}'); xcrun simctl boot "$SIM_NAME" || true; xcrun simctl bootstatus "$SIM_NAME" -b; xcodebuild test -project AmakaFlowCompanion/AmakaFlowCompanion.xcodeproj -scheme AmakaFlowCompanion -configuration Debug -destination "platform=iOS Simulator,name=$SIM_NAME" -derivedDataPath AmakaFlowCompanion/DerivedData -clonedSourcePackagesDirPath AmakaFlowCompanion/.spm -only-testing:AmakaFlowCompanionTests/SupportDiagnosticsProbeTests -enableCodeCoverage NO CLERK_PUBLISHABLE_KEY_DEV="..." CLERK_PUBLISHABLE_KEY_STAGING="..." CLERK_PUBLISHABLE_KEY_PRODUCTION="..."
+```
+
+Relevant output:
+
+```text
+Cannot find 'SupportDiagnosticsRuntimeState' in scope
+Cannot find 'SupportDiagnosticsClerkSessionState' in scope
+Extra argument 'simulationState' in call
+Cannot find 'SupportDiagnosticsFeatureOverrideReader' in scope
+Testing cancelled because the build failed.
+** TEST FAILED **
+```
+
+After the first implementation pass, focused tests compiled but two formatter assertions failed, proving the live probe assertions were executing actual output rather than a static label dictionary:
+
+```text
+Test case 'SupportDiagnosticsProbeTests.testActualProbeOutputsCatchStaticContractOnlyMutation()' failed
+XCTAssertEqual failed: ("Optional("program_wizard_enabled")") is not equal to ("Optional("program_wizard=enabled")")
+Test case 'SupportDiagnosticsProbeTests.testAllowlistedFeatureOverrideReaderCatchesArbitraryDefaultsScanMutation()' failed
+XCTAssertEqual failed: ("non_mvp_disabled, program_wizard_enabled, strength_auto_capture_enabled") is not equal to ("non_mvp=disabled, program_wizard=enabled, strength_auto_capture=enabled")
+** TEST FAILED **
+```
+
+### GREEN evidence
+
+Focused probe tests:
+
+```bash
+SIM_NAME=$(xcrun simctl list devices available | awk '!found && match($0, /iPhone [^(]*/) {name = substr($0, RSTART, RLENGTH); sub(/[[:space:]]+$/, "", name); print name; found = 1}'); xcrun simctl boot "$SIM_NAME" || true; xcrun simctl bootstatus "$SIM_NAME" -b; xcodebuild test -project AmakaFlowCompanion/AmakaFlowCompanion.xcodeproj -scheme AmakaFlowCompanion -configuration Debug -destination "platform=iOS Simulator,name=$SIM_NAME" -derivedDataPath AmakaFlowCompanion/DerivedData -clonedSourcePackagesDirPath AmakaFlowCompanion/.spm -only-testing:AmakaFlowCompanionTests/SupportDiagnosticsProbeTests -enableCodeCoverage NO CLERK_PUBLISHABLE_KEY_DEV="..." CLERK_PUBLISHABLE_KEY_STAGING="..." CLERK_PUBLISHABLE_KEY_PRODUCTION="..."
+```
+
+Output:
+
+```text
+** TEST SUCCEEDED **
+Test suite 'SupportDiagnosticsProbeTests' started
+... 11 Probe tests passed
+```
+
+Final focused rerun after SwiftLint fixes:
+
+```text
+Test session results:
+AmakaFlowCompanion/DerivedData/Logs/Test/Test-AmakaFlowCompanion-2026.08.21_22-15-47--0500.xcresult
+** TEST SUCCEEDED **
+... 11 Probe tests passed
+```
+
+Four-class diagnostics selection:
+
+```bash
+SIM_NAME=$(xcrun simctl list devices available | awk '!found && match($0, /iPhone [^(]*/) {name = substr($0, RSTART, RLENGTH); sub(/[[:space:]]+$/, "", name); print name; found = 1}'); xcrun simctl boot "$SIM_NAME" || true; xcrun simctl bootstatus "$SIM_NAME" -b; xcodebuild test -project AmakaFlowCompanion/AmakaFlowCompanion.xcodeproj -scheme AmakaFlowCompanion -configuration Debug -destination "platform=iOS Simulator,name=$SIM_NAME" -derivedDataPath AmakaFlowCompanion/DerivedData -clonedSourcePackagesDirPath AmakaFlowCompanion/.spm -only-testing:AmakaFlowCompanionTests/SupportDiagnosticsAccessClientTests -only-testing:AmakaFlowCompanionTests/SupportDiagnosticsEntryTests -only-testing:AmakaFlowCompanionTests/SupportDiagnosticsSessionTests -only-testing:AmakaFlowCompanionTests/SupportDiagnosticsProbeTests -enableCodeCoverage NO CLERK_PUBLISHABLE_KEY_DEV="..." CLERK_PUBLISHABLE_KEY_STAGING="..." CLERK_PUBLISHABLE_KEY_PRODUCTION="..."
+```
+
+Output:
+
+```text
+** TEST SUCCEEDED **
+... 9 Entry tests passed
+... 11 Probe tests passed
+... 4 AccessClient tests passed
+... 7 Session tests passed
+```
+
+xcresult:
+
+```text
+AmakaFlowCompanion/DerivedData/Logs/Test/Test-AmakaFlowCompanion-2026.08.21_22-12-59--0500.xcresult
+```
+
+### Static verification
+
+Line-count split check:
+
+```bash
+wc -l AmakaFlow/Services/SupportDiagnostics/SupportDiagnosticsProbes.swift AmakaFlow/Services/SupportDiagnostics/SupportDiagnosticsEnvironmentProbes.swift AmakaFlow/Services/SupportDiagnostics/SupportDiagnosticsSystemProbes.swift
+```
+
+Output:
+
+```text
+     297 AmakaFlow/Services/SupportDiagnostics/SupportDiagnosticsProbes.swift
+     268 AmakaFlow/Services/SupportDiagnostics/SupportDiagnosticsEnvironmentProbes.swift
+     229 AmakaFlow/Services/SupportDiagnostics/SupportDiagnosticsSystemProbes.swift
+     794 total
+```
+
+Strict baseline-aware SwiftLint:
+
+```bash
+swiftlint lint --strict --baseline .swiftlint-baseline.yml --use-alternative-excluding --quiet AmakaFlow/Services/SupportDiagnostics/SupportDiagnosticsProbe.swift AmakaFlow/Services/SupportDiagnostics/SupportDiagnosticsProbeRunner.swift AmakaFlow/Services/SupportDiagnostics/SupportDiagnosticsProbes.swift AmakaFlow/Services/SupportDiagnostics/SupportDiagnosticsEnvironmentProbes.swift AmakaFlow/Services/SupportDiagnostics/SupportDiagnosticsSystemProbes.swift AmakaFlow/Views/SupportDiagnostics/SupportDiagnosticsStatusView.swift AmakaFlow/Views/SupportDiagnostics/SupportDiagnosticsCenterView.swift AmakaFlow/Services/APITransport.swift AmakaFlow/Services/DebugLogService.swift AmakaFlow/Services/SentryService.swift AmakaFlow/Services/WatchConnectivityManager.swift
+```
+
+Output:
+
+```text
+warning: Found a configuration for 'line_length' rule, but it is disabled in 'disabled_rules'.
+```
+
+Exit code: 0.
+
+Project file:
+
+```bash
+plutil -lint AmakaFlowCompanion/AmakaFlowCompanion.xcodeproj/project.pbxproj
+```
+
+Output:
+
+```text
+AmakaFlowCompanion/AmakaFlowCompanion.xcodeproj/project.pbxproj: OK
+```
+
+Whitespace check:
+
+```bash
+git diff --check
+```
+
+Output: none. Exit code: 0.
+
+### Self-review
+
+- Confirmed Clerk expiry uses SDK `Session.expireAt` metadata and does not parse JWT bytes or claims.
+- Confirmed only request IDs, Sentry IDs, and sanitized Watch action/outcome strings are recorded for diagnostics.
+- Confirmed generic probe failures/timeouts receive a safe default correlation ID in both direct runner use and the live Status view.
+- Confirmed the allowlisted override reader does not scan arbitrary UserDefaults keys.
+- Confirmed actual probe-output tests cover app/device fields, Clerk expiry/hash, Watch last transfer, grant capability/simulation/override state, correlation IDs, and forbidden-content absence.
+- Confirmed integration changes do not render raw health samples, token bodies, claims, database rows, URL query values, authorization headers, cookies, exact locations, request bodies, response bodies, or log messages.
+
+### Concerns
+
+- xcodebuild still emits existing generated-code actor-isolation warnings and duplicate synchronized test build-file warnings outside this task scope.

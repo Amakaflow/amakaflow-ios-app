@@ -1,3 +1,4 @@
+import ClerkKit
 import Foundation
 import UIKit
 import WatchConnectivity
@@ -55,27 +56,61 @@ nonisolated struct ClerkSessionProbe: SupportDiagnosticsProbe {
     let id: SupportDiagnosticsProbeID = .clerkSession
     let title = "Clerk session"
     let timeout: Duration = .seconds(1)
+    let sessionState: @Sendable () async -> SupportDiagnosticsClerkSessionState
+    let now: @Sendable () -> Date
+
+    init(
+        sessionState: @escaping @Sendable () async -> SupportDiagnosticsClerkSessionState = {
+            await MainActor.run {
+                let auth = AuthViewModel.shared
+                return SupportDiagnosticsClerkSessionState(
+                    hasResolvedInitialSession: auth.hasResolvedInitialSession,
+                    isAuthenticated: auth.isAuthenticated,
+                    hasActiveSession: auth.hasActiveSession,
+                    needsReauth: auth.needsReauth,
+                    tokenExpiresAt: Clerk.shared.session?.expireAt,
+                    lastTokenRefresh: auth.lastTokenRefresh,
+                    rawUserID: auth.userProfile?.id
+                )
+            }
+        },
+        now: @escaping @Sendable () -> Date = Date.init
+    ) {
+        self.sessionState = sessionState
+        self.now = now
+    }
 
     func run() async throws -> [SupportDiagnosticsDisplayField] {
-        await MainActor.run {
-            let auth = AuthViewModel.shared
-            return [
-                supportDiagnosticsField(
-                    "Resolved initial session",
-                    supportDiagnosticsYesNo(auth.hasResolvedInitialSession)
-                ),
-                supportDiagnosticsField("Authenticated", supportDiagnosticsYesNo(auth.isAuthenticated)),
-                supportDiagnosticsField("Active SDK session", supportDiagnosticsYesNo(auth.hasActiveSession)),
-                supportDiagnosticsField("Needs reauth", supportDiagnosticsYesNo(auth.needsReauth)),
-                supportDiagnosticsField("Token expiry", "Not reported by SDK"),
-                supportDiagnosticsField("Last token refresh", supportDiagnosticsFormatted(auth.lastTokenRefresh)),
-                supportDiagnosticsField(
-                    "User ID hash",
-                    SupportDiagnosticsSafeSummaries.hashedUserID(auth.userProfile?.id)
-                )
-            ]
-        }
+        let state = await sessionState()
+        return [
+            supportDiagnosticsField(
+                "Resolved initial session",
+                supportDiagnosticsYesNo(state.hasResolvedInitialSession)
+            ),
+            supportDiagnosticsField("Authenticated", supportDiagnosticsYesNo(state.isAuthenticated)),
+            supportDiagnosticsField("Active SDK session", supportDiagnosticsYesNo(state.hasActiveSession)),
+            supportDiagnosticsField("Needs reauth", supportDiagnosticsYesNo(state.needsReauth)),
+            supportDiagnosticsField(
+                "Token expiry",
+                SupportDiagnosticsSafeSummaries.tokenExpirySummary(state.tokenExpiresAt, now: now())
+            ),
+            supportDiagnosticsField("Last token refresh", supportDiagnosticsFormatted(state.lastTokenRefresh)),
+            supportDiagnosticsField(
+                "User ID hash",
+                SupportDiagnosticsSafeSummaries.hashedUserID(state.rawUserID)
+            )
+        ]
     }
+}
+
+nonisolated struct SupportDiagnosticsClerkSessionState: Equatable, Sendable {
+    let hasResolvedInitialSession: Bool
+    let isAuthenticated: Bool
+    let hasActiveSession: Bool
+    let needsReauth: Bool
+    let tokenExpiresAt: Date?
+    let lastTokenRefresh: Date?
+    let rawUserID: String?
 }
 
 nonisolated struct ReachabilityHealthProbe: SupportDiagnosticsProbe {

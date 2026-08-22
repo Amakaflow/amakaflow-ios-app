@@ -111,6 +111,7 @@ class DebugLogService: ObservableObject {
         // correlated with Sentry breadcrumbs and BFF/mapper-api logs.
         if let requestID = requestID {
             metadata["request_id"] = requestID
+            SupportDiagnosticsRuntimeState.shared.recordRequestID(requestID)
         }
 
         let details = error?.localizedDescription ?? response ?? "Unknown error"

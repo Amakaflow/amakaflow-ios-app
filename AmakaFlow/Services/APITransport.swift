@@ -37,15 +37,14 @@ struct APILogEvent: Equatable {
 protocol APIObservabilityLogging: AnyObject {
     func log(_ event: APILogEvent)
 }
-
 final class DefaultAPIObservabilityLogger: APIObservabilityLogging {
     static let shared = DefaultAPIObservabilityLogger()
 
     private let logger = Logger(subsystem: "com.amakaflow.app", category: "network")
-
     private init() {}
 
     func log(_ event: APILogEvent) {
+        SupportDiagnosticsRuntimeState.shared.recordRequestID(event.serverRequestId ?? event.requestId)
         let status = event.statusCode.map(String.init) ?? "none"
         let errorType = event.errorType ?? "none"
         let serverRequestId = event.serverRequestId ?? "none"

@@ -34,6 +34,10 @@ final class SupportDiagnosticsProbeTests: XCTestCase {
     }
 
     func testRunnerTurnsOnlyTimedOutProbeUnavailable() async {
+        SupportDiagnosticsRuntimeState.shared.resetForTests()
+        SupportDiagnosticsRuntimeState.shared.setFallbackCorrelationIDForTests("diag-fixed-default")
+        defer { SupportDiagnosticsRuntimeState.shared.resetForTests() }
+
         let runner = SupportDiagnosticsProbeRunner(
             probes: [
                 StubDiagnosticsProbe(
@@ -55,7 +59,7 @@ final class SupportDiagnosticsProbeTests: XCTestCase {
 
         XCTAssertEqual(
             snapshot.result(for: .reachabilityHealth)?.availability,
-            .unavailable(errorCode: .probeTimedOut, correlationID: nil)
+            .unavailable(errorCode: .probeTimedOut, correlationID: "diag-fixed-default")
         )
         XCTAssertEqual(
             snapshot.result(for: .watchConnectivity)?.availability,
@@ -128,21 +132,125 @@ final class SupportDiagnosticsProbeTests: XCTestCase {
         )
     }
 
-    func testApprovedLiveFieldContractCatchesRemovedDistributionLocaleTimezoneAndGrantFields() {
-        let fields = SupportDiagnosticsProbes.approvedLiveFieldLabels
+    func testDefaultRunnerCorrelationCatchesStatusViewNilCorrelationMutation() async {
+        SupportDiagnosticsRuntimeState.shared.resetForTests()
+        SupportDiagnosticsRuntimeState.shared.setFallbackCorrelationIDForTests("diag-fixed-default")
+        defer { SupportDiagnosticsRuntimeState.shared.resetForTests() }
 
-        XCTAssertEqual(Set(fields.keys), Set(SupportDiagnosticsProbeID.allCases))
-        XCTAssertTrue(fields[.appBuildDevice, default: []].contains("Distribution"))
-        XCTAssertTrue(fields[.appBuildDevice, default: []].contains("Locale"))
-        XCTAssertTrue(fields[.appBuildDevice, default: []].contains("Timezone"))
-        XCTAssertTrue(fields[.clerkSession, default: []].contains("Token expiry"))
-        XCTAssertTrue(fields[.clerkSession, default: []].contains("User ID hash"))
-        XCTAssertTrue(fields[.watchConnectivity, default: []].contains("Last transfer result"))
-        XCTAssertTrue(fields[.databaseHealth, default: []].contains("Local schema version"))
-        XCTAssertTrue(fields[.databaseHealth, default: []].contains("Migration health"))
-        XCTAssertTrue(fields[.grantState, default: []].contains("Capability wire list"))
-        XCTAssertTrue(fields[.grantState, default: []].contains("Simulation state"))
-        XCTAssertTrue(fields[.grantState, default: []].contains("Allowlisted feature overrides"))
+        let runner = SupportDiagnosticsProbeRunner(
+            probes: [
+                StubDiagnosticsProbe(
+                    id: .databaseHealth,
+                    title: "Database",
+                    outcome: .genericFailure
+                )
+            ],
+            now: { Self.fixedDate }
+        )
+
+        let snapshot = await runner.run()
+
+        XCTAssertEqual(
+            snapshot.result(for: .databaseHealth)?.availability,
+            .unavailable(errorCode: .probeFailed, correlationID: "diag-fixed-default")
+        )
+    }
+
+    func testActualProbeOutputsCatchStaticContractOnlyMutation() async throws {
+        let clerkExpiry = Self.fixedDate.addingTimeInterval(600)
+        let authorization = SupportDiagnosticsAuthorization(
+            grantID: UUID(uuidString: "00000000-0000-0000-0000-000000000251")!,
+            role: .staff,
+            capabilities: [.statusRead, .featureOverrideAllowlisted],
+            expiresAt: Self.fixedDate.addingTimeInterval(3_600),
+            serverTime: Self.fixedDate
+        )
+
+        let appLabels = Set(try await AppBuildDeviceProbe().run().map(\.label))
+        let clerkFields = try await ClerkSessionProbe(
+            sessionState: {
+                SupportDiagnosticsClerkSessionState(
+                    hasResolvedInitialSession: true,
+                    isAuthenticated: true,
+                    hasActiveSession: true,
+                    needsReauth: false,
+                    tokenExpiresAt: clerkExpiry,
+                    lastTokenRefresh: Self.fixedDate,
+                    rawUserID: "user_live_contract"
+                )
+            },
+            now: { Self.fixedDate }
+        ).run()
+        let watchFields = try await WatchConnectivityProbe(
+            lastTransferState: {
+                .recorded(action: "syncWorkouts", outcome: "queued")
+            }
+        ).run()
+        let grantFields = try await GrantStateProbe(
+            authorization: authorization,
+            featureOverrideState: {
+                .configured(["program_wizard=enabled"])
+            },
+            simulationState: { true }
+        ).run()
+        let correlationFields = try await CorrelationIDsProbe(
+            provider: {
+                SupportDiagnosticsCorrelationIdentifiers(
+                    requestID: "req-live-1",
+                    sentryEventID: "sentry-live-1",
+                    sentryTraceID: "trace-live-1"
+                )
+            }
+        ).run()
+
+        XCTAssertTrue(appLabels.isSuperset(of: ["Distribution", "Locale", "Timezone"]))
+        XCTAssertEqual(clerkFields.value(for: "Token expiry"), supportDiagnosticsFormatted(clerkExpiry))
+        XCTAssertNotEqual(clerkFields.value(for: "Token expiry"), "Not reported by SDK")
+        XCTAssertEqual(clerkFields.value(for: "User ID hash")?.hasPrefix("sha256:"), true)
+        XCTAssertEqual(watchFields.value(for: "Last transfer result"), "syncWorkouts: queued")
+        XCTAssertEqual(grantFields.value(for: "Allowlisted feature overrides"), "program_wizard=enabled")
+        XCTAssertEqual(grantFields.value(for: "Simulation state"), "Enabled")
+        XCTAssertEqual(correlationFields.value(for: "Existing request ID"), "req-live-1")
+        XCTAssertEqual(correlationFields.value(for: "Existing Sentry event ID"), "sentry-live-1")
+        XCTAssertEqual(correlationFields.value(for: "Existing Sentry trace ID"), "trace-live-1")
+    }
+
+    func testLiveDependenciesReadRuntimeStateCatchesNoneRecordedDefaultsMutation() async {
+        SupportDiagnosticsRuntimeState.shared.resetForTests()
+        defer { SupportDiagnosticsRuntimeState.shared.resetForTests() }
+        SupportDiagnosticsRuntimeState.shared.recordRequestID("req-runtime-1")
+        SupportDiagnosticsRuntimeState.shared.recordSentryEventID("sentry-runtime-1")
+        SupportDiagnosticsRuntimeState.shared.recordSentryTraceID("trace-runtime-1")
+        SupportDiagnosticsRuntimeState.shared.recordWatchTransfer(action: "dayStateResponse", outcome: "sent")
+
+        let dependencies = SupportDiagnosticsProbeDependencies.live
+        let identifiers = await dependencies.correlationIdentifiers()
+        let watchState = await dependencies.lastWatchTransferState()
+
+        XCTAssertEqual(identifiers.requestID, "req-runtime-1")
+        XCTAssertEqual(identifiers.sentryEventID, "sentry-runtime-1")
+        XCTAssertEqual(identifiers.sentryTraceID, "trace-runtime-1")
+        XCTAssertEqual(watchState, .recorded(action: "dayStateResponse", outcome: "sent"))
+    }
+
+    func testAllowlistedFeatureOverrideReaderCatchesArbitraryDefaultsScanMutation() async {
+        let reader = SupportDiagnosticsFeatureOverrideReader(
+            environment: [
+                "AMAKAFLOW_PROGRAM_WIZARD": "1",
+                "AMAKAFLOW_NON_MVP": "0",
+                "UNRELATED_SECRET_FLAG": "1"
+            ],
+            explicitStates: [
+                "strength_auto_capture": true
+            ]
+        )
+
+        let overrides = await reader.state()
+
+        XCTAssertEqual(
+            SupportDiagnosticsSafeSummaries.featureOverrides(overrides),
+            "non_mvp=disabled, program_wizard=enabled, strength_auto_capture=enabled"
+        )
     }
 
     func testApprovedReachabilityContractCatchesRemovedConfiguredAPIHealthProbeMutation() {
@@ -161,7 +269,20 @@ final class SupportDiagnosticsProbeTests: XCTestCase {
     }
 
     func testSafeBoundaryContractCatchesRawIdentifierTokenAndMessageFieldsMutation() {
-        let labels = SupportDiagnosticsProbes.approvedLiveFieldLabels.values.flatMap { $0 }
+        let labels = [
+            "Resolved initial session",
+            "Authenticated",
+            "Active SDK session",
+            "Needs reauth",
+            "Token expiry",
+            "Last token refresh",
+            "User ID hash",
+            "Last transfer result",
+            "Existing request ID",
+            "Existing Sentry event ID",
+            "Existing Sentry trace ID",
+            "Allowlisted feature overrides"
+        ]
         let prohibitedFragments = [
             "JWT",
             "Claims",
@@ -267,3 +388,9 @@ private struct StubDiagnosticsProbe: SupportDiagnosticsProbe {
 }
 
 private struct StubDiagnosticsError: Error {}
+
+private extension Array where Element == SupportDiagnosticsDisplayField {
+    func value(for label: String) -> String? {
+        first { $0.label == label }?.value
+    }
+}

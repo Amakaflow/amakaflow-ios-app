@@ -117,12 +117,23 @@ nonisolated struct GrantStateProbe: SupportDiagnosticsProbe {
 
     let authorization: SupportDiagnosticsAuthorization
     let featureOverrideState: @Sendable () async -> SupportDiagnosticsFeatureOverrideState
+    let simulationState: @Sendable () async -> Bool
+
+    init(
+        authorization: SupportDiagnosticsAuthorization,
+        featureOverrideState: @escaping @Sendable () async -> SupportDiagnosticsFeatureOverrideState,
+        simulationState: @escaping @Sendable () async -> Bool = {
+            await MainActor.run { SimulationSettings.shared.isEnabled }
+        }
+    ) {
+        self.authorization = authorization
+        self.featureOverrideState = featureOverrideState
+        self.simulationState = simulationState
+    }
 
     func run() async throws -> [SupportDiagnosticsDisplayField] {
         let overrides = await featureOverrideState()
-        let simulationEnabled = await MainActor.run {
-            SimulationSettings.shared.isEnabled
-        }
+        let simulationEnabled = await simulationState()
         return [
             supportDiagnosticsField("Role", authorization.role.rawValue),
             supportDiagnosticsField("Capability count", String(authorization.capabilities.count)),

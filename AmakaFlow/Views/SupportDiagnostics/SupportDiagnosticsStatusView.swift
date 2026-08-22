@@ -67,7 +67,9 @@ struct SupportDiagnosticsStatusView: View {
 
         let runner = SupportDiagnosticsProbeRunner(
             probes: SupportDiagnosticsProbes.live(authorization: authorization)
-        )
+        ) {
+            SupportDiagnosticsRuntimeState.shared.safeCorrelationID()
+        }
         snapshot = await runner.run()
     }
 }
