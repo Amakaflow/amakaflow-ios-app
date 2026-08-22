@@ -8,8 +8,9 @@
 # for baseline+clerk_test@amakaflow.dev — see scripts/capture-baseline.sh;
 # the AMA-1843 mock bypass is launch-flaky per AMA-2457).
 # NOTE: no launchApp here on purpose — Maestro attaches to the running app.
-# Tab taps are text-based: the tab bar exposes af_tabbar but no per-tab
-# ids on current main (2026-08-17).
+# Tab taps use per-tab ids (today_tab / library_tab / profile_tab). They
+# were unreachable until AMA-2492: af_tabbar was declared on the tab bar
+# container without children: .contain, which collapsed the subtree.
 # Every section is a conditional runFlow so a missing surface skips
 # instead of failing the whole capture. Riskier deep-dives (editor,
 # match screen) run LAST so a stuck state cannot spoil earlier captures.
@@ -30,7 +31,7 @@ appId: com.myamaka.AmakaFlowCompanion
 
 # ── Library root ───────────────────────────────────────────────────────
 - tapOn:
-    text: "Library"
+    id: "library_tab"
 - waitForAnimationToEnd:
     timeout: 3000
 - takeScreenshot: docs/app-baseline/library-root
@@ -290,7 +291,7 @@ appId: com.myamaka.AmakaFlowCompanion
           timeout: 1500
 # ── Profile hub / Friends / History / Settings ─────────────────────────
 - tapOn:
-    text: "Profile"
+    id: "profile_tab"
 - waitForAnimationToEnd:
     timeout: 3000
 - takeScreenshot: docs/app-baseline/profile-hub
@@ -334,7 +335,7 @@ appId: com.myamaka.AmakaFlowCompanion
 
 # ── RISKY LAST: builder shape picker → editor (discard-safe) ───────────
 - tapOn:
-    text: "Library"
+    id: "library_tab"
 - waitForAnimationToEnd:
     timeout: 2000
 - runFlow:
@@ -387,7 +388,7 @@ appId: com.myamaka.AmakaFlowCompanion
 
 # ── RISKY LAST: Today session card → match screen (What was this?) ────
 - tapOn:
-    text: "Today"
+    id: "today_tab"
 - waitForAnimationToEnd:
     timeout: 2000
 - runFlow:
@@ -420,4 +421,4 @@ appId: com.myamaka.AmakaFlowCompanion
       - waitForAnimationToEnd:
           timeout: 1500
 - tapOn:
-    text: "Today"
+    id: "today_tab"
