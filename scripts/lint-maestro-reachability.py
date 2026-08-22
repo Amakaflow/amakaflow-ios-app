@@ -66,16 +66,44 @@ def load_documents(path: pathlib.Path) -> list[object]:
         raise SystemExit(f"{path}: {exc}") from exc
 
 
-def walk_strings(node: object):
+# Commands whose target must be on screen for the step to succeed. A command
+# outside this set is not evidence of reaching a surface: `assertNotVisible`
+# passes precisely when its target is absent, so treating it as a target would
+# fail the eleven flows that legitimately assert a tab is hidden.
+REACHING_COMMANDS = frozenset(
+    {
+        "tapOn",
+        "doubleTapOn",
+        "longPressOn",
+        "assertVisible",
+        "extendedWaitUntil",
+        "scrollUntilVisible",
+        "waitForAnimationToEnd",
+        "copyTextFrom",
+    }
+)
+
+
+def identifiers_in(node: object):
+    """Yield selector strings, ignoring keys so a command name is never a target."""
     if isinstance(node, dict):
-        for key, value in node.items():
-            yield str(key)
-            yield from walk_strings(value)
+        for value in node.values():
+            yield from identifiers_in(value)
     elif isinstance(node, list):
         for item in node:
-            yield from walk_strings(item)
+            yield from identifiers_in(item)
     elif node is not None:
         yield str(node)
+
+
+def commands(documents: list[object]) -> list[object]:
+    """Every command across every list document, not just the first.
+
+    A Maestro file may hold several command documents. ama-2286 keeps its
+    forced-failure scenario in a second one, so reading only the first would
+    let a missing session flag through the gate.
+    """
+    return [step for doc in documents if isinstance(doc, list) for step in doc]
 
 
 def launch_blocks(steps: list[object]) -> list[dict]:
@@ -91,21 +119,41 @@ def launch_blocks(steps: list[object]) -> list[dict]:
 
 def authed_targets(steps: list[object]) -> set[str]:
     found = set()
-    for value in walk_strings(steps):
-        if value in AUTHED_IDS or value.startswith(AUTHED_ID_PREFIXES):
-            found.add(value)
+    for step in steps:
+        if not isinstance(step, dict):
+            continue
+        for command, payload in step.items():
+            if command not in REACHING_COMMANDS:
+                continue
+            for value in identifiers_in(payload):
+                if value in AUTHED_IDS or value.startswith(AUTHED_ID_PREFIXES):
+                    found.add(value)
     return found
 
 
-def runs_signin_helper(text: str) -> bool:
-    return SIGNIN_HELPER in text
+def runs_signin_helper(steps: list[object]) -> bool:
+    """Only a real runFlow counts. Scanning raw text let a comment silence this."""
+    for step in steps:
+        if not isinstance(step, dict):
+            continue
+        target = step.get("runFlow")
+        if isinstance(target, dict):
+            target = target.get("file")
+        if isinstance(target, str) and SIGNIN_HELPER in target:
+            return True
+    return False
+
+
+def display(path: pathlib.Path) -> str:
+    """Repo-relative when possible, so an explicit path argument still prints."""
+    try:
+        return str(path.relative_to(REPO_ROOT))
+    except ValueError:
+        return str(path)
 
 
 def audit(path: pathlib.Path) -> str | None:
-    text = path.read_text()
-    documents = load_documents(path)
-    steps = [doc for doc in documents if isinstance(doc, list)]
-    steps = steps[0] if steps else []
+    steps = commands(load_documents(path))
 
     blocks = launch_blocks(steps)
     if not blocks:
@@ -123,7 +171,7 @@ def audit(path: pathlib.Path) -> str | None:
 
     if declared_flags & SESSION_FLAGS or declared_flags & DEMO_HOST_FLAGS:
         return None
-    if runs_signin_helper(text):
+    if runs_signin_helper(steps):
         return None
 
     targets = authed_targets(steps)
@@ -132,7 +180,7 @@ def audit(path: pathlib.Path) -> str | None:
 
     listed = ", ".join(sorted(targets)[:4])
     return (
-        f"{path.relative_to(REPO_ROOT)}: clearState with no session flag and no "
+        f"{display(path)}: clearState with no session flag and no "
         f"{SIGNIN_HELPER}, but targets authenticated surfaces ({listed})"
     )
 
