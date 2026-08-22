@@ -1,10 +1,3 @@
-//
-//  DebugLogService.swift
-//  AmakaFlow
-//
-//  Centralized error logging service for debugging API and device failures
-//
-
 import Foundation
 import Combine
 
@@ -81,22 +74,22 @@ struct DebugLogEntry: Identifiable, Codable {
 class DebugLogService: ObservableObject {
     static let shared = DebugLogService()
 
-    private let maxEntries = 100
-    private let store: DiagnosticEventStore
-    private let redactor: DiagnosticRedactor
-    private let accountIdentifierProvider: @MainActor @Sendable () -> String?
-    private let accountIdentifierPublisher: @MainActor @Sendable () -> AnyPublisher<String?, Never>
+    let maxEntries = 100
+    let store: DiagnosticEventStore
+    let redactor: DiagnosticRedactor
+    let accountIdentifierProvider: @MainActor @Sendable () -> String?
+    let accountIdentifierPublisher: @MainActor @Sendable () -> AnyPublisher<String?, Never>
 
-    @Published private(set) var entries: [DebugLogEntry] = []
+    @Published var entries: [DebugLogEntry] = []
 
-    private var pendingWriteTasks: [Task<Void, Never>] = []
-    private var writeTail: Task<Void, Never>?
-    private var accountLoadTask: Task<Void, Never>?
-    private var migrationTask: Task<Void, Never>?
-    private var accountStateCancellable: AnyCancellable?
-    private var currentAccountHash: String?
-    private var accountLoadGeneration = 0
-    private var hasLocalMutation = false
+    var pendingWriteTasks: [Task<Void, Never>] = []
+    var writeTail: Task<Void, Never>?
+    var accountLoadTask: Task<Void, Never>?
+    var migrationTask: Task<Void, Never>?
+    var accountStateCancellable: AnyCancellable?
+    var currentAccountHash: String?
+    var accountLoadGeneration = 0
+    var hasLocalMutation = false
 
     init(
         store: DiagnosticEventStore = DiagnosticEventStore(),
@@ -296,105 +289,5 @@ class DebugLogService: ObservableObject {
         }
 
         return text
-    }
-
-    // MARK: - Private Methods
-
-    func waitForPendingWrites() async {
-        let tail = writeTail
-        let accountLoadTask = accountLoadTask
-        pendingWriteTasks = []
-        await tail?.value
-        await accountLoadTask?.value
-    }
-
-    func reloadEntriesForCurrentAccount() async {
-        accountIdentifierDidChange(accountIdentifierProvider())
-        await waitForPendingWrites()
-    }
-
-    // MARK: - Private Methods
-
-    private func addEvent(_ event: DiagnosticEvent) {
-        hasLocalMutation = true
-        let entry = event.projectedDebugLogEntry
-        if eventBelongsToCurrentAccount(event) {
-            entries.insert(entry, at: 0)
-        }
-
-        // Prune old entries
-        if entries.count > maxEntries {
-            entries = Array(entries.prefix(maxEntries))
-        }
-
-        enqueueWrite { [store] in
-            try await store.append(event)
-        }
-
-        // Print only the already-redacted projection for local Xcode debugging.
-        print("[DebugLog] \(entry.type.rawValue): \(entry.title) - \(entry.details)")
-    }
-
-    private func enqueueWrite(_ operation: @escaping @Sendable () async throws -> Void) {
-        let previous = writeTail
-        let task = Task.detached(priority: .utility) {
-            await previous?.value
-            do {
-                try await operation()
-            } catch {
-                print("[DebugLogService] Failed to persist diagnostic event")
-            }
-        }
-        writeTail = task
-        pendingWriteTasks.append(task)
-    }
-
-    private func bindAccountState() {
-        accountStateCancellable = accountIdentifierPublisher()
-            .sink { [weak self] accountIdentifier in
-                self?.accountIdentifierDidChange(accountIdentifier)
-            }
-    }
-
-    private func accountIdentifierDidChange(_ accountIdentifier: String?) {
-        let newAccountHash = redactor.hashAccountIdentifier(accountIdentifier)
-        guard newAccountHash != currentAccountHash || entries.isEmpty else { return }
-        accountLoadGeneration += 1
-        let generation = accountLoadGeneration
-        currentAccountHash = newAccountHash
-        entries = []
-        hasLocalMutation = false
-
-        guard let newAccountHash else {
-            accountLoadTask = nil
-            return
-        }
-
-        let pendingWrites = writeTail
-        let migrationTask = migrationTask
-        accountLoadTask = Task { [weak self] in
-            await pendingWrites?.value
-            await migrationTask?.value
-            await self?.loadEntries(for: newAccountHash, generation: generation)
-        }
-    }
-
-    private func loadEntries(for accountHash: String, generation: Int) async {
-        do {
-            let loadedEntries = try await store.snapshot(.account(accountHash))
-                .prefix(maxEntries)
-                .map(\.projectedDebugLogEntry)
-            guard generation == accountLoadGeneration, currentAccountHash == accountHash, !hasLocalMutation else { return }
-            entries = loadedEntries
-        } catch {
-            print("[DebugLogService] Failed to reload diagnostic events")
-            guard generation == accountLoadGeneration else { return }
-            entries = []
-        }
-    }
-
-    private func eventBelongsToCurrentAccount(_ event: DiagnosticEvent) -> Bool {
-        guard let currentAccountHash else { return false }
-        return event.accountHash == currentAccountHash
     }
 }
