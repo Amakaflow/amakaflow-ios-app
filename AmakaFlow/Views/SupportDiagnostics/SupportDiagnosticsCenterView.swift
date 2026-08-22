@@ -41,22 +41,12 @@ struct SupportDiagnosticsCenterView: View {
         if let authorization = viewModel.authorization {
             Section {
                 statusRow(authorization: authorization)
-                capabilityRow(
-                    title: "Logs",
-                    systemImage: "doc.text.magnifyingglass",
-                    capability: .logsRead,
-                    authorization: authorization
-                )
-                capabilityRow(
-                    title: "Export",
-                    systemImage: "square.and.arrow.up",
-                    capability: .bundleExport,
-                    authorization: authorization
-                )
+                logsRow(authorization: authorization)
+                exportPreviewRow(authorization: authorization)
             } header: {
                 Text("Diagnostics")
             } footer: {
-                Text("Sanitized logs and explicit export are added in the next AMA-2510 slices.")
+                Text("Only authorized, account-scoped, sanitized diagnostics are available.")
             }
         }
     }
@@ -82,17 +72,46 @@ struct SupportDiagnosticsCenterView: View {
         }
     }
 
-    private func capabilityRow(
-        title: String,
-        systemImage: String,
-        capability: SupportDiagnosticsCapability,
-        authorization: SupportDiagnosticsAuthorization
-    ) -> some View {
-        capabilityLabel(
-            title: title,
-            systemImage: systemImage,
-            isAuthorized: authorization.capabilities.contains(capability)
-        )
+    @ViewBuilder
+    private func logsRow(authorization: SupportDiagnosticsAuthorization) -> some View {
+        if authorization.capabilities.contains(.logsRead) {
+            NavigationLink {
+                SupportDiagnosticsLogsView(viewModel: viewModel)
+            } label: {
+                capabilityLabel(
+                    title: "Logs",
+                    systemImage: "doc.text.magnifyingglass",
+                    isAuthorized: true
+                )
+            }
+        } else {
+            capabilityLabel(
+                title: "Logs",
+                systemImage: "doc.text.magnifyingglass",
+                isAuthorized: false
+            )
+        }
+    }
+
+    @ViewBuilder
+    private func exportPreviewRow(authorization: SupportDiagnosticsAuthorization) -> some View {
+        if authorization.capabilities.contains(.bundleExport) {
+            NavigationLink {
+                DiagnosticBundlePreviewView(viewModel: viewModel)
+            } label: {
+                capabilityLabel(
+                    title: "Export Preview",
+                    systemImage: "square.and.arrow.up",
+                    isAuthorized: true
+                )
+            }
+        } else {
+            capabilityLabel(
+                title: "Export Preview",
+                systemImage: "square.and.arrow.up",
+                isAuthorized: false
+            )
+        }
     }
 
     private func capabilityLabel(

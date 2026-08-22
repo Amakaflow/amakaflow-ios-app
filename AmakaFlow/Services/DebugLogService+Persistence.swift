@@ -15,6 +15,16 @@ extension DebugLogService {
         await waitForPendingWrites()
     }
 
+    func diagnosticEventsForCurrentAccount() async throws -> [DiagnosticEvent] {
+        guard let accountHash = currentAccountHash ?? redactor.hashAccountIdentifier(accountIdentifierProvider())
+        else { return [] }
+
+        await writeTail?.value
+        await migrationTask?.value
+        await accountLoadTask?.value
+        return try await store.snapshot(.account(accountHash))
+    }
+
     func addEvent(_ event: DiagnosticEvent) {
         hasLocalMutation = true
         let entry = event.projectedDebugLogEntry

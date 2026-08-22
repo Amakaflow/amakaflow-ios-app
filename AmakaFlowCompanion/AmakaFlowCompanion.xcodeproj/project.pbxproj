@@ -18,7 +18,10 @@
 		AMA2510ENVBLD /* SupportDiagnosticsEnvironmentProbes.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2510ENVREF /* SupportDiagnosticsEnvironmentProbes.swift */; };
 		AMA2510SYSBLD /* SupportDiagnosticsSystemProbes.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2510SYSREF /* SupportDiagnosticsSystemProbes.swift */; };
 		AMA2510STATBLD /* SupportDiagnosticsStatusView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2510STATREF /* SupportDiagnosticsStatusView.swift */; };
+		AMA2510LOGBLD /* SupportDiagnosticsLogsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2510LOGREF /* SupportDiagnosticsLogsView.swift */; };
+		AMA2510EXPBLD /* DiagnosticBundlePreviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2510EXPREF /* DiagnosticBundlePreviewView.swift */; };
 		AMA2510EVTBLD /* DiagnosticEvent.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2510EVTREF /* DiagnosticEvent.swift */; };
+		AMA2510SNAPBLD /* DiagnosticBundleSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2510SNAPREF /* DiagnosticBundleSnapshot.swift */; };
 		AMA2510REDBLD /* DiagnosticRedactor.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2510REDREF /* DiagnosticRedactor.swift */; };
 		AMA2510TXSBLD /* DiagnosticTextSanitizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2510TXSREF /* DiagnosticTextSanitizer.swift */; };
 		AMA2510POLBLD /* DiagnosticRedactionPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2510POLREF /* DiagnosticRedactionPolicy.swift */; };
@@ -895,7 +898,10 @@
 		AMA2510ENVREF /* SupportDiagnosticsEnvironmentProbes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SupportDiagnosticsEnvironmentProbes.swift; path = ../AmakaFlow/Services/SupportDiagnostics/SupportDiagnosticsEnvironmentProbes.swift; sourceTree = SOURCE_ROOT; };
 		AMA2510SYSREF /* SupportDiagnosticsSystemProbes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SupportDiagnosticsSystemProbes.swift; path = ../AmakaFlow/Services/SupportDiagnostics/SupportDiagnosticsSystemProbes.swift; sourceTree = SOURCE_ROOT; };
 		AMA2510STATREF /* SupportDiagnosticsStatusView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SupportDiagnosticsStatusView.swift; path = ../AmakaFlow/Views/SupportDiagnostics/SupportDiagnosticsStatusView.swift; sourceTree = SOURCE_ROOT; };
+		AMA2510LOGREF /* SupportDiagnosticsLogsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SupportDiagnosticsLogsView.swift; path = ../AmakaFlow/Views/SupportDiagnostics/SupportDiagnosticsLogsView.swift; sourceTree = SOURCE_ROOT; };
+		AMA2510EXPREF /* DiagnosticBundlePreviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DiagnosticBundlePreviewView.swift; path = ../AmakaFlow/Views/SupportDiagnostics/DiagnosticBundlePreviewView.swift; sourceTree = SOURCE_ROOT; };
 		AMA2510EVTREF /* DiagnosticEvent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DiagnosticEvent.swift; path = ../AmakaFlow/Services/SupportDiagnostics/DiagnosticEvent.swift; sourceTree = SOURCE_ROOT; };
+		AMA2510SNAPREF /* DiagnosticBundleSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DiagnosticBundleSnapshot.swift; path = ../AmakaFlow/Services/SupportDiagnostics/DiagnosticBundleSnapshot.swift; sourceTree = SOURCE_ROOT; };
 		AMA2510REDREF /* DiagnosticRedactor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DiagnosticRedactor.swift; path = ../AmakaFlow/Services/SupportDiagnostics/DiagnosticRedactor.swift; sourceTree = SOURCE_ROOT; };
 		AMA2510TXSREF /* DiagnosticTextSanitizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DiagnosticTextSanitizer.swift; path = ../AmakaFlow/Services/SupportDiagnostics/DiagnosticTextSanitizer.swift; sourceTree = SOURCE_ROOT; };
 		AMA2510POLREF /* DiagnosticRedactionPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DiagnosticRedactionPolicy.swift; path = ../AmakaFlow/Services/SupportDiagnostics/DiagnosticRedactionPolicy.swift; sourceTree = SOURCE_ROOT; };
@@ -1928,6 +1934,7 @@
 				AMA2510ENVREF /* SupportDiagnosticsEnvironmentProbes.swift */,
 				AMA2510SYSREF /* SupportDiagnosticsSystemProbes.swift */,
 				AMA2510EVTREF /* DiagnosticEvent.swift */,
+				AMA2510SNAPREF /* DiagnosticBundleSnapshot.swift */,
 				AMA2510REDREF /* DiagnosticRedactor.swift */,
 				AMA2510TXSREF /* DiagnosticTextSanitizer.swift */,
 				AMA2510POLREF /* DiagnosticRedactionPolicy.swift */,
@@ -2079,6 +2086,8 @@
 				S1MUL4T10N00000006 /* DebugSettingsView.swift */,
 				AMA2510CENTERREF /* SupportDiagnosticsCenterView.swift */,
 				AMA2510STATREF /* SupportDiagnosticsStatusView.swift */,
+				AMA2510LOGREF /* SupportDiagnosticsLogsView.swift */,
+				AMA2510EXPREF /* DiagnosticBundlePreviewView.swift */,
 				S1MUL4T10N00000007 /* SimulationBannerView.swift */,
 				S1MUL4T10N00000008 /* SimulatedWeightProvider.swift */,
 				D3P3ND1NJ3CT10N0001 /* AppDependencies.swift */,
@@ -3169,7 +3178,10 @@
 				AMA2510ENVBLD /* SupportDiagnosticsEnvironmentProbes.swift in Sources */,
 				AMA2510SYSBLD /* SupportDiagnosticsSystemProbes.swift in Sources */,
 				AMA2510STATBLD /* SupportDiagnosticsStatusView.swift in Sources */,
+				AMA2510LOGBLD /* SupportDiagnosticsLogsView.swift in Sources */,
+				AMA2510EXPBLD /* DiagnosticBundlePreviewView.swift in Sources */,
 				AMA2510EVTBLD /* DiagnosticEvent.swift in Sources */,
+				AMA2510SNAPBLD /* DiagnosticBundleSnapshot.swift in Sources */,
 				AMA2510REDBLD /* DiagnosticRedactor.swift in Sources */,
 				AMA2510TXSBLD /* DiagnosticTextSanitizer.swift in Sources */,
 				AMA2510POLBLD /* DiagnosticRedactionPolicy.swift in Sources */,
