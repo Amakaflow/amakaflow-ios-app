@@ -39,6 +39,7 @@ VERSIONED = re.compile(r"^(?P<stem>.*?)(?P<version>\d*)$")
 # is what establishes current UI.
 ARTIFACT_TOKEN = re.compile(r"(?:rig|screens)-[a-z0-9-]+")
 TITLE = re.compile(r"<title>([^<]+)</title>", re.IGNORECASE)
+JSDOC = re.compile(r"/\*\*(.*?)\*/", re.DOTALL)
 
 
 def matrix_surfaces(matrix: pathlib.Path) -> list[dict[str, str]]:
@@ -124,12 +125,25 @@ def describe(path: pathlib.Path) -> str:
     A filename says nothing to a reader deciding whether an artifact still has
     authority. Every rig already carries a written description; use it.
     """
-    if path.suffix != ".html":
+    text = path.read_text(encoding="utf-8", errors="replace")
+    if path.suffix == ".html":
+        # No head slice: these rigs inline a large style block before <title>,
+        # so a truncated read silently found nothing.
+        match = TITLE.search(text)
+        return match.group(1).strip() if match else "—"
+
+    # Every screens-*.jsx opens with a JSDoc block naming what it holds. It is
+    # the only description these files carry, and reading it is what turns a
+    # bare filename into something a person can classify.
+    block = JSDOC.search(text)
+    if not block:
         return "—"
-    # No head slice: these rigs inline a large style block before <title>,
-    # so a truncated read silently found nothing.
-    match = TITLE.search(path.read_text(encoding="utf-8", errors="replace"))
-    return match.group(1).strip() if match else "—"
+    lines = [
+        line.strip().lstrip("*").strip()
+        for line in block.group(1).splitlines()
+    ]
+    summary = " ".join(line for line in lines if line)
+    return summary[:150].replace("|", "·") or "—"
 
 
 def classify(
@@ -167,6 +181,11 @@ def classify(
             elif path.name in inherited:
                 verdict = "Canonical"
                 why = f"rendered by {inherited[path.name]}, which a live ticket cites"
+            elif "DISPOSABLE" in describe(path).upper():
+                # Several prototypes label themselves DISPOSABLE in their own
+                # header. That is the author's classification; take it.
+                verdict = "Deprecated"
+                why = "the file's own header marks it DISPOSABLE"
             else:
                 verdict = "Unknown"
                 why = "no ticket and no matrix row cites it — classify before relying on it"

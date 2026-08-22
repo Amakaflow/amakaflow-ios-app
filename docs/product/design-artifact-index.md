@@ -13,7 +13,7 @@ mid-transition and can look emptier than they are.
 
 | Artifact | What it is | Look | Classification | Why |
 | --- | --- | --- | --- | --- |
-| `amakaflow-mvp-design-refresh/daily-driver-handoff/reference/screens-daily-driver.jsx` | — | — | Canonical | cited by a live contract ticket in the parity matrix |
+| `amakaflow-mvp-design-refresh/daily-driver-handoff/reference/screens-daily-driver.jsx` | Daily Driver rework — loop-first IA prototype screens. v3 "reference voice". Visual brief from David's Gymdex + FitSaver screenshots (2026-07-09): tru | — | Canonical | cited by a live contract ticket in the parity matrix |
 | `amakaflow-mvp-design-refresh/project/hifi/rig-actuals.html` | Completed sync & actuals — the honest log (rig) | [png](unknown-artifacts/rig-actuals.png) | Canonical | cited by AMA-2387 (Done) |
 | `amakaflow-mvp-design-refresh/project/hifi/rig-ai.html` | Create with AI — flow rework (rig) | [png](unknown-artifacts/rig-ai.png) | Unknown | no ticket and no matrix row cites it — classify before relying on it |
 | `amakaflow-mvp-design-refresh/project/hifi/rig-builder3.html` | Builder v3 — build-from-scratch rework (rig) | — | Canonical | cited by a live contract ticket in the parity matrix |
@@ -29,33 +29,33 @@ mid-transition and can look emptier than they are.
 | `amakaflow-mvp-design-refresh/project/hifi/rig-watch.html` | On your watches — watch manager (rig) | [png](unknown-artifacts/rig-watch.png) | Canonical | cited by AMA-2375 (Done) |
 | `amakaflow-mvp-design-refresh/project/hifi/rig-watchitem.html` | Watch item — edit readiness & replace (rig) | — | Legacy | superseded by rig-watchitem2 |
 | `amakaflow-mvp-design-refresh/project/hifi/rig-watchitem2.html` | Watch item sheet v2 — fidelity + honest wiring (rig) | — | Canonical | cited by a live contract ticket in the parity matrix |
-| `amakaflow-mvp-design-refresh/project/hifi/screens-actuals.jsx` | — | — | Legacy | superseded by screens-actuals3 |
-| `amakaflow-mvp-design-refresh/project/hifi/screens-actuals2.jsx` | — | — | Legacy | superseded by screens-actuals3 |
-| `amakaflow-mvp-design-refresh/project/hifi/screens-actuals3.jsx` | — | — | Canonical | cited by a live contract ticket in the parity matrix |
-| `amakaflow-mvp-design-refresh/project/hifi/screens-agent.jsx` | — | — | Unknown | no ticket and no matrix row cites it — classify before relying on it |
-| `amakaflow-mvp-design-refresh/project/hifi/screens-ai.jsx` | — | — | Unknown | no ticket and no matrix row cites it — classify before relying on it |
-| `amakaflow-mvp-design-refresh/project/hifi/screens-builder3.jsx` | — | — | Canonical | rendered by rig-builder3.html, which a live ticket cites |
-| `amakaflow-mvp-design-refresh/project/hifi/screens-collections.jsx` | — | — | Canonical | rendered by rig-collections.html, which a live ticket cites |
-| `amakaflow-mvp-design-refresh/project/hifi/screens-connections.jsx` | — | — | Unknown | no ticket and no matrix row cites it — classify before relying on it |
-| `amakaflow-mvp-design-refresh/project/hifi/screens-detail.jsx` | — | — | Canonical | cited by AMA-2395 (Done) |
-| `amakaflow-mvp-design-refresh/project/hifi/screens-editsheet.jsx` | — | — | Canonical | cited by AMA-2379 (Backlog) |
-| `amakaflow-mvp-design-refresh/project/hifi/screens-enhance2.jsx` | — | — | Unknown | no ticket and no matrix row cites it — classify before relying on it |
-| `amakaflow-mvp-design-refresh/project/hifi/screens-flow.jsx` | — | — | Unknown | no ticket and no matrix row cites it — classify before relying on it |
-| `amakaflow-mvp-design-refresh/project/hifi/screens-friends.jsx` | — | — | Legacy | superseded by screens-friends3 |
-| `amakaflow-mvp-design-refresh/project/hifi/screens-friends2.jsx` | — | — | Legacy | superseded by screens-friends3 |
-| `amakaflow-mvp-design-refresh/project/hifi/screens-friends3.jsx` | — | — | Canonical | rendered by rig-friends.html, which a live ticket cites |
-| `amakaflow-mvp-design-refresh/project/hifi/screens-main.jsx` | — | — | Unknown | no ticket and no matrix row cites it — classify before relying on it |
-| `amakaflow-mvp-design-refresh/project/hifi/screens-marketing.jsx` | — | — | Unknown | no ticket and no matrix row cites it — classify before relying on it |
-| `amakaflow-mvp-design-refresh/project/hifi/screens-motion.jsx` | — | — | Unknown | no ticket and no matrix row cites it — classify before relying on it |
-| `amakaflow-mvp-design-refresh/project/hifi/screens-send.jsx` | — | — | Canonical | cited by AMA-2369 (Backlog) |
-| `amakaflow-mvp-design-refresh/project/hifi/screens-sync2.jsx` | — | — | Canonical | rendered by rig-sync2.html, which a live ticket cites |
-| `amakaflow-mvp-design-refresh/project/hifi/screens-toast.jsx` | — | — | Unknown | no ticket and no matrix row cites it — classify before relying on it |
-| `amakaflow-mvp-design-refresh/project/hifi/screens-v2.jsx` | — | — | Unknown | no ticket and no matrix row cites it — classify before relying on it |
-| `amakaflow-mvp-design-refresh/project/hifi/screens-v3-decide.jsx` | — | — | Unknown | no ticket and no matrix row cites it — classify before relying on it |
-| `amakaflow-mvp-design-refresh/project/hifi/screens-v3-essentials.jsx` | — | — | Unknown | no ticket and no matrix row cites it — classify before relying on it |
-| `amakaflow-mvp-design-refresh/project/hifi/screens-v3-secondary.jsx` | — | — | Unknown | no ticket and no matrix row cites it — classify before relying on it |
-| `amakaflow-mvp-design-refresh/project/hifi/screens-watch.jsx` | — | — | Canonical | cited by AMA-2375 (Done) |
-| `amakaflow-mvp-design-refresh/project/hifi/screens-watchitem.jsx` | — | — | Legacy | superseded by screens-watchitem2 |
-| `amakaflow-mvp-design-refresh/project/hifi/screens-watchitem2.jsx` | — | — | Canonical | rendered by rig-watchitem2.html, which a live ticket cites |
+| `amakaflow-mvp-design-refresh/project/hifi/screens-actuals.jsx` | Completed-workout sync & fill-in actuals — 2026-08-07. DISPOSABLE. Evolves the ORIGINAL proto loop (DDTodayScreen timeline, DDActivityScreen matched/t | — | Legacy | superseded by screens-actuals3 |
+| `amakaflow-mvp-design-refresh/project/hifi/screens-actuals2.jsx` | Sync additions — empty-not-connected Today + 3-source consolidation. 2026-08-07 (second pass on screens-actuals). DISPOSABLE. · SYEmptyTodayScreen — T | — | Legacy | superseded by screens-actuals3 |
+| `amakaflow-mvp-design-refresh/project/hifi/screens-actuals3.jsx` | Sync additions pass 3 — the CONNECTION flows themselves (2026-08-07). DISPOSABLE. David: "i dont see the connection flow to strava or apple". · SYAppl | — | Canonical | cited by a live contract ticket in the parity matrix |
+| `amakaflow-mvp-design-refresh/project/hifi/screens-agent.jsx` | AmakaFlow agent-visibility screens — Mental Model, Plan Reveal, Weekly Review, Watch Delivery States, Agent Event Inbox. Plus 3 Home banner variants ( | — | Unknown | no ticket and no matrix row cites it — classify before relying on it |
+| `amakaflow-mvp-design-refresh/project/hifi/screens-ai.jsx` | Create-with-AI flow rework — Mobbin research 2026-08-02. DISPOSABLE. Redesigns the describe→spinner→"Today's suggestion" flow against patterns verifie | — | Deprecated | the file's own header marks it DISPOSABLE |
+| `amakaflow-mvp-design-refresh/project/hifi/screens-builder3.jsx` | Builder v3 — "Build from scratch" rework. Mobbin research 2026-08-02. DISPOSABLE prototype. Replaces the editor2 empty state (template chips + 5 forma | — | Canonical | rendered by rig-builder3.html, which a live ticket cites |
+| `amakaflow-mvp-design-refresh/project/hifi/screens-collections.jsx` | Library collections & organize — Mobbin research 2026-08-03. DISPOSABLE. RecMe-inspired (David's screenshots): Cookbooks → workout Collections with co | — | Canonical | rendered by rig-collections.html, which a live ticket cites |
+| `amakaflow-mvp-design-refresh/project/hifi/screens-connections.jsx` | AmakaFlow — Connections hub + per-connection detail. Reuses tokens.css + ui.jsx primitives. No new style language. The hub is the discoverability win: | — | Unknown | no ticket and no matrix row cites it — classify before relying on it |
+| `amakaflow-mvp-design-refresh/project/hifi/screens-detail.jsx` | Canonical workout detail — one anatomy for EVERY source (2026-08-09). v3 same day: David caught the ＋Add / Collect DUPLICATION — both added to a colle | — | Canonical | cited by AMA-2395 (Done) |
+| `amakaflow-mvp-design-refresh/project/hifi/screens-editsheet.jsx` | Exercise edit sheet v2 — aligned set-goal family. 2026-08-04. DISPOSABLE. Fixes the shipped sheet where "Range" floats as a stray link above REPS and  | — | Canonical | cited by AMA-2379 (Backlog) |
+| `amakaflow-mvp-design-refresh/project/hifi/screens-enhance2.jsx` | Make it watch-ready v2 — configurable enhancement. Mobbin research 2026-08-04. DISPOSABLE. The shipped sheet (AMA-2371) hardcodes Jump Rope mobility a | — | Deprecated | the file's own header marks it DISPOSABLE |
+| `amakaflow-mvp-design-refresh/project/hifi/screens-flow.jsx` | AmakaFlow hi-fi screens — onboarding, pairing, history, settings. | — | Unknown | no ticket and no matrix row cites it — classify before relying on it |
+| `amakaflow-mvp-design-refresh/project/hifi/screens-friends.jsx` | Friends & workout sharing — 2026-08-07. DISPOSABLE. DESIGN-ONLY (David decides after review — not ticketed). Scope v1: add friends (same-app), send wo | — | Legacy | superseded by screens-friends3 |
+| `amakaflow-mvp-design-refresh/project/hifi/screens-friends2.jsx` | Friends — WHERE IT LIVES. v3 (2026-08-07): rebuilt against David's REAL app screenshots (IMG_2267–2270) after two wrong passes. His direction: · SEND  | — | Legacy | superseded by screens-friends3 |
+| `amakaflow-mvp-design-refresh/project/hifi/screens-friends3.jsx` | Friends — ORIGIN + MANAGE/REMOVE (2026-08-08). DISPOSABLE. David's final placement call: Friends originates on PROFILE (not the Settings row) — a row  | — | Canonical | rendered by rig-friends.html, which a live ticket cites |
+| `amakaflow-mvp-design-refresh/project/hifi/screens-main.jsx` | AmakaFlow hi-fi screens (Card Stack direction). Each screen is a self-contained component that receives (state, nav, setState). Interactions wired: St | — | Unknown | no ticket and no matrix row cites it — classify before relying on it |
+| `amakaflow-mvp-design-refresh/project/hifi/screens-marketing.jsx` | Paywall + Landing — mobile and desktop variants. | — | Unknown | no ticket and no matrix row cites it — classify before relying on it |
+| `amakaflow-mvp-design-refresh/project/hifi/screens-motion.jsx` | DD Motion — "it writes itself". 2026-08-05 (+reel import & AI draft). DISPOSABLE. One build engine, three surfaces: · watch  — To your Apple Watch pla | — | Deprecated | the file's own header marks it DISPOSABLE |
+| `amakaflow-mvp-design-refresh/project/hifi/screens-send.jsx` | Send/Enhance flow rework — Mobbin research 2026-08-02. DISPOSABLE. Redesigns the 7 iOS screenshots (enhance existing workout → push to Apple Watch / G | — | Canonical | cited by AMA-2369 (Backlog) |
+| `amakaflow-mvp-design-refresh/project/hifi/screens-sync2.jsx` | Sync v2 — map redesign, history access, verified-undo, Strava write-back. 2026-08-09, after David's TestFlight dogfood of the shipped AMA-2387 flow. v | — | Canonical | rendered by rig-sync2.html, which a live ticket cites |
+| `amakaflow-mvp-design-refresh/project/hifi/screens-toast.jsx` | DD Toast — action confirmations. 2026-08-05. DISPOSABLE. Reference: top-drop capsule w/ check (David's 2026-08-05 screenshot). One toast system for ev | — | Deprecated | the file's own header marks it DISPOSABLE |
+| `amakaflow-mvp-design-refresh/project/hifi/screens-v2.jsx` | AmakaFlow v1 polish screens (AMA-1876…1885): - SignupScreen (with looping animated phone demo) - EquipmentScreen - MessagingScreen + MessagingDetailSc | — | Unknown | no ticket and no matrix row cites it — classify before relying on it |
+| `amakaflow-mvp-design-refresh/project/hifi/screens-v3-decide.jsx` | Part B — 12 representative "decide-later" screens. One representative screen each. Marked [DECIDE: keep/cut for v1] in canvas. | — | Unknown | no ticket and no matrix row cites it — classify before relying on it |
+| `amakaflow-mvp-design-refresh/project/hifi/screens-v3-essentials.jsx` | Part A — 8 essential screens (10 sub-screens) for v1 coverage. Built on existing ui.jsx primitives + tokens only. | — | Unknown | no ticket and no matrix row cites it — classify before relying on it |
+| `amakaflow-mvp-design-refresh/project/hifi/screens-v3-secondary.jsx` | Part C — 10 secondary screens. Each is a complete-enough rep to validate the idea; built on existing primitives only. | — | Unknown | no ticket and no matrix row cites it — classify before relying on it |
+| `amakaflow-mvp-design-refresh/project/hifi/screens-watch.jsx` | On your watches — watch workout manager. Mobbin research 2026-08-03. DISPOSABLE. Today the only way to see what's scheduled on the Apple Watch is mid- | — | Canonical | cited by AMA-2375 (Done) |
+| `amakaflow-mvp-design-refresh/project/hifi/screens-watchitem.jsx` | Watch item sheet — edit readiness & replace on watch. 2026-08-07. DISPOSABLE. Tapping a row in On-your-watches (AMA-2375, shipped) opens THIS — not th | — | Legacy | superseded by screens-watchitem2 |
+| `amakaflow-mvp-design-refresh/project/hifi/screens-watchitem2.jsx` | Watch item sheet v2 — 2026-08-07 fidelity + wiring redesign. DISPOSABLE. Fixes the shipped AMA-2386 sheet (PR #539) against David's dogfood report: ·  | — | Canonical | rendered by rig-watchitem2.html, which a live ticket cites |
 
 44 artifacts classified.
