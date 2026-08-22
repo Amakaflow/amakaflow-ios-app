@@ -37,12 +37,10 @@ struct APILogEvent: Equatable {
 protocol APIObservabilityLogging: AnyObject {
     func log(_ event: APILogEvent)
 }
-
 final class DefaultAPIObservabilityLogger: APIObservabilityLogging {
     static let shared = DefaultAPIObservabilityLogger()
 
     private let logger = Logger(subsystem: "com.amakaflow.app", category: "network")
-
     private init() {}
 
     func log(_ event: APILogEvent) {
@@ -55,6 +53,7 @@ final class DefaultAPIObservabilityLogger: APIObservabilityLogging {
         )
 
         if event.phase == .fail {
+            SupportDiagnosticsRuntimeState.shared.recordRequestID(event.serverRequestId ?? event.requestId)
             addSentryBreadcrumb(for: event, status: status, errorType: errorType)
         }
 
@@ -75,7 +74,7 @@ final class DefaultAPIObservabilityLogger: APIObservabilityLogging {
                     statusCode: event.statusCode,
                     response: nil,
                     error: nil,
-                    requestID: event.requestId
+                    requestID: event.serverRequestId ?? event.requestId
                 )
             case .empty:
                 break
@@ -476,20 +475,20 @@ extension APIService {
     }
 
     // MARK: - Error Logging Helper
-
     func logError(endpoint: String, method: String, statusCode: Int?, response: String?, error: Error?) {
+        let apiError = error as? APIError ?? APIError.server(status: statusCode ?? 0)
+        logAPIEvent(
+            phase: .fail,
+            endpoint: endpoint,
+            method: method,
+            statusCode: statusCode,
+            startedAt: Date(),
+            requestId: UUID().uuidString,
+            serverRequestId: nil,
+            error: apiError
+        )
         Task { @MainActor in
-            // Log to debug service
-            DebugLogService.shared.logAPIError(
-                endpoint: endpoint,
-                method: method,
-                statusCode: statusCode,
-                response: response,
-                error: error
-            )
-
             // Capture to Sentry (AMA-225)
-            let apiError = error ?? APIError.server(status: statusCode ?? 0)
             SentryService.shared.captureAPIError(
                 apiError,
                 endpoint: "\(method) \(endpoint)",

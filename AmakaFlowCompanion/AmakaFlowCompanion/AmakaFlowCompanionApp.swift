@@ -25,6 +25,7 @@ private enum OnboardingGate {
 struct AmakaFlowCompanionApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @StateObject private var authViewModel = AuthViewModel.shared
+    @StateObject private var supportDiagnostics = SupportDiagnosticsViewModel.live()
     @StateObject private var subscriptionAccess = SubscriptionAccessViewModel(
         billingClient: RevenueCatSubscriptionBillingClient.shared
     )
@@ -179,15 +180,6 @@ struct AmakaFlowCompanionApp: App {
         return (name, userInfo.isEmpty ? nil : userInfo)
     }
 
-    /// Returns true if the URL was routed to an in-app surface. Thin wrapper
-    /// around `resolveAppSurfaceDeepLink` that performs the side-effect.
-    @discardableResult
-    private func routeAppSurfaceDeepLink(_ url: URL) -> Bool {
-        guard let resolved = Self.resolveAppSurfaceDeepLink(url) else { return false }
-        NotificationCenter.default.post(name: resolved.name, object: nil, userInfo: resolved.userInfo)
-        return true
-    }
-
     var body: some Scene {
         WindowGroup {
             Group {
@@ -195,6 +187,12 @@ struct AmakaFlowCompanionApp: App {
             }
             .environment(Clerk.shared)
             .environmentObject(authViewModel)
+            .supportDiagnosticsLifecycle(
+                viewModel: supportDiagnostics,
+                accountID: authViewModel.userProfile?.id,
+                isAuthenticated: authViewModel.isAuthenticated,
+                scenePhase: scenePhase
+            )
             .onChange(of: authViewModel.isAuthenticated) { _, isAuthenticated in
                 if !isAuthenticated {
                     Task {
@@ -203,7 +201,7 @@ struct AmakaFlowCompanionApp: App {
                 }
             }
             .onChange(of: scenePhase) { _, newPhase in
-                if newPhase == .active && authViewModel.isAuthenticated {
+                if newPhase == .active, authViewModel.isAuthenticated {
                     Task {
                         await workoutsViewModel.checkPendingWorkouts()
                     }
@@ -278,11 +276,6 @@ struct AmakaFlowCompanionApp: App {
                 _ = deepLinkManager.handleIncomingURL(url)
             }
         }
-    }
-
-    private func markMentalModelSeen(_ key: String) {
-        UserDefaults.standard.set(true, forKey: key)
-        mentalModelGateRefresh.toggle()
     }
 
     @ViewBuilder
@@ -416,6 +409,22 @@ struct AmakaFlowCompanionApp: App {
             }
     }
 
+}
+
+private extension AmakaFlowCompanionApp {
+    func markMentalModelSeen(_ key: String) {
+        UserDefaults.standard.set(true, forKey: key)
+        mentalModelGateRefresh.toggle()
+    }
+
+    /// Returns true if the URL was routed to an in-app surface. Thin wrapper
+    /// around `resolveAppSurfaceDeepLink` that performs the side-effect.
+    @discardableResult
+    func routeAppSurfaceDeepLink(_ url: URL) -> Bool {
+        guard let resolved = Self.resolveAppSurfaceDeepLink(url) else { return false }
+        NotificationCenter.default.post(name: resolved.name, object: nil, userInfo: resolved.userInfo)
+        return true
+    }
 }
 
 #if DEBUG

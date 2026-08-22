@@ -7,6 +7,37 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		AMA2510MODBLD /* SupportDiagnosticsModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2510MODREF /* SupportDiagnosticsModels.swift */; };
+		AMA2510CLIBLD /* SupportDiagnosticsAccessClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2510CLIREF /* SupportDiagnosticsAccessClient.swift */; };
+		AMA2510SESBLD /* SupportDiagnosticsSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2510SESREF /* SupportDiagnosticsSession.swift */; };
+		AMA2510ENTVMBLD /* SupportDiagnosticsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2510ENTVMREF /* SupportDiagnosticsViewModel.swift */; };
+		AMA2510CENTERBLD /* SupportDiagnosticsCenterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2510CENTERREF /* SupportDiagnosticsCenterView.swift */; };
+		AMA2510PROBBLD /* SupportDiagnosticsProbe.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2510PROBREF /* SupportDiagnosticsProbe.swift */; };
+		AMA2510RUNBLD /* SupportDiagnosticsProbeRunner.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2510RUNREF /* SupportDiagnosticsProbeRunner.swift */; };
+		AMA2510PRBSBLD /* SupportDiagnosticsProbes.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2510PRBSREF /* SupportDiagnosticsProbes.swift */; };
+		AMA2510ENVBLD /* SupportDiagnosticsEnvironmentProbes.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2510ENVREF /* SupportDiagnosticsEnvironmentProbes.swift */; };
+		AMA2510SYSBLD /* SupportDiagnosticsSystemProbes.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2510SYSREF /* SupportDiagnosticsSystemProbes.swift */; };
+		AMA2510STATBLD /* SupportDiagnosticsStatusView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2510STATREF /* SupportDiagnosticsStatusView.swift */; };
+		AMA2510LOGBLD /* SupportDiagnosticsLogsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2510LOGREF /* SupportDiagnosticsLogsView.swift */; };
+		AMA2510EXPBLD /* DiagnosticBundlePreviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2510EXPREF /* DiagnosticBundlePreviewView.swift */; };
+		AMA2510EVTBLD /* DiagnosticEvent.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2510EVTREF /* DiagnosticEvent.swift */; };
+		AMA2510SNAPBLD /* DiagnosticBundleSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2510SNAPREF /* DiagnosticBundleSnapshot.swift */; };
+		AMA2510REDBLD /* DiagnosticRedactor.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2510REDREF /* DiagnosticRedactor.swift */; };
+		AMA2510TXSBLD /* DiagnosticTextSanitizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2510TXSREF /* DiagnosticTextSanitizer.swift */; };
+		AMA2510POLBLD /* DiagnosticRedactionPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2510POLREF /* DiagnosticRedactionPolicy.swift */; };
+		AMA2510LEGBLD /* DiagnosticLegacyEventMapping.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2510LEGREF /* DiagnosticLegacyEventMapping.swift */; };
+		AMA2510STOBLD /* DiagnosticEventStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2510STOREF /* DiagnosticEventStore.swift */; };
+		AMA2510T01BLD /* DebugLogServiceDiagnosticScopeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2510T01REF /* DebugLogServiceDiagnosticScopeTests.swift */; };
+		AMA2510T02BLD /* DebugLogServiceDiagnosticsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2510T02REF /* DebugLogServiceDiagnosticsTests.swift */; };
+		AMA2510T03BLD /* DiagnosticBundlePreviewTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2510T03REF /* DiagnosticBundlePreviewTests.swift */; };
+		AMA2510T04BLD /* DiagnosticEventStoreTestCase.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2510T04REF /* DiagnosticEventStoreTestCase.swift */; };
+		AMA2510T05BLD /* DiagnosticEventStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2510T05REF /* DiagnosticEventStoreTests.swift */; };
+		AMA2510T06BLD /* DiagnosticLoadAuthorizationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2510T06REF /* DiagnosticLoadAuthorizationTests.swift */; };
+		AMA2510T07BLD /* DiagnosticRedactorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2510T07REF /* DiagnosticRedactorTests.swift */; };
+		AMA2510T08BLD /* SupportDiagnosticsAccessClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2510T08REF /* SupportDiagnosticsAccessClientTests.swift */; };
+		AMA2510T09BLD /* SupportDiagnosticsEntryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2510T09REF /* SupportDiagnosticsEntryTests.swift */; };
+		AMA2510T10BLD /* SupportDiagnosticsProbeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2510T10REF /* SupportDiagnosticsProbeTests.swift */; };
+		AMA2510T11BLD /* SupportDiagnosticsSessionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2510T11REF /* SupportDiagnosticsSessionTests.swift */; };
 		AMA2426MODBLD /* LogbookModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2426MODREF /* LogbookModels.swift */; };
 		AMA2426WUMBLD /* WeightUnitMath.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2426WUMREF /* WeightUnitMath.swift */; };
 		AMA2426CPYBLD /* LogbookCopy.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2426CPYREF /* LogbookCopy.swift */; };
@@ -684,6 +715,7 @@
 		D33PL1NKT35T50002 /* DeepLinkManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33PL1NKT35T50001 /* DeepLinkManagerTests.swift */; };
 		D37C6098D3FACBE84D8D261D /* WeeklyReviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3CF9663A6818FA77C6C02B0 /* WeeklyReviewView.swift */; };
 		D3BUG10G00000001C0000001 /* DebugLogService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BUG10G00000001B0000001 /* DebugLogService.swift */; };
+		D3BUG10G00000003C0000003 /* DebugLogService+Persistence.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BUG10G00000003B0000003 /* DebugLogService+Persistence.swift */; };
 		D3BUG10G00000002C0000002 /* DebugLogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BUG10G00000002B0000002 /* DebugLogView.swift */; };
 		D3P3ND1NJ3CT10N1001 /* AppDependencies.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3P3ND1NJ3CT10N0001 /* AppDependencies.swift */; };
 		D3P3ND1NJ3CT10N1002 /* AudioProviding.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3P3ND1NJ3CT10N0002 /* AudioProviding.swift */; };
@@ -866,6 +898,37 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		AMA2510MODREF /* SupportDiagnosticsModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SupportDiagnosticsModels.swift; path = ../AmakaFlow/Services/SupportDiagnostics/SupportDiagnosticsModels.swift; sourceTree = SOURCE_ROOT; };
+		AMA2510CLIREF /* SupportDiagnosticsAccessClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SupportDiagnosticsAccessClient.swift; path = ../AmakaFlow/Services/SupportDiagnostics/SupportDiagnosticsAccessClient.swift; sourceTree = SOURCE_ROOT; };
+		AMA2510SESREF /* SupportDiagnosticsSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SupportDiagnosticsSession.swift; path = ../AmakaFlow/Services/SupportDiagnostics/SupportDiagnosticsSession.swift; sourceTree = SOURCE_ROOT; };
+		AMA2510ENTVMREF /* SupportDiagnosticsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SupportDiagnosticsViewModel.swift; path = ../AmakaFlow/ViewModels/SupportDiagnosticsViewModel.swift; sourceTree = SOURCE_ROOT; };
+		AMA2510CENTERREF /* SupportDiagnosticsCenterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SupportDiagnosticsCenterView.swift; path = ../AmakaFlow/Views/SupportDiagnostics/SupportDiagnosticsCenterView.swift; sourceTree = SOURCE_ROOT; };
+		AMA2510PROBREF /* SupportDiagnosticsProbe.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SupportDiagnosticsProbe.swift; path = ../AmakaFlow/Services/SupportDiagnostics/SupportDiagnosticsProbe.swift; sourceTree = SOURCE_ROOT; };
+		AMA2510RUNREF /* SupportDiagnosticsProbeRunner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SupportDiagnosticsProbeRunner.swift; path = ../AmakaFlow/Services/SupportDiagnostics/SupportDiagnosticsProbeRunner.swift; sourceTree = SOURCE_ROOT; };
+		AMA2510PRBSREF /* SupportDiagnosticsProbes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SupportDiagnosticsProbes.swift; path = ../AmakaFlow/Services/SupportDiagnostics/SupportDiagnosticsProbes.swift; sourceTree = SOURCE_ROOT; };
+		AMA2510ENVREF /* SupportDiagnosticsEnvironmentProbes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SupportDiagnosticsEnvironmentProbes.swift; path = ../AmakaFlow/Services/SupportDiagnostics/SupportDiagnosticsEnvironmentProbes.swift; sourceTree = SOURCE_ROOT; };
+		AMA2510SYSREF /* SupportDiagnosticsSystemProbes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SupportDiagnosticsSystemProbes.swift; path = ../AmakaFlow/Services/SupportDiagnostics/SupportDiagnosticsSystemProbes.swift; sourceTree = SOURCE_ROOT; };
+		AMA2510STATREF /* SupportDiagnosticsStatusView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SupportDiagnosticsStatusView.swift; path = ../AmakaFlow/Views/SupportDiagnostics/SupportDiagnosticsStatusView.swift; sourceTree = SOURCE_ROOT; };
+		AMA2510LOGREF /* SupportDiagnosticsLogsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SupportDiagnosticsLogsView.swift; path = ../AmakaFlow/Views/SupportDiagnostics/SupportDiagnosticsLogsView.swift; sourceTree = SOURCE_ROOT; };
+		AMA2510EXPREF /* DiagnosticBundlePreviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DiagnosticBundlePreviewView.swift; path = ../AmakaFlow/Views/SupportDiagnostics/DiagnosticBundlePreviewView.swift; sourceTree = SOURCE_ROOT; };
+		AMA2510EVTREF /* DiagnosticEvent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DiagnosticEvent.swift; path = ../AmakaFlow/Services/SupportDiagnostics/DiagnosticEvent.swift; sourceTree = SOURCE_ROOT; };
+		AMA2510SNAPREF /* DiagnosticBundleSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DiagnosticBundleSnapshot.swift; path = ../AmakaFlow/Services/SupportDiagnostics/DiagnosticBundleSnapshot.swift; sourceTree = SOURCE_ROOT; };
+		AMA2510REDREF /* DiagnosticRedactor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DiagnosticRedactor.swift; path = ../AmakaFlow/Services/SupportDiagnostics/DiagnosticRedactor.swift; sourceTree = SOURCE_ROOT; };
+		AMA2510TXSREF /* DiagnosticTextSanitizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DiagnosticTextSanitizer.swift; path = ../AmakaFlow/Services/SupportDiagnostics/DiagnosticTextSanitizer.swift; sourceTree = SOURCE_ROOT; };
+		AMA2510POLREF /* DiagnosticRedactionPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DiagnosticRedactionPolicy.swift; path = ../AmakaFlow/Services/SupportDiagnostics/DiagnosticRedactionPolicy.swift; sourceTree = SOURCE_ROOT; };
+		AMA2510LEGREF /* DiagnosticLegacyEventMapping.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DiagnosticLegacyEventMapping.swift; path = ../AmakaFlow/Services/SupportDiagnostics/DiagnosticLegacyEventMapping.swift; sourceTree = SOURCE_ROOT; };
+		AMA2510STOREF /* DiagnosticEventStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DiagnosticEventStore.swift; path = ../AmakaFlow/Services/SupportDiagnostics/DiagnosticEventStore.swift; sourceTree = SOURCE_ROOT; };
+		AMA2510T01REF /* DebugLogServiceDiagnosticScopeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DebugLogServiceDiagnosticScopeTests.swift; path = AmakaFlowCompanionTests/DebugLogServiceDiagnosticScopeTests.swift; sourceTree = SOURCE_ROOT; };
+		AMA2510T02REF /* DebugLogServiceDiagnosticsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DebugLogServiceDiagnosticsTests.swift; path = AmakaFlowCompanionTests/DebugLogServiceDiagnosticsTests.swift; sourceTree = SOURCE_ROOT; };
+		AMA2510T03REF /* DiagnosticBundlePreviewTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DiagnosticBundlePreviewTests.swift; path = AmakaFlowCompanionTests/DiagnosticBundlePreviewTests.swift; sourceTree = SOURCE_ROOT; };
+		AMA2510T04REF /* DiagnosticEventStoreTestCase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DiagnosticEventStoreTestCase.swift; path = AmakaFlowCompanionTests/DiagnosticEventStoreTestCase.swift; sourceTree = SOURCE_ROOT; };
+		AMA2510T05REF /* DiagnosticEventStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DiagnosticEventStoreTests.swift; path = AmakaFlowCompanionTests/DiagnosticEventStoreTests.swift; sourceTree = SOURCE_ROOT; };
+		AMA2510T06REF /* DiagnosticLoadAuthorizationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DiagnosticLoadAuthorizationTests.swift; path = AmakaFlowCompanionTests/DiagnosticLoadAuthorizationTests.swift; sourceTree = SOURCE_ROOT; };
+		AMA2510T07REF /* DiagnosticRedactorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DiagnosticRedactorTests.swift; path = AmakaFlowCompanionTests/DiagnosticRedactorTests.swift; sourceTree = SOURCE_ROOT; };
+		AMA2510T08REF /* SupportDiagnosticsAccessClientTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SupportDiagnosticsAccessClientTests.swift; path = AmakaFlowCompanionTests/SupportDiagnosticsAccessClientTests.swift; sourceTree = SOURCE_ROOT; };
+		AMA2510T09REF /* SupportDiagnosticsEntryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SupportDiagnosticsEntryTests.swift; path = AmakaFlowCompanionTests/SupportDiagnosticsEntryTests.swift; sourceTree = SOURCE_ROOT; };
+		AMA2510T10REF /* SupportDiagnosticsProbeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SupportDiagnosticsProbeTests.swift; path = AmakaFlowCompanionTests/SupportDiagnosticsProbeTests.swift; sourceTree = SOURCE_ROOT; };
+		AMA2510T11REF /* SupportDiagnosticsSessionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SupportDiagnosticsSessionTests.swift; path = AmakaFlowCompanionTests/SupportDiagnosticsSessionTests.swift; sourceTree = SOURCE_ROOT; };
 		AMA2426MODREF /* LogbookModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LogbookModels.swift; path = ../AmakaFlow/Models/LogbookModels.swift; sourceTree = SOURCE_ROOT; };
 		AMA2426WUMREF /* WeightUnitMath.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WeightUnitMath.swift; path = ../AmakaFlow/Models/WeightUnitMath.swift; sourceTree = SOURCE_ROOT; };
 		AMA2426CPYREF /* LogbookCopy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LogbookCopy.swift; path = ../AmakaFlow/Models/LogbookCopy.swift; sourceTree = SOURCE_ROOT; };
@@ -1531,6 +1594,7 @@
 		D33PL1NKMAN4G3R0001 /* DeepLinkManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = DeepLinkManager.swift; path = ../AmakaFlow/Services/DeepLinkManager.swift; sourceTree = "<group>"; };
 		D33PL1NKT35T50001 /* DeepLinkManagerTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = DeepLinkManagerTests.swift; path = AmakaFlowCompanionTests/DeepLinkManagerTests.swift; sourceTree = "<group>"; };
 		D3BUG10G00000001B0000001 /* DebugLogService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DebugLogService.swift; path = ../AmakaFlow/Services/DebugLogService.swift; sourceTree = SOURCE_ROOT; };
+		D3BUG10G00000003B0000003 /* DebugLogService+Persistence.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "DebugLogService+Persistence.swift"; path = "../AmakaFlow/Services/DebugLogService+Persistence.swift"; sourceTree = SOURCE_ROOT; };
 		D3BUG10G00000002B0000002 /* DebugLogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DebugLogView.swift; path = ../AmakaFlow/Views/DebugLogView.swift; sourceTree = SOURCE_ROOT; };
 		D3P3ND1NJ3CT10N0001 /* AppDependencies.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDependencies.swift; path = ../AmakaFlow/DependencyInjection/AppDependencies.swift; sourceTree = SOURCE_ROOT; };
 		D3P3ND1NJ3CT10N0002 /* AudioProviding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AudioProviding.swift; path = ../AmakaFlow/DependencyInjection/AudioProviding.swift; sourceTree = SOURCE_ROOT; };
@@ -1882,6 +1946,22 @@
 				AMA2367REPLREF /* IncompleteScheduleReplacing.swift */,
 				AMA2366OVRDREF /* AppleStartHandoffOverrides.swift */,
 				D3BUG10G00000001B0000001 /* DebugLogService.swift */,
+				D3BUG10G00000003B0000003 /* DebugLogService+Persistence.swift */,
+				AMA2510MODREF /* SupportDiagnosticsModels.swift */,
+				AMA2510CLIREF /* SupportDiagnosticsAccessClient.swift */,
+				AMA2510SESREF /* SupportDiagnosticsSession.swift */,
+				AMA2510PROBREF /* SupportDiagnosticsProbe.swift */,
+				AMA2510RUNREF /* SupportDiagnosticsProbeRunner.swift */,
+				AMA2510PRBSREF /* SupportDiagnosticsProbes.swift */,
+				AMA2510ENVREF /* SupportDiagnosticsEnvironmentProbes.swift */,
+				AMA2510SYSREF /* SupportDiagnosticsSystemProbes.swift */,
+				AMA2510EVTREF /* DiagnosticEvent.swift */,
+				AMA2510SNAPREF /* DiagnosticBundleSnapshot.swift */,
+				AMA2510REDREF /* DiagnosticRedactor.swift */,
+				AMA2510TXSREF /* DiagnosticTextSanitizer.swift */,
+				AMA2510POLREF /* DiagnosticRedactionPolicy.swift */,
+				AMA2510LEGREF /* DiagnosticLegacyEventMapping.swift */,
+				AMA2510STOREF /* DiagnosticEventStore.swift */,
 				AMA1791APPDBREF /* AppDatabase.swift */,
 				AMA1791V1REF /* V1_initial_schema.swift */,
 				AMA1823V2REF /* V2_add_request_id_to_sync_queue.swift */,
@@ -2026,6 +2106,10 @@
 				S1MUL4T10N00000004 /* SimulatedHealthProvider.swift */,
 				S1MUL4T10N00000005 /* SimulationSettings.swift */,
 				S1MUL4T10N00000006 /* DebugSettingsView.swift */,
+				AMA2510CENTERREF /* SupportDiagnosticsCenterView.swift */,
+				AMA2510STATREF /* SupportDiagnosticsStatusView.swift */,
+				AMA2510LOGREF /* SupportDiagnosticsLogsView.swift */,
+				AMA2510EXPREF /* DiagnosticBundlePreviewView.swift */,
 				S1MUL4T10N00000007 /* SimulationBannerView.swift */,
 				S1MUL4T10N00000008 /* SimulatedWeightProvider.swift */,
 				D3P3ND1NJ3CT10N0001 /* AppDependencies.swift */,
@@ -2348,6 +2432,7 @@
 				D33PL1NKMAN4G3R0001 /* DeepLinkManager.swift */,
 				85D3757E5B284286B341C75C /* PairingService.swift */,
 				AMA1620AUTHVM001A /* AuthViewModel.swift */,
+				AMA2510ENTVMREF /* SupportDiagnosticsViewModel.swift */,
 				AMA2007SIGNUPVMREF /* SignUpViewModel.swift */,
 				AMA1620AUTHINT01A /* ClerkAuthorizationInterceptor.swift */,
 				AMA2502LCFGREF /* LaunchConfig.swift */,
@@ -2507,6 +2592,17 @@
 				AMA291RC004REF /* SubscriptionAccessViewModelTests.swift */,
 				AK00TST003A /* AmakaFlowCompanionTests.swift */,
 				AK00TST004A /* APIIntegrationTests.swift */,
+				AMA2510T01REF /* DebugLogServiceDiagnosticScopeTests.swift */,
+				AMA2510T02REF /* DebugLogServiceDiagnosticsTests.swift */,
+				AMA2510T03REF /* DiagnosticBundlePreviewTests.swift */,
+				AMA2510T04REF /* DiagnosticEventStoreTestCase.swift */,
+				AMA2510T05REF /* DiagnosticEventStoreTests.swift */,
+				AMA2510T06REF /* DiagnosticLoadAuthorizationTests.swift */,
+				AMA2510T07REF /* DiagnosticRedactorTests.swift */,
+				AMA2510T08REF /* SupportDiagnosticsAccessClientTests.swift */,
+				AMA2510T09REF /* SupportDiagnosticsEntryTests.swift */,
+				AMA2510T10REF /* SupportDiagnosticsProbeTests.swift */,
+				AMA2510T11REF /* SupportDiagnosticsSessionTests.swift */,
 				AK00TST005A /* CompletionDetailTests.swift */,
 				AK00TST006A /* CompletionDetailViewModelTests.swift */,
 				AK00TST007A /* FeedViewModelTests.swift */,
@@ -2986,6 +3082,7 @@
 				D33PL1NK1MP0RTV0002 /* DeepLinkImportView.swift in Sources */,
 				CA268753E918494FAD7CCD56 /* PairingService.swift in Sources */,
 				AMA1620AUTHVM001B /* AuthViewModel.swift in Sources */,
+				AMA2510ENTVMBLD /* SupportDiagnosticsViewModel.swift in Sources */,
 				AMA1620AUTHINT01B /* ClerkAuthorizationInterceptor.swift in Sources */,
 				AMA2502LCFGBLD /* LaunchConfig.swift in Sources */,
 				F1XTUR3L0AD3R0000002 /* FixtureLoader.swift in Sources */,
@@ -3103,6 +3200,26 @@
 				AMA2373HELPBLD /* SuggestWorkoutDisplayHelpers.swift in Sources */,
 				AMA2373DAILYBLD /* SuggestWorkoutDailyCoachContent.swift in Sources */,
 				D3BUG10G00000001C0000001 /* DebugLogService.swift in Sources */,
+				D3BUG10G00000003C0000003 /* DebugLogService+Persistence.swift in Sources */,
+				AMA2510MODBLD /* SupportDiagnosticsModels.swift in Sources */,
+				AMA2510CLIBLD /* SupportDiagnosticsAccessClient.swift in Sources */,
+				AMA2510SESBLD /* SupportDiagnosticsSession.swift in Sources */,
+				AMA2510CENTERBLD /* SupportDiagnosticsCenterView.swift in Sources */,
+				AMA2510PROBBLD /* SupportDiagnosticsProbe.swift in Sources */,
+				AMA2510RUNBLD /* SupportDiagnosticsProbeRunner.swift in Sources */,
+				AMA2510PRBSBLD /* SupportDiagnosticsProbes.swift in Sources */,
+				AMA2510ENVBLD /* SupportDiagnosticsEnvironmentProbes.swift in Sources */,
+				AMA2510SYSBLD /* SupportDiagnosticsSystemProbes.swift in Sources */,
+				AMA2510STATBLD /* SupportDiagnosticsStatusView.swift in Sources */,
+				AMA2510LOGBLD /* SupportDiagnosticsLogsView.swift in Sources */,
+				AMA2510EXPBLD /* DiagnosticBundlePreviewView.swift in Sources */,
+				AMA2510EVTBLD /* DiagnosticEvent.swift in Sources */,
+				AMA2510SNAPBLD /* DiagnosticBundleSnapshot.swift in Sources */,
+				AMA2510REDBLD /* DiagnosticRedactor.swift in Sources */,
+				AMA2510TXSBLD /* DiagnosticTextSanitizer.swift in Sources */,
+				AMA2510POLBLD /* DiagnosticRedactionPolicy.swift in Sources */,
+				AMA2510LEGBLD /* DiagnosticLegacyEventMapping.swift in Sources */,
+				AMA2510STOBLD /* DiagnosticEventStore.swift in Sources */,
 				AMA1791APPDBBLD /* AppDatabase.swift in Sources */,
 				AMA1791V1BLD /* V1_initial_schema.swift in Sources */,
 				AMA1823V2BLD /* V2_add_request_id_to_sync_queue.swift in Sources */,
@@ -3598,6 +3715,17 @@
 				AMA291RC004BLD /* SubscriptionAccessViewModelTests.swift in Sources */,
 				AK00TST003B /* AmakaFlowCompanionTests.swift in Sources */,
 				AK00TST004B /* APIIntegrationTests.swift in Sources */,
+				AMA2510T01BLD /* DebugLogServiceDiagnosticScopeTests.swift in Sources */,
+				AMA2510T02BLD /* DebugLogServiceDiagnosticsTests.swift in Sources */,
+				AMA2510T03BLD /* DiagnosticBundlePreviewTests.swift in Sources */,
+				AMA2510T04BLD /* DiagnosticEventStoreTestCase.swift in Sources */,
+				AMA2510T05BLD /* DiagnosticEventStoreTests.swift in Sources */,
+				AMA2510T06BLD /* DiagnosticLoadAuthorizationTests.swift in Sources */,
+				AMA2510T07BLD /* DiagnosticRedactorTests.swift in Sources */,
+				AMA2510T08BLD /* SupportDiagnosticsAccessClientTests.swift in Sources */,
+				AMA2510T09BLD /* SupportDiagnosticsEntryTests.swift in Sources */,
+				AMA2510T10BLD /* SupportDiagnosticsProbeTests.swift in Sources */,
+				AMA2510T11BLD /* SupportDiagnosticsSessionTests.swift in Sources */,
 				AK00TST005B /* CompletionDetailTests.swift in Sources */,
 				AK00TST006B /* CompletionDetailViewModelTests.swift in Sources */,
 				AK00TST007B /* FeedViewModelTests.swift in Sources */,

@@ -35,18 +35,19 @@ final class SentryService {
 
     /// Capture an error with optional context
     func captureError(_ error: Error, context: [String: Any]? = nil) {
-        SentrySDK.capture(error: error) { scope in
+        let eventID = SentrySDK.capture(error: error) { scope in
             if let context = context {
                 for (key, value) in context {
                     scope.setExtra(value: value, key: key)
                 }
             }
         }
+        recordDiagnosticEventID(eventID)
     }
 
     /// Capture an API error with endpoint and status code
     func captureAPIError(_ error: Error, endpoint: String, statusCode: Int?, responseBody: String? = nil) {
-        SentrySDK.capture(error: error) { scope in
+        let eventID = SentrySDK.capture(error: error) { scope in
             scope.setTag(value: endpoint, key: "api_endpoint")
             if let code = statusCode {
                 scope.setTag(value: String(code), key: "status_code")
@@ -56,12 +57,13 @@ final class SentryService {
             }
             scope.setTag(value: "api", key: "error_category")
         }
+        recordDiagnosticEventID(eventID)
     }
 
     /// AMA-2308: social-import transport failures (false-offline triage).
     func captureSocialImportTransport(error: Error, context: SocialImportTransportContext) {
         let safeURL = SocialImportTransportDiagnostics.sanitizedTelemetryURL(context.failingURL)
-        SentrySDK.capture(error: error) { scope in
+        let eventID = SentrySDK.capture(error: error) { scope in
             scope.setTag(value: "social_import_transport", key: "error_category")
             scope.setTag(value: context.operation, key: "social_import_operation")
             scope.setTag(value: context.appEnvironment, key: "app_environment")
@@ -74,27 +76,30 @@ final class SentryService {
             scope.setExtra(value: context.ingestorBase, key: "ingestor_base")
             scope.setLevel(SentryLevel.warning)
         }
+        recordDiagnosticEventID(eventID)
     }
 
     /// Capture a Watch communication error
     func captureWatchError(_ error: Error, context: String) {
-        SentrySDK.capture(error: error) { scope in
+        let eventID = SentrySDK.capture(error: error) { scope in
             scope.setTag(value: "watch_communication", key: "error_category")
             scope.setExtra(value: context, key: "context")
         }
+        recordDiagnosticEventID(eventID)
     }
 
     /// Capture a Garmin communication error
     func captureGarminError(_ error: Error, context: String) {
-        SentrySDK.capture(error: error) { scope in
+        let eventID = SentrySDK.capture(error: error) { scope in
             scope.setTag(value: "garmin_communication", key: "error_category")
             scope.setExtra(value: context, key: "context")
         }
+        recordDiagnosticEventID(eventID)
     }
 
     /// Capture a workout engine error
     func captureWorkoutError(_ error: Error, workoutId: String?, stepIndex: Int?) {
-        SentrySDK.capture(error: error) { scope in
+        let eventID = SentrySDK.capture(error: error) { scope in
             scope.setTag(value: "workout", key: "error_category")
             if let id = workoutId {
                 scope.setExtra(value: id, key: "workout_id")
@@ -103,6 +108,7 @@ final class SentryService {
                 scope.setExtra(value: step, key: "step_index")
             }
         }
+        recordDiagnosticEventID(eventID)
     }
 
     // MARK: - Breadcrumbs
@@ -144,7 +150,9 @@ final class SentryService {
     /// Start a new performance transaction bound to no scope.
     /// The caller owns the returned span and must call `finish()` on it.
     nonisolated func startTransaction(name: String, operation: String) -> any Span {
-        SentrySDK.startTransaction(name: name, operation: operation, bindToScope: false)
+        let span = SentrySDK.startTransaction(name: name, operation: operation, bindToScope: false)
+        SupportDiagnosticsRuntimeState.shared.recordSentryTraceID(span.traceId.sentryIdString)
+        return span
     }
 
     /// Finish a span with a given status (convenience wrapper).
@@ -157,6 +165,7 @@ final class SentryService {
     /// Submit user feedback for a captured event
     func submitFeedback(comments: String, email: String? = nil, name: String? = nil) {
         let eventId = SentrySDK.capture(message: "User Feedback")
+        recordDiagnosticEventID(eventId)
         let feedback = UserFeedback(eventId: eventId)
         feedback.comments = comments
         feedback.email = email ?? ""
@@ -167,9 +176,15 @@ final class SentryService {
 
     /// Capture a message with attached debug logs
     func captureWithLogs(_ message: String, logs: String) {
-        SentrySDK.capture(message: message) { scope in
+        let eventID = SentrySDK.capture(message: message) { scope in
             scope.setExtra(value: logs, key: "debug_logs")
         }
+        recordDiagnosticEventID(eventID)
+    }
+
+    private func recordDiagnosticEventID(_ eventID: SentryId) {
+        guard eventID != .empty else { return }
+        SupportDiagnosticsRuntimeState.shared.recordSentryEventID(eventID.sentryIdString)
     }
 }
 

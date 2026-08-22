@@ -170,7 +170,7 @@ struct SyncQueueItem: Codable, FetchableRecord, MutablePersistableRecord, Identi
     }
 }
 
-struct SyncQueueSummary: Equatable {
+struct SyncQueueSummary: Equatable, Sendable {
     let pendingCount: Int
     let inFlightCount: Int
     let failedCount: Int

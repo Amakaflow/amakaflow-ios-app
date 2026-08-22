@@ -171,4 +171,67 @@ final class WatchConnectivityManagerBehaviorTests: XCTestCase {
 
         XCTAssertFalse(mock.sendMessageCalled, "sendAck must not deliver when watch is unreachable")
     }
+
+    func testSendAck_inlineFailureIsNotOverwrittenByDispatchedOutcome() {
+        SupportDiagnosticsRuntimeState.shared.resetForTests()
+        defer { SupportDiagnosticsRuntimeState.shared.resetForTests() }
+        let mock = MockWatchSession()
+        mock.isReachable = true
+        mock.sendMessageError = URLError(.notConnectedToInternet)
+        let manager = WatchConnectivityManager(session: mock)
+
+        manager.sendAck(CommandAck(commandId: "cmd-fail", status: .error, errorCode: "OFFLINE"))
+
+        XCTAssertEqual(
+            SupportDiagnosticsRuntimeState.shared.lastWatchTransferState(),
+            .recorded(action: "commandAck", outcome: "failed"),
+            "An inline Watch send failure must remain the latest diagnostics outcome"
+        )
+    }
+
+    func testSendWorkoutRecordsReceiveWorkoutWhileAwaitingReply() async {
+        SupportDiagnosticsRuntimeState.shared.resetForTests()
+        defer { SupportDiagnosticsRuntimeState.shared.resetForTests() }
+        let messageSent = expectation(description: "Workout message sent")
+        let mock = NotifyingMockWatchSession {
+            messageSent.fulfill()
+        }
+        let manager = WatchConnectivityManager(session: mock)
+        let workout = Workout(
+            name: "Diagnostics Test",
+            sport: .running,
+            duration: 1_200,
+            intervals: [.time(seconds: 600, target: nil)],
+            source: .manual
+        )
+
+        let sendTask = Task { await manager.sendWorkoutWithOutcome(workout) }
+        await fulfillment(of: [messageSent], timeout: 1)
+
+        XCTAssertEqual(
+            SupportDiagnosticsRuntimeState.shared.lastWatchTransferState(),
+            .recorded(action: "receiveWorkout", outcome: "dispatched")
+        )
+
+        mock.lastReplyHandler?(["status": "received"])
+        let outcome = await sendTask.value
+        XCTAssertEqual(outcome, .sent)
+    }
+}
+
+private final class NotifyingMockWatchSession: MockWatchSession {
+    private let onSendMessage: () -> Void
+
+    init(onSendMessage: @escaping () -> Void) {
+        self.onSendMessage = onSendMessage
+    }
+
+    override func sendMessage(
+        _ message: [String: Any],
+        replyHandler: (([String: Any]) -> Void)?,
+        errorHandler: ((any Error) -> Void)?
+    ) {
+        super.sendMessage(message, replyHandler: replyHandler, errorHandler: errorHandler)
+        onSendMessage()
+    }
 }

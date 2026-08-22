@@ -1,10 +1,3 @@
-//
-//  DebugLogService.swift
-//  AmakaFlow
-//
-//  Centralized error logging service for debugging API and device failures
-//
-
 import Foundation
 import Combine
 
@@ -40,6 +33,22 @@ struct DebugLogEntry: Identifiable, Codable {
         self.metadata = metadata
     }
 
+    init(
+        id: String,
+        timestamp: Date,
+        type: DebugLogType,
+        title: String,
+        details: String,
+        metadata: [String: String]? = nil
+    ) {
+        self.id = id
+        self.timestamp = timestamp
+        self.type = type
+        self.title = title
+        self.details = details
+        self.metadata = metadata
+    }
+
     var formattedTimestamp: String {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
@@ -65,25 +74,52 @@ struct DebugLogEntry: Identifiable, Codable {
 class DebugLogService: ObservableObject {
     static let shared = DebugLogService()
 
-    private let storageKey = DefaultsKey.debugLogEntries.rawValue
-    private let maxEntries = 100
+    let maxEntries = 100
+    let store: DiagnosticEventStore
+    let redactor: DiagnosticRedactor
+    let accountIdentifierProvider: @MainActor @Sendable () -> String?
+    let accountIdentifierPublisher: @MainActor @Sendable () -> AnyPublisher<String?, Never>
+    let diagnosticSnapshotReader: @MainActor @Sendable (DiagnosticSnapshotScope) async throws -> [DiagnosticEvent]
 
-    @Published private(set) var entries: [DebugLogEntry] = []
+    @Published var entries: [DebugLogEntry] = []
 
-    // Background serial queue for debounced saves
-    private let saveQueue = DispatchQueue(label: "com.amakaflow.debuglog.save", qos: .utility)
-    private var saveWorkItem: DispatchWorkItem?
-    private let saveDebounceInterval: TimeInterval = 0.5
+    var writeTail: Task<Void, Never>?
+    var accountLoadTask: Task<Void, Never>?
+    var migrationTask: Task<Void, Never>?
+    var accountStateCancellable: AnyCancellable?
+    var currentAccountHash: String?
+    var accountLoadGeneration = 0
+    var hasLocalMutation = false
 
-    private init() {
-        // Load entries on background queue to avoid blocking main thread (AMA-1075)
-        Task.detached(priority: .utility) { [weak self] in
-            let loadedEntries = await self?.loadEntriesBackground() ?? []
-            await MainActor.run { [weak self] in
-                guard let self else { return }
-                self.entries = loadedEntries
+    init(
+        store: DiagnosticEventStore = DiagnosticEventStore(),
+        redactor: DiagnosticRedactor = DiagnosticRedactor(),
+        accountIdentifierProvider: @escaping @MainActor @Sendable () -> String? = {
+            AuthViewModel.shared.userProfile?.id
+        },
+        accountIdentifierPublisher: @escaping @MainActor @Sendable () -> AnyPublisher<String?, Never> = {
+            AuthViewModel.shared.$userProfile
+                .map { $0?.id }
+                .removeDuplicates()
+                .eraseToAnyPublisher()
+        },
+        diagnosticSnapshotReader: (@MainActor @Sendable (DiagnosticSnapshotScope) async throws -> [DiagnosticEvent])? = nil
+    ) {
+        self.store = store
+        self.redactor = redactor
+        self.accountIdentifierProvider = accountIdentifierProvider
+        self.accountIdentifierPublisher = accountIdentifierPublisher
+        self.diagnosticSnapshotReader = diagnosticSnapshotReader ?? { scope in
+            try await store.snapshot(scope)
+        }
+        self.migrationTask = Task.detached(priority: .utility) { [store] in
+            do {
+                try await store.migrateLegacyIfNeeded()
+            } catch {
+                print("[DebugLogService] Failed to load diagnostic events")
             }
         }
+        bindAccountState()
     }
 
     // MARK: - Public API
@@ -97,6 +133,10 @@ class DebugLogService: ObservableObject {
         error: Error? = nil,
         requestID: String? = nil
     ) {
+        // Response bodies are intentionally never persisted. They can contain customer,
+        // authentication, health, or location data; callers may pass one for API
+        // compatibility, but diagnostics record only safe status and error summaries.
+        _ = response
         var metadata: [String: String] = [
             "Endpoint": endpoint,
             "Method": method
@@ -104,57 +144,60 @@ class DebugLogService: ObservableObject {
         if let statusCode = statusCode {
             metadata["Status"] = "\(statusCode)"
         }
-        if let response = response {
-            metadata["Response"] = String(response.prefix(500))
-        }
         // AMA-1823: surface the request_id so debug log entries can be
         // correlated with Sentry breadcrumbs and BFF/mapper-api logs.
         if let requestID = requestID {
             metadata["request_id"] = requestID
+            SupportDiagnosticsRuntimeState.shared.recordRequestID(requestID)
         }
 
-        let details = error?.localizedDescription ?? response ?? "Unknown error"
-
-        let entry = DebugLogEntry(
-            type: .apiError,
-            title: "\(method) \(endpoint) failed",
-            details: details,
-            metadata: metadata
+        let details = error?.localizedDescription
+            ?? statusCode.map { "HTTP \($0) response omitted from diagnostics" }
+            ?? "API request failed"
+        record(
+            category: .api,
+            severity: .error,
+            name: "api.request.failed",
+            displayTitle: "\(method) \(endpoint) failed",
+            message: details,
+            metadata: metadata,
+            requestID: requestID
         )
-        addEntry(entry)
     }
 
     /// Log an API success (optional, for debugging)
     func logAPISuccess(endpoint: String, method: String = "GET", statusCode: Int) {
-        let entry = DebugLogEntry(
-            type: .apiSuccess,
-            title: "\(method) \(endpoint)",
-            details: "Status: \(statusCode)",
+        record(
+            category: .api,
+            severity: .info,
+            name: "api.request.succeeded",
+            displayTitle: "\(method) \(endpoint)",
+            message: "Status: \(statusCode)",
             metadata: ["Endpoint": endpoint, "Method": method, "Status": "\(statusCode)"]
         )
-        addEntry(entry)
     }
 
     /// Log a Watch connectivity error
     func logWatchError(title: String, details: String, metadata: [String: String]? = nil) {
-        let entry = DebugLogEntry(
-            type: .watchError,
-            title: title,
-            details: details,
-            metadata: metadata
+        record(
+            category: .watch,
+            severity: .error,
+            name: "watch.error",
+            displayTitle: title,
+            message: details,
+            metadata: metadata ?? [:]
         )
-        addEntry(entry)
     }
 
     /// Log a Watch connectivity event
     func logWatchEvent(title: String, details: String) {
-        let entry = DebugLogEntry(
-            type: .watchEvent,
-            title: title,
-            details: details,
-            metadata: nil
+        record(
+            category: .watch,
+            severity: .info,
+            name: "watch.event",
+            displayTitle: title,
+            message: details
         )
-        addEntry(entry)
     }
 
     /// Log a workout completion error
@@ -167,52 +210,59 @@ class DebugLogService: ObservableObject {
             metadata["Context"] = context
         }
 
-        let entry = DebugLogEntry(
-            type: .completionError,
-            title: "Completion failed",
-            details: error.localizedDescription,
+        record(
+            category: .completion,
+            severity: .error,
+            name: "completion.failed",
+            displayTitle: "Completion failed",
+            message: error.localizedDescription,
             metadata: metadata
         )
-        addEntry(entry)
     }
 
     /// Log a network error
     func logNetworkError(error: Error, context: String? = nil) {
-        let entry = DebugLogEntry(
-            type: .networkError,
-            title: "Network error",
-            details: error.localizedDescription,
-            metadata: context != nil ? ["Context": context!] : nil
+        record(
+            category: .network,
+            severity: .warning,
+            name: "network.error",
+            displayTitle: "Network error",
+            message: error.localizedDescription,
+            metadata: context.map { ["Context": $0] } ?? [:]
         )
-        addEntry(entry)
     }
 
     /// Log an authentication error
     func logAuthError(details: String, context: String? = nil) {
-        let entry = DebugLogEntry(
-            type: .authError,
-            title: "Authentication error",
-            details: details,
-            metadata: context != nil ? ["Context": context!] : nil
+        record(
+            category: .auth,
+            severity: .error,
+            name: "auth.error",
+            displayTitle: "Authentication error",
+            message: details,
+            metadata: context.map { ["Context": $0] } ?? [:]
         )
-        addEntry(entry)
     }
 
     /// Log a general debug message
     func log(_ title: String, details: String, metadata: [String: String]? = nil) {
-        let entry = DebugLogEntry(
-            type: .general,
-            title: title,
-            details: details,
-            metadata: metadata
+        record(
+            category: .general,
+            severity: .info,
+            name: "general.event",
+            displayTitle: title,
+            message: details,
+            metadata: metadata ?? [:]
         )
-        addEntry(entry)
     }
 
     /// Clear all log entries
     func clearLog() {
+        hasLocalMutation = true
         entries = []
-        saveEntries()
+        enqueueWrite { [store] in
+            try await store.clear()
+        }
     }
 
     /// Get all entries as copyable text
@@ -233,90 +283,26 @@ class DebugLogService: ObservableObject {
         return text
     }
 
-    // MARK: - Private Methods
-
-    private func addEntry(_ entry: DebugLogEntry) {
-        entries.insert(entry, at: 0)
-
-        // Prune old entries
-        if entries.count > maxEntries {
-            entries = Array(entries.prefix(maxEntries))
-        }
-
-        // Debounced save to background queue (AMA-1075)
-        scheduleSaveEntries()
-
-        // Also print to console for Xcode debugging
-        print("[DebugLog] \(entry.type.rawValue): \(entry.title) - \(entry.details)")
-    }
-
-    /// Schedule a debounced save to avoid writing on every log call
-    private func scheduleSaveEntries() {
-        // Cancel any pending save
-        saveWorkItem?.cancel()
-
-        // Create new debounced save
-        let workItem = DispatchWorkItem { [weak self] in
-            guard let self = self else { return }
-            // Capture entries on main actor before going to background
-            let entriesToSave = self.entries
-            self.saveEntriesBackground(entries: entriesToSave)
-        }
-        saveWorkItem = workItem
-
-        // Schedule with debounce delay
-        saveQueue.asyncAfter(deadline: .now() + saveDebounceInterval, execute: workItem)
-    }
-
-    private func saveEntriesBackground(entries: [DebugLogEntry]) {
-        do {
-            let encoder = JSONEncoder()
-            encoder.dateEncodingStrategy = .iso8601
-            let data = try encoder.encode(entries)
-            UserDefaults.standard.set(data, forKey: storageKey)
-        } catch {
-            print("[DebugLogService] Failed to save entries: \(error)")
-        }
-    }
-
-    private func saveEntries() {
-        // For immediate saves (clearLog), save immediately on background queue
-        saveQueue.async { [weak self] in
-            guard let self = self else { return }
-            let entriesToSave = self.entries
-            self.saveEntriesBackground(entries: entriesToSave)
-        }
-    }
-
-    /// Load entries on background thread
-    private func loadEntriesBackground() async -> [DebugLogEntry] {
-        guard let data = UserDefaults.standard.data(forKey: storageKey) else {
-            return []
-        }
-
-        do {
-            let decoder = JSONDecoder()
-            decoder.dateDecodingStrategy = .iso8601
-            return try decoder.decode([DebugLogEntry].self, from: data)
-        } catch {
-            print("[DebugLogService] Failed to load entries: \(error)")
-            return []
-        }
-    }
-
-    private func loadEntries() {
-        // Synchronous version kept for compatibility, but init now uses async loading
-        guard let data = UserDefaults.standard.data(forKey: storageKey) else {
-            return
-        }
-
-        do {
-            let decoder = JSONDecoder()
-            decoder.dateDecodingStrategy = .iso8601
-            entries = try decoder.decode([DebugLogEntry].self, from: data)
-        } catch {
-            print("[DebugLogService] Failed to load entries: \(error)")
-            entries = []
-        }
+    private func record(
+        category: DiagnosticEventCategory,
+        severity: DiagnosticEventSeverity,
+        name: String,
+        displayTitle: String,
+        message: String,
+        metadata: [String: String] = [:],
+        requestID: String? = nil
+    ) {
+        addEvent(
+            redactor.redact(
+                category: category,
+                severity: severity,
+                name: name,
+                displayTitle: displayTitle,
+                message: message,
+                metadata: metadata,
+                requestID: requestID,
+                accountIdentifier: accountIdentifierProvider()
+            )
+        )
     }
 }
