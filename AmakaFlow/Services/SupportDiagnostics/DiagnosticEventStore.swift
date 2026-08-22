@@ -1,5 +1,10 @@
 import Foundation
 
+nonisolated enum DiagnosticSnapshotScope: Equatable, Sendable {
+    case account(String)
+    case unscopedForMigrationOnly
+}
+
 actor DiagnosticEventStore {
     private static let migrationMarkerKey = "SupportDiagnostics.DebugLogEntriesMigrated.v1"
     private static let retentionInterval: TimeInterval = 7 * 24 * 60 * 60
@@ -47,12 +52,13 @@ actor DiagnosticEventStore {
         try persist(retained(events))
     }
 
-    func snapshot(accountHash: String? = nil) async throws -> [DiagnosticEvent] {
+    func snapshot(_ scope: DiagnosticSnapshotScope) async throws -> [DiagnosticEvent] {
         let events = try cleanupRetentionIfNeeded()
         let scopedEvents: [DiagnosticEvent]
-        if let accountHash {
+        switch scope {
+        case .account(let accountHash):
             scopedEvents = events.filter { $0.accountHash == accountHash }
-        } else {
+        case .unscopedForMigrationOnly:
             scopedEvents = events
         }
         return scopedEvents.sorted { $0.timestamp > $1.timestamp }

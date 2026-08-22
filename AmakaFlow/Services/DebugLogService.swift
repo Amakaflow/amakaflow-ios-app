@@ -85,11 +85,17 @@ class DebugLogService: ObservableObject {
     private let store: DiagnosticEventStore
     private let redactor: DiagnosticRedactor
     private let accountIdentifierProvider: @MainActor @Sendable () -> String?
+    private let accountIdentifierPublisher: @MainActor @Sendable () -> AnyPublisher<String?, Never>
 
     @Published private(set) var entries: [DebugLogEntry] = []
 
     private var pendingWriteTasks: [Task<Void, Never>] = []
     private var writeTail: Task<Void, Never>?
+    private var accountLoadTask: Task<Void, Never>?
+    private var migrationTask: Task<Void, Never>?
+    private var accountStateCancellable: AnyCancellable?
+    private var currentAccountHash: String?
+    private var accountLoadGeneration = 0
     private var hasLocalMutation = false
 
     init(
@@ -97,31 +103,26 @@ class DebugLogService: ObservableObject {
         redactor: DiagnosticRedactor = DiagnosticRedactor(),
         accountIdentifierProvider: @escaping @MainActor @Sendable () -> String? = {
             AuthViewModel.shared.userProfile?.id
+        },
+        accountIdentifierPublisher: @escaping @MainActor @Sendable () -> AnyPublisher<String?, Never> = {
+            AuthViewModel.shared.$userProfile
+                .map { $0?.id }
+                .removeDuplicates()
+                .eraseToAnyPublisher()
         }
     ) {
         self.store = store
         self.redactor = redactor
         self.accountIdentifierProvider = accountIdentifierProvider
-        Task.detached(priority: .utility) { [weak self] in
-            guard let self else { return }
-            let loadedEntries: [DebugLogEntry]
+        self.accountIdentifierPublisher = accountIdentifierPublisher
+        self.migrationTask = Task.detached(priority: .utility) { [store] in
             do {
                 try await store.migrateLegacyIfNeeded()
-                let accountHash = await self.currentAccountHash()
-                loadedEntries = try await store.snapshot(accountHash: accountHash)
-                    .prefix(maxEntries)
-                    .map(\.projectedDebugLogEntry)
             } catch {
                 print("[DebugLogService] Failed to load diagnostic events")
-                loadedEntries = []
-            }
-            await MainActor.run { [weak self] in
-                guard let self else { return }
-                if self.entries.isEmpty && !self.hasLocalMutation {
-                    self.entries = loadedEntries
-                }
             }
         }
+        bindAccountState()
     }
 
     // MARK: - Public API
@@ -301,18 +302,15 @@ class DebugLogService: ObservableObject {
 
     func waitForPendingWrites() async {
         let tail = writeTail
+        let accountLoadTask = accountLoadTask
         pendingWriteTasks = []
         await tail?.value
+        await accountLoadTask?.value
     }
 
     func reloadEntriesForCurrentAccount() async {
+        accountIdentifierDidChange(accountIdentifierProvider())
         await waitForPendingWrites()
-        do {
-            entries = try await scopedEntries()
-        } catch {
-            print("[DebugLogService] Failed to reload diagnostic events")
-            entries = []
-        }
     }
 
     // MARK: - Private Methods
@@ -351,18 +349,52 @@ class DebugLogService: ObservableObject {
         pendingWriteTasks.append(task)
     }
 
-    private func scopedEntries() async throws -> [DebugLogEntry] {
-        try await store.snapshot(accountHash: currentAccountHash())
-            .prefix(maxEntries)
-            .map(\.projectedDebugLogEntry)
+    private func bindAccountState() {
+        accountStateCancellable = accountIdentifierPublisher()
+            .sink { [weak self] accountIdentifier in
+                self?.accountIdentifierDidChange(accountIdentifier)
+            }
     }
 
-    private func currentAccountHash() -> String? {
-        redactor.hashAccountIdentifier(accountIdentifierProvider())
+    private func accountIdentifierDidChange(_ accountIdentifier: String?) {
+        let newAccountHash = redactor.hashAccountIdentifier(accountIdentifier)
+        guard newAccountHash != currentAccountHash || entries.isEmpty else { return }
+        accountLoadGeneration += 1
+        let generation = accountLoadGeneration
+        currentAccountHash = newAccountHash
+        entries = []
+        hasLocalMutation = false
+
+        guard let newAccountHash else {
+            accountLoadTask = nil
+            return
+        }
+
+        let pendingWrites = writeTail
+        let migrationTask = migrationTask
+        accountLoadTask = Task { [weak self] in
+            await pendingWrites?.value
+            await migrationTask?.value
+            await self?.loadEntries(for: newAccountHash, generation: generation)
+        }
+    }
+
+    private func loadEntries(for accountHash: String, generation: Int) async {
+        do {
+            let loadedEntries = try await store.snapshot(.account(accountHash))
+                .prefix(maxEntries)
+                .map(\.projectedDebugLogEntry)
+            guard generation == accountLoadGeneration, currentAccountHash == accountHash, !hasLocalMutation else { return }
+            entries = loadedEntries
+        } catch {
+            print("[DebugLogService] Failed to reload diagnostic events")
+            guard generation == accountLoadGeneration else { return }
+            entries = []
+        }
     }
 
     private func eventBelongsToCurrentAccount(_ event: DiagnosticEvent) -> Bool {
-        guard let currentAccountHash = currentAccountHash() else { return true }
+        guard let currentAccountHash else { return false }
         return event.accountHash == currentAccountHash
     }
 }

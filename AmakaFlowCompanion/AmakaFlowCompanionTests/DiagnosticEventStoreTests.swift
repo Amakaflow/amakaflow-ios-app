@@ -1,3 +1,4 @@
+import Combine
 import XCTest
 @testable import AmakaFlowCompanion
 
@@ -62,13 +63,13 @@ final class DiagnosticEventStoreTests: XCTestCase {
         let store = makeStore()
         try await store.migrateLegacyIfNeeded()
 
-        let events = try await store.snapshot()
+        let events = try await store.snapshot(.unscopedForMigrationOnly)
         XCTAssertEqual(events.count, 1)
         XCTAssertEqual(events[0].name, "api.request.failed")
         XCTAssertEqual(events[0].requestID, "req-legacy-1")
         XCTAssertEqual(events[0].metadata["Status"], "500")
         XCTAssertNil(events[0].metadata["Response"])
-        XCTAssertEqual(events[0].message, "API response body omitted from diagnostics")
+        XCTAssertEqual(events[0].message, DiagnosticRedactor.omittedBodyMessage)
         XCTAssertFalse(events[0].message.contains("legacy-access-token"))
         XCTAssertFalse(events[0].message.contains("legacy-refresh-token"))
         XCTAssertFalse(events[0].message.contains("profile"))
@@ -81,9 +82,53 @@ final class DiagnosticEventStoreTests: XCTestCase {
 
         defaults.set(Data("not-json".utf8), forKey: DefaultsKey.debugLogEntries.rawValue)
         try await store.migrateLegacyIfNeeded()
-        let snapshotAfterSecondMigrationAttempt = try await store.snapshot()
+        let snapshotAfterSecondMigrationAttempt = try await store.snapshot(.unscopedForMigrationOnly)
         XCTAssertEqual(snapshotAfterSecondMigrationAttempt.count, 1)
         XCTAssertNotNil(defaults.data(forKey: DefaultsKey.debugLogEntries.rawValue), "migration must run exactly once after a successful attempt")
+    }
+
+    func testMigrateLegacyNonAPIBodyLikeEntriesUseOmittedMessageAcrossCategories() async throws {
+        let legacy = [
+            DebugLogEntry(
+                type: .general,
+                title: "General copied payload",
+                details: """
+                {
+                  "customer": {"name": "Jane Athlete"},
+                  "profile": {"email": "jane@example.com"},
+                  "health": {"hrv": 42},
+                  "location": {"lat": 37.7, "lng": -122.4}
+                }
+                """,
+                metadata: ["Context": "debug import"]
+            ),
+            DebugLogEntry(
+                type: .networkError,
+                title: "Network copied response",
+                details: "Raw response body contained customer profile and health location payload",
+                metadata: [
+                    "Context": "sync",
+                    "response_body": #"{"customer":"Jane Athlete","profile":"raw"}"#
+                ]
+            )
+        ]
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        defaults.set(try encoder.encode(legacy), forKey: DefaultsKey.debugLogEntries.rawValue)
+
+        let store = makeStore()
+        try await store.migrateLegacyIfNeeded()
+
+        let events = try await store.snapshot(.unscopedForMigrationOnly)
+        XCTAssertEqual(events.count, 2)
+        XCTAssertEqual(Set(events.map(\.message)), [DiagnosticRedactor.omittedBodyMessage])
+        for event in events {
+            XCTAssertFalse(event.projectedDebugLogEntry.copyableText.contains("Jane Athlete"))
+            XCTAssertFalse(event.projectedDebugLogEntry.copyableText.contains("jane@example.com"))
+            XCTAssertFalse(event.projectedDebugLogEntry.copyableText.contains("\"health\""))
+            XCTAssertFalse(event.projectedDebugLogEntry.copyableText.contains("\"location\""))
+            XCTAssertNil(event.metadata["response_body"])
+        }
     }
 
     func testSnapshotAppliesAndPersistsAgeRetentionWithoutNewWrite() async throws {
@@ -93,7 +138,7 @@ final class DiagnosticEventStoreTests: XCTestCase {
 
         now = now.addingTimeInterval(8 * 24 * 60 * 60)
 
-        let names = try await store.snapshot().map(\.name)
+        let names = try await store.snapshot(.unscopedForMigrationOnly).map(\.name)
         XCTAssertEqual(names, [])
         let rawFile = try String(contentsOf: store.eventsFileURL)
         XCTAssertFalse(rawFile.contains("before-window"))
@@ -107,7 +152,7 @@ final class DiagnosticEventStoreTests: XCTestCase {
         try await initialStore.append(event("oversized-3", at: now.addingTimeInterval(3), message: String(repeating: "c", count: 600)))
 
         let enforcingStore = makeStore(maxBytes: 1_200)
-        let names = try await enforcingStore.snapshot().map(\.name)
+        let names = try await enforcingStore.snapshot(.unscopedForMigrationOnly).map(\.name)
 
         XCTAssertEqual(names, ["oversized-3"])
         let bytes = try Data(contentsOf: enforcingStore.eventsFileURL).count
@@ -119,13 +164,13 @@ final class DiagnosticEventStoreTests: XCTestCase {
         try await store.append(event("valid-before-corruption", at: now))
         try Data("{not-json}\n".utf8).append(to: store.eventsFileURL)
 
-        let loaded = try await store.snapshot()
+        let loaded = try await store.snapshot(.unscopedForMigrationOnly)
         XCTAssertEqual(loaded.map(\.name), ["valid-before-corruption"])
 
         try await store.append(event("valid-after-corruption", at: now.addingTimeInterval(1)))
 
         let rawFile = try String(contentsOf: store.eventsFileURL)
-        let snapshotAfterRepair = try await store.snapshot()
+        let snapshotAfterRepair = try await store.snapshot(.unscopedForMigrationOnly)
         XCTAssertFalse(rawFile.contains("{not-json}"))
         XCTAssertEqual(snapshotAfterRepair.map(\.name), ["valid-after-corruption", "valid-before-corruption"])
     }
@@ -137,7 +182,7 @@ final class DiagnosticEventStoreTests: XCTestCase {
         try await store.append(event("newer-2", at: now.addingTimeInterval(-20), message: String(repeating: "b", count: 260)))
         try await store.append(event("newer-3", at: now.addingTimeInterval(-10), message: String(repeating: "c", count: 260)))
 
-        let names = try await store.snapshot().map(\.name)
+        let names = try await store.snapshot(.unscopedForMigrationOnly).map(\.name)
         XCTAssertFalse(names.contains("too-old"))
         XCTAssertFalse(names.contains("newer-1"), "oldest retained event should be evicted first when over byte budget")
         XCTAssertEqual(names, ["newer-3", "newer-2"])
@@ -157,13 +202,13 @@ final class DiagnosticEventStoreTests: XCTestCase {
             try await group.waitForAll()
         }
 
-        let snapshot = try await store.snapshot()
+        let snapshot = try await store.snapshot(.unscopedForMigrationOnly)
         XCTAssertEqual(snapshot.count, 50)
         XCTAssertEqual(snapshot.first?.name, "event-49")
 
         try await store.append(event("event-50", at: now.addingTimeInterval(50)))
         XCTAssertEqual(snapshot.count, 50)
-        let updatedSnapshot = try await store.snapshot()
+        let updatedSnapshot = try await store.snapshot(.unscopedForMigrationOnly)
         XCTAssertEqual(updatedSnapshot.first?.name, "event-50")
     }
 
@@ -202,18 +247,23 @@ final class DiagnosticEventStoreTests: XCTestCase {
             timestamp: now.addingTimeInterval(1)
         ))
 
-        let hashes = try await store.snapshot().compactMap(\.accountHash)
+        let hashes = try await store.snapshot(.unscopedForMigrationOnly).compactMap(\.accountHash)
         XCTAssertEqual(Set(hashes).count, 2)
         XCTAssertFalse(hashes.contains("user-a"))
         XCTAssertFalse(hashes.contains("user-b"))
-        let requestIDs = try await store.snapshot().map(\.requestID)
+        let requestIDs = try await store.snapshot(.unscopedForMigrationOnly).map(\.requestID)
         XCTAssertEqual(requestIDs, ["req-shared", "req-shared"])
     }
 
     @MainActor
     func testDebugLogServiceFacadeProjectsSanitizedEventsAndPreservesStatusAndRequestCorrelation() async throws {
         let store = makeStore()
-        let service = DebugLogService(store: store)
+        let authChanges = CurrentValueSubject<String?, Never>("debug-account")
+        let service = DebugLogService(
+            store: store,
+            accountIdentifierProvider: { "debug-account" },
+            accountIdentifierPublisher: { authChanges.eraseToAnyPublisher() }
+        )
 
         service.logAPIError(
             endpoint: "/v1/coach?token=abc",
@@ -240,9 +290,11 @@ final class DiagnosticEventStoreTests: XCTestCase {
     func testDebugLogServiceScopesDisplayedCopiedAndPersistedEntriesToCurrentAccount() async throws {
         let store = makeStore()
         var currentAccount: String? = "account-a"
+        let authChanges = CurrentValueSubject<String?, Never>("account-a")
         let service = DebugLogService(
             store: store,
-            accountIdentifierProvider: { currentAccount }
+            accountIdentifierProvider: { currentAccount },
+            accountIdentifierPublisher: { authChanges.eraseToAnyPublisher() }
         )
 
         service.log("Account A title", details: "account-a-only-detail")
@@ -250,7 +302,8 @@ final class DiagnosticEventStoreTests: XCTestCase {
         XCTAssertTrue(service.getAllEntriesAsText().contains("account-a-only-detail"))
 
         currentAccount = "account-b"
-        await service.reloadEntriesForCurrentAccount()
+        authChanges.send("account-b")
+        await service.waitForPendingWrites()
         XCTAssertFalse(service.getAllEntriesAsText().contains("account-a-only-detail"))
         XCTAssertTrue(service.entries.isEmpty)
 
@@ -260,9 +313,67 @@ final class DiagnosticEventStoreTests: XCTestCase {
         XCTAssertFalse(service.getAllEntriesAsText().contains("account-a-only-detail"))
 
         currentAccount = "account-a"
-        await service.reloadEntriesForCurrentAccount()
+        authChanges.send("account-a")
+        await service.waitForPendingWrites()
         XCTAssertTrue(service.getAllEntriesAsText().contains("account-a-only-detail"))
         XCTAssertFalse(service.getAllEntriesAsText().contains("account-b-only-detail"))
+    }
+
+    @MainActor
+    func testDebugLogServiceAuthChangesScopeAutomaticallyAndFailClosed() async throws {
+        let store = makeStore()
+        let redactor = DiagnosticRedactor()
+        try await store.append(event("legacy-nil", at: now, message: "legacy-nil-detail"))
+        try await store.append(event(
+            "account-a",
+            at: now.addingTimeInterval(1),
+            message: "account-a-detail",
+            accountHash: redactor.hashAccountIdentifier("account-a")
+        ))
+        try await store.append(event(
+            "account-b",
+            at: now.addingTimeInterval(2),
+            message: "account-b-detail",
+            accountHash: redactor.hashAccountIdentifier("account-b")
+        ))
+
+        var currentAccount: String?
+        let authChanges = CurrentValueSubject<String?, Never>(nil)
+        let service = DebugLogService(
+            store: store,
+            accountIdentifierProvider: { currentAccount },
+            accountIdentifierPublisher: { authChanges.eraseToAnyPublisher() }
+        )
+
+        await service.waitForPendingWrites()
+        XCTAssertTrue(service.entries.isEmpty)
+        XCTAssertFalse(service.getAllEntriesAsText().contains("legacy-nil-detail"))
+        XCTAssertFalse(service.getAllEntriesAsText().contains("account-a-detail"))
+        XCTAssertFalse(service.getAllEntriesAsText().contains("account-b-detail"))
+
+        currentAccount = "account-b"
+        authChanges.send("account-b")
+        await service.waitForPendingWrites()
+        XCTAssertEqual(service.entries.map(\.details), ["account-b-detail"])
+        XCTAssertFalse(service.getAllEntriesAsText().contains("legacy-nil-detail"))
+        XCTAssertFalse(service.getAllEntriesAsText().contains("account-a-detail"))
+
+        currentAccount = nil
+        authChanges.send(nil)
+        XCTAssertTrue(service.entries.isEmpty)
+        XCTAssertFalse(service.getAllEntriesAsText().contains("account-b-detail"))
+
+        currentAccount = "account-a"
+        authChanges.send("account-a")
+        await service.waitForPendingWrites()
+        XCTAssertEqual(service.entries.map(\.details), ["account-a-detail"])
+
+        currentAccount = "account-b"
+        authChanges.send("account-b")
+        XCTAssertTrue(service.entries.isEmpty, "account changes must clear stale entries before the new account load finishes")
+        XCTAssertFalse(service.getAllEntriesAsText().contains("account-a-detail"))
+        await service.waitForPendingWrites()
+        XCTAssertEqual(service.entries.map(\.details), ["account-b-detail"])
     }
 
     @MainActor
@@ -279,7 +390,7 @@ final class DiagnosticEventStoreTests: XCTestCase {
         service.clearLog()
         await service.waitForPendingWrites()
 
-        let persisted = try await store.snapshot()
+        let persisted = try await store.snapshot(.unscopedForMigrationOnly)
         XCTAssertEqual(persisted, [])
         XCTAssertTrue(service.entries.isEmpty)
     }
@@ -296,7 +407,8 @@ final class DiagnosticEventStoreTests: XCTestCase {
     private func event(
         _ name: String,
         at timestamp: Date,
-        message: String = "safe message"
+        message: String = "safe message",
+        accountHash: String? = nil
     ) -> DiagnosticEvent {
         DiagnosticEvent(
             id: UUID().uuidString,
@@ -309,7 +421,7 @@ final class DiagnosticEventStoreTests: XCTestCase {
             requestID: nil,
             sentryEventID: nil,
             sentryTraceID: nil,
-            accountHash: nil
+            accountHash: accountHash
         )
     }
 }

@@ -2,7 +2,8 @@ import CryptoKit
 import Foundation
 
 nonisolated struct DiagnosticRedactor: Sendable {
-    static let omittedAPIResponseMessage = "API response body omitted from diagnostics"
+    static let omittedBodyMessage = "Diagnostic body omitted from diagnostics"
+    static let omittedAPIResponseMessage = omittedBodyMessage
 
     private static let redacted = "[REDACTED]"
     private static let redactedEmail = "[REDACTED_EMAIL]"
@@ -61,7 +62,7 @@ nonisolated struct DiagnosticRedactor: Sendable {
         let category = category(for: entry.type)
         let severity = severity(for: entry.type)
         let sanitizedMetadata = sanitizeMetadata(entry.metadata ?? [:], category: category)
-        let omitLegacyBody = shouldOmitLegacyBody(entry, category: category)
+        let omitLegacyBody = shouldOmitLegacyBody(entry)
         return DiagnosticEvent(
             id: entry.id,
             timestamp: entry.timestamp,
@@ -222,8 +223,8 @@ private extension DiagnosticRedactor {
         category == .api && (hasBodySignal(in: metadata) || isBodyLike(message))
     }
 
-    private func shouldOmitLegacyBody(_ entry: DebugLogEntry, category: DiagnosticEventCategory) -> Bool {
-        category == .api && (hasBodySignal(in: entry.metadata ?? [:]) || isBodyLike(entry.details))
+    private func shouldOmitLegacyBody(_ entry: DebugLogEntry) -> Bool {
+        hasBodySignal(in: entry.metadata ?? [:]) || isBodyLike(entry.details)
     }
 
     private func hasBodySignal(in metadata: [String: String]) -> Bool {
@@ -236,7 +237,12 @@ private extension DiagnosticRedactor {
                 "response_body",
                 "request_body",
                 "body",
-                "json"
+                "json",
+                "payload",
+                "profile",
+                "customer",
+                "health",
+                "location"
             ].contains(lowercased)
         }
     }
@@ -253,6 +259,9 @@ private extension DiagnosticRedactor {
             "id_token",
             "profile",
             "customer",
+            "health",
+            "location",
+            "payload",
             "response_body",
             "request_body"
         ].contains { lowercased.contains($0) }
