@@ -9,49 +9,49 @@ Only **Canonical** establishes current UI.
 
 | Artifact | Classification | Why |
 | --- | --- | --- |
-| `rig-actuals.html` | Unknown | no live ticket cites it — classify before relying on it |
-| `rig-ai.html` | Unknown | no live ticket cites it — classify before relying on it |
-| `rig-builder3.html` | Canonical | cited by a live contract ticket in the parity matrix |
-| `rig-collections.html` | Canonical | cited by a live contract ticket in the parity matrix |
-| `rig-detail.html` | Canonical | cited by a live contract ticket in the parity matrix |
-| `rig-editsheet.html` | Unknown | no live ticket cites it — classify before relying on it |
-| `rig-enhance2.html` | Unknown | no live ticket cites it — classify before relying on it |
-| `rig-friends.html` | Canonical | cited by a live contract ticket in the parity matrix |
-| `rig-motion.html` | Unknown | no live ticket cites it — classify before relying on it |
-| `rig-send.html` | Canonical | cited by a live contract ticket in the parity matrix |
-| `rig-sync2.html` | Canonical | cited by a live contract ticket in the parity matrix |
-| `rig-toast.html` | Unknown | no live ticket cites it — classify before relying on it |
-| `rig-watch.html` | Unknown | no live ticket cites it — classify before relying on it |
-| `rig-watchitem.html` | Legacy | superseded by rig-watchitem2 |
-| `rig-watchitem2.html` | Canonical | cited by a live contract ticket in the parity matrix |
-| `screens-actuals.jsx` | Legacy | superseded by screens-actuals3 |
-| `screens-actuals2.jsx` | Legacy | superseded by screens-actuals3 |
-| `screens-actuals3.jsx` | Canonical | cited by a live contract ticket in the parity matrix |
-| `screens-agent.jsx` | Unknown | no live ticket cites it — classify before relying on it |
-| `screens-ai.jsx` | Unknown | no live ticket cites it — classify before relying on it |
-| `screens-builder3.jsx` | Unknown | no live ticket cites it — classify before relying on it |
-| `screens-collections.jsx` | Unknown | no live ticket cites it — classify before relying on it |
-| `screens-connections.jsx` | Unknown | no live ticket cites it — classify before relying on it |
-| `screens-daily-driver.jsx` | Canonical | cited by a live contract ticket in the parity matrix |
-| `screens-detail.jsx` | Unknown | no live ticket cites it — classify before relying on it |
-| `screens-editsheet.jsx` | Unknown | no live ticket cites it — classify before relying on it |
-| `screens-enhance2.jsx` | Unknown | no live ticket cites it — classify before relying on it |
-| `screens-flow.jsx` | Unknown | no live ticket cites it — classify before relying on it |
-| `screens-friends.jsx` | Legacy | superseded by screens-friends3 |
-| `screens-friends2.jsx` | Legacy | superseded by screens-friends3 |
-| `screens-friends3.jsx` | Unknown | no live ticket cites it — classify before relying on it |
-| `screens-main.jsx` | Unknown | no live ticket cites it — classify before relying on it |
-| `screens-marketing.jsx` | Unknown | no live ticket cites it — classify before relying on it |
-| `screens-motion.jsx` | Unknown | no live ticket cites it — classify before relying on it |
-| `screens-send.jsx` | Unknown | no live ticket cites it — classify before relying on it |
-| `screens-sync2.jsx` | Unknown | no live ticket cites it — classify before relying on it |
-| `screens-toast.jsx` | Unknown | no live ticket cites it — classify before relying on it |
-| `screens-v2.jsx` | Unknown | no live ticket cites it — classify before relying on it |
-| `screens-v3-decide.jsx` | Unknown | no live ticket cites it — classify before relying on it |
-| `screens-v3-essentials.jsx` | Unknown | no live ticket cites it — classify before relying on it |
-| `screens-v3-secondary.jsx` | Unknown | no live ticket cites it — classify before relying on it |
-| `screens-watch.jsx` | Unknown | no live ticket cites it — classify before relying on it |
-| `screens-watchitem.jsx` | Legacy | superseded by screens-watchitem2 |
-| `screens-watchitem2.jsx` | Unknown | no live ticket cites it — classify before relying on it |
+| `amakaflow-mvp-design-refresh/daily-driver-handoff/reference/screens-daily-driver.jsx` | Canonical | cited by a live contract ticket in the parity matrix |
+| `amakaflow-mvp-design-refresh/project/hifi/rig-actuals.html` | Unknown | no live ticket cites it — classify before relying on it |
+| `amakaflow-mvp-design-refresh/project/hifi/rig-ai.html` | Unknown | no live ticket cites it — classify before relying on it |
+| `amakaflow-mvp-design-refresh/project/hifi/rig-builder3.html` | Canonical | cited by a live contract ticket in the parity matrix |
+| `amakaflow-mvp-design-refresh/project/hifi/rig-collections.html` | Canonical | cited by a live contract ticket in the parity matrix |
+| `amakaflow-mvp-design-refresh/project/hifi/rig-detail.html` | Canonical | cited by a live contract ticket in the parity matrix |
+| `amakaflow-mvp-design-refresh/project/hifi/rig-editsheet.html` | Unknown | no live ticket cites it — classify before relying on it |
+| `amakaflow-mvp-design-refresh/project/hifi/rig-enhance2.html` | Unknown | no live ticket cites it — classify before relying on it |
+| `amakaflow-mvp-design-refresh/project/hifi/rig-friends.html` | Canonical | cited by a live contract ticket in the parity matrix |
+| `amakaflow-mvp-design-refresh/project/hifi/rig-motion.html` | Unknown | no live ticket cites it — classify before relying on it |
+| `amakaflow-mvp-design-refresh/project/hifi/rig-send.html` | Canonical | cited by a live contract ticket in the parity matrix |
+| `amakaflow-mvp-design-refresh/project/hifi/rig-sync2.html` | Canonical | cited by a live contract ticket in the parity matrix |
+| `amakaflow-mvp-design-refresh/project/hifi/rig-toast.html` | Unknown | no live ticket cites it — classify before relying on it |
+| `amakaflow-mvp-design-refresh/project/hifi/rig-watch.html` | Unknown | no live ticket cites it — classify before relying on it |
+| `amakaflow-mvp-design-refresh/project/hifi/rig-watchitem.html` | Legacy | superseded by rig-watchitem2 |
+| `amakaflow-mvp-design-refresh/project/hifi/rig-watchitem2.html` | Canonical | cited by a live contract ticket in the parity matrix |
+| `amakaflow-mvp-design-refresh/project/hifi/screens-actuals.jsx` | Legacy | superseded by screens-actuals3 |
+| `amakaflow-mvp-design-refresh/project/hifi/screens-actuals2.jsx` | Legacy | superseded by screens-actuals3 |
+| `amakaflow-mvp-design-refresh/project/hifi/screens-actuals3.jsx` | Canonical | cited by a live contract ticket in the parity matrix |
+| `amakaflow-mvp-design-refresh/project/hifi/screens-agent.jsx` | Unknown | no live ticket cites it — classify before relying on it |
+| `amakaflow-mvp-design-refresh/project/hifi/screens-ai.jsx` | Unknown | no live ticket cites it — classify before relying on it |
+| `amakaflow-mvp-design-refresh/project/hifi/screens-builder3.jsx` | Unknown | no live ticket cites it — classify before relying on it |
+| `amakaflow-mvp-design-refresh/project/hifi/screens-collections.jsx` | Unknown | no live ticket cites it — classify before relying on it |
+| `amakaflow-mvp-design-refresh/project/hifi/screens-connections.jsx` | Unknown | no live ticket cites it — classify before relying on it |
+| `amakaflow-mvp-design-refresh/project/hifi/screens-detail.jsx` | Unknown | no live ticket cites it — classify before relying on it |
+| `amakaflow-mvp-design-refresh/project/hifi/screens-editsheet.jsx` | Unknown | no live ticket cites it — classify before relying on it |
+| `amakaflow-mvp-design-refresh/project/hifi/screens-enhance2.jsx` | Unknown | no live ticket cites it — classify before relying on it |
+| `amakaflow-mvp-design-refresh/project/hifi/screens-flow.jsx` | Unknown | no live ticket cites it — classify before relying on it |
+| `amakaflow-mvp-design-refresh/project/hifi/screens-friends.jsx` | Legacy | superseded by screens-friends3 |
+| `amakaflow-mvp-design-refresh/project/hifi/screens-friends2.jsx` | Legacy | superseded by screens-friends3 |
+| `amakaflow-mvp-design-refresh/project/hifi/screens-friends3.jsx` | Unknown | no live ticket cites it — classify before relying on it |
+| `amakaflow-mvp-design-refresh/project/hifi/screens-main.jsx` | Unknown | no live ticket cites it — classify before relying on it |
+| `amakaflow-mvp-design-refresh/project/hifi/screens-marketing.jsx` | Unknown | no live ticket cites it — classify before relying on it |
+| `amakaflow-mvp-design-refresh/project/hifi/screens-motion.jsx` | Unknown | no live ticket cites it — classify before relying on it |
+| `amakaflow-mvp-design-refresh/project/hifi/screens-send.jsx` | Unknown | no live ticket cites it — classify before relying on it |
+| `amakaflow-mvp-design-refresh/project/hifi/screens-sync2.jsx` | Unknown | no live ticket cites it — classify before relying on it |
+| `amakaflow-mvp-design-refresh/project/hifi/screens-toast.jsx` | Unknown | no live ticket cites it — classify before relying on it |
+| `amakaflow-mvp-design-refresh/project/hifi/screens-v2.jsx` | Unknown | no live ticket cites it — classify before relying on it |
+| `amakaflow-mvp-design-refresh/project/hifi/screens-v3-decide.jsx` | Unknown | no live ticket cites it — classify before relying on it |
+| `amakaflow-mvp-design-refresh/project/hifi/screens-v3-essentials.jsx` | Unknown | no live ticket cites it — classify before relying on it |
+| `amakaflow-mvp-design-refresh/project/hifi/screens-v3-secondary.jsx` | Unknown | no live ticket cites it — classify before relying on it |
+| `amakaflow-mvp-design-refresh/project/hifi/screens-watch.jsx` | Unknown | no live ticket cites it — classify before relying on it |
+| `amakaflow-mvp-design-refresh/project/hifi/screens-watchitem.jsx` | Legacy | superseded by screens-watchitem2 |
+| `amakaflow-mvp-design-refresh/project/hifi/screens-watchitem2.jsx` | Unknown | no live ticket cites it — classify before relying on it |
 
 44 artifacts classified.

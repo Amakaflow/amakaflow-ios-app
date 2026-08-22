@@ -33,16 +33,20 @@ OUT_DIR = REPO_ROOT / "docs" / "product"
 
 MATRIX_ROW = re.compile(r"^\|\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|")
 VERSIONED = re.compile(r"^(?P<stem>.*?)(?P<version>\d*)$")
+# Only artifact-shaped tokens count. Matching any lowercase word let prose
+# in a target cell promote an uncited artifact to Canonical, and Canonical
+# is what establishes current UI.
+ARTIFACT_TOKEN = re.compile(r"(?:rig|screens)-[a-z0-9-]+")
 
 
 def matrix_surfaces(matrix: pathlib.Path) -> list[dict[str, str]]:
     rows = []
-    for line in matrix.read_text(errors="replace").splitlines():
+    for line in matrix.read_text(encoding="utf-8", errors="replace").splitlines():
         match = MATRIX_ROW.match(line)
         if not match:
             continue
         surface, target, ticket, verdict = (part.strip() for part in match.groups())
-        if surface in {"Surface", ""} or set(surface) <= {"-"}:
+        if surface in {"Surface", ""} or set(surface) <= {"-", ":"}:
             continue
         rows.append(
             {"surface": surface, "target": target, "ticket": ticket, "verdict": verdict}
@@ -54,7 +58,7 @@ def probed_screens() -> dict[str, int]:
     if not PROBES.is_dir():
         return {}
     return {
-        path.stem: len([line for line in path.read_text().splitlines() if line])
+        path.stem: len([line for line in path.read_text(encoding="utf-8").splitlines() if line])
         for path in sorted(PROBES.glob("*.txt"))
     }
 
@@ -71,7 +75,9 @@ def artifacts(design_root: pathlib.Path) -> list[pathlib.Path]:
     return sorted(found, key=lambda p: p.name)
 
 
-def classify(paths: list[pathlib.Path], cited: set[str]) -> list[tuple[str, str, str]]:
+def classify(
+    paths: list[pathlib.Path], cited: set[str], root: pathlib.Path
+) -> list[tuple[str, str, str]]:
     """Canonical when a live ticket cites it, Legacy when a newer sibling exists."""
     by_stem: dict[str, list[tuple[int, pathlib.Path]]] = {}
     for path in paths:
@@ -85,8 +91,8 @@ def classify(paths: list[pathlib.Path], cited: set[str]) -> list[tuple[str, str,
     for stem, entries in by_stem.items():
         newest = max(version for version, _ in entries)
         for version, path in sorted(entries):
-            name = path.name
-            if any(token in cited for token in (name, name.rsplit(".", 1)[0])):
+            name = str(path.relative_to(root))
+            if path.name.rsplit(".", 1)[0] in cited:
                 verdict = "Canonical"
                 why = "cited by a live contract ticket in the parity matrix"
             elif version < newest:
@@ -114,7 +120,7 @@ def main() -> int:
     cited = {
         token
         for row in surfaces
-        for token in re.findall(r"[a-z0-9-]+(?:\.html|\.jsx)?", row["target"])
+        for token in ARTIFACT_TOKEN.findall(row["target"])
     }
     design_root = args.docs_repo / "design"
 
@@ -166,7 +172,7 @@ def main() -> int:
         "Status values: TODO, CAPTURED, RECONCILED, CANONICAL, BLOCKED, OUT_OF_SCOPE.",
         "Only CANONICAL establishes current intended UI.",
     ]
-    (OUT_DIR / "screen-registry.md").write_text("\n".join(registry) + "\n")
+    (OUT_DIR / "screen-registry.md").write_text("\n".join(registry) + "\n", encoding="utf-8")
 
     found = artifacts(design_root)
     index = [
@@ -182,9 +188,9 @@ def main() -> int:
         "| Artifact | Classification | Why |",
         "| --- | --- | --- |",
     ]
-    index += [f"| `{name}` | {verdict} | {why} |" for name, verdict, why in classify(found, cited)]
+    index += [f"| `{name}` | {verdict} | {why} |" for name, verdict, why in classify(found, cited, design_root)]
     index += ["", f"{len(found)} artifacts classified."]
-    (OUT_DIR / "design-artifact-index.md").write_text("\n".join(index) + "\n")
+    (OUT_DIR / "design-artifact-index.md").write_text("\n".join(index) + "\n", encoding="utf-8")
 
     print(f"registry: {len(probed)} captured, {len(surfaces)} matrix surfaces")
     print(f"artifact index: {len(found)} artifacts")
