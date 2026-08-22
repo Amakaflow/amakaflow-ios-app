@@ -1,0 +1,11 @@
+artifact	ticket	ticket_status	evidence
+rig-actuals.html	AMA-2387	Done	description: "Prototype (11 live panels): hifi/rig-actuals.html"
+rig-motion.html	AMA-2383	Done	attachment: "Rig — build engine (watch/import/AI, 4 panels)" file=hifi/rig-motion.html
+rig-toast.html	AMA-2383	Done	attachment: "Rig — DD Toast (playground + auto-demo)" file=hifi/rig-toast.html
+rig-watch.html	AMA-2375	Done	description: "hifi/screens-watch.jsx + hifi/rig-watch.html, 5 live panels"
+screens-watch.jsx	AMA-2375	Done	description: "hifi/screens-watch.jsx + hifi/rig-watch.html, 5 live panels"
+screens-editsheet.jsx	AMA-2379	Backlog	description: "Redesigned 2026-08-04 ... hifi/screens-editsheet.jsx"
+rig-editsheet.html	AMA-2379	Backlog	rig for screens-editsheet.jsx; matrix cites it as "rig-editor2 / editsheet"
+screens-send.jsx	AMA-2369	Backlog	description: "hifi/screens-send.jsx + hifi/rig-send.html"
+screens-detail.jsx	AMA-2395	Done	description: "hifi/screens-detail.jsx + rig-detail.html"
+screens-friends.jsx	AMA-2389	Backlog	description: "hifi/rig-friends.html — sources hifi/screens-friends.jsx"
