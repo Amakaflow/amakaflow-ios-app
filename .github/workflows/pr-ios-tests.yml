@@ -80,6 +80,27 @@ jobs:
       - name: Run SwiftLint
         run: swiftlint lint --strict --baseline .swiftlint-baseline.yml --reporter github-actions-logging
 
+  launch-flag-hygiene:
+    name: Launch flag + flow reachability
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install PyYAML
+        run: pip install --quiet pyyaml
+
+      # Both scripts are static, so they gate every PR. The Maestro suite
+      # cannot: it needs a simulator and is label-gated (AMA-2519).
+      - name: Flag reads are gated and reachable
+        run: python3 scripts/lint-flag-reads.py
+
+      - name: Flows do not assert past the sign-in screen
+        run: python3 scripts/lint-maestro-reachability.py
+
   detect-changes:
     name: Detect Changed Files
     # Pure git diff + grep + the affected-tests script (all ubuntu-safe) —
