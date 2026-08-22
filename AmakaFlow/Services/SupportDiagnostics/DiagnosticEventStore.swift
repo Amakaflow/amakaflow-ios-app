@@ -47,8 +47,15 @@ actor DiagnosticEventStore {
         try persist(retained(events))
     }
 
-    func snapshot() async throws -> [DiagnosticEvent] {
-        try loadEvents().sorted { $0.timestamp > $1.timestamp }
+    func snapshot(accountHash: String? = nil) async throws -> [DiagnosticEvent] {
+        let events = try cleanupRetentionIfNeeded()
+        let scopedEvents: [DiagnosticEvent]
+        if let accountHash {
+            scopedEvents = events.filter { $0.accountHash == accountHash }
+        } else {
+            scopedEvents = events
+        }
+        return scopedEvents.sorted { $0.timestamp > $1.timestamp }
     }
 
     func clear() async throws {
@@ -61,7 +68,10 @@ actor DiagnosticEventStore {
     }
 
     func migrateLegacyIfNeeded() async throws {
-        guard !userDefaults.bool(forKey: Self.migrationMarkerKey) else { return }
+        guard !userDefaults.bool(forKey: Self.migrationMarkerKey) else {
+            _ = try cleanupRetentionIfNeeded()
+            return
+        }
 
         guard let data = userDefaults.data(forKey: DefaultsKey.debugLogEntries.rawValue) else {
             completeLegacyMigration()
@@ -100,6 +110,15 @@ actor DiagnosticEventStore {
         }
 
         return retained
+    }
+
+    private func cleanupRetentionIfNeeded() throws -> [DiagnosticEvent] {
+        let events = try loadEvents()
+        let retainedEvents = try retained(events)
+        if events != retainedEvents {
+            try persist(retainedEvents)
+        }
+        return retainedEvents
     }
 
     private func encodedSize(_ events: [DiagnosticEvent]) -> Int {

@@ -84,23 +84,31 @@ class DebugLogService: ObservableObject {
     private let maxEntries = 100
     private let store: DiagnosticEventStore
     private let redactor: DiagnosticRedactor
+    private let accountIdentifierProvider: @MainActor @Sendable () -> String?
 
     @Published private(set) var entries: [DebugLogEntry] = []
 
     private var pendingWriteTasks: [Task<Void, Never>] = []
+    private var writeTail: Task<Void, Never>?
+    private var hasLocalMutation = false
 
     init(
         store: DiagnosticEventStore = DiagnosticEventStore(),
-        redactor: DiagnosticRedactor = DiagnosticRedactor()
+        redactor: DiagnosticRedactor = DiagnosticRedactor(),
+        accountIdentifierProvider: @escaping @MainActor @Sendable () -> String? = {
+            AuthViewModel.shared.userProfile?.id
+        }
     ) {
         self.store = store
         self.redactor = redactor
+        self.accountIdentifierProvider = accountIdentifierProvider
         Task.detached(priority: .utility) { [weak self] in
             guard let self else { return }
             let loadedEntries: [DebugLogEntry]
             do {
                 try await store.migrateLegacyIfNeeded()
-                loadedEntries = try await store.snapshot()
+                let accountHash = await self.currentAccountHash()
+                loadedEntries = try await store.snapshot(accountHash: accountHash)
                     .prefix(maxEntries)
                     .map(\.projectedDebugLogEntry)
             } catch {
@@ -109,7 +117,7 @@ class DebugLogService: ObservableObject {
             }
             await MainActor.run { [weak self] in
                 guard let self else { return }
-                if self.entries.isEmpty {
+                if self.entries.isEmpty && !self.hasLocalMutation {
                     self.entries = loadedEntries
                 }
             }
@@ -148,9 +156,11 @@ class DebugLogService: ObservableObject {
             category: .api,
             severity: .error,
             name: "api.request.failed",
+            displayTitle: "\(method) \(endpoint) failed",
             message: details,
             metadata: metadata,
-            requestID: requestID
+            requestID: requestID,
+            accountIdentifier: accountIdentifierProvider()
         )
         addEvent(event)
     }
@@ -161,8 +171,10 @@ class DebugLogService: ObservableObject {
             category: .api,
             severity: .info,
             name: "api.request.succeeded",
+            displayTitle: "\(method) \(endpoint)",
             message: "Status: \(statusCode)",
-            metadata: ["Endpoint": endpoint, "Method": method, "Status": "\(statusCode)"]
+            metadata: ["Endpoint": endpoint, "Method": method, "Status": "\(statusCode)"],
+            accountIdentifier: accountIdentifierProvider()
         )
         addEvent(event)
     }
@@ -172,9 +184,11 @@ class DebugLogService: ObservableObject {
         let event = redactor.redact(
             category: .watch,
             severity: .error,
-            name: title,
+            name: "watch.error",
+            displayTitle: title,
             message: details,
-            metadata: metadata ?? [:]
+            metadata: metadata ?? [:],
+            accountIdentifier: accountIdentifierProvider()
         )
         addEvent(event)
     }
@@ -184,8 +198,10 @@ class DebugLogService: ObservableObject {
         let event = redactor.redact(
             category: .watch,
             severity: .info,
-            name: title,
-            message: details
+            name: "watch.event",
+            displayTitle: title,
+            message: details,
+            accountIdentifier: accountIdentifierProvider()
         )
         addEvent(event)
     }
@@ -203,9 +219,11 @@ class DebugLogService: ObservableObject {
         let event = redactor.redact(
             category: .completion,
             severity: .error,
-            name: "Completion failed",
+            name: "completion.failed",
+            displayTitle: "Completion failed",
             message: error.localizedDescription,
-            metadata: metadata
+            metadata: metadata,
+            accountIdentifier: accountIdentifierProvider()
         )
         addEvent(event)
     }
@@ -215,9 +233,11 @@ class DebugLogService: ObservableObject {
         let event = redactor.redact(
             category: .network,
             severity: .warning,
-            name: "Network error",
+            name: "network.error",
+            displayTitle: "Network error",
             message: error.localizedDescription,
-            metadata: context.map { ["Context": $0] } ?? [:]
+            metadata: context.map { ["Context": $0] } ?? [:],
+            accountIdentifier: accountIdentifierProvider()
         )
         addEvent(event)
     }
@@ -227,9 +247,11 @@ class DebugLogService: ObservableObject {
         let event = redactor.redact(
             category: .auth,
             severity: .error,
-            name: "Authentication error",
+            name: "auth.error",
+            displayTitle: "Authentication error",
             message: details,
-            metadata: context.map { ["Context": $0] } ?? [:]
+            metadata: context.map { ["Context": $0] } ?? [:],
+            accountIdentifier: accountIdentifierProvider()
         )
         addEvent(event)
     }
@@ -239,15 +261,18 @@ class DebugLogService: ObservableObject {
         let event = redactor.redact(
             category: .general,
             severity: .info,
-            name: title,
+            name: "general.event",
+            displayTitle: title,
             message: details,
-            metadata: metadata ?? [:]
+            metadata: metadata ?? [:],
+            accountIdentifier: accountIdentifierProvider()
         )
         addEvent(event)
     }
 
     /// Clear all log entries
     func clearLog() {
+        hasLocalMutation = true
         entries = []
         enqueueWrite { [store] in
             try await store.clear()
@@ -275,18 +300,29 @@ class DebugLogService: ObservableObject {
     // MARK: - Private Methods
 
     func waitForPendingWrites() async {
-        let tasks = pendingWriteTasks
+        let tail = writeTail
         pendingWriteTasks = []
-        for task in tasks {
-            await task.value
+        await tail?.value
+    }
+
+    func reloadEntriesForCurrentAccount() async {
+        await waitForPendingWrites()
+        do {
+            entries = try await scopedEntries()
+        } catch {
+            print("[DebugLogService] Failed to reload diagnostic events")
+            entries = []
         }
     }
 
     // MARK: - Private Methods
 
     private func addEvent(_ event: DiagnosticEvent) {
+        hasLocalMutation = true
         let entry = event.projectedDebugLogEntry
-        entries.insert(entry, at: 0)
+        if eventBelongsToCurrentAccount(event) {
+            entries.insert(entry, at: 0)
+        }
 
         // Prune old entries
         if entries.count > maxEntries {
@@ -302,13 +338,31 @@ class DebugLogService: ObservableObject {
     }
 
     private func enqueueWrite(_ operation: @escaping @Sendable () async throws -> Void) {
+        let previous = writeTail
         let task = Task.detached(priority: .utility) {
+            await previous?.value
             do {
                 try await operation()
             } catch {
                 print("[DebugLogService] Failed to persist diagnostic event")
             }
         }
+        writeTail = task
         pendingWriteTasks.append(task)
+    }
+
+    private func scopedEntries() async throws -> [DebugLogEntry] {
+        try await store.snapshot(accountHash: currentAccountHash())
+            .prefix(maxEntries)
+            .map(\.projectedDebugLogEntry)
+    }
+
+    private func currentAccountHash() -> String? {
+        redactor.hashAccountIdentifier(accountIdentifierProvider())
+    }
+
+    private func eventBelongsToCurrentAccount(_ event: DiagnosticEvent) -> Bool {
+        guard let currentAccountHash = currentAccountHash() else { return true }
+        return event.accountHash == currentAccountHash
     }
 }

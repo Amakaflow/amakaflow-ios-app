@@ -2,6 +2,8 @@ import CryptoKit
 import Foundation
 
 nonisolated struct DiagnosticRedactor: Sendable {
+    static let omittedAPIResponseMessage = "API response body omitted from diagnostics"
+
     private static let redacted = "[REDACTED]"
     private static let redactedEmail = "[REDACTED_EMAIL]"
     private static let redactedQuery = "[REDACTED_QUERY]"
@@ -23,6 +25,7 @@ nonisolated struct DiagnosticRedactor: Sendable {
         category: DiagnosticEventCategory,
         severity: DiagnosticEventSeverity,
         name: String,
+        displayTitle: String? = nil,
         message: String,
         metadata: [String: String] = [:],
         requestID: String? = nil,
@@ -36,8 +39,11 @@ nonisolated struct DiagnosticRedactor: Sendable {
             timestamp: timestamp,
             severity: severity,
             category: category,
-            name: sanitizeIdentifier(name, fallback: "diagnostic.event"),
-            message: sanitizeText(message),
+            name: sanitizeIdentifier(sanitizeText(name), fallback: "diagnostic.event"),
+            title: sanitizeDisplayTitle(displayTitle ?? name, fallback: name),
+            message: shouldOmitAPIMessage(message, metadata: metadata, category: category)
+                ? Self.omittedAPIResponseMessage
+                : sanitizeText(message),
             metadata: sanitizedMetadata,
             requestID: sanitizeCorrelationID(requestID ?? sanitizedMetadata["request_id"] ?? sanitizedMetadata["requestId"]),
             sentryEventID: sanitizeCorrelationID(sentryEventID ?? sanitizedMetadata["sentry_event_id"]),
@@ -55,13 +61,15 @@ nonisolated struct DiagnosticRedactor: Sendable {
         let category = category(for: entry.type)
         let severity = severity(for: entry.type)
         let sanitizedMetadata = sanitizeMetadata(entry.metadata ?? [:], category: category)
+        let omitLegacyBody = shouldOmitLegacyBody(entry, category: category)
         return DiagnosticEvent(
             id: entry.id,
             timestamp: entry.timestamp,
             severity: severity,
             category: category,
-            name: sanitizeText(entry.title),
-            message: sanitizeText(entry.details),
+            name: stableEventName(for: entry.type),
+            title: sanitizeDisplayTitle(entry.title, fallback: stableEventName(for: entry.type)),
+            message: omitLegacyBody ? Self.omittedAPIResponseMessage : sanitizeText(entry.details),
             metadata: sanitizedMetadata,
             requestID: sanitizeCorrelationID(sanitizedMetadata["request_id"] ?? sanitizedMetadata["requestId"]),
             sentryEventID: nil,
@@ -130,10 +138,21 @@ nonisolated struct DiagnosticRedactor: Sendable {
             options: [.caseInsensitive],
             with: Self.redacted
         )
+        sanitized = replace(
+            pattern: #"(?i)\b(access_token|refresh_token|id_token|api_key|client_secret|password)\b\s*[:=]\s*"?[^",\s}]+"?"#,
+            in: sanitized
+        ) { match in
+            guard let separator = match.firstIndex(where: { $0 == ":" || $0 == "=" }) else {
+                return Self.redacted
+            }
+            return "\(match[..<separator])\(match[separator]) \(Self.redacted)"
+        }
         return sanitized
     }
+}
 
-    private func sanitizeMetadata(
+private extension DiagnosticRedactor {
+    func sanitizeMetadata(
         _ metadata: [String: String],
         category: DiagnosticEventCategory
     ) -> [String: String] {
@@ -188,6 +207,57 @@ nonisolated struct DiagnosticRedactor: Sendable {
         return Self.sensitiveKeyFragments.contains { lowercased.contains($0) }
     }
 
+    private func sanitizeDisplayTitle(_ value: String, fallback: String) -> String {
+        let sanitized = sanitizeText(value)
+            .replacingOccurrences(of: "\n", with: " ")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        return String((sanitized.nilIfEmpty ?? fallback).prefix(Self.maxValueLength))
+    }
+
+    private func shouldOmitAPIMessage(
+        _ message: String,
+        metadata: [String: String],
+        category: DiagnosticEventCategory
+    ) -> Bool {
+        category == .api && (hasBodySignal(in: metadata) || isBodyLike(message))
+    }
+
+    private func shouldOmitLegacyBody(_ entry: DebugLogEntry, category: DiagnosticEventCategory) -> Bool {
+        category == .api && (hasBodySignal(in: entry.metadata ?? [:]) || isBodyLike(entry.details))
+    }
+
+    private func hasBodySignal(in metadata: [String: String]) -> Bool {
+        metadata.keys.contains { key in
+            let lowercased = key.lowercased()
+            return [
+                "response",
+                "request",
+                "raw_response",
+                "response_body",
+                "request_body",
+                "body",
+                "json"
+            ].contains(lowercased)
+        }
+    }
+
+    private func isBodyLike(_ text: String) -> Bool {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.hasPrefix("{") || trimmed.hasPrefix("[") {
+            return true
+        }
+        let lowercased = trimmed.lowercased()
+        return [
+            "access_token",
+            "refresh_token",
+            "id_token",
+            "profile",
+            "customer",
+            "response_body",
+            "request_body"
+        ].contains { lowercased.contains($0) }
+    }
+
     private func normalizedPath(_ value: String) -> String {
         if let components = URLComponents(string: value), let path = components.path.nilIfEmpty {
             return path
@@ -240,6 +310,27 @@ nonisolated struct DiagnosticRedactor: Sendable {
             return .warning
         case .apiError, .watchError, .completionError, .authError:
             return .error
+        }
+    }
+
+    private func stableEventName(for type: DebugLogType) -> String {
+        switch type {
+        case .apiError:
+            return "api.request.failed"
+        case .apiSuccess:
+            return "api.request.succeeded"
+        case .watchError:
+            return "watch.error"
+        case .watchEvent:
+            return "watch.event"
+        case .completionError:
+            return "completion.failed"
+        case .networkError:
+            return "network.error"
+        case .authError:
+            return "auth.error"
+        case .general:
+            return "general.event"
         }
     }
 

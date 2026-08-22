@@ -2,6 +2,36 @@ import XCTest
 @testable import AmakaFlowCompanion
 
 final class DiagnosticRedactorTests: XCTestCase {
+    func testFreeFormDisplayTitleIsRedactedAndStoredUnderStableEventName() {
+        let unsafeTitle = """
+        jane@example.com Bearer redaction-fixture-token \
+        eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJyZWRhY3Rpb24ifQ.signature \
+        https://example.test/profile?token=query-secret
+        """
+        let event = DiagnosticRedactor().redact(
+            category: .general,
+            severity: .info,
+            name: "general.event",
+            displayTitle: unsafeTitle,
+            message: "Details for jane@example.com with Authorization: Bearer details-token",
+            metadata: ["Context": "https://example.test/path?email=jane@example.com"],
+            timestamp: Self.fixedDate
+        )
+
+        XCTAssertEqual(event.name, "general.event")
+        XCTAssertFalse(event.name.contains("jane@example.com"))
+        XCTAssertFalse(event.name.contains("redaction-fixture-token"))
+        XCTAssertFalse(event.name.contains("eyJhbGci"))
+        XCTAssertFalse(event.name.contains("query-secret"))
+
+        let projection = event.projectedDebugLogEntry
+        XCTAssertFalse(projection.copyableText.contains("jane@example.com"))
+        XCTAssertFalse(projection.copyableText.contains("redaction-fixture-token"))
+        XCTAssertFalse(projection.copyableText.contains("eyJhbGci"))
+        XCTAssertFalse(projection.copyableText.contains("query-secret"))
+        XCTAssertFalse(projection.copyableText.contains("details-token"))
+    }
+
     func testAPIRedactionDropsBodiesQueriesAndSensitiveMetadataWhileKeepingCorrelationFields() {
         let event = DiagnosticRedactor().redact(
             category: .api,

@@ -34,9 +34,25 @@ final class DiagnosticEventStoreTests: XCTestCase {
         let legacy = [
             DebugLogEntry(
                 type: .apiError,
-                title: "POST /v1/workouts?token=abc failed",
-                details: "Bearer raw-token david@example.com",
-                metadata: ["Endpoint": "/v1/workouts?token=abc", "Method": "POST", "Status": "500", "Response": "raw body", "request_id": "req-legacy-1"]
+                title: """
+                POST /v1/workouts?token=abc failed for jane@example.com \
+                Bearer title-token eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJsZWdhY3kifQ.signature
+                """,
+                details: """
+                {
+                  "access_token": "legacy-access-token",
+                  "refresh_token": "legacy-refresh-token",
+                  "profile": {"email": "jane@example.com"},
+                  "customer": "raw customer support content"
+                }
+                """,
+                metadata: [
+                    "Endpoint": "/v1/workouts?token=abc",
+                    "Method": "POST",
+                    "Status": "500",
+                    "Response": #"{"raw":"body with arbitrary customer text"}"#,
+                    "request_id": "req-legacy-1"
+                ]
             )
         ]
         let encoder = JSONEncoder()
@@ -48,11 +64,19 @@ final class DiagnosticEventStoreTests: XCTestCase {
 
         let events = try await store.snapshot()
         XCTAssertEqual(events.count, 1)
+        XCTAssertEqual(events[0].name, "api.request.failed")
         XCTAssertEqual(events[0].requestID, "req-legacy-1")
         XCTAssertEqual(events[0].metadata["Status"], "500")
         XCTAssertNil(events[0].metadata["Response"])
-        XCTAssertFalse(events[0].message.contains("raw-token"))
-        XCTAssertFalse(events[0].message.contains("david@example.com"))
+        XCTAssertEqual(events[0].message, "API response body omitted from diagnostics")
+        XCTAssertFalse(events[0].message.contains("legacy-access-token"))
+        XCTAssertFalse(events[0].message.contains("legacy-refresh-token"))
+        XCTAssertFalse(events[0].message.contains("profile"))
+        XCTAssertFalse(events[0].message.contains("customer"))
+        XCTAssertFalse(events[0].projectedDebugLogEntry.copyableText.contains("jane@example.com"))
+        XCTAssertFalse(events[0].projectedDebugLogEntry.copyableText.contains("title-token"))
+        XCTAssertFalse(events[0].projectedDebugLogEntry.copyableText.contains("eyJhbGci"))
+        XCTAssertFalse(events[0].projectedDebugLogEntry.copyableText.contains("token=abc"))
         XCTAssertNil(defaults.data(forKey: DefaultsKey.debugLogEntries.rawValue))
 
         defaults.set(Data("not-json".utf8), forKey: DefaultsKey.debugLogEntries.rawValue)
@@ -60,6 +84,34 @@ final class DiagnosticEventStoreTests: XCTestCase {
         let snapshotAfterSecondMigrationAttempt = try await store.snapshot()
         XCTAssertEqual(snapshotAfterSecondMigrationAttempt.count, 1)
         XCTAssertNotNil(defaults.data(forKey: DefaultsKey.debugLogEntries.rawValue), "migration must run exactly once after a successful attempt")
+    }
+
+    func testSnapshotAppliesAndPersistsAgeRetentionWithoutNewWrite() async throws {
+        let store = makeStore()
+        try await store.append(event("before-window", at: now.addingTimeInterval(-60)))
+        try await store.append(event("latest-before-idle", at: now))
+
+        now = now.addingTimeInterval(8 * 24 * 60 * 60)
+
+        let names = try await store.snapshot().map(\.name)
+        XCTAssertEqual(names, [])
+        let rawFile = try String(contentsOf: store.eventsFileURL)
+        XCTAssertFalse(rawFile.contains("before-window"))
+        XCTAssertFalse(rawFile.contains("latest-before-idle"))
+    }
+
+    func testSnapshotEvictsOversizedPreexistingStorageWithoutNewWrite() async throws {
+        let initialStore = makeStore(maxBytes: 20_000)
+        try await initialStore.append(event("oversized-1", at: now.addingTimeInterval(1), message: String(repeating: "a", count: 600)))
+        try await initialStore.append(event("oversized-2", at: now.addingTimeInterval(2), message: String(repeating: "b", count: 600)))
+        try await initialStore.append(event("oversized-3", at: now.addingTimeInterval(3), message: String(repeating: "c", count: 600)))
+
+        let enforcingStore = makeStore(maxBytes: 1_200)
+        let names = try await enforcingStore.snapshot().map(\.name)
+
+        XCTAssertEqual(names, ["oversized-3"])
+        let bytes = try Data(contentsOf: enforcingStore.eventsFileURL).count
+        XCTAssertLessThanOrEqual(bytes, 1_200)
     }
 
     func testCorruptPersistedRecordsDoNotBlockSnapshotsAndAreDiscardedOnNextWrite() async throws {
@@ -182,6 +234,54 @@ final class DiagnosticEventStoreTests: XCTestCase {
         XCTAssertFalse(entry.copyableText.contains("raw-body"))
         XCTAssertFalse(entry.copyableText.contains("token=abc"))
         XCTAssertEqual(SupportDiagnosticsCorrelationIdentifiers.fromDebugLogEntries(service.entries).requestID, "req-debug-1")
+    }
+
+    @MainActor
+    func testDebugLogServiceScopesDisplayedCopiedAndPersistedEntriesToCurrentAccount() async throws {
+        let store = makeStore()
+        var currentAccount: String? = "account-a"
+        let service = DebugLogService(
+            store: store,
+            accountIdentifierProvider: { currentAccount }
+        )
+
+        service.log("Account A title", details: "account-a-only-detail")
+        await service.waitForPendingWrites()
+        XCTAssertTrue(service.getAllEntriesAsText().contains("account-a-only-detail"))
+
+        currentAccount = "account-b"
+        await service.reloadEntriesForCurrentAccount()
+        XCTAssertFalse(service.getAllEntriesAsText().contains("account-a-only-detail"))
+        XCTAssertTrue(service.entries.isEmpty)
+
+        service.log("Account B title", details: "account-b-only-detail")
+        await service.waitForPendingWrites()
+        XCTAssertTrue(service.getAllEntriesAsText().contains("account-b-only-detail"))
+        XCTAssertFalse(service.getAllEntriesAsText().contains("account-a-only-detail"))
+
+        currentAccount = "account-a"
+        await service.reloadEntriesForCurrentAccount()
+        XCTAssertTrue(service.getAllEntriesAsText().contains("account-a-only-detail"))
+        XCTAssertFalse(service.getAllEntriesAsText().contains("account-b-only-detail"))
+    }
+
+    @MainActor
+    func testClearLogIsOrderedAfterEarlierPendingAppends() async throws {
+        let store = makeStore(maxBytes: 100_000)
+        let service = DebugLogService(store: store)
+
+        for index in 0..<200 {
+            service.log(
+                "Clear race \(index)",
+                details: String(repeating: "payload-\(index)", count: 100)
+            )
+        }
+        service.clearLog()
+        await service.waitForPendingWrites()
+
+        let persisted = try await store.snapshot()
+        XCTAssertEqual(persisted, [])
+        XCTAssertTrue(service.entries.isEmpty)
     }
 
     private func makeStore(maxBytes: Int = 5 * 1024 * 1024) -> DiagnosticEventStore {
