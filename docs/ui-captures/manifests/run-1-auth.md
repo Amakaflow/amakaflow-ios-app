@@ -22,7 +22,14 @@ before any credentials exist, so nothing here depends on a real identity.
 
 3 of 3 screens captured.
 
-## Two defects visible in these captures
+## Superseded, do not act on the defects below
+
+David, 2026-08-22: onboarding still carries the old design and is due to be
+redesigned once the full design lands. These captures are therefore a record
+of what shipped today, not a defect list. Nothing below should become a
+ticket; recapture after the redesign instead.
+
+## Two issues visible in these captures
 
 **Pre-auth screens ignore dark mode.** `BASELINE.md` fixes appearance to Dark,
 and every signed-in screen honours it. The mental-model gate and the sign-in
@@ -30,8 +37,8 @@ screen render light. `ContentView` sets `.preferredColorScheme(.dark)`, but
 these screens sit above it in `unauthenticatedRoot`, so nothing applies it.
 
 **Terms line is truncated.** The sign-in screen reads "you agree to AmakaFlow's
-Terms and Privac…". A legal consent line clipped mid-word is worth its own
-ticket.
+Terms and Privac…". A legal consent line clipped mid-word would normally be worth a ticket;
+here it waits for the redesign.
 
 ## Not captured
 
