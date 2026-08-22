@@ -64,18 +64,12 @@ struct DDFloatingTabBar: View {
                 .shadow(color: Color.black.opacity(0.55), radius: 15, x: 0, y: 10)
         }
         .padding(.horizontal, 12)
-        // A marker, not an identifier on the bar itself: an identifier here
-        // overwrites every descendant's, which is what hid today_tab,
-        // library_tab and profile_tab from every flow that taps them
-        // (AMA-2492). 30 flows assert on af_tabbar, so it has to keep
-        // existing as its own element.
-        .overlay(alignment: .top) {
-            Text(" ")
-                .font(.system(size: 1))
-                .opacity(0.01)
-                .accessibilityIdentifier("af_tabbar")
-                .accessibilityLabel("Tab bar")
-        }
+        // `children: .contain` is load-bearing. Without it this identifier
+        // collapses the subtree and today_tab, library_tab and profile_tab
+        // stop existing at runtime (AMA-2492).
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("af_tabbar")
+        .accessibilityLabel("Tab bar")
     }
 }
 

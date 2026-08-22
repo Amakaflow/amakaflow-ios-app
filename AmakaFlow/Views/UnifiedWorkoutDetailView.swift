@@ -362,6 +362,7 @@ struct UnifiedWorkoutDetailView: View {
         .onChange(of: scenePhase) { phase in
             handleScenePhaseChange(phase)
         }
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("af_workout_detail_screen")
     }
 
