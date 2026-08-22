@@ -17,6 +17,7 @@ appId: com.myamaka.AmakaFlowCompanion
 - launchApp:
     clearState: true
     arguments:
+      AF_SESSION_IDENTITY: "user_id=user_ama2317_visual,email=claude+clerk_test@amakaflow.dev,name=AMA2317 Visual"
       AF_USE_FIXTURES: "1"
       AF_FIXTURE_NAMES: "strength_block_w1"
       AF_SKIP_ONBOARDING: "true"
@@ -26,6 +27,7 @@ appId: com.myamaka.AmakaFlowCompanion
 - tapOn:
     id: "af_library_search"
 - inputText: "Strength"
+- pressKey: Enter
 - extendedWaitUntil:
     visible:
       id: "af_library_results"
@@ -48,6 +50,7 @@ appId: com.myamaka.AmakaFlowCompanion
 - launchApp:
     clearState: true
     arguments:
+      AF_SESSION_IDENTITY: "user_id=user_ama2317_visual,email=claude+clerk_test@amakaflow.dev,name=AMA2317 Visual"
       AF_USE_FIXTURES: "1"
       AF_FIXTURE_NAMES: "strength_block_w1"
       AF_SKIP_ONBOARDING: "true"
@@ -57,6 +60,7 @@ appId: com.myamaka.AmakaFlowCompanion
 - tapOn:
     id: "af_library_search"
 - inputText: "Strength"
+- pressKey: Enter
 - extendedWaitUntil:
     visible:
       id: "af_library_results"
@@ -83,6 +87,7 @@ appId: com.myamaka.AmakaFlowCompanion
 - launchApp:
     clearState: true
     arguments:
+      AF_SESSION_IDENTITY: "user_id=user_ama2317_visual,email=claude+clerk_test@amakaflow.dev,name=AMA2317 Visual"
       AF_USE_FIXTURES: "1"
       AF_FIXTURE_NAMES: "strength_block_w1"
       AF_SKIP_ONBOARDING: "true"
@@ -91,6 +96,7 @@ appId: com.myamaka.AmakaFlowCompanion
 - tapOn:
     id: "af_library_search"
 - inputText: "Strength"
+- pressKey: Enter
 - extendedWaitUntil:
     visible:
       id: "af_library_results"
@@ -135,6 +141,7 @@ appId: com.myamaka.AmakaFlowCompanion
 - launchApp:
     clearState: true
     arguments:
+      AF_SESSION_IDENTITY: "user_id=user_ama2317_visual,email=claude+clerk_test@amakaflow.dev,name=AMA2317 Visual"
       AF_USE_FIXTURES: "1"
       AF_FIXTURE_NAMES: "strength_block_w1"
       AF_SKIP_ONBOARDING: "true"
@@ -143,6 +150,7 @@ appId: com.myamaka.AmakaFlowCompanion
 - tapOn:
     id: "af_library_search"
 - inputText: "Strength"
+- pressKey: Enter
 - extendedWaitUntil:
     visible:
       id: "af_library_results"
