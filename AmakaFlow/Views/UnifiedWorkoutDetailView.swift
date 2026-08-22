@@ -452,6 +452,7 @@ struct UnifiedWorkoutDetailView: View {
                         .accessibilityHint("Changes how watches record it")
                         .accessibilityIdentifier("af_workout_detail_sport_chip")
                     }
+                    .accessibilityElement(children: .contain)
                     .accessibilityIdentifier("af_detail_pills")
 
                     if showSportDisagreementChip {

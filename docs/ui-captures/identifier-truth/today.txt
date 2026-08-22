@@ -1,0 +1,22 @@
+3 of 3 Wi-Fi bars
+af_header_log_sets
+af_library_fab
+af_tabbar
+af_today_diary_list
+af_today_title
+af_today_watch_pill
+applewatch
+bookmark
+chevron.right
+clock
+dumbbell.fill
+figure.run
+flame.fill
+heart.fill
+library_tab
+person.crop.circle
+profile_tab
+profile_tab_badge
+sun.max.fill
+today_screen
+today_tab

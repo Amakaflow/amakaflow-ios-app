@@ -1,0 +1,19 @@
+appId: com.myamaka.AmakaFlowCompanion
+---
+- runFlow: _launch.yaml
+- tapOn:
+    id: "library_tab"
+- tapOn:
+    id: "af_library_search"
+- inputText: "Strength"
+- pressKey: Enter
+- extendedWaitUntil:
+    visible:
+      id: "af_library_results"
+    timeout: 10000
+- tapOn:
+    id: "af_library_item_workout:fixture-strength-001"
+- extendedWaitUntil:
+    visible:
+      id: "af_workout_detail_screen"
+    timeout: 10000
