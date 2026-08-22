@@ -543,7 +543,7 @@ final class CoachAPIRepositoryEndpointTests: XCTestCase {
         }
     }
 
-    func testGeneratedCoachRoutesUndocumentedStatusLogsAndThrowsServerError() async throws {
+    func testGeneratedCoachRoutesUndocumentedStatusEmitsFailLogAndThrowsServerError() async throws {
         let routes: [(name: String, path: String, method: String, invoke: () async throws -> Void)] = [
             ("message", "/v1/coach/message", "POST", { _ = try await self.api.sendCoachMessage(message: "hi", context: nil) }),
             ("fatigue", "/v1/coach/fatigue-advice", "POST", { _ = try await self.api.getFatigueAdvice(fatigueScore: nil, loadHistory: nil) }),
@@ -553,7 +553,6 @@ final class CoachAPIRepositoryEndpointTests: XCTestCase {
         ]
 
         for route in routes {
-            await MainActor.run { DebugLogService.shared.clearLog() }
             MockURLProtocol.reset()
             logger = RecordingAPIObservabilityLogger()
             api = APIService(session: MockURLProtocol.mockSession(), observabilityLogger: logger)
@@ -573,10 +572,12 @@ final class CoachAPIRepositoryEndpointTests: XCTestCase {
                 XCTFail("Expected serverError(\(undocumentedStatus)) for \(route.name), got \(error)")
             }
 
-            let entry = await waitForDebugLogEntry(title: "\(route.method) \(route.path) failed")
-            XCTAssertNotNil(entry, "Expected debug log entry for \(route.name)")
-            XCTAssertEqual(entry?.type, .apiError)
-            XCTAssertEqual(entry?.metadata?["Status"], "\(undocumentedStatus)")
+            let event = try XCTUnwrap(logger.events.last, "Expected API failure event for \(route.name)")
+            XCTAssertEqual(event.phase, .fail, "Expected failure phase for \(route.name)")
+            XCTAssertEqual(event.endpoint, route.path, "Expected sanitized endpoint for \(route.name)")
+            XCTAssertEqual(event.httpMethod, route.method, "Expected HTTP method for \(route.name)")
+            XCTAssertEqual(event.statusCode, undocumentedStatus, "Expected status code for \(route.name)")
+            XCTAssertEqual(event.errorType, "server", "Expected server error category for \(route.name)")
         }
     }
 
@@ -1216,22 +1217,6 @@ final class CoachAPIRepositoryEndpointTests: XCTestCase {
             data.append(buffer, count: count)
         }
         return data
-    }
-
-    private func waitForDebugLogEntry(
-        title: String,
-        attempts: Int = 20,
-        sleepNanos: UInt64 = 50_000_000
-    ) async -> DebugLogEntry? {
-        for _ in 0..<attempts {
-            if let entry = await MainActor.run(body: {
-                DebugLogService.shared.entries.first(where: { $0.title == title })
-            }) {
-                return entry
-            }
-            try? await Task.sleep(nanoseconds: sleepNanos)
-        }
-        return nil
     }
 
     private static func agentActionJSON(status: String) -> Data {
