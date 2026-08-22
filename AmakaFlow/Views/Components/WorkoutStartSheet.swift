@@ -139,6 +139,7 @@ struct WorkoutStartSheet: View {
         }
         .background(DailyDriver.screenBackground)
         .preferredColorScheme(.dark)
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("af_start_sheet")
     }
 
