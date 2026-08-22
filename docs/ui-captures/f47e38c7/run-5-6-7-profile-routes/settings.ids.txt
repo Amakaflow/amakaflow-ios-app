@@ -1,0 +1,20 @@
+3 of 3 Wi-Fi bars
+af_library_fab
+af_tabbar
+applewatch
+bookmark
+chevron.down
+chevron.left
+house.fill
+library_tab
+link
+person.2.fill
+person.crop.circle.fill
+person.fill
+profile_screen
+profile_tab
+settings_refresh_header
+settings_screen
+slider.horizontal.3
+sun.max
+today_tab

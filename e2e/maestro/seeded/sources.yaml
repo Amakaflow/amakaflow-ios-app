@@ -1,0 +1,15 @@
+appId: com.myamaka.AmakaFlowCompanion
+---
+- runFlow: _attach.yaml
+- tapOn:
+    id: "profile_tab"
+- extendedWaitUntil:
+    visible:
+      id: "af_profile_connect_sources_entry"
+    timeout: 15000
+- tapOn:
+    id: "af_profile_connect_sources_entry"
+- extendedWaitUntil:
+    visible:
+      id: "af_actuals_source_row_strava"
+    timeout: 15000

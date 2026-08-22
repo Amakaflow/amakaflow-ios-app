@@ -1,0 +1,15 @@
+appId: com.myamaka.AmakaFlowCompanion
+---
+- runFlow: _attach.yaml
+- tapOn:
+    id: "profile_tab"
+- extendedWaitUntil:
+    visible:
+      id: "af_profile_sync_history_entry"
+    timeout: 15000
+- tapOn:
+    id: "af_profile_sync_history_entry"
+- extendedWaitUntil:
+    visible:
+      id: "af_actuals_history"
+    timeout: 15000

@@ -1,0 +1,22 @@
+3 of 3 Wi-Fi bars
+BackButton
+_TtGC7SwiftUI32NavigationStackHosting
+af_actuals_history
+af_actuals_history_row_strava_19766713807
+af_actuals_history_row_strava_19794179579
+af_actuals_history_row_strava_19802064345
+af_actuals_history_row_strava_19817311134
+af_actuals_history_row_strava_19822512985
+af_actuals_history_row_strava_19823436090
+af_actuals_history_row_strava_19830439728
+af_actuals_history_row_strava_19840351271
+af_actuals_strava_badge_theirs
+af_library_fab
+af_tabbar
+bookmark
+library_tab
+person.crop.circle.fill
+profile_screen
+profile_tab
+sun.max
+today_tab
