@@ -28,9 +28,10 @@ struct CoachChatView: View {
     @State private var route: CoachShellRoute?
     @FocusState private var isInputFocused: Bool
 
-    /// ContentView floats DDFloatingTabBar over the content in a ZStack, so
-    /// nothing insets the composer above it. Reserve the tab-bar lane locally
-    /// (kept even while focused to cover simulator/hardware-keyboard runs).
+    /// ContentView floats DDFloatingTabBar over the content in a ZStack rather
+    /// than insetting it, so nothing lifts the composer above the tab bar.
+    /// Reserve the tab-bar lane locally (kept even while focused, to cover
+    /// simulator and hardware-keyboard runs).
     private let tabBarClearance: CGFloat = 72
 
     private enum CoachShellRoute: Hashable {
