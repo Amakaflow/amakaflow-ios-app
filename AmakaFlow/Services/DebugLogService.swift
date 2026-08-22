@@ -79,6 +79,7 @@ class DebugLogService: ObservableObject {
     let redactor: DiagnosticRedactor
     let accountIdentifierProvider: @MainActor @Sendable () -> String?
     let accountIdentifierPublisher: @MainActor @Sendable () -> AnyPublisher<String?, Never>
+    let diagnosticSnapshotReader: @MainActor @Sendable (DiagnosticSnapshotScope) async throws -> [DiagnosticEvent]
 
     @Published var entries: [DebugLogEntry] = []
 
@@ -102,12 +103,16 @@ class DebugLogService: ObservableObject {
                 .map { $0?.id }
                 .removeDuplicates()
                 .eraseToAnyPublisher()
-        }
+        },
+        diagnosticSnapshotReader: (@MainActor @Sendable (DiagnosticSnapshotScope) async throws -> [DiagnosticEvent])? = nil
     ) {
         self.store = store
         self.redactor = redactor
         self.accountIdentifierProvider = accountIdentifierProvider
         self.accountIdentifierPublisher = accountIdentifierPublisher
+        self.diagnosticSnapshotReader = diagnosticSnapshotReader ?? { scope in
+            try await store.snapshot(scope)
+        }
         self.migrationTask = Task.detached(priority: .utility) { [store] in
             do {
                 try await store.migrateLegacyIfNeeded()

@@ -40,7 +40,17 @@ extension DebugLogService {
             return []
         }
         guard currentAccountHash == accountHash else { return [] }
-        return try await store.snapshot(.account(accountHash))
+        let events = try await diagnosticSnapshotReader(.account(accountHash))
+        let postSnapshotAccountIdentifier = accountIdentifierProvider()
+        guard redactor.hashAccountIdentifier(postSnapshotAccountIdentifier) == accountHash else {
+            accountIdentifierDidChange(postSnapshotAccountIdentifier)
+            return []
+        }
+        guard currentAccountHash == accountHash else {
+            accountIdentifierDidChange(postSnapshotAccountIdentifier)
+            return []
+        }
+        return events
     }
 
     func addEvent(_ event: DiagnosticEvent) {
