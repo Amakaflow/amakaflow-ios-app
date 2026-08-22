@@ -43,8 +43,8 @@ Feature-presence on TestFlight is the regression gate for entry points.
 # Build staging Debug sim (scripts/sim-build.sh)
 scripts/sim-build.sh staging
 
-UITEST_CLERK_PASSWORD="$(grep '^UITEST_CLERK_PASSWORD=' ~/.claude/projects/-Users-davidmini/secrets/keys.env | cut -d= -f2-)" \
-  maestro test -e UITEST_CLERK_PASSWORD="$UITEST_CLERK_PASSWORD" \
+AF_CLERK_PASSWORD="$(grep '^AF_CLERK_PASSWORD=' ~/.claude/projects/-Users-davidmini/secrets/keys.env | cut -d= -f2-)" \
+  maestro test -e AF_CLERK_PASSWORD="$AF_CLERK_PASSWORD" \
   e2e/maestro/flows/coach/feature-presence.yaml
 ```
 

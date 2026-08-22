@@ -18,9 +18,9 @@ struct LaunchConfig: Equatable, Sendable {
     var skipAppleWatch: Bool
     var session: TestSession?
 
-    /// `UITEST_CLERK_EMAIL` + `_PASSWORD` + `_PUBLISHABLE_KEY` all present.
+    /// `AF_CLERK_EMAIL` + `_PASSWORD` + `_PUBLISHABLE_KEY` all present.
     /// Distinct from `session`: every XCUITest supplies this triple and no
-    /// `UITEST_CLERK_REAL_SESSION_EMAIL`, so it cannot be derived from
+    /// `AF_SESSION_CLERK_EMAIL`, so it cannot be derived from
     /// `session == .realClerk` without disabling the whole XCUITest suite.
     var clerkTestUser: Bool
 
@@ -112,42 +112,42 @@ struct LaunchConfig: Equatable, Sendable {
     ) -> LaunchConfig? {
         let source = Source(argv: argv, defaults: defaults, environment: environment)
 
-        let fixtureNames = source.list(for: "UITEST_FIXTURES")
+        let fixtureNames = source.list(for: "AF_FIXTURE_NAMES")
         var faults: Set<FaultScenario> = []
         switch source.fixtureState(hasFixtureNames: fixtureNames != nil) {
         case "empty": faults.insert(.emptyLibrary)
         case "error": faults.insert(.libraryLoadFails)
         default: break
         }
-        if source.isTruthy("UITEST_GARMIN_PAIRED") {
+        if source.isTruthy("AF_FAULT_GARMIN_PAIRED") {
             faults.insert(.garminPaired)
         }
-        if let reason = source.value(for: "UITEST_GARMIN_PUSH_FAIL")?
+        if let reason = source.value(for: "AF_FAULT_GARMIN_PUSH_FAIL")?
             .trimmingCharacters(in: .whitespacesAndNewlines), !reason.isEmpty {
             faults.insert(.garminPushFails(reason: reason))
         }
-        if source.isTruthy("UITEST_WATCHITEM_REPLACE_FAIL") {
+        if source.isTruthy("AF_FAULT_WATCH_REPLACE_FAIL") {
             faults.insert(.watchItemReplaceFails)
         }
-        if let raw = source.value(for: "UITEST_WATCHITEM_REPLACE_DELAY_MS"),
+        if let raw = source.value(for: "AF_FAULT_WATCH_REPLACE_DELAY_MS"),
            let milliseconds = Int(raw) {
             faults.insert(.watchItemReplaceSlow(milliseconds: milliseconds))
         }
-        if source.isTruthy("UITEST_FORCE_WATCH_MANAGER") || source.isTruthy("AMA2375_DEMO") {
+        if source.isTruthy("AF_DEMO_WATCH_MANAGER") || source.isTruthy("AF_DEMO_WATCH_MANAGER") {
             faults.insert(.watchManagerDemo)
         }
 
         let config = LaunchConfig(
-            useFixtures: source.isTruthy("UITEST_USE_FIXTURES"),
-            skipOnboarding: source.isTruthy("UITEST_SKIP_ONBOARDING"),
-            skipAppleWatch: source.isTruthy("UITEST_SKIP_APPLE_WATCH")
-                || source.isTruthy("UITEST_FAKE_WATCH"),
+            useFixtures: source.isTruthy("AF_USE_FIXTURES"),
+            skipOnboarding: source.isTruthy("AF_SKIP_ONBOARDING"),
+            skipAppleWatch: source.isTruthy("AF_SKIP_APPLE_WATCH")
+,
             session: source.session(),
             clerkTestUser: source.hasClerkTestUser(),
             fixtures: fixtureNames.map(FixtureSelection.named) ?? .all,
             faults: faults,
             demoHost: source.demoHost(),
-            actualsTodayDemo: source.isTruthy("AMA2387_TODAY_DEMO"),
+            actualsTodayDemo: source.isTruthy("AF_DEMO_ACTUALS_TODAY"),
             simulationSpeed: source.simulationSpeed()
         )
         return config == .inactive ? nil : config
@@ -233,7 +233,7 @@ private struct Source {
 
     /// Prefer explicit launch arguments / app defaults over the simulator's
     /// process environment — stale `simctl`/scheme env (e.g.
-    /// `UITEST_USE_FIXTURES=false`) otherwise shadows intentional dogfood launches.
+    /// `AF_USE_FIXTURES=false`) otherwise shadows intentional dogfood launches.
     func value(for key: String) -> String? {
         if let fromArgs = argument(for: key) {
             return fromArgs
@@ -267,26 +267,26 @@ private struct Source {
     /// Ignore stale simulator env `empty` when launch args/defaults name fixtures —
     /// otherwise dogfood launches load zero workouts while Library still looks "live".
     func fixtureState(hasFixtureNames: Bool) -> String? {
-        if let fromArgs = argument(for: "UITEST_FIXTURE_STATE") {
+        if let fromArgs = argument(for: "AF_FIXTURE_STATE") {
             return fromArgs.isEmpty ? nil : fromArgs
         }
-        if let stored = defaults.string(forKey: "UITEST_FIXTURE_STATE"), !stored.isEmpty {
+        if let stored = defaults.string(forKey: "AF_FIXTURE_STATE"), !stored.isEmpty {
             return stored
         }
         if hasFixtureNames {
             return nil
         }
-        let state = environment["UITEST_FIXTURE_STATE"]
+        let state = environment["AF_FIXTURE_STATE"]
         return state?.isEmpty == false ? state : nil
     }
 
     /// The real-Clerk bypass wins: `AuthViewModel.start()` checks it first and
     /// returns before the mock bypass can run.
     func session() -> LaunchConfig.TestSession? {
-        if let email = value(for: "UITEST_CLERK_REAL_SESSION_EMAIL"), !email.isEmpty {
-            return .realClerk(email: email, password: value(for: "UITEST_CLERK_PASSWORD"))
+        if let email = value(for: "AF_SESSION_CLERK_EMAIL"), !email.isEmpty {
+            return .realClerk(email: email, password: value(for: "AF_CLERK_PASSWORD"))
         }
-        guard let raw = value(for: "UITEST_CLERK_TEST_SESSION"), !raw.isEmpty else { return nil }
+        guard let raw = value(for: "AF_SESSION_IDENTITY"), !raw.isEmpty else { return nil }
         var fields: [String: String] = [:]
         for pair in raw.split(separator: ",") {
             let parts = pair.split(separator: "=", maxSplits: 1).map(String.init)
@@ -303,33 +303,37 @@ private struct Source {
     }
 
     func hasClerkTestUser() -> Bool {
-        value(for: "UITEST_CLERK_EMAIL")?.isEmpty == false
-            && value(for: "UITEST_CLERK_PASSWORD")?.isEmpty == false
-            && value(for: "UITEST_CLERK_PUBLISHABLE_KEY")?.isEmpty == false
+        value(for: "AF_CLERK_EMAIL")?.isEmpty == false
+            && value(for: "AF_CLERK_PASSWORD")?.isEmpty == false
+            && value(for: "AF_CLERK_PUBLISHABLE_KEY")?.isEmpty == false
     }
 
     func demoHost() -> LaunchConfig.DemoHost? {
-        if isTruthy("AMA2387_DEMO") || isTruthy("AMA2426_DEMO") || isTruthy("UITEST_SHOW_ACTUALS_DOGFOOD") {
+        if isTruthy("AF_DEMO_ACTUALS_HUB") {
             return .actualsDogfood(autorun: autorun())
         }
-        if isTruthy("UITEST_SHOW_CREATE_WITH_AI_GENERATING") {
+        if isTruthy("AF_DEMO_CREATE_WITH_AI") {
             return .createWithAIGenerating
         }
         return nil
     }
 
+    /// One four-valued choice, not four booleans. The old encoding spread it across
+    /// AMA2426_AUTORUN, _LIVE, _COMPANION, and AMA2387_AUTORUN, whose only legal
+    /// combinations were the four values below — every other combination decoded to
+    /// something nobody intended.
     private func autorun() -> LaunchConfig.AutorunMode? {
-        if isTruthy("AMA2426_AUTORUN") {
-            if isTruthy("AMA2426_LIVE") { return .live }
-            if isTruthy("AMA2426_COMPANION") { return .companion }
-            return .fixture
+        switch value(for: "AF_DEMO_AUTORUN")?.lowercased() {
+        case "live": return .live
+        case "companion": return .companion
+        case "fixture": return .fixture
+        case "walkthrough": return .walkthrough
+        default: return nil
         }
-        if isTruthy("AMA2387_AUTORUN") { return .walkthrough }
-        return nil
     }
 
     func simulationSpeed() -> Double {
-        guard let raw = value(for: "UITEST_SIM_SPEED"), let speed = Double(raw), speed > 0 else {
+        guard let raw = value(for: "AF_SIM_SPEED"), let speed = Double(raw), speed > 0 else {
             return 1.0
         }
         return speed

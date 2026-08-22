@@ -13,8 +13,8 @@ Library → Start → Garmin is usable when unpaired (clear pair/CIQ path) and w
 | What we're testing | Why | Click / check | Pass looks like |
 | ----- | ----- | --- | ----- |
 | Unpaired recovery | Dead grey row is the friction | Start → Garmin unpaired | CTA “Tap to pair CIQ / open Devices” + PAIR tag → Devices sheet |
-| Paired push | Software path | Start → Garmin with `UITEST_GARMIN_PAIRED` | Status queued/sent/ready ≤ few seconds |
-| Fail honesty | Trust | `UITEST_GARMIN_PUSH_FAIL=not_paired` | what+why copy |
+| Paired push | Software path | Start → Garmin with `AF_FAULT_GARMIN_PAIRED` | Status queued/sent/ready ≤ few seconds |
+| Fail honesty | Trust | `AF_FAULT_GARMIN_PUSH_FAIL=not_paired` | what+why copy |
 | Watch land | Golden loop | CIQ download → native player | Strength on FR965/Fenix (or AMA-1387 leftover documented) |
 
 ## How to reproduce (sim)
@@ -27,7 +27,7 @@ maestro test e2e/maestro/ama-2310-visual-garmin-unpaired.yaml
 maestro test e2e/maestro/ama-2286-visual-garmin-start.yaml
 ```
 
-Env pattern: `UITEST_MODE` + fixtures + `UITEST_SKIP_ONBOARDING` (+ `UITEST_GARMIN_PAIRED` for paired path).
+Env pattern: `UITEST_MODE` + fixtures + `AF_SKIP_ONBOARDING` (+ `AF_FAULT_GARMIN_PAIRED` for paired path).
 
 ## Screenshots
 

@@ -26,7 +26,7 @@ On-your-watches rows are inert. Tapping must open a **watch item sheet** (never 
 | CTA | Dim `No changes yet` → lime `Replace on watch · N change(s)` → busy `Updating on watch…` |
 | Apple replace | Recompose → remove this plan → schedule new plan **same slot/date**; never silent empty slot |
 | Garmin replace | Regenerate FIT → `recordPush` same workout id; waiting stays waiting |
-| Demo | `AMA2375_DEMO` / `UITEST_FORCE_WATCH_MANAGER` → delayed mock Replace |
+| Demo | `AF_DEMO_WATCH_MANAGER` / `AF_DEMO_WATCH_MANAGER` → delayed mock Replace |
 | Live | Demo off → real WorkoutKit / Garmin push paths |
 | Toast | `beginPending("Updating on watch…")` → `Replaced ✓` / `Queue updated ✓` / real error |
 | Counter reset | Only on confirmed success |

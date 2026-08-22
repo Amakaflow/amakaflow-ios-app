@@ -54,9 +54,9 @@ for attempt in 1 2 3; do
   xcrun simctl terminate "$UDID" "$BUNDLE_ID" 2>/dev/null || true
   sleep 2
   xcrun simctl launch "$UDID" "$BUNDLE_ID" \
-    -UITEST_SKIP_ONBOARDING true \
-    -UITEST_SKIP_APPLE_WATCH true \
-    -UITEST_USE_FIXTURES true
+    -AF_SKIP_ONBOARDING true \
+    -AF_SKIP_APPLE_WATCH true \
+    -AF_USE_FIXTURES true
   sleep 12
   if authed; then
     echo "[baseline] authed shell up (attempt $attempt)"

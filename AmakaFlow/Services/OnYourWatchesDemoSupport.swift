@@ -3,7 +3,7 @@
 //  AmakaFlow
 //
 //  AMA-2375: fixture snapshot / queue / Apple rows for simulator dogfood
-//  (`UITEST_FORCE_WATCH_MANAGER=true` or `AMA2375_DEMO=true`).
+//  (`AF_DEMO_WATCH_MANAGER=true` or `AF_DEMO_WATCH_MANAGER=true`).
 //
 
 import Foundation

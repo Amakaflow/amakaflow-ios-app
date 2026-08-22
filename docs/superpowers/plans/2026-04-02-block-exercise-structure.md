@@ -1029,12 +1029,12 @@ git commit -m "test(AMA-1409): Add unit tests for BlockToIntervalConverter and W
 ## Task 9: Update Fixture Data + Maestro E2E
 
 **Files:**
-- Modify: Fixture workout data (wherever UITEST_FIXTURES are defined)
+- Modify: Fixture workout data (wherever AF_FIXTURE_NAMES are defined)
 - Modify: `flows/ios/ama-1218-pairing-navigation.yaml` in amakaflow-automation (optional)
 
 - [ ] **Step 1: Find where fixture workouts are defined in the iOS app**
 
-Search for `UITEST_FIXTURES` or `FixtureWorkoutRepository` or `amrap_10min` in the iOS codebase to find where mock workouts are created.
+Search for `AF_FIXTURE_NAMES` or `FixtureWorkoutRepository` or `amrap_10min` in the iOS codebase to find where mock workouts are created.
 
 - [ ] **Step 2: Update fixture workouts to include blocks**
 

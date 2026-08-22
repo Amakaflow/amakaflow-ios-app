@@ -11,7 +11,7 @@ The entire iOS friends feature runs on `InMemoryFriendsSharingService` (demo see
 1. **Repo amakaflow-backend**: staging Supabase migration (Mgmt API only — never prod): `friendships` (requester/addressee/status pending|accepted, unique pair) + `workout_shares` (immutable workout_snapshot jsonb, note, lineage_id, status sent|seen|saved|dismissed). No notification events for decline/cancel/remove — ever.
 2. **mobile-bff**: new `friends.py` router — friends CRUD + search-by-handle + shares send/inbox/seen/save/dismiss (save idempotent). Clerk JWT auth; participants-only authorization. BFF-owned camelCase models; **regenerate BOTH OpenAPI snapshots in the same PR** (verify the artifact — the check script exits 0 on failure).
 3. **Pre-check (blocker)**: confirm Clerk usernames are enabled on staging (ruling-mite-84) — handle = Clerk username. If not, add a claim-handle step and note it on the ticket.
-4. **Repo amakaflow-ios-app**: `BFFFriendsSharingService: FriendsSharingProviding` calling the new endpoints; keep `InMemoryFriendsSharingService` for previews + `UITEST_USE_FIXTURES` only. No UI changes.
+4. **Repo amakaflow-ios-app**: `BFFFriendsSharingService: FriendsSharingProviding` calling the new endpoints; keep `InMemoryFriendsSharingService` for previews + `AF_USE_FIXTURES` only. No UI changes.
 5. Gate: L4 harness green; the two-account dogfood path in the ticket.
 
 ## AMA-2391 — Strava live wiring (backend exists — deploy + swap)

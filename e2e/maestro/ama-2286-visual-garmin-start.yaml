@@ -1,16 +1,15 @@
 # AMA-2286 / AMA-2310: Start → Garmin shows real push status (not stub).
 # Device row confirms immediately (no separate confirm control).
-# Forced fail: relaunch with UITEST_GARMIN_PUSH_FAIL=not_paired.
+# Forced fail: relaunch with AF_FAULT_GARMIN_PUSH_FAIL=not_paired.
 appId: com.myamaka.AmakaFlowCompanion
 ---
 - launchApp:
     clearState: true
     arguments:
-      UITEST_MODE: "1"
-      UITEST_USE_FIXTURES: "1"
-      UITEST_FIXTURES: "strength_block_w1"
-      UITEST_SKIP_ONBOARDING: "true"
-      UITEST_GARMIN_PAIRED: "1"
+      AF_USE_FIXTURES: "1"
+      AF_FIXTURE_NAMES: "strength_block_w1"
+      AF_SKIP_ONBOARDING: "true"
+      AF_FAULT_GARMIN_PAIRED: "1"
 - tapOn:
     id: "library_tab"
 - tapOn:
@@ -36,12 +35,11 @@ appId: com.myamaka.AmakaFlowCompanion
 - launchApp:
     clearState: true
     arguments:
-      UITEST_MODE: "1"
-      UITEST_USE_FIXTURES: "1"
-      UITEST_FIXTURES: "strength_block_w1"
-      UITEST_SKIP_ONBOARDING: "true"
-      UITEST_GARMIN_PAIRED: "1"
-      UITEST_GARMIN_PUSH_FAIL: "not_paired"
+      AF_USE_FIXTURES: "1"
+      AF_FIXTURE_NAMES: "strength_block_w1"
+      AF_SKIP_ONBOARDING: "true"
+      AF_FAULT_GARMIN_PAIRED: "1"
+      AF_FAULT_GARMIN_PUSH_FAIL: "not_paired"
 - tapOn:
     id: "library_tab"
 - tapOn:

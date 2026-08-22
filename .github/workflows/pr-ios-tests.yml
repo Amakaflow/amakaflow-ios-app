@@ -620,17 +620,17 @@ jobs:
       - name: Run Maestro flows
         id: maestro
         env:
-          UITEST_CLERK_PASSWORD: ${{ secrets.UITEST_CLERK_PASSWORD }}
+          AF_CLERK_PASSWORD: ${{ secrets.UITEST_CLERK_PASSWORD }}
         run: |
           set +e
           mkdir -p maestro-output
           OVERALL=0
 
           MAESTRO_ENV=()
-          if [[ -n "${UITEST_CLERK_PASSWORD:-}" ]]; then
-            MAESTRO_ENV=(-e "UITEST_CLERK_PASSWORD=${UITEST_CLERK_PASSWORD}")
+          if [[ -n "${AF_CLERK_PASSWORD:-}" ]]; then
+            MAESTRO_ENV=(-e "AF_CLERK_PASSWORD=${AF_CLERK_PASSWORD}")
           else
-            echo "::warning::UITEST_CLERK_PASSWORD not set — flows using clerk-signin.yaml will fail auth steps."
+            echo "::warning::AF_CLERK_PASSWORD not set — flows using clerk-signin.yaml will fail auth steps."
           fi
 
           # AMA-1821: ALL flows are warn-only on initial rollout. The
@@ -689,16 +689,16 @@ jobs:
         id: cj01-l4
         continue-on-error: true
         env:
-          UITEST_CLERK_PASSWORD: ${{ secrets.UITEST_CLERK_PASSWORD }}
+          AF_CLERK_PASSWORD: ${{ secrets.UITEST_CLERK_PASSWORD }}
         run: |
           set +e
           mkdir -p maestro-output/cj01-l4
           FLOW="e2e/maestro/flows/workout-lifecycle/ama1839-cj01-signin-generate-saveend-evidence.yaml"
           MAESTRO_ENV=()
-          if [[ -n "${UITEST_CLERK_PASSWORD:-}" ]]; then
-            MAESTRO_ENV=(-e "UITEST_CLERK_PASSWORD=${UITEST_CLERK_PASSWORD}")
+          if [[ -n "${AF_CLERK_PASSWORD:-}" ]]; then
+            MAESTRO_ENV=(-e "AF_CLERK_PASSWORD=${AF_CLERK_PASSWORD}")
           else
-            echo "::warning::UITEST_CLERK_PASSWORD not set — CJ-01 L4 clerk-signin will fail."
+            echo "::warning::AF_CLERK_PASSWORD not set — CJ-01 L4 clerk-signin will fail."
           fi
           echo "::group::maestro test ${FLOW} (evidence-only)"
           maestro test "${FLOW}" \

@@ -39,9 +39,6 @@ final class AmakaFlowWatch_Watch_AppUITestsLaunchTests: XCTestCase {
             "--uitesting",
             "--reset-state"
         ]
-        app.launchEnvironment = [
-            "UITEST_MODE": "1"
-        ]
         app.launch()
 
         // Verify the app is running
@@ -84,9 +81,6 @@ final class AmakaFlowWatch_Watch_AppUITestsLaunchTests: XCTestCase {
         app.launchArguments = [
             "--uitesting",
             "--reset-state"
-        ]
-        app.launchEnvironment = [
-            "UITEST_MODE": "1"
         ]
         app.launch()
 

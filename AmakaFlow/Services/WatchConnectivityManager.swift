@@ -46,7 +46,7 @@ class WatchConnectivityManager: NSObject, ObservableObject {
 
         #if DEBUG
         if LaunchConfig.active?.skipAppleWatch == true {
-            print("[WatchConnectivityManager] Skipping WCSession setup (UITEST_SKIP_APPLE_WATCH=true)")
+            print("[WatchConnectivityManager] Skipping WCSession setup (AF_SKIP_APPLE_WATCH=true)")
             return
         }
         #endif

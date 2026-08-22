@@ -18,10 +18,10 @@ final class AMA2376LibraryCollectionsSmokeUITests: XCTestCase {
         app = XCUIApplication()
         app.launchArguments = ["--uitesting"]
         app.launchEnvironment = [
-            "UITEST_CLERK_TEST_SESSION": "user_id=user_ama2376_smoke,email=ama2376@example.test,name=AMA2376 Smoke",
-            "UITEST_SKIP_ONBOARDING": "true",
-            "UITEST_SKIP_APPLE_WATCH": "true",
-            "UITEST_USE_FIXTURES": "true"
+            "AF_SESSION_IDENTITY": "user_id=user_ama2376_smoke,email=ama2376@example.test,name=AMA2376 Smoke",
+            "AF_SKIP_ONBOARDING": "true",
+            "AF_SKIP_APPLE_WATCH": "true",
+            "AF_USE_FIXTURES": "true"
         ]
         app.launch()
         dismissBlockingModalsIfPresent()

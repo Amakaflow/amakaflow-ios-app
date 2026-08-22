@@ -42,9 +42,9 @@ AmakaFlowCompanionUITests/
 Provide a real Clerk test user through environment variables before running UI tests:
 
 ```bash
-export UITEST_CLERK_EMAIL="ios-e2e@example.com"
-export UITEST_CLERK_PASSWORD="..."
-export UITEST_CLERK_PUBLISHABLE_KEY="pk_test_..."
+export AF_CLERK_EMAIL="ios-e2e@example.com"
+export AF_CLERK_PASSWORD="..."
+export AF_CLERK_PUBLISHABLE_KEY="pk_test_..."
 export TEST_API_BASE_URL="http://localhost:8001"
 ```
 
@@ -115,15 +115,15 @@ app.launch()
 
 This sets:
 - `--uitesting` - Indicates UI test mode
-- `UITEST_CLERK_EMAIL` / `UITEST_CLERK_PASSWORD` - real Clerk test user
-- `UITEST_CLERK_PUBLISHABLE_KEY` - Clerk publishable key for the test environment
+- `AF_CLERK_EMAIL` / `AF_CLERK_PASSWORD` - real Clerk test user
+- `AF_CLERK_PUBLISHABLE_KEY` - Clerk publishable key for the test environment
 
 The app checks for these in `AmakaFlowCompanionApp.swift`:
 
 ```swift
 #if DEBUG
 if CommandLine.arguments.contains("--uitesting") {
-    // Drive the Clerk AuthView using UITEST_CLERK_EMAIL and UITEST_CLERK_PASSWORD.
+    // Drive the Clerk AuthView using AF_CLERK_EMAIL and AF_CLERK_PASSWORD.
 }
 #endif
 ```
@@ -167,7 +167,7 @@ Uses [XCTHealthKit](https://github.com/StanfordBDHG/XCTHealthKit) from Stanford 
 
 ### Tests fail at sign-in
 
-Ensure `UITEST_CLERK_EMAIL`, `UITEST_CLERK_PASSWORD`, and `UITEST_CLERK_PUBLISHABLE_KEY` are set for a valid Clerk test user.
+Ensure `AF_CLERK_EMAIL`, `AF_CLERK_PASSWORD`, and `AF_CLERK_PUBLISHABLE_KEY` are set for a valid Clerk test user.
 
 ### Watch tests are skipped
 

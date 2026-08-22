@@ -320,8 +320,8 @@ final class AppleStartHandoffServiceTests: XCTestCase {
     }
 
     func testForcedFailureEnvironment() async {
-        setenv("UITEST_APPLE_TRY_FAIL", "authorization_denied", 1)
-        defer { unsetenv("UITEST_APPLE_TRY_FAIL") }
+        setenv("AF_FAULT_APPLE_START_FAIL", "authorization_denied", 1)
+        defer { unsetenv("AF_FAULT_APPLE_START_FAIL") }
         let service = AppleStartHandoffService(
             pairingReader: MockPairingReader(read: .unknown),
             workoutKitSaver: MockWorkoutKitSaver()
@@ -383,7 +383,7 @@ final class AppleStartHandoffService {
         } else {
             self.workoutKitSaver = nil
         }
-        // keep existing UITEST_APPLE_TRY_FAIL default for forceFailureCode
+        // keep existing AF_FAULT_APPLE_START_FAIL default for forceFailureCode
         self.forceFailureCode = forceFailureCode ?? { /* same as today */ }
     }
 

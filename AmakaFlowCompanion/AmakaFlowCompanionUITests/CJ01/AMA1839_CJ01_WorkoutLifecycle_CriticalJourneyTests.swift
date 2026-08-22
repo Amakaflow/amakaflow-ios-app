@@ -20,7 +20,7 @@
 //    `accessibilityIdentifier` values anywhere in the SDK, so we
 //    cannot deterministically tap the email/password/continue fields
 //    from XCUITest. AMA-1843 tracks the UITest-only bypass
-//    (UITEST_CLERK_TEST_SESSION env var that programmatically creates
+//    (AF_SESSION_IDENTITY env var that programmatically creates
 //    a Clerk session via the Backend API and persists the JWT to
 //    keychain so the app routes past PairingView). Until 1843 lands,
 //    the canonical journey test is gated on that env var being
@@ -71,7 +71,7 @@ final class AMA1839_CJ01_WorkoutLifecycle_CriticalJourneyTests: XCTestCase {
     /// CANONICAL CJ-01 happy path. Per blueprint Phase 2, when this test
     /// passes green twice in a row L3 of CJ-01 is Done.
     ///
-    /// Currently gated on `UITEST_CLERK_TEST_SESSION` (AMA-1843). When
+    /// Currently gated on `AF_SESSION_IDENTITY` (AMA-1843). When
     /// the env var is absent the test skips — it does NOT silently
     /// pass. Skip is the honest signal: "we can't drive Clerk signin
     /// deterministically, here's the ticket that will fix it."
@@ -80,7 +80,7 @@ final class AMA1839_CJ01_WorkoutLifecycle_CriticalJourneyTests: XCTestCase {
 
         // Step 1 — Signed in (handled by 1843 bypass; verify state).
         XCTAssertTrue(waitForTabBar(timeout: 30),
-                      "App did not reach signed-in home (tab bar) within 30 s — UITEST_CLERK_TEST_SESSION bypass may not have hydrated the session")
+                      "App did not reach signed-in home (tab bar) within 30 s — AF_SESSION_IDENTITY bypass may not have hydrated the session")
 
         // Step 2 — Navigate to Coach (lives under More in this app).
         try openCoachFromMore()
@@ -219,10 +219,10 @@ final class AMA1839_CJ01_WorkoutLifecycle_CriticalJourneyTests: XCTestCase {
         var env = app.launchEnvironment
         env["TEST_ENVIRONMENT"] = ProcessInfo.processInfo.environment["TEST_ENVIRONMENT"] ?? "staging"
         for key in [
-            "UITEST_CLERK_EMAIL",
-            "UITEST_CLERK_PASSWORD",
-            "UITEST_CLERK_PUBLISHABLE_KEY",
-            "UITEST_CLERK_TEST_SESSION"
+            "AF_CLERK_EMAIL",
+            "AF_CLERK_PASSWORD",
+            "AF_CLERK_PUBLISHABLE_KEY",
+            "AF_SESSION_IDENTITY"
         ] {
             if let v = ProcessInfo.processInfo.environment[key] { env[key] = v }
         }
@@ -237,11 +237,11 @@ final class AMA1839_CJ01_WorkoutLifecycle_CriticalJourneyTests: XCTestCase {
     /// xcresult, not failures, and surface the unblocking ticket
     /// directly in the test log.
     private func requireClerkTestSessionOrSkip() throws {
-        guard ProcessInfo.processInfo.environment["UITEST_CLERK_TEST_SESSION"] != nil else {
+        guard ProcessInfo.processInfo.environment["AF_SESSION_IDENTITY"] != nil else {
             throw XCTSkip(
                 "CJ-01 L3 cannot run end-to-end until AMA-1843 lands: " +
                 "ClerkKitUI ships no accessibilityIdentifier values, so XCUITest cannot " +
-                "drive the signin step. Set UITEST_CLERK_TEST_SESSION=<session_jwt> to " +
+                "drive the signin step. Set AF_SESSION_IDENTITY=<session_jwt> to " +
                 "enable the UITest-only signin bypass once AMA-1843 is implemented."
             )
         }

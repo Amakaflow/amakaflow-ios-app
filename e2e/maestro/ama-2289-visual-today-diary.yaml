@@ -1,7 +1,7 @@
 # AMA-2289 visual validation — Today completed diary
 #
-# Auth: UITEST_CLERK_TEST_SESSION + UITEST_SKIP_ONBOARDING + fixtures.
-# Empty: UITEST_FIXTURE_STATE=empty
+# Auth: AF_SESSION_IDENTITY + AF_SKIP_ONBOARDING + fixtures.
+# Empty: AF_FIXTURE_STATE=empty
 # Populated: default fixtures include Garmin + phone completions for today.
 appId: com.myamaka.AmakaFlowCompanion
 ---

@@ -18,21 +18,20 @@ final class ProgramWizardEntryPointUITests: XCTestCase {
         app = XCUIApplication()
         app.launchArguments = ["--uitesting"]
         var launchEnvironment = [
-            "UITEST_CLERK_TEST_SESSION": "user_id=user_ama2096,email=ama2096@example.test,name=AMA2096",
-            "UITEST_CLERK_EMAIL": "ama2096@example.test",
-            "UITEST_CLERK_PASSWORD": "unused-mock-session",
-            "UITEST_CLERK_PUBLISHABLE_KEY": ProcessInfo.processInfo.environment["UITEST_CLERK_PUBLISHABLE_KEY"] ?? "pk_test_cnVsaW5nLW1pdGUtODQuY2xlcmsuYWNjb3VudHMuZGV2JA==",
-            "UITEST_SKIP_ONBOARDING": "true",
-            "UITEST_SKIP_APPLE_WATCH": "true",
-            "UITEST_USE_FIXTURES": "true",
-            "UITEST_FIXTURE_STATE": "empty",
-            "UITEST_MODE": "true",
+            "AF_SESSION_IDENTITY": "user_id=user_ama2096,email=ama2096@example.test,name=AMA2096",
+            "AF_CLERK_EMAIL": "ama2096@example.test",
+            "AF_CLERK_PASSWORD": "unused-mock-session",
+            "AF_CLERK_PUBLISHABLE_KEY": ProcessInfo.processInfo.environment["AF_CLERK_PUBLISHABLE_KEY"] ?? "pk_test_cnVsaW5nLW1pdGUtODQuY2xlcmsuYWNjb3VudHMuZGV2JA==",
+            "AF_SKIP_ONBOARDING": "true",
+            "AF_SKIP_APPLE_WATCH": "true",
+            "AF_USE_FIXTURES": "true",
+            "AF_FIXTURE_STATE": "empty",
             // Wizard ships OFF by default (gated until the mobile-bff
             // /v1/programs/*/stream routes deploy); enable it for this test.
             "AMAKAFLOW_PROGRAM_WIZARD": "1"
         ]
         if name.contains("ProgramsList") {
-            launchEnvironment["UITEST_START_SCREEN"] = "programs"
+            launchEnvironment["AF_START_SCREEN"] = "programs"
         }
         app.launchEnvironment = launchEnvironment
         app.launch()

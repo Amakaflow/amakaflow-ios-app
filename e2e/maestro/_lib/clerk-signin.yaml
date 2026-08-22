@@ -1,7 +1,7 @@
 # AMA-1837 / AMA-2269 — Reusable Clerk staging sign-in subflow
 #
 # Primary path (AMA-1849 + AMA-2269): programmatic password session via
-# `UITEST_CLERK_REAL_SESSION_EMAIL` + `UITEST_CLERK_PASSWORD` injected at
+# `AF_SESSION_CLERK_EMAIL` + `AF_CLERK_PASSWORD` injected at
 # launchApp. Staging Clerk is password-first for the CI test user — UI
 # email-code sign-in was the root cause of af_tabbar timeouts in CI.
 #
@@ -10,23 +10,23 @@
 #
 # Test email (public Clerk test fixture):
 #   claude+clerk_test@amakaflow.dev
-# Password: pass at run time via -e UITEST_CLERK_PASSWORD=... (never commit).
+# Password: pass at run time via -e AF_CLERK_PASSWORD=... (never commit).
 
 appId: com.myamaka.AmakaFlowCompanion
 env:
   USE_FIXTURES: ${USE_FIXTURES || "false"}
-  UITEST_CLERK_PASSWORD: ${UITEST_CLERK_PASSWORD}
+  AF_CLERK_PASSWORD: ${AF_CLERK_PASSWORD}
 ---
 - launchApp:
     appId: com.myamaka.AmakaFlowCompanion
     permissions:
       notifications: deny
     arguments:
-      UITEST_CLERK_REAL_SESSION_EMAIL: "claude+clerk_test@amakaflow.dev"
-      UITEST_CLERK_PASSWORD: ${UITEST_CLERK_PASSWORD}
-      UITEST_SKIP_APPLE_WATCH: "true"
-      UITEST_SKIP_ONBOARDING: "true"
-      UITEST_USE_FIXTURES: ${USE_FIXTURES}
+      AF_SESSION_CLERK_EMAIL: "claude+clerk_test@amakaflow.dev"
+      AF_CLERK_PASSWORD: ${AF_CLERK_PASSWORD}
+      AF_SKIP_APPLE_WATCH: "true"
+      AF_SKIP_ONBOARDING: "true"
+      AF_USE_FIXTURES: ${USE_FIXTURES}
 - waitForAnimationToEnd:
     timeout: 5000
 
@@ -113,7 +113,7 @@ env:
             - tapOn:
                 text: "Enter your password"
             - eraseText
-            - inputText: ${UITEST_CLERK_PASSWORD}
+            - inputText: ${AF_CLERK_PASSWORD}
             - tapOn:
                 text: "Continue"
             - waitForAnimationToEnd:
@@ -125,7 +125,7 @@ env:
             - tapOn:
                 text: "Enter your password"
             - eraseText
-            - inputText: ${UITEST_CLERK_PASSWORD}
+            - inputText: ${AF_CLERK_PASSWORD}
             - tapOn:
                 text: "Continue"
             - waitForAnimationToEnd:

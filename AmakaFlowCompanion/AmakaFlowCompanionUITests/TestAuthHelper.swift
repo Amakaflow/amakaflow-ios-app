@@ -14,9 +14,9 @@ enum TestAuthHelper {
     static var hasRequiredClerkCredentials: Bool {
         let environment = ProcessInfo.processInfo.environment
         return [
-            "UITEST_CLERK_EMAIL",
-            "UITEST_CLERK_PASSWORD",
-            "UITEST_CLERK_PUBLISHABLE_KEY"
+            "AF_CLERK_EMAIL",
+            "AF_CLERK_PASSWORD",
+            "AF_CLERK_PUBLISHABLE_KEY"
         ].allSatisfy { key in
             guard let value = environment[key] else { return false }
             return !value.isEmpty && !value.hasPrefix("$(")
@@ -34,7 +34,7 @@ enum TestAuthHelper {
         guard hasRequiredClerkCredentials || isCI else {
             throw XCTSkip(
                 "Skipping authenticated UI E2E locally because Clerk test credentials are not configured. " +
-                "Set UITEST_CLERK_EMAIL, UITEST_CLERK_PASSWORD, and UITEST_CLERK_PUBLISHABLE_KEY to run it. CI does not skip this guard."
+                "Set AF_CLERK_EMAIL, AF_CLERK_PASSWORD, and AF_CLERK_PUBLISHABLE_KEY to run it. CI does not skip this guard."
             )
         }
     }
@@ -49,23 +49,23 @@ enum TestAuthHelper {
         // Real Clerk test-user pattern. Tests should drive the Clerk UI with these credentials
         // instead of bypassing backend auth headers. Values are supplied by CI/local env.
         let processEnvironment = ProcessInfo.processInfo.environment
-        let clerkEmail = processEnvironment["UITEST_CLERK_EMAIL"] ?? ""
-        let clerkPassword = processEnvironment["UITEST_CLERK_PASSWORD"] ?? ""
-        let clerkKey = processEnvironment["UITEST_CLERK_PUBLISHABLE_KEY"] ?? ""
+        let clerkEmail = processEnvironment["AF_CLERK_EMAIL"] ?? ""
+        let clerkPassword = processEnvironment["AF_CLERK_PASSWORD"] ?? ""
+        let clerkKey = processEnvironment["AF_CLERK_PUBLISHABLE_KEY"] ?? ""
 
         guard !clerkEmail.isEmpty, !clerkPassword.isEmpty, !clerkKey.isEmpty else {
             XCTFail(
-                "Missing required Clerk test credentials. Set UITEST_CLERK_EMAIL, " +
-                "UITEST_CLERK_PASSWORD, and UITEST_CLERK_PUBLISHABLE_KEY in the environment " +
+                "Missing required Clerk test credentials. Set AF_CLERK_EMAIL, " +
+                "AF_CLERK_PASSWORD, and AF_CLERK_PUBLISHABLE_KEY in the environment " +
                 "or CI secrets before running UI tests."
             )
             return
         }
 
         var launchEnv: [String: String] = [
-            "UITEST_CLERK_EMAIL": clerkEmail,
-            "UITEST_CLERK_PASSWORD": clerkPassword,
-            "UITEST_CLERK_PUBLISHABLE_KEY": clerkKey,
+            "AF_CLERK_EMAIL": clerkEmail,
+            "AF_CLERK_PASSWORD": clerkPassword,
+            "AF_CLERK_PUBLISHABLE_KEY": clerkKey,
             "TEST_ENVIRONMENT": environment
         ]
         // Only set TEST_API_BASE_URL when explicitly provided or running against localhost

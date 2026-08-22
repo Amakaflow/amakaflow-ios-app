@@ -20,10 +20,10 @@ extension FixtureAPIService {
         livePhoneSetLogsById = [:]
     }
 
-    /// Fixture completions for Today diary — empty when `UITEST_FIXTURE_STATE=empty`.
+    /// Fixture completions for Today diary — empty when `AF_FIXTURE_STATE=empty`.
     static func diaryCompletions(limit: Int, offset: Int) -> [WorkoutCompletion] {
         if LaunchConfig.active?.isLibraryEmpty == true {
-            print("[FixtureAPIService] UITEST_FIXTURE_STATE=empty → no completions")
+            print("[FixtureAPIService] AF_FIXTURE_STATE=empty → no completions")
             return []
         }
         // Newest-first: live phone sessions, then static diary samples.

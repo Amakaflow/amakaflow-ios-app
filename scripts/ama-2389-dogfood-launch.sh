@@ -18,10 +18,10 @@ open -a Simulator --args -CurrentDeviceUDID "$SIM_UDID" 2>/dev/null || true
 
 echo "[ama-2389] launching $BUNDLE_ID on $SIM_UDID with fixtures + friends demo…"
 xcrun simctl launch "$SIM_UDID" "$BUNDLE_ID" \
-  -UITEST_CLERK_TEST_SESSION "user_id=user_ama2389_dogfood,email=claude+clerk_test@amakaflow.dev,name=AMA2389 Dogfood" \
-  -UITEST_SKIP_ONBOARDING true \
-  -UITEST_SKIP_APPLE_WATCH true \
-  -UITEST_USE_FIXTURES true
+  -AF_SESSION_IDENTITY "user_id=user_ama2389_dogfood,email=claude+clerk_test@amakaflow.dev,name=AMA2389 Dogfood" \
+  -AF_SKIP_ONBOARDING true \
+  -AF_SKIP_APPLE_WATCH true \
+  -AF_USE_FIXTURES true
 
 cat <<EOF
 

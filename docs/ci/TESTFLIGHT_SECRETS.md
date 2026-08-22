@@ -189,8 +189,8 @@ Dev key is the public solid-chicken-50 instance (same as `scripts/sim-build.sh`)
 
 | Secret | Purpose |
 |--------|---------|
-| `UITEST_CLERK_PASSWORD` | Maestro golden-path sign-in |
-| `UITEST_CLERK_EMAIL` | Reserved for future explicit email override |
+| `AF_CLERK_PASSWORD` | Maestro golden-path sign-in |
+| `AF_CLERK_EMAIL` | Reserved for future explicit email override |
 | `TELEGRAM_BOT_TOKEN` / `TELEGRAM_CHAT_ID` | Page on smoke failure |
 | `LINEAR_API_KEY` | Create P1 on smoke failure |
 | `SENTRY_AUTH_TOKEN` | Used by Xcode “Upload Debug Symbols to Sentry” build phase |

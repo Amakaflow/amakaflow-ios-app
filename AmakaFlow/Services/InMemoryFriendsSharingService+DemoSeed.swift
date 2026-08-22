@@ -166,7 +166,7 @@ nonisolated enum InMemoryFriendsDemoSeed {
         )
 
         // Matches fixture-hiit-001 lineage (`src:` + lowercased source_url) so
-        // UITEST_USE_FIXTURES dogfood / Maestro can hit the amber dup card.
+        // AF_USE_FIXTURES dogfood / Maestro can hit the amber dup card.
         let hiitDup = WorkoutShareSnapshot(
             name: "HIIT remixed",
             sport: "cardio",

@@ -268,7 +268,7 @@ class FixtureAPIService: APIServiceProviding {
     }
 
     /// Cache-backed fixture workouts so deletes persist without relaunch.
-    /// Preserves `UITEST_FIXTURE_STATE=empty` (`[]`) and `=error` (throws).
+    /// Preserves `AF_FIXTURE_STATE=empty` (`[]`) and `=error` (throws).
     func loadedFixtureWorkouts() throws -> [Workout] {
         if let fixtureWorkoutsCache {
             return fixtureWorkoutsCache

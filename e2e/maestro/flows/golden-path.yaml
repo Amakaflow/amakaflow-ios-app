@@ -18,7 +18,7 @@
 # tripped, not just that some row exists.
 #
 # Preconditions (same as clerk-signin.yaml): Release/staging build with the
-# ruling-mite-84 Clerk key; UITEST_CLERK_PASSWORD provided at run time;
+# ruling-mite-84 Clerk key; AF_CLERK_PASSWORD provided at run time;
 # sim has network to *.clerk.accounts.dev + staging hosts.
 #
 # AMA-2277: all extendedWaitUntil / scrollUntilVisible / assertVisible waits

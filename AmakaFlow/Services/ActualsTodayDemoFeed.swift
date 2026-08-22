@@ -4,7 +4,7 @@
 //
 //  AMA-2387 DEBUG: seeds Today with merge / map / fill-in debt so the flow
 //  can be judged in the real app shell (tabs + Today chrome) without live ingest.
-//  Activate after Connect, or launch with AMA2387_TODAY_DEMO=true.
+//  Activate after Connect, or launch with AF_DEMO_ACTUALS_TODAY=true.
 //
 
 // swiftlint:disable file_length
@@ -235,7 +235,7 @@ final class ActualsTodayDemoFeed: ObservableObject {
     /// AMA-2391: after Strava OAuth succeeds, pull sync-completed into the Today rail.
     /// AMA-2419: after Apple Health grant, pull HKWorkout samples the same way.
     /// AMA-2422: when multiple sources are linked, load all and certain-dedupe.
-    /// Demo flag (`AMA2387_TODAY_DEMO`) still wins in DEBUG for fixture dogfood.
+    /// Demo flag (`AF_DEMO_ACTUALS_TODAY`) still wins in DEBUG for fixture dogfood.
     func handleProviderConnected(
         _ provider: ActualsSourceProvider,
         sync: ActualsSyncProgressStore,

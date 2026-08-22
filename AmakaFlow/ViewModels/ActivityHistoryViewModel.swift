@@ -197,7 +197,7 @@ class ActivityHistoryViewModel: ObservableObject {
 
         // If not authenticated, show empty state (no mock data).
         // DEBUG: seed handoff timeline so simulator verification works without pairing/backend.
-        // AMA-2387: skip when UITEST_FIXTURE_STATE=empty so the teach card can show.
+        // AMA-2387: skip when AF_FIXTURE_STATE=empty so the teach card can show.
         if !hasAuth {
             #if DEBUG
             seedDebugTodayDiarySample(reason: "unpaired")
@@ -353,7 +353,7 @@ class ActivityHistoryViewModel: ObservableObject {
             hasMoreData = false
             currentOffset = 0
             if clearError { errorMessage = nil }
-            logger.info("loadCompletions: suppressed DEBUG today seed (\(reason); UITEST_FIXTURE_STATE=empty)")
+            logger.info("loadCompletions: suppressed DEBUG today seed (\(reason); AF_FIXTURE_STATE=empty)")
             return
         }
         completions = WorkoutCompletion.todayDiarySampleData(now: nowProvider(), calendar: calendar)

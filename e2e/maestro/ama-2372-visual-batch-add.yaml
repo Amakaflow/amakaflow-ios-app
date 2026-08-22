@@ -6,7 +6,7 @@
 # run, so the amber "NOT IN YOUR GYM" marker should never appear (no
 # profile ⇒ never mark missing).
 #
-# Auth: UITEST_CLERK_TEST_SESSION + UITEST_SKIP_ONBOARDING + fixtures.
+# Auth: AF_SESSION_IDENTITY + AF_SKIP_ONBOARDING + fixtures.
 appId: com.myamaka.AmakaFlowCompanion
 ---
 - launchApp:
@@ -15,10 +15,10 @@ appId: com.myamaka.AmakaFlowCompanion
     permissions:
       notifications: deny
     arguments:
-      UITEST_CLERK_TEST_SESSION: "user_id=user_ama2372_batch_add,email=claude+clerk_test@amakaflow.dev,name=AMA2372 Visual"
-      UITEST_SKIP_ONBOARDING: "true"
-      UITEST_SKIP_APPLE_WATCH: "true"
-      UITEST_USE_FIXTURES: "true"
+      AF_SESSION_IDENTITY: "user_id=user_ama2372_batch_add,email=claude+clerk_test@amakaflow.dev,name=AMA2372 Visual"
+      AF_SKIP_ONBOARDING: "true"
+      AF_SKIP_APPLE_WATCH: "true"
+      AF_USE_FIXTURES: "true"
 - waitForAnimationToEnd:
     timeout: 5000
 - extendedWaitUntil:

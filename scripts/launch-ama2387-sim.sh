@@ -67,12 +67,12 @@ xcrun simctl install "$SIM_UDID" "$APP"
 xcrun simctl terminate "$SIM_UDID" "$BUNDLE_ID" 2>/dev/null || true
 
 echo "[ama2387] launching with Today Actuals demo flags…"
-SIMCTL_CHILD_UITEST_CLERK_TEST_SESSION='user_id=user_ama2387,email=ama2387@example.test,name=AMA2387' \
-SIMCTL_CHILD_UITEST_SKIP_ONBOARDING=true \
-SIMCTL_CHILD_UITEST_SKIP_APPLE_WATCH=true \
-SIMCTL_CHILD_UITEST_USE_FIXTURES=true \
-SIMCTL_CHILD_UITEST_FIXTURE_STATE=empty \
-SIMCTL_CHILD_AMA2387_TODAY_DEMO=true \
+SIMCTL_CHILD_AF_SESSION_IDENTITY='user_id=user_ama2387,email=ama2387@example.test,name=AMA2387' \
+SIMCTL_CHILD_AF_SKIP_ONBOARDING=true \
+SIMCTL_CHILD_AF_SKIP_APPLE_WATCH=true \
+SIMCTL_CHILD_AF_USE_FIXTURES=true \
+SIMCTL_CHILD_AF_FIXTURE_STATE=empty \
+SIMCTL_CHILD_AF_DEMO_ACTUALS_TODAY=true \
 xcrun simctl launch "$SIM_UDID" "$BUNDLE_ID"
 
 echo "[ama2387] running on $SIM_NAME only."
