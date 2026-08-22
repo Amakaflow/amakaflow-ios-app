@@ -61,7 +61,9 @@ Every changed Swift file is strictly under 300 lines.
 
 ## Commit
 
-Commit hash: recorded in the final handoff after commit creation. This report is included in that commit, so the final hash cannot be embedded here without changing the commit hash.
+Structural refactor commit: `4bdaf025cb606181505cce8295e1854e82e12ca7`.
+
+This report is updated after the structural commit so it can contain that concrete hash. The report-update commit hash is recorded in the final handoff.
 
 ## Concerns
 
