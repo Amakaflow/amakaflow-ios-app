@@ -12,6 +12,10 @@
 		AMA2510SESBLD /* SupportDiagnosticsSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2510SESREF /* SupportDiagnosticsSession.swift */; };
 		AMA2510ENTVMBLD /* SupportDiagnosticsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2510ENTVMREF /* SupportDiagnosticsViewModel.swift */; };
 		AMA2510CENTERBLD /* SupportDiagnosticsCenterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2510CENTERREF /* SupportDiagnosticsCenterView.swift */; };
+		AMA2510PROBBLD /* SupportDiagnosticsProbe.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2510PROBREF /* SupportDiagnosticsProbe.swift */; };
+		AMA2510RUNBLD /* SupportDiagnosticsProbeRunner.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2510RUNREF /* SupportDiagnosticsProbeRunner.swift */; };
+		AMA2510PRBSBLD /* SupportDiagnosticsProbes.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2510PRBSREF /* SupportDiagnosticsProbes.swift */; };
+		AMA2510STATBLD /* SupportDiagnosticsStatusView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2510STATREF /* SupportDiagnosticsStatusView.swift */; };
 		AMA2426MODBLD /* LogbookModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2426MODREF /* LogbookModels.swift */; };
 		AMA2426WUMBLD /* WeightUnitMath.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2426WUMREF /* WeightUnitMath.swift */; };
 		AMA2426CPYBLD /* LogbookCopy.swift in Sources */ = {isa = PBXBuildFile; fileRef = AMA2426CPYREF /* LogbookCopy.swift */; };
@@ -876,6 +880,10 @@
 		AMA2510SESREF /* SupportDiagnosticsSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SupportDiagnosticsSession.swift; path = ../AmakaFlow/Services/SupportDiagnostics/SupportDiagnosticsSession.swift; sourceTree = SOURCE_ROOT; };
 		AMA2510ENTVMREF /* SupportDiagnosticsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SupportDiagnosticsViewModel.swift; path = ../AmakaFlow/ViewModels/SupportDiagnosticsViewModel.swift; sourceTree = SOURCE_ROOT; };
 		AMA2510CENTERREF /* SupportDiagnosticsCenterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SupportDiagnosticsCenterView.swift; path = ../AmakaFlow/Views/SupportDiagnostics/SupportDiagnosticsCenterView.swift; sourceTree = SOURCE_ROOT; };
+		AMA2510PROBREF /* SupportDiagnosticsProbe.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SupportDiagnosticsProbe.swift; path = ../AmakaFlow/Services/SupportDiagnostics/SupportDiagnosticsProbe.swift; sourceTree = SOURCE_ROOT; };
+		AMA2510RUNREF /* SupportDiagnosticsProbeRunner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SupportDiagnosticsProbeRunner.swift; path = ../AmakaFlow/Services/SupportDiagnostics/SupportDiagnosticsProbeRunner.swift; sourceTree = SOURCE_ROOT; };
+		AMA2510PRBSREF /* SupportDiagnosticsProbes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SupportDiagnosticsProbes.swift; path = ../AmakaFlow/Services/SupportDiagnostics/SupportDiagnosticsProbes.swift; sourceTree = SOURCE_ROOT; };
+		AMA2510STATREF /* SupportDiagnosticsStatusView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SupportDiagnosticsStatusView.swift; path = ../AmakaFlow/Views/SupportDiagnostics/SupportDiagnosticsStatusView.swift; sourceTree = SOURCE_ROOT; };
 		AMA2426MODREF /* LogbookModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LogbookModels.swift; path = ../AmakaFlow/Models/LogbookModels.swift; sourceTree = SOURCE_ROOT; };
 		AMA2426WUMREF /* WeightUnitMath.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WeightUnitMath.swift; path = ../AmakaFlow/Models/WeightUnitMath.swift; sourceTree = SOURCE_ROOT; };
 		AMA2426CPYREF /* LogbookCopy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LogbookCopy.swift; path = ../AmakaFlow/Models/LogbookCopy.swift; sourceTree = SOURCE_ROOT; };
@@ -1895,6 +1903,9 @@
 				AMA2510MODREF /* SupportDiagnosticsModels.swift */,
 				AMA2510CLIREF /* SupportDiagnosticsAccessClient.swift */,
 				AMA2510SESREF /* SupportDiagnosticsSession.swift */,
+				AMA2510PROBREF /* SupportDiagnosticsProbe.swift */,
+				AMA2510RUNREF /* SupportDiagnosticsProbeRunner.swift */,
+				AMA2510PRBSREF /* SupportDiagnosticsProbes.swift */,
 				AMA1791APPDBREF /* AppDatabase.swift */,
 				AMA1791V1REF /* V1_initial_schema.swift */,
 				AMA1823V2REF /* V2_add_request_id_to_sync_queue.swift */,
@@ -2040,6 +2051,7 @@
 				S1MUL4T10N00000005 /* SimulationSettings.swift */,
 				S1MUL4T10N00000006 /* DebugSettingsView.swift */,
 				AMA2510CENTERREF /* SupportDiagnosticsCenterView.swift */,
+				AMA2510STATREF /* SupportDiagnosticsStatusView.swift */,
 				S1MUL4T10N00000007 /* SimulationBannerView.swift */,
 				S1MUL4T10N00000008 /* SimulatedWeightProvider.swift */,
 				D3P3ND1NJ3CT10N0001 /* AppDependencies.swift */,
@@ -3123,6 +3135,10 @@
 				AMA2510CLIBLD /* SupportDiagnosticsAccessClient.swift in Sources */,
 				AMA2510SESBLD /* SupportDiagnosticsSession.swift in Sources */,
 				AMA2510CENTERBLD /* SupportDiagnosticsCenterView.swift in Sources */,
+				AMA2510PROBBLD /* SupportDiagnosticsProbe.swift in Sources */,
+				AMA2510RUNBLD /* SupportDiagnosticsProbeRunner.swift in Sources */,
+				AMA2510PRBSBLD /* SupportDiagnosticsProbes.swift in Sources */,
+				AMA2510STATBLD /* SupportDiagnosticsStatusView.swift in Sources */,
 				AMA1791APPDBBLD /* AppDatabase.swift in Sources */,
 				AMA1791V1BLD /* V1_initial_schema.swift in Sources */,
 				AMA1823V2BLD /* V2_add_request_id_to_sync_queue.swift in Sources */,

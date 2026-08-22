@@ -40,12 +40,7 @@ struct SupportDiagnosticsCenterView: View {
     private var capabilitySection: some View {
         if let authorization = viewModel.authorization {
             Section {
-                capabilityRow(
-                    title: "Status",
-                    systemImage: "waveform.path.ecg",
-                    capability: .statusRead,
-                    authorization: authorization
-                )
+                statusRow(authorization: authorization)
                 capabilityRow(
                     title: "Logs",
                     systemImage: "doc.text.magnifyingglass",
@@ -61,8 +56,29 @@ struct SupportDiagnosticsCenterView: View {
             } header: {
                 Text("Diagnostics")
             } footer: {
-                Text("Status, sanitized logs, and explicit export are added in the next AMA-2510 slices.")
+                Text("Sanitized logs and explicit export are added in the next AMA-2510 slices.")
             }
+        }
+    }
+
+    @ViewBuilder
+    private func statusRow(authorization: SupportDiagnosticsAuthorization) -> some View {
+        if authorization.capabilities.contains(.statusRead) {
+            NavigationLink {
+                SupportDiagnosticsStatusView(authorization: authorization)
+            } label: {
+                capabilityLabel(
+                    title: "Status",
+                    systemImage: "waveform.path.ecg",
+                    isAuthorized: true
+                )
+            }
+        } else {
+            capabilityLabel(
+                title: "Status",
+                systemImage: "waveform.path.ecg",
+                isAuthorized: false
+            )
         }
     }
 
@@ -72,13 +88,25 @@ struct SupportDiagnosticsCenterView: View {
         capability: SupportDiagnosticsCapability,
         authorization: SupportDiagnosticsAuthorization
     ) -> some View {
+        capabilityLabel(
+            title: title,
+            systemImage: systemImage,
+            isAuthorized: authorization.capabilities.contains(capability)
+        )
+    }
+
+    private func capabilityLabel(
+        title: String,
+        systemImage: String,
+        isAuthorized: Bool
+    ) -> some View {
         HStack(spacing: 12) {
             Image(systemName: systemImage)
                 .frame(width: 24)
             Text(title)
             Spacer()
-            Image(systemName: authorization.capabilities.contains(capability) ? "checkmark.circle.fill" : "lock.fill")
-                .foregroundStyle(authorization.capabilities.contains(capability) ? .green : .secondary)
+            Image(systemName: isAuthorized ? "checkmark.circle.fill" : "lock.fill")
+                .foregroundStyle(isAuthorized ? .green : .secondary)
         }
         .accessibilityElement(children: .combine)
     }
