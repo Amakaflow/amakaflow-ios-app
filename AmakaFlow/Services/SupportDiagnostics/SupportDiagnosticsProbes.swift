@@ -1,344 +1,212 @@
+import CryptoKit
 import Foundation
-import GRDB
-import HealthKit
-import UIKit
-import WatchConnectivity
 
 nonisolated enum SupportDiagnosticsProbes {
-    static func live(authorization: SupportDiagnosticsAuthorization) -> [any SupportDiagnosticsProbe] {
+    static let approvedReachabilityServiceNames = [
+        "Mobile BFF",
+        "Mapper API",
+        "Ingestor API",
+        "Calendar API",
+        "Chat API",
+        "MCP API",
+        "Strava API"
+    ]
+
+    static let approvedLiveFieldLabels: [SupportDiagnosticsProbeID: [String]] = [
+        .appBuildDevice: [
+            "App version",
+            "Build",
+            "Bundle ID",
+            "Distribution",
+            "Device model",
+            "System",
+            "Locale",
+            "Timezone"
+        ],
+        .configuredHosts: [
+            "Environment",
+            "Mobile BFF",
+            "Mapper API",
+            "Ingestor API",
+            "Calendar API",
+            "Chat API",
+            "MCP API",
+            "Strava API"
+        ],
+        .clerkSession: [
+            "Resolved initial session",
+            "Authenticated",
+            "Active SDK session",
+            "Needs reauth",
+            "Token expiry",
+            "Last token refresh",
+            "User ID hash"
+        ],
+        .reachabilityHealth: approvedReachabilityServiceNames.flatMap {
+            ["\($0) host", "\($0) outcome", "\($0) latency"]
+        },
+        .watchConnectivity: [
+            "Supported",
+            "Paired",
+            "Watch app installed",
+            "Reachable",
+            "Activation",
+            "Last transfer result"
+        ],
+        .healthKitAuthorization: [
+            "Health data available",
+            "Actuals workout read",
+            "Protein write",
+            "Water write",
+            "Body mass write",
+            "Read status disclosure"
+        ],
+        .queues: [
+            "Sync pending",
+            "Sync in flight",
+            "Sync failed",
+            "Sync poison",
+            "Oldest sync queue age",
+            "Last sync attempt",
+            "Last safe sync error",
+            "Completion pending"
+        ],
+        .databaseHealth: [
+            "Database readable",
+            "Local schema version",
+            "Migration table",
+            "Applied migrations",
+            "Migration health",
+            "Schema tables"
+        ],
+        .grantState: [
+            "Role",
+            "Capability count",
+            "Capability wire list",
+            "Expires",
+            "Expired",
+            "Simulation state",
+            "Allowlisted feature overrides"
+        ],
+        .correlationIDs: [
+            "Existing request ID",
+            "Existing Sentry event ID",
+            "Existing Sentry trace ID"
+        ]
+    ]
+
+    static func live(
+        authorization: SupportDiagnosticsAuthorization,
+        dependencies: SupportDiagnosticsProbeDependencies = .live
+    ) -> [any SupportDiagnosticsProbe] {
         [
             AppBuildDeviceProbe(),
             ConfiguredHostsProbe(),
             ClerkSessionProbe(),
             ReachabilityHealthProbe(),
-            WatchConnectivityProbe(),
+            WatchConnectivityProbe(lastTransferState: dependencies.lastWatchTransferState),
             HealthKitAuthorizationProbe(),
             QueuesProbe(),
             DatabaseHealthProbe(),
-            GrantStateProbe(authorization: authorization),
-            CorrelationIDsProbe()
+            GrantStateProbe(
+                authorization: authorization,
+                featureOverrideState: dependencies.allowlistedFeatureOverrides
+            ),
+            CorrelationIDsProbe(provider: dependencies.correlationIdentifiers)
         ]
     }
 }
 
-private nonisolated struct AppBuildDeviceProbe: SupportDiagnosticsProbe {
-    let id: SupportDiagnosticsProbeID = .appBuildDevice
-    let title = "App, build, and device"
-    let timeout: Duration = .seconds(1)
+nonisolated struct SupportDiagnosticsProbeDependencies: Sendable {
+    let correlationIdentifiers: @Sendable () async -> SupportDiagnosticsCorrelationIdentifiers
+    let lastWatchTransferState: @Sendable () async -> SupportDiagnosticsWatchTransferState
+    let allowlistedFeatureOverrides: @Sendable () async -> SupportDiagnosticsFeatureOverrideState
 
-    func run() async throws -> [SupportDiagnosticsDisplayField] {
-        let bundle = Bundle.main
-        let version = bundle.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
-        let build = bundle.object(forInfoDictionaryKey: "CFBundleVersion") as? String
-        let identifier = bundle.bundleIdentifier
-        let device = UIDevice.current
+    static let live = SupportDiagnosticsProbeDependencies(
+        correlationIdentifiers: { .noneRecorded },
+        lastWatchTransferState: { .noneRecorded },
+        allowlistedFeatureOverrides: { .noneConfigured }
+    )
+}
 
-        return [
-            field("App version", version ?? "Unknown"),
-            field("Build", build ?? "Unknown"),
-            field("Bundle ID", identifier ?? "Unknown"),
-            field("Device model", device.model),
-            field("System", "\(device.systemName) \(device.systemVersion)")
-        ]
+nonisolated struct SupportDiagnosticsCorrelationIdentifiers: Equatable, Sendable {
+    let requestID: String?
+    let sentryEventID: String?
+    let sentryTraceID: String?
+
+    static let noneRecorded = SupportDiagnosticsCorrelationIdentifiers(
+        requestID: nil,
+        sentryEventID: nil,
+        sentryTraceID: nil
+    )
+}
+
+nonisolated enum SupportDiagnosticsWatchTransferState: Equatable, Sendable {
+    case noneRecorded
+    case recorded(action: String, outcome: String)
+}
+
+nonisolated enum SupportDiagnosticsFeatureOverrideState: Equatable, Sendable {
+    case noneConfigured
+    case configured([String])
+}
+
+nonisolated enum SupportDiagnosticsSafeSummaries {
+    static func hashedUserID(_ rawUserID: String?) -> String {
+        guard let rawUserID, !rawUserID.isEmpty else { return "None" }
+        let digest = SHA256.hash(data: Data(rawUserID.utf8))
+        let hex = digest.map { String(format: "%02x", $0) }.joined()
+        return "sha256:\(hex.prefix(16))"
+    }
+
+    static func sanitizedWatchTransferResult(state: SupportDiagnosticsWatchTransferState) -> String {
+        switch state {
+        case .noneRecorded:
+            return "None recorded"
+        case .recorded(let action, let outcome):
+            return "\(sanitizedToken(action)): \(sanitizedToken(outcome))"
+        }
+    }
+
+    static func displayIdentifier(_ identifier: String?) -> String {
+        guard let identifier, !identifier.isEmpty else { return "None recorded" }
+        return String(sanitizedToken(identifier).prefix(96))
+    }
+
+    static func featureOverrides(_ state: SupportDiagnosticsFeatureOverrideState) -> String {
+        switch state {
+        case .noneConfigured:
+            return "None"
+        case .configured(let overrides):
+            let sanitized = overrides
+                .filter { !$0.isEmpty }
+                .map(sanitizedToken)
+                .sorted()
+            return sanitized.isEmpty ? "None" : sanitized.joined(separator: ", ")
+        }
+    }
+
+    private static func sanitizedToken(_ token: String) -> String {
+        let allowed = CharacterSet.alphanumerics.union(CharacterSet(charactersIn: ".:_-"))
+        let scalars = token.unicodeScalars.map { scalar in
+            allowed.contains(scalar) ? Character(scalar) : "_"
+        }
+        return String(scalars)
     }
 }
 
-private nonisolated struct ConfiguredHostsProbe: SupportDiagnosticsProbe {
-    let id: SupportDiagnosticsProbeID = .configuredHosts
-    let title = "Configured hosts"
-    let timeout: Duration = .seconds(1)
-
-    func run() async throws -> [SupportDiagnosticsDisplayField] {
-        await MainActor.run {
-            let environment = AppEnvironment.current
-            return [
-                field("Environment", environment.rawValue),
-                field("Mobile BFF", host(from: environment.mobileBFFURL)),
-                field("Mapper API", host(from: environment.mapperAPIURL)),
-                field("Ingestor API", host(from: environment.ingestorAPIURL)),
-                field("Calendar API", host(from: environment.calendarAPIURL)),
-                field("Chat API", host(from: environment.chatAPIURL)),
-                field("MCP API", host(from: environment.mcpAPIURL))
-            ]
-        }
-    }
-}
-
-private nonisolated struct ClerkSessionProbe: SupportDiagnosticsProbe {
-    let id: SupportDiagnosticsProbeID = .clerkSession
-    let title = "Clerk session"
-    let timeout: Duration = .seconds(1)
-
-    func run() async throws -> [SupportDiagnosticsDisplayField] {
-        await MainActor.run {
-            let auth = AuthViewModel.shared
-            return [
-                field("Resolved initial session", yesNo(auth.hasResolvedInitialSession)),
-                field("Authenticated", yesNo(auth.isAuthenticated)),
-                field("Active SDK session", yesNo(auth.hasActiveSession)),
-                field("Needs reauth", yesNo(auth.needsReauth)),
-                field("Last token refresh", formatted(auth.lastTokenRefresh))
-            ]
-        }
-    }
-}
-
-private nonisolated struct ReachabilityHealthProbe: SupportDiagnosticsProbe {
-    let id: SupportDiagnosticsProbeID = .reachabilityHealth
-    let title = "Reachability and health"
-    let timeout: Duration = .seconds(4)
-
-    func run() async throws -> [SupportDiagnosticsDisplayField] {
-        let baseURL = await MainActor.run {
-            AppEnvironment.current.mobileBFFURL
-        }
-        guard let base = URL(string: baseURL) else {
-            throw SupportDiagnosticsProbeError(code: .configurationUnavailable)
-        }
-        let url = base.appending(path: "health")
-        var request = URLRequest(url: url)
-        request.httpMethod = "HEAD"
-        request.timeoutInterval = 3
-
-        let started = Date()
-        do {
-            let (_, response) = try await URLSession.shared.data(for: request)
-            guard let httpResponse = response as? HTTPURLResponse else {
-                throw SupportDiagnosticsProbeError(code: .networkUnavailable)
-            }
-            let elapsed = Int(Date().timeIntervalSince(started) * 1_000)
-            return [
-                field("Host", base.host ?? "Unknown"),
-                field("HTTP status", String(httpResponse.statusCode)),
-                field("Latency", "\(elapsed) ms")
-            ]
-        } catch let error as SupportDiagnosticsProbeError {
-            throw error
-        } catch {
-            throw SupportDiagnosticsProbeError(code: .networkUnavailable)
-        }
-    }
-}
-
-private nonisolated struct WatchConnectivityProbe: SupportDiagnosticsProbe {
-    let id: SupportDiagnosticsProbeID = .watchConnectivity
-    let title = "Watch connectivity"
-    let timeout: Duration = .seconds(1)
-
-    func run() async throws -> [SupportDiagnosticsDisplayField] {
-        await MainActor.run {
-            let session = AppDependencies.current.watchSession
-            return [
-                field("Supported", yesNo(WCSession.isSupported())),
-                field("Paired", yesNo(session.isPaired)),
-                field("Watch app installed", yesNo(session.isWatchAppInstalled)),
-                field("Reachable", yesNo(session.isReachable)),
-                field("Activation", activationDescription(session.activationState))
-            ]
-        }
-    }
-}
-
-private nonisolated struct HealthKitAuthorizationProbe: SupportDiagnosticsProbe {
-    let id: SupportDiagnosticsProbeID = .healthKitAuthorization
-    let title = "HealthKit authorization"
-    let timeout: Duration = .seconds(1)
-
-    func run() async throws -> [SupportDiagnosticsDisplayField] {
-        guard HKHealthStore.isHealthDataAvailable() else {
-            throw SupportDiagnosticsProbeError(code: .healthKitUnavailable)
-        }
-
-        let store = HKHealthStore()
-        let protein = HKQuantityType.quantityType(forIdentifier: .dietaryProtein)
-        let water = HKQuantityType.quantityType(forIdentifier: .dietaryWater)
-        let bodyMass = HKQuantityType.quantityType(forIdentifier: .bodyMass)
-
-        let actualsState = await MainActor.run {
-            LiveActualsHealthKitConnector().authorizationState.rawValue
-        }
-
-        return [
-            field("Health data available", "Yes"),
-            field("Actuals workout read", actualsState),
-            field("Protein write", authorizationDescription(protein, store: store)),
-            field("Water write", authorizationDescription(water, store: store)),
-            field("Body mass write", authorizationDescription(bodyMass, store: store)),
-            field("Read status disclosure", "Not exposed by HealthKit")
-        ]
-    }
-}
-
-private nonisolated struct QueuesProbe: SupportDiagnosticsProbe {
-    let id: SupportDiagnosticsProbeID = .queues
-    let title = "Queues"
-    let timeout: Duration = .seconds(2)
-
-    func run() async throws -> [SupportDiagnosticsDisplayField] {
-        do {
-            let summary = try await MainActor.run {
-                try AppDependencies.current.syncQueueRepository.summary()
-            }
-            let oldestAge = try await oldestSyncQueueAge()
-            let completionCount = await MainActor.run {
-                WorkoutCompletionService.shared.pendingCount
-            }
-
-            return [
-                field("Sync pending", String(summary.pendingCount)),
-                field("Sync in flight", String(summary.inFlightCount)),
-                field("Sync failed", String(summary.failedCount)),
-                field("Sync poison", String(summary.poisonCount)),
-                field("Oldest sync queue age", oldestAge ?? "None"),
-                field("Last sync attempt", formatted(summary.lastAttemptedAt)),
-                field("Last safe sync error", summary.latestError == nil ? "None" : "SYNC_QUEUE_ERROR_RECORDED"),
-                field("Completion pending", String(completionCount))
-            ]
-        } catch {
-            throw SupportDiagnosticsProbeError(code: .queueUnavailable)
-        }
-    }
-}
-
-private nonisolated struct DatabaseHealthProbe: SupportDiagnosticsProbe {
-    let id: SupportDiagnosticsProbeID = .databaseHealth
-    let title = "Database schema and migrations"
-    let timeout: Duration = .seconds(2)
-
-    func run() async throws -> [SupportDiagnosticsDisplayField] {
-        do {
-            let result = try await MainActor.run {
-                try AppDatabase.shared.dbQueue.read { database in
-                    let tables = try Int.fetchOne(
-                        database,
-                        sql: "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table'"
-                    ) ?? 0
-                    let migrations = try Int.fetchOne(
-                        database,
-                        sql: "SELECT COUNT(*) FROM grdb_migrations"
-                    ) ?? 0
-                    return (tables, migrations)
-                }
-            }
-
-            return [
-                field("Database readable", "Yes"),
-                field("Schema tables", String(result.0)),
-                field("Applied migrations", String(result.1))
-            ]
-        } catch {
-            throw SupportDiagnosticsProbeError(code: .databaseUnavailable)
-        }
-    }
-}
-
-private nonisolated struct GrantStateProbe: SupportDiagnosticsProbe {
-    let id: SupportDiagnosticsProbeID = .grantState
-    let title = "Effective grant state"
-    let timeout: Duration = .seconds(1)
-
-    let authorization: SupportDiagnosticsAuthorization
-
-    func run() async throws -> [SupportDiagnosticsDisplayField] {
-        [
-            field("Role", authorization.role.rawValue),
-            field("Capability count", String(authorization.capabilities.count)),
-            field("Expires", formatted(authorization.expiresAt)),
-            field("Expired", yesNo(isExpired))
-        ]
-    }
-
-    private var isExpired: Bool {
-        guard let expiresAt = authorization.expiresAt else { return false }
-        return expiresAt <= authorization.serverTime
-    }
-}
-
-private nonisolated struct CorrelationIDsProbe: SupportDiagnosticsProbe {
-    let id: SupportDiagnosticsProbeID = .correlationIDs
-    let title = "Correlation IDs"
-    let timeout: Duration = .seconds(1)
-
-    func run() async throws -> [SupportDiagnosticsDisplayField] {
-        [
-            field("Existing IDs", "None recorded for status probes")
-        ]
-    }
-}
-
-private nonisolated func field(_ label: String, _ value: String) -> SupportDiagnosticsDisplayField {
+nonisolated func supportDiagnosticsField(
+    _ label: String,
+    _ value: String
+) -> SupportDiagnosticsDisplayField {
     SupportDiagnosticsDisplayField(label: label, value: value)
 }
 
-private nonisolated func yesNo(_ value: Bool) -> String {
+nonisolated func supportDiagnosticsYesNo(_ value: Bool) -> String {
     value ? "Yes" : "No"
 }
 
-private nonisolated func formatted(_ date: Date?) -> String {
+nonisolated func supportDiagnosticsFormatted(_ date: Date?) -> String {
     guard let date else { return "None" }
     return date.formatted(date: .abbreviated, time: .shortened)
-}
-
-private nonisolated func host(from urlString: String) -> String {
-    guard let url = URL(string: urlString), let host = url.host else {
-        return "Invalid"
-    }
-    return host
-}
-
-private nonisolated func activationDescription(_ state: WCSessionActivationState) -> String {
-    switch state {
-    case .notActivated:
-        return "Not activated"
-    case .inactive:
-        return "Inactive"
-    case .activated:
-        return "Activated"
-    @unknown default:
-        return "Unknown"
-    }
-}
-
-private nonisolated func authorizationDescription(
-    _ type: HKQuantityType?,
-    store: HKHealthStore
-) -> String {
-    guard let type else { return "Unavailable" }
-    switch store.authorizationStatus(for: type) {
-    case .notDetermined:
-        return "Not determined"
-    case .sharingDenied:
-        return "Denied"
-    case .sharingAuthorized:
-        return "Authorized"
-    @unknown default:
-        return "Unknown"
-    }
-}
-
-@MainActor
-private func oldestSyncQueueAge(now: Date = Date()) throws -> String? {
-    try AppDatabase.shared.dbQueue.read { database in
-        let oldest = try Date.fetchOne(
-            database,
-            sql: """
-            SELECT MIN(created_at) FROM sync_queue
-            WHERE status IN (?, ?, ?)
-            """,
-            arguments: [
-                SyncQueueStatus.pending.rawValue,
-                SyncQueueStatus.failed.rawValue,
-                SyncQueueStatus.poison.rawValue
-            ]
-        )
-        guard let oldest else { return nil }
-        let age = max(0, Int(now.timeIntervalSince(oldest)))
-        if age < 60 {
-            return "\(age)s"
-        }
-        if age < 3_600 {
-            return "\(age / 60)m"
-        }
-        return "\(age / 3_600)h"
-    }
 }

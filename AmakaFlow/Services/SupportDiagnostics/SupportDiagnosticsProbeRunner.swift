@@ -4,17 +4,20 @@ nonisolated struct SupportDiagnosticsProbeRunner: Sendable {
     private let probes: [any SupportDiagnosticsProbe]
     private let now: @Sendable () -> Date
     private let sleep: @Sendable (Duration) async throws -> Void
+    private let correlationIDProvider: @Sendable () -> String?
 
     init(
         probes: [any SupportDiagnosticsProbe],
         now: @escaping @Sendable () -> Date = Date.init,
         sleep: @escaping @Sendable (Duration) async throws -> Void = { duration in
             try await Task.sleep(for: duration)
-        }
+        },
+        correlationIDProvider: @escaping @Sendable () -> String? = { nil }
     ) {
         self.probes = probes
         self.now = now
         self.sleep = sleep
+        self.correlationIDProvider = correlationIDProvider
     }
 
     func run() async -> SupportDiagnosticsSnapshot {
@@ -24,7 +27,11 @@ nonisolated struct SupportDiagnosticsProbeRunner: Sendable {
                 group.addTask {
                     await IndexedProbeResult(
                         index: index,
-                        result: execute(probe: probe, sleep: sleep)
+                        result: execute(
+                            probe: probe,
+                            sleep: sleep,
+                            correlationIDProvider: correlationIDProvider
+                        )
                     )
                 }
             }
@@ -54,30 +61,32 @@ private nonisolated enum TimedProbeOutcome: Sendable {
 
 private nonisolated func execute(
     probe: any SupportDiagnosticsProbe,
-    sleep: @escaping @Sendable (Duration) async throws -> Void
+    sleep: @escaping @Sendable (Duration) async throws -> Void,
+    correlationIDProvider: @escaping @Sendable () -> String?
 ) async -> SupportDiagnosticsProbeResult {
-    let outcome = await withTaskGroup(of: TimedProbeOutcome.self, returning: TimedProbeOutcome.self) { group in
-        group.addTask {
+    let outcome = await withCheckedContinuation { continuation in
+        let race = ProbeRace(continuation: continuation)
+        let probeTask = Task {
             do {
-                return .fields(try await probe.run())
+                await race.resolve(.fields(try await probe.run()))
             } catch let error as SupportDiagnosticsProbeError {
-                return .unavailable(error.code, error.correlationID)
+                await race.resolve(.unavailable(error.code, error.correlationID ?? correlationIDProvider()))
             } catch {
-                return .unavailable(.probeFailed, nil)
+                await race.resolve(.unavailable(.probeFailed, correlationIDProvider()))
             }
         }
-        group.addTask {
+        let timeoutTask = Task {
             do {
                 try await sleep(probe.timeout)
             } catch {
-                return .unavailable(.probeFailed, nil)
+                await race.resolve(.unavailable(.probeFailed, correlationIDProvider()))
+                return
             }
-            return .unavailable(.probeTimedOut, nil)
+            await race.resolve(.unavailable(.probeTimedOut, correlationIDProvider()))
         }
-
-        let outcome = await group.next() ?? .unavailable(.probeFailed, nil)
-        group.cancelAll()
-        return outcome
+        Task {
+            await race.installTasks([probeTask, timeoutTask])
+        }
     }
 
     switch outcome {
@@ -93,5 +102,31 @@ private nonisolated func execute(
             title: probe.title,
             availability: .unavailable(errorCode: errorCode, correlationID: correlationID)
         )
+    }
+}
+
+private actor ProbeRace {
+    private var didResolve = false
+    private var tasks: [Task<Void, Never>] = []
+    private let continuation: CheckedContinuation<TimedProbeOutcome, Never>
+
+    init(continuation: CheckedContinuation<TimedProbeOutcome, Never>) {
+        self.continuation = continuation
+    }
+
+    func installTasks(_ tasks: [Task<Void, Never>]) {
+        if didResolve {
+            tasks.forEach { $0.cancel() }
+        } else {
+            self.tasks = tasks
+        }
+    }
+
+    func resolve(_ outcome: TimedProbeOutcome) {
+        guard !didResolve else { return }
+        didResolve = true
+        continuation.resume(returning: outcome)
+        tasks.forEach { $0.cancel() }
+        tasks = []
     }
 }

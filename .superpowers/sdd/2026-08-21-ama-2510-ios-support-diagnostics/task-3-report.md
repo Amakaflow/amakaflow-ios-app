@@ -190,3 +190,175 @@ Output: none. Exit code: 0.
 
 - Final post-adjustment test execution is blocked by a simulator launch failure (`NSMachErrorDomain Code=-308`, `waiting for workers to materialize`). The final source builds for testing successfully, and the same focused plus diagnostics test selection passed before the final one-line Clerk safety tightening.
 - xcodebuild still emits existing project warnings, including generated Swift concurrency warnings and duplicate synchronized test build-file warnings. These are outside Task 3 scope and were not changed.
+
+## Fix round 1
+
+### Implementation
+
+- Added app/device distribution type, locale, and timezone fields.
+- Added Clerk token-expiry and user-ID-hash fields without parsing token bytes, JWT bodies, or raw claims. The current Clerk SDK surface used here does not report token expiry, so the probe reports the stable value `Not reported by SDK`.
+- Expanded bounded reachability checks to the configured mobile BFF, mapper, ingestor, calendar, chat, MCP, and Strava API endpoints. Output remains limited to safe service names, hostnames, status outcomes, and latency.
+- Added a typed WatchConnectivity last-transfer summary dependency and safe sanitizer. The live default reports a typed `None recorded` state until a safe recorder is wired.
+- Added grant capability wire list, simulation state, and a typed support feature override state. The live default reports typed none rather than scanning arbitrary preferences.
+- Replaced the correlation-ID stub with a typed injected provider for already-recorded request/Sentry identifiers. The live default reports typed none until safe recorders are wired.
+- Added local SQLite schema version through `PRAGMA user_version`; migration health still reads only schema metadata/counts and does not read customer rows.
+- Changed the probe runner timeout race so a timeout returns on time even if the probe ignores cancellation, while sibling probes still complete independently.
+- Added injected safe correlation IDs for generic probe failures and timeouts.
+- Split the 649-line probe implementation into focused files under `AmakaFlow/Services/SupportDiagnostics`:
+  - `SupportDiagnosticsProbes.swift` now owns factory wiring, approved contracts, safe summary helpers, and dependency types.
+  - `SupportDiagnosticsEnvironmentProbes.swift` owns app/config/session/reachability/watch probes.
+  - `SupportDiagnosticsSystemProbes.swift` owns HealthKit, queue, database, grant, and correlation probes.
+
+### Files changed
+
+- `AmakaFlow/Services/SupportDiagnostics/SupportDiagnosticsProbeRunner.swift`
+- `AmakaFlow/Services/SupportDiagnostics/SupportDiagnosticsProbes.swift`
+- `AmakaFlow/Services/SupportDiagnostics/SupportDiagnosticsEnvironmentProbes.swift`
+- `AmakaFlow/Services/SupportDiagnostics/SupportDiagnosticsSystemProbes.swift`
+- `AmakaFlowCompanion/AmakaFlowCompanionTests/SupportDiagnosticsProbeTests.swift`
+- `AmakaFlowCompanion/AmakaFlowCompanion.xcodeproj/project.pbxproj`
+
+### RED evidence
+
+Command:
+
+```bash
+SIM_NAME=$(xcrun simctl list devices available | awk '!found && match($0, /iPhone [^(]*/) {name = substr($0, RSTART, RLENGTH); sub(/[[:space:]]+$/, "", name); print name; found = 1}'); xcrun simctl boot "$SIM_NAME" || true; xcrun simctl bootstatus "$SIM_NAME" -b; xcodebuild test -project AmakaFlowCompanion/AmakaFlowCompanion.xcodeproj -scheme AmakaFlowCompanion -configuration Debug -destination "platform=iOS Simulator,name=$SIM_NAME" -derivedDataPath AmakaFlowCompanion/DerivedData -clonedSourcePackagesDirPath AmakaFlowCompanion/.spm -only-testing:AmakaFlowCompanionTests/SupportDiagnosticsProbeTests -enableCodeCoverage NO CLERK_PUBLISHABLE_KEY_DEV="pk_test_c29saWQtY2hpY2tlbi01MC5jbGVyay5hY2NvdW50cy5kZXYk" CLERK_PUBLISHABLE_KEY_STAGING="pk_test_cnVsaW5nLW1pdGUtODQuY2xlcmsuYWNjb3VudHMuZGV2JA" CLERK_PUBLISHABLE_KEY_PRODUCTION="pk_test_cnVsaW5nLW1pdGUtODQuY2xlcmsuYWNjb3VudHMuZGV2JA"
+```
+
+Relevant failing output:
+
+```text
+SupportDiagnosticsProbeTests.swift: Extra argument 'correlationIDProvider' in call
+SupportDiagnosticsProbeTests.swift: Type 'SupportDiagnosticsProbes' has no member 'approvedLiveFieldLabels'
+SupportDiagnosticsProbeTests.swift: Type 'SupportDiagnosticsProbes' has no member 'approvedReachabilityServiceNames'
+SupportDiagnosticsProbeTests.swift: Cannot find 'SupportDiagnosticsSafeSummaries' in scope
+SupportDiagnosticsProbeTests.swift: Cannot infer contextual base in reference to member 'recorded'
+Testing cancelled because the build failed.
+** TEST FAILED **
+```
+
+xcresult:
+
+```text
+AmakaFlowCompanion/DerivedData/Logs/Test/Test-AmakaFlowCompanion-2026.08.21_21-34-56--0500.xcresult
+```
+
+### GREEN evidence
+
+Focused probe tests after fixes and file split:
+
+```bash
+SIM_NAME=$(xcrun simctl list devices available | awk '!found && match($0, /iPhone [^(]*/) {name = substr($0, RSTART, RLENGTH); sub(/[[:space:]]+$/, "", name); print name; found = 1}'); xcrun simctl boot "$SIM_NAME" || true; xcrun simctl bootstatus "$SIM_NAME" -b; xcodebuild test -project AmakaFlowCompanion/AmakaFlowCompanion.xcodeproj -scheme AmakaFlowCompanion -configuration Debug -destination "platform=iOS Simulator,name=$SIM_NAME" -derivedDataPath AmakaFlowCompanion/DerivedData -clonedSourcePackagesDirPath AmakaFlowCompanion/.spm -only-testing:AmakaFlowCompanionTests/SupportDiagnosticsProbeTests -enableCodeCoverage NO CLERK_PUBLISHABLE_KEY_DEV="pk_test_c29saWQtY2hpY2tlbi01MC5jbGVyay5hY2NvdW50cy5kZXYk" CLERK_PUBLISHABLE_KEY_STAGING="pk_test_cnVsaW5nLW1pdGUtODQuY2xlcmsuYWNjb3VudHMuZGV2JA" CLERK_PUBLISHABLE_KEY_PRODUCTION="pk_test_cnVsaW5nLW1pdGUtODQuY2xlcmsuYWNjb3VudHMuZGV2JA"
+```
+
+Relevant output:
+
+```text
+** TEST SUCCEEDED **
+Test suite 'SupportDiagnosticsProbeTests' started
+Test case 'SupportDiagnosticsProbeTests.testApprovedLiveFieldContractCatchesRemovedDistributionLocaleTimezoneAndGrantFields()' passed
+Test case 'SupportDiagnosticsProbeTests.testApprovedReachabilityContractCatchesRemovedConfiguredAPIHealthProbeMutation()' passed
+Test case 'SupportDiagnosticsProbeTests.testRunnerHardTimeoutCatchesCancellationUnawareProbeMutation()' passed
+Test case 'SupportDiagnosticsProbeTests.testRunnerInjectsSafeCorrelationIDForGenericFailuresAndTimeoutsMutation()' passed
+Test case 'SupportDiagnosticsProbeTests.testSafeBoundaryContractCatchesRawIdentifierTokenAndMessageFieldsMutation()' passed
+... 8 SupportDiagnosticsProbeTests passed
+```
+
+xcresult:
+
+```text
+AmakaFlowCompanion/DerivedData/Logs/Test/Test-AmakaFlowCompanion-2026.08.21_21-47-44--0500.xcresult
+```
+
+Relevant existing diagnostics tests plus probe tests:
+
+```bash
+SIM_NAME=$(xcrun simctl list devices available | awk '!found && match($0, /iPhone [^(]*/) {name = substr($0, RSTART, RLENGTH); sub(/[[:space:]]+$/, "", name); print name; found = 1}'); xcrun simctl boot "$SIM_NAME" || true; xcrun simctl bootstatus "$SIM_NAME" -b; xcodebuild test -project AmakaFlowCompanion/AmakaFlowCompanion.xcodeproj -scheme AmakaFlowCompanion -configuration Debug -destination "platform=iOS Simulator,name=$SIM_NAME" -derivedDataPath AmakaFlowCompanion/DerivedData -clonedSourcePackagesDirPath AmakaFlowCompanion/.spm -only-testing:AmakaFlowCompanionTests/SupportDiagnosticsAccessClientTests -only-testing:AmakaFlowCompanionTests/SupportDiagnosticsEntryTests -only-testing:AmakaFlowCompanionTests/SupportDiagnosticsSessionTests -only-testing:AmakaFlowCompanionTests/SupportDiagnosticsProbeTests -enableCodeCoverage NO CLERK_PUBLISHABLE_KEY_DEV="pk_test_c29saWQtY2hpY2tlbi01MC5jbGVyay5hY2NvdW50cy5kZXYk" CLERK_PUBLISHABLE_KEY_STAGING="pk_test_cnVsaW5nLW1pdGUtODQuY2xlcmsuYWNjb3VudHMuZGV2JA" CLERK_PUBLISHABLE_KEY_PRODUCTION="pk_test_cnVsaW5nLW1pdGUtODQuY2xlcmsuYWNjb3VudHMuZGV2JA"
+```
+
+Relevant output:
+
+```text
+** TEST SUCCEEDED **
+Test suite 'SupportDiagnosticsEntryTests' started
+... 9 Entry tests passed
+Test suite 'SupportDiagnosticsProbeTests' started
+... 8 Probe tests passed
+Test suite 'SupportDiagnosticsAccessClientTests' started
+... 4 AccessClient tests passed
+Test suite 'SupportDiagnosticsSessionTests' started
+... 7 Session tests passed
+```
+
+xcresult:
+
+```text
+AmakaFlowCompanion/DerivedData/Logs/Test/Test-AmakaFlowCompanion-2026.08.21_21-50-51--0500.xcresult
+```
+
+### Static verification
+
+Line-count split check:
+
+```bash
+wc -l AmakaFlow/Services/SupportDiagnostics/SupportDiagnosticsProbes.swift AmakaFlow/Services/SupportDiagnostics/SupportDiagnosticsEnvironmentProbes.swift AmakaFlow/Services/SupportDiagnostics/SupportDiagnosticsSystemProbes.swift
+```
+
+Output:
+
+```text
+     212 AmakaFlow/Services/SupportDiagnostics/SupportDiagnosticsProbes.swift
+     233 AmakaFlow/Services/SupportDiagnostics/SupportDiagnosticsEnvironmentProbes.swift
+     218 AmakaFlow/Services/SupportDiagnostics/SupportDiagnosticsSystemProbes.swift
+     663 total
+```
+
+Strict baseline-aware SwiftLint:
+
+```bash
+swiftlint lint --strict --baseline .swiftlint-baseline.yml --use-alternative-excluding --quiet AmakaFlow/Services/SupportDiagnostics/SupportDiagnosticsProbe.swift AmakaFlow/Services/SupportDiagnostics/SupportDiagnosticsProbeRunner.swift AmakaFlow/Services/SupportDiagnostics/SupportDiagnosticsProbes.swift AmakaFlow/Services/SupportDiagnostics/SupportDiagnosticsEnvironmentProbes.swift AmakaFlow/Services/SupportDiagnostics/SupportDiagnosticsSystemProbes.swift AmakaFlow/Views/SupportDiagnostics/SupportDiagnosticsStatusView.swift AmakaFlow/Views/SupportDiagnostics/SupportDiagnosticsCenterView.swift
+```
+
+Output:
+
+```text
+warning: Found a configuration for 'line_length' rule, but it is disabled in 'disabled_rules'.
+```
+
+Exit code: 0.
+
+Project file:
+
+```bash
+plutil -lint AmakaFlowCompanion/AmakaFlowCompanion.xcodeproj/project.pbxproj
+```
+
+Output:
+
+```text
+AmakaFlowCompanion/AmakaFlowCompanion.xcodeproj/project.pbxproj: OK
+```
+
+Whitespace check:
+
+```bash
+git diff --check
+```
+
+Output: none. Exit code: 0.
+
+### Self-review
+
+- Confirmed the approved live field/category contract includes only Task 3 categories and safe labels.
+- Confirmed the new contract tests name the production mutation they catch for app/device fields, reachability services, cancellation-unaware timeout behavior, generic correlation injection, and raw data boundary regressions.
+- Confirmed live probes expose safe summaries at the framework/service edge and keep runner/result modeling framework-free.
+- Confirmed no raw health samples, JWT bodies, raw claims, authorization headers, cookies, request/response bodies, URL query values, exact locations, or customer table contents are rendered by the new probes.
+- Confirmed generic timeout and failure results receive an injected safe correlation ID when available.
+- Confirmed `project.pbxproj` adds only production source references/build entries for the two split files; no explicit synchronized test build entry was added.
+
+### Concerns
+
+- Clerk token expiry is reported as `Not reported by SDK` because the safe SDK/session metadata used here does not expose expiry; the implementation intentionally does not parse JWT bytes.
+- Live correlation IDs, Watch last transfer result, and allowlisted feature overrides default to typed none states until safe recorders/providers are wired outside these owned Task 3 files.
+- xcodebuild still emits existing duplicate synchronized test build-file warnings. They are outside this fix scope and were not introduced by the new test file.
