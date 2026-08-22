@@ -11,6 +11,35 @@ tone_instructions: >-
 
 reviews:
   profile: "assertive"
+  tools:
+    # DISABLED on CodeRabbit support's recommendation (2026-08). CodeRabbit runs
+    # SwiftLint 0.65.0 and the version cannot be pinned; CI pins 0.57.1 and local
+    # machines run 0.62.2. A third version produces violations neither CI nor
+    # local can reproduce. Re-enable only after CI/local standardize on a version
+    # close to CodeRabbit's.
+    swiftlint:
+      enabled: false
+      config_file: ".swiftlint.yml"
+    actionlint:
+      enabled: true
+    yamllint:
+      enabled: true
+    shellcheck:
+      enabled: true
+    # Secret + workflow-security scanning. This repo carries Clerk publishable
+    # keys, App Store Connect API keys and signing certs through CI.
+    gitleaks:
+      enabled: true
+    trufflehog:
+      enabled: true
+    zizmor:
+      enabled: true
+    semgrep:
+      enabled: true
+    ast-grep:
+      enabled: true
+    github-checks:
+      enabled: true
   # AMA-1592: at least 2 real reviews; pause after 2; a 3rd only via
   # `@coderabbitai review` if many real issues remain. Never on every push.
   auto_review:
@@ -175,36 +204,6 @@ reviews:
       mode: "warning"
     docstrings:
       mode: "off"
-
-tools:
-  # DISABLED on CodeRabbit support's recommendation (2026-08). CodeRabbit runs
-  # SwiftLint 0.65.0 and the version cannot be pinned; CI pins 0.57.1 and local
-  # machines run 0.62.2. A third version produces violations neither CI nor
-  # local can reproduce. Re-enable only after CI/local standardize on a version
-  # close to CodeRabbit's.
-  swiftlint:
-    enabled: false
-    config_file: ".swiftlint.yml"
-  actionlint:
-    enabled: true
-  yamllint:
-    enabled: true
-  shellcheck:
-    enabled: true
-  # Secret + workflow-security scanning. This repo carries Clerk publishable
-  # keys, App Store Connect API keys and signing certs through CI.
-  gitleaks:
-    enabled: true
-  trufflehog:
-    enabled: true
-  zizmor:
-    enabled: true
-  semgrep:
-    enabled: true
-  ast-grep:
-    enabled: true
-  github-checks:
-    enabled: true
 
 chat:
   # Lets a PR comment file a Linear issue directly — useful when the Linear
