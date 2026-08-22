@@ -34,6 +34,47 @@ nonisolated struct DiagnosticBundleAuthorizationSnapshot: Codable, Equatable, Se
             expiresAt: authorization.expiresAt
         )
     }
+
+    func matches(_ authorization: SupportDiagnosticsAuthorization) -> Bool {
+        grantID == authorization.grantID
+            && role == authorization.role
+            && capabilities == authorization.capabilities
+            && expiresAt == authorization.expiresAt
+    }
+}
+
+nonisolated struct DiagnosticAuthorizationLoadToken: Equatable, Sendable {
+    let grantID: UUID
+    let capabilities: Set<SupportDiagnosticsCapability>
+    let accountID: String?
+
+    static func capture(
+        state: SupportDiagnosticsSessionState,
+        accountID: String?,
+        requiredCapability: SupportDiagnosticsCapability
+    ) -> DiagnosticAuthorizationLoadToken? {
+        guard case .authorized(let authorization) = state,
+              authorization.capabilities.contains(requiredCapability)
+        else { return nil }
+        return DiagnosticAuthorizationLoadToken(
+            grantID: authorization.grantID,
+            capabilities: authorization.capabilities,
+            accountID: accountID
+        )
+    }
+
+    func matches(
+        state: SupportDiagnosticsSessionState,
+        accountID: String?,
+        requiredCapability: SupportDiagnosticsCapability
+    ) -> Bool {
+        guard case .authorized(let authorization) = state,
+              authorization.capabilities.contains(requiredCapability)
+        else { return false }
+        return grantID == authorization.grantID
+            && capabilities == authorization.capabilities
+            && self.accountID == accountID
+    }
 }
 
 nonisolated struct DiagnosticActionSnapshot: Codable, Equatable, Identifiable, Sendable {
@@ -120,6 +161,28 @@ nonisolated enum DiagnosticLogsPolicy {
     static func canReadLogs(_ state: SupportDiagnosticsSessionState) -> Bool {
         hasCapability(.logsRead, in: state)
     }
+
+    static func acceptsLoadedEvents(
+        token: DiagnosticAuthorizationLoadToken?,
+        currentState: SupportDiagnosticsSessionState,
+        currentAccountID: String?
+    ) -> Bool {
+        token?.matches(state: currentState, accountID: currentAccountID, requiredCapability: .logsRead) == true
+    }
+
+    static func shouldReloadLoadedContent(
+        token: DiagnosticAuthorizationLoadToken?,
+        currentState: SupportDiagnosticsSessionState,
+        currentAccountID: String?,
+        requiredCapability: SupportDiagnosticsCapability
+    ) -> Bool {
+        guard let currentToken = DiagnosticAuthorizationLoadToken.capture(
+            state: currentState,
+            accountID: currentAccountID,
+            requiredCapability: requiredCapability
+        ) else { return false }
+        return token != currentToken
+    }
 }
 
 nonisolated enum DiagnosticBundlePreviewPolicy {
@@ -127,12 +190,24 @@ nonisolated enum DiagnosticBundlePreviewPolicy {
         state: SupportDiagnosticsSessionState,
         snapshot: DiagnosticBundleSnapshot?
     ) -> DiagnosticBundlePreview? {
-        guard hasCapability(.bundleExport, in: state), let snapshot else { return nil }
+        guard case .authorized(let authorization) = state,
+              authorization.capabilities.contains(.bundleExport),
+              let snapshot,
+              snapshot.authorization.matches(authorization)
+        else { return nil }
         return DiagnosticBundlePreview(snapshot: snapshot)
     }
 
     static func canPreviewBundle(_ state: SupportDiagnosticsSessionState) -> Bool {
         hasCapability(.bundleExport, in: state)
+    }
+
+    static func acceptsLoadedSnapshot(
+        token: DiagnosticAuthorizationLoadToken?,
+        currentState: SupportDiagnosticsSessionState,
+        currentAccountID: String?
+    ) -> Bool {
+        token?.matches(state: currentState, accountID: currentAccountID, requiredCapability: .bundleExport) == true
     }
 }
 
@@ -156,19 +231,31 @@ nonisolated struct LiveDiagnosticEventSnapshotProvider: DiagnosticEventSnapshotP
 }
 
 @MainActor
+protocol DiagnosticActionSnapshotProviding {
+    func actionsForCurrentSession() async throws -> [DiagnosticActionSnapshot]
+}
+
+nonisolated struct ViewerEmptyActionProvider: DiagnosticActionSnapshotProviding {
+    func actionsForCurrentSession() async throws -> [DiagnosticActionSnapshot] { [] }
+}
+
+@MainActor
 protocol DiagnosticBundleSnapshotProviding {
     func snapshot(authorization: SupportDiagnosticsAuthorization) async throws -> DiagnosticBundleSnapshot
 }
 
 nonisolated struct LiveDiagnosticBundleSnapshotProvider: DiagnosticBundleSnapshotProviding {
     private let eventsProvider: any DiagnosticEventSnapshotProviding
+    private let actionProvider: any DiagnosticActionSnapshotProviding
     private let now: @MainActor @Sendable () -> Date
 
     init(
         eventsProvider: any DiagnosticEventSnapshotProviding,
+        actionProvider: any DiagnosticActionSnapshotProviding = ViewerEmptyActionProvider(),
         now: @escaping @MainActor @Sendable () -> Date = Date.init
     ) {
         self.eventsProvider = eventsProvider
+        self.actionProvider = actionProvider
         self.now = now
     }
 
@@ -177,13 +264,14 @@ nonisolated struct LiveDiagnosticBundleSnapshotProvider: DiagnosticBundleSnapsho
             probes: SupportDiagnosticsProbes.live(authorization: authorization)
         ).run()
         let events = try await eventsProvider.eventsForCurrentAccount()
+        let actions = try await actionProvider.actionsForCurrentSession()
 
         return DiagnosticBundleSnapshot(
             createdAt: now(),
             authorization: DiagnosticBundleAuthorizationSnapshot(authorization: authorization),
             status: status,
             events: events,
-            actions: []
+            actions: actions
         )
     }
 }

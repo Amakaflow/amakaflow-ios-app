@@ -16,12 +16,30 @@ extension DebugLogService {
     }
 
     func diagnosticEventsForCurrentAccount() async throws -> [DiagnosticEvent] {
-        guard let accountHash = currentAccountHash ?? redactor.hashAccountIdentifier(accountIdentifierProvider())
-        else { return [] }
+        let accountIdentifier = accountIdentifierProvider()
+        guard let accountHash = redactor.hashAccountIdentifier(accountIdentifier) else {
+            if currentAccountHash != nil {
+                accountIdentifierDidChange(nil)
+            }
+            await writeTail?.value
+            await migrationTask?.value
+            await accountLoadTask?.value
+            return []
+        }
+
+        if currentAccountHash != accountHash {
+            accountIdentifierDidChange(accountIdentifier)
+        }
 
         await writeTail?.value
         await migrationTask?.value
         await accountLoadTask?.value
+        let latestAccountIdentifier = accountIdentifierProvider()
+        guard redactor.hashAccountIdentifier(latestAccountIdentifier) == accountHash else {
+            accountIdentifierDidChange(latestAccountIdentifier)
+            return []
+        }
+        guard currentAccountHash == accountHash else { return [] }
         return try await store.snapshot(.account(accountHash))
     }
 

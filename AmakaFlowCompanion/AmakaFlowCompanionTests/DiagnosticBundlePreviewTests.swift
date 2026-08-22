@@ -121,7 +121,7 @@ final class DiagnosticBundlePreviewTests: XCTestCase {
         let snapshot = bundleSnapshot(events: [event("queued", at: date("2026-08-21T20:00:00Z"))])
 
         XCTAssertNotNil(DiagnosticBundlePreviewPolicy.preview(
-            state: .authorized(authorization(capabilities: [.bundleExport])),
+            state: .authorized(authorization(capabilities: [.statusRead, .logsRead, .bundleExport])),
             snapshot: snapshot
         ))
         XCTAssertNil(DiagnosticBundlePreviewPolicy.preview(state: .locked(.expired), snapshot: snapshot))

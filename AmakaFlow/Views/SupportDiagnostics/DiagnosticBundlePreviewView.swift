@@ -5,6 +5,7 @@ struct DiagnosticBundlePreviewView: View {
 
     private let provider: any DiagnosticBundleSnapshotProviding
     @State private var snapshot: DiagnosticBundleSnapshot?
+    @State private var loadedToken: DiagnosticAuthorizationLoadToken?
     @State private var isLoading = false
     @State private var errorMessage: String?
 
@@ -36,9 +37,18 @@ struct DiagnosticBundlePreviewView: View {
         .refreshable {
             await loadSnapshot()
         }
-        .task(id: viewModel.state) {
-            clearIfLocked()
-            guard snapshot == nil else { return }
+        .task(id: currentToken) {
+            guard currentToken != nil else {
+                clearLoadedContent()
+                return
+            }
+            guard loadedToken == nil || DiagnosticLogsPolicy.shouldReloadLoadedContent(
+                token: loadedToken,
+                currentState: viewModel.state,
+                currentAccountID: viewModel.currentAccountID,
+                requiredCapability: .bundleExport
+            ) else { return }
+            clearLoadedContent()
             await loadSnapshot()
         }
         .overlay {
@@ -99,10 +109,10 @@ struct DiagnosticBundlePreviewView: View {
 
     @MainActor
     private func loadSnapshot() async {
-        guard DiagnosticBundlePreviewPolicy.canPreviewBundle(viewModel.state),
+        guard let token = currentToken,
               let authorization = viewModel.authorization
         else {
-            snapshot = nil
+            clearLoadedContent()
             return
         }
 
@@ -110,20 +120,41 @@ struct DiagnosticBundlePreviewView: View {
         defer { isLoading = false }
 
         do {
-            snapshot = try await provider.snapshot(authorization: authorization)
+            let loadedSnapshot = try await provider.snapshot(authorization: authorization)
+            guard DiagnosticBundlePreviewPolicy.acceptsLoadedSnapshot(
+                token: token,
+                currentState: viewModel.state,
+                currentAccountID: viewModel.currentAccountID
+            ), DiagnosticBundlePreviewPolicy.preview(state: viewModel.state, snapshot: loadedSnapshot) != nil
+            else { return }
+            snapshot = loadedSnapshot
+            loadedToken = token
             errorMessage = nil
         } catch {
+            guard DiagnosticBundlePreviewPolicy.acceptsLoadedSnapshot(
+                token: token,
+                currentState: viewModel.state,
+                currentAccountID: viewModel.currentAccountID
+            ) else { return }
             snapshot = nil
+            loadedToken = token
             errorMessage = "BUNDLE_PREVIEW_UNAVAILABLE"
         }
     }
 
     @MainActor
-    private func clearIfLocked() {
-        guard DiagnosticBundlePreviewPolicy.canPreviewBundle(viewModel.state) else {
-            snapshot = nil
-            errorMessage = nil
-            return
-        }
+    private var currentToken: DiagnosticAuthorizationLoadToken? {
+        DiagnosticAuthorizationLoadToken.capture(
+            state: viewModel.state,
+            accountID: viewModel.currentAccountID,
+            requiredCapability: .bundleExport
+        )
+    }
+
+    @MainActor
+    private func clearLoadedContent() {
+        snapshot = nil
+        loadedToken = nil
+        errorMessage = nil
     }
 }

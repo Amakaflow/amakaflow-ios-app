@@ -63,6 +63,10 @@ final class SupportDiagnosticsViewModel: ObservableObject {
         return authorization
     }
 
+    var currentAccountID: String? {
+        accountID
+    }
+
     func registerVersionTap(at date: Date = Date()) async {
         guard tapSequence.registerTap(at: date) else { return }
         guard session.state != .checking else { return }

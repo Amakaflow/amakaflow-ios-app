@@ -5,6 +5,7 @@ struct SupportDiagnosticsLogsView: View {
 
     private let provider: any DiagnosticEventSnapshotProviding
     @State private var events: [DiagnosticEvent] = []
+    @State private var loadedToken: DiagnosticAuthorizationLoadToken?
     @State private var isLoading = false
     @State private var errorMessage: String?
 
@@ -36,9 +37,18 @@ struct SupportDiagnosticsLogsView: View {
         .refreshable {
             await loadEvents()
         }
-        .task(id: viewModel.state) {
-            clearIfLocked()
-            guard events.isEmpty else { return }
+        .task(id: currentToken) {
+            guard currentToken != nil else {
+                clearLoadedContent()
+                return
+            }
+            guard loadedToken == nil || DiagnosticLogsPolicy.shouldReloadLoadedContent(
+                token: loadedToken,
+                currentState: viewModel.state,
+                currentAccountID: viewModel.currentAccountID,
+                requiredCapability: .logsRead
+            ) else { return }
+            clearLoadedContent()
             await loadEvents()
         }
         .overlay {
@@ -81,8 +91,8 @@ struct SupportDiagnosticsLogsView: View {
 
     @MainActor
     private func loadEvents() async {
-        guard DiagnosticLogsPolicy.canReadLogs(viewModel.state) else {
-            events = []
+        guard let token = currentToken else {
+            clearLoadedContent()
             return
         }
 
@@ -90,21 +100,41 @@ struct SupportDiagnosticsLogsView: View {
         defer { isLoading = false }
 
         do {
-            events = try await provider.eventsForCurrentAccount()
+            let loadedEvents = try await provider.eventsForCurrentAccount()
+            guard DiagnosticLogsPolicy.acceptsLoadedEvents(
+                token: token,
+                currentState: viewModel.state,
+                currentAccountID: viewModel.currentAccountID
+            ) else { return }
+            events = loadedEvents
+            loadedToken = token
             errorMessage = nil
         } catch {
+            guard DiagnosticLogsPolicy.acceptsLoadedEvents(
+                token: token,
+                currentState: viewModel.state,
+                currentAccountID: viewModel.currentAccountID
+            ) else { return }
             events = []
+            loadedToken = token
             errorMessage = "LOGS_UNAVAILABLE"
         }
     }
 
     @MainActor
-    private func clearIfLocked() {
-        guard DiagnosticLogsPolicy.canReadLogs(viewModel.state) else {
-            events = []
-            errorMessage = nil
-            return
-        }
+    private var currentToken: DiagnosticAuthorizationLoadToken? {
+        DiagnosticAuthorizationLoadToken.capture(
+            state: viewModel.state,
+            accountID: viewModel.currentAccountID,
+            requiredCapability: .logsRead
+        )
+    }
+
+    @MainActor
+    private func clearLoadedContent() {
+        events = []
+        loadedToken = nil
+        errorMessage = nil
     }
 }
 
