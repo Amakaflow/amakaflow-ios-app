@@ -37,6 +37,7 @@ VERSIONED = re.compile(r"^(?P<stem>.*?)(?P<version>\d*)$")
 # in a target cell promote an uncited artifact to Canonical, and Canonical
 # is what establishes current UI.
 ARTIFACT_TOKEN = re.compile(r"(?:rig|screens)-[a-z0-9-]+")
+TITLE = re.compile(r"<title>([^<]+)</title>", re.IGNORECASE)
 
 
 def matrix_surfaces(matrix: pathlib.Path) -> list[dict[str, str]]:
@@ -75,10 +76,44 @@ def artifacts(design_root: pathlib.Path) -> list[pathlib.Path]:
     return sorted(found, key=lambda p: p.name)
 
 
+RENDERED = re.compile(r"screens-[a-z0-9-]+\.jsx")
+
+
+def rendered_by_canonical(paths: list[pathlib.Path], cited: set[str]) -> dict[str, str]:
+    """Screens a cited rig renders, mapped to the rig that renders them.
+
+    The parity matrix cites rigs, and each rig renders a screens-*.jsx. Those
+    screens are the source of a cited artifact, not uncited files, so authority
+    propagates through the reference instead of stopping at the rig.
+    """
+    inherited: dict[str, str] = {}
+    for path in paths:
+        if path.suffix != ".html" or path.name.rsplit(".", 1)[0] not in cited:
+            continue
+        for name in RENDERED.findall(path.read_text(encoding="utf-8", errors="replace")):
+            inherited.setdefault(name, path.name)
+    return inherited
+
+
+def describe(path: pathlib.Path) -> str:
+    """The rig's own <title>, which is what makes an entry recognisable.
+
+    A filename says nothing to a reader deciding whether an artifact still has
+    authority. Every rig already carries a written description; use it.
+    """
+    if path.suffix != ".html":
+        return "—"
+    # No head slice: these rigs inline a large style block before <title>,
+    # so a truncated read silently found nothing.
+    match = TITLE.search(path.read_text(encoding="utf-8", errors="replace"))
+    return match.group(1).strip() if match else "—"
+
+
 def classify(
     paths: list[pathlib.Path], cited: set[str], root: pathlib.Path
 ) -> list[tuple[str, str, str]]:
     """Canonical when a live ticket cites it, Legacy when a newer sibling exists."""
+    inherited = rendered_by_canonical(paths, cited)
     by_stem: dict[str, list[tuple[int, pathlib.Path]]] = {}
     for path in paths:
         base = path.name.rsplit(".", 1)[0]
@@ -96,12 +131,22 @@ def classify(
                 verdict = "Canonical"
                 why = "cited by a live contract ticket in the parity matrix"
             elif version < newest:
+                # Supersession beats inheritance. A rig often renders several
+                # versions of a screen, so being referenced by a cited rig does
+                # not make an older version current.
                 verdict = "Legacy"
                 why = f"superseded by {stem}{newest}"
+            elif path.name in inherited:
+                verdict = "Canonical"
+                why = f"rendered by {inherited[path.name]}, which a live ticket cites"
             else:
                 verdict = "Unknown"
                 why = "no live ticket cites it — classify before relying on it"
-            rows.append((name, verdict, why))
+            shot = OUT_DIR / "unknown-artifacts" / f"{path.stem}.png"
+            look = (
+                f"[png](unknown-artifacts/{path.stem}.png)" if shot.is_file() else "—"
+            )
+            rows.append((name, describe(path), verdict, why, look))
     return sorted(rows)
 
 
@@ -185,10 +230,17 @@ def main() -> int:
         "",
         "Only **Canonical** establishes current UI.",
         "",
-        "| Artifact | Classification | Why |",
-        "| --- | --- | --- |",
+        "`Look` links a rendered capture where one exists, so an entry can be",
+        "recognised on sight. Motion rigs animate, so a still catches them",
+        "mid-transition and can look emptier than they are.",
+        "",
+        "| Artifact | What it is | Look | Classification | Why |",
+        "| --- | --- | --- | --- | --- |",
     ]
-    index += [f"| `{name}` | {verdict} | {why} |" for name, verdict, why in classify(found, cited, design_root)]
+    index += [
+        f"| `{name}` | {title} | {look} | {verdict} | {why} |"
+        for name, title, verdict, why, look in classify(found, cited, design_root)
+    ]
     index += ["", f"{len(found)} artifacts classified."]
     (OUT_DIR / "design-artifact-index.md").write_text("\n".join(index) + "\n", encoding="utf-8")
 

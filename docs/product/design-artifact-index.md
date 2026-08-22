@@ -7,51 +7,55 @@ is historical and carries no authority.
 
 Only **Canonical** establishes current UI.
 
-| Artifact | Classification | Why |
-| --- | --- | --- |
-| `amakaflow-mvp-design-refresh/daily-driver-handoff/reference/screens-daily-driver.jsx` | Canonical | cited by a live contract ticket in the parity matrix |
-| `amakaflow-mvp-design-refresh/project/hifi/rig-actuals.html` | Unknown | no live ticket cites it — classify before relying on it |
-| `amakaflow-mvp-design-refresh/project/hifi/rig-ai.html` | Unknown | no live ticket cites it — classify before relying on it |
-| `amakaflow-mvp-design-refresh/project/hifi/rig-builder3.html` | Canonical | cited by a live contract ticket in the parity matrix |
-| `amakaflow-mvp-design-refresh/project/hifi/rig-collections.html` | Canonical | cited by a live contract ticket in the parity matrix |
-| `amakaflow-mvp-design-refresh/project/hifi/rig-detail.html` | Canonical | cited by a live contract ticket in the parity matrix |
-| `amakaflow-mvp-design-refresh/project/hifi/rig-editsheet.html` | Unknown | no live ticket cites it — classify before relying on it |
-| `amakaflow-mvp-design-refresh/project/hifi/rig-enhance2.html` | Unknown | no live ticket cites it — classify before relying on it |
-| `amakaflow-mvp-design-refresh/project/hifi/rig-friends.html` | Canonical | cited by a live contract ticket in the parity matrix |
-| `amakaflow-mvp-design-refresh/project/hifi/rig-motion.html` | Unknown | no live ticket cites it — classify before relying on it |
-| `amakaflow-mvp-design-refresh/project/hifi/rig-send.html` | Canonical | cited by a live contract ticket in the parity matrix |
-| `amakaflow-mvp-design-refresh/project/hifi/rig-sync2.html` | Canonical | cited by a live contract ticket in the parity matrix |
-| `amakaflow-mvp-design-refresh/project/hifi/rig-toast.html` | Unknown | no live ticket cites it — classify before relying on it |
-| `amakaflow-mvp-design-refresh/project/hifi/rig-watch.html` | Unknown | no live ticket cites it — classify before relying on it |
-| `amakaflow-mvp-design-refresh/project/hifi/rig-watchitem.html` | Legacy | superseded by rig-watchitem2 |
-| `amakaflow-mvp-design-refresh/project/hifi/rig-watchitem2.html` | Canonical | cited by a live contract ticket in the parity matrix |
-| `amakaflow-mvp-design-refresh/project/hifi/screens-actuals.jsx` | Legacy | superseded by screens-actuals3 |
-| `amakaflow-mvp-design-refresh/project/hifi/screens-actuals2.jsx` | Legacy | superseded by screens-actuals3 |
-| `amakaflow-mvp-design-refresh/project/hifi/screens-actuals3.jsx` | Canonical | cited by a live contract ticket in the parity matrix |
-| `amakaflow-mvp-design-refresh/project/hifi/screens-agent.jsx` | Unknown | no live ticket cites it — classify before relying on it |
-| `amakaflow-mvp-design-refresh/project/hifi/screens-ai.jsx` | Unknown | no live ticket cites it — classify before relying on it |
-| `amakaflow-mvp-design-refresh/project/hifi/screens-builder3.jsx` | Unknown | no live ticket cites it — classify before relying on it |
-| `amakaflow-mvp-design-refresh/project/hifi/screens-collections.jsx` | Unknown | no live ticket cites it — classify before relying on it |
-| `amakaflow-mvp-design-refresh/project/hifi/screens-connections.jsx` | Unknown | no live ticket cites it — classify before relying on it |
-| `amakaflow-mvp-design-refresh/project/hifi/screens-detail.jsx` | Unknown | no live ticket cites it — classify before relying on it |
-| `amakaflow-mvp-design-refresh/project/hifi/screens-editsheet.jsx` | Unknown | no live ticket cites it — classify before relying on it |
-| `amakaflow-mvp-design-refresh/project/hifi/screens-enhance2.jsx` | Unknown | no live ticket cites it — classify before relying on it |
-| `amakaflow-mvp-design-refresh/project/hifi/screens-flow.jsx` | Unknown | no live ticket cites it — classify before relying on it |
-| `amakaflow-mvp-design-refresh/project/hifi/screens-friends.jsx` | Legacy | superseded by screens-friends3 |
-| `amakaflow-mvp-design-refresh/project/hifi/screens-friends2.jsx` | Legacy | superseded by screens-friends3 |
-| `amakaflow-mvp-design-refresh/project/hifi/screens-friends3.jsx` | Unknown | no live ticket cites it — classify before relying on it |
-| `amakaflow-mvp-design-refresh/project/hifi/screens-main.jsx` | Unknown | no live ticket cites it — classify before relying on it |
-| `amakaflow-mvp-design-refresh/project/hifi/screens-marketing.jsx` | Unknown | no live ticket cites it — classify before relying on it |
-| `amakaflow-mvp-design-refresh/project/hifi/screens-motion.jsx` | Unknown | no live ticket cites it — classify before relying on it |
-| `amakaflow-mvp-design-refresh/project/hifi/screens-send.jsx` | Unknown | no live ticket cites it — classify before relying on it |
-| `amakaflow-mvp-design-refresh/project/hifi/screens-sync2.jsx` | Unknown | no live ticket cites it — classify before relying on it |
-| `amakaflow-mvp-design-refresh/project/hifi/screens-toast.jsx` | Unknown | no live ticket cites it — classify before relying on it |
-| `amakaflow-mvp-design-refresh/project/hifi/screens-v2.jsx` | Unknown | no live ticket cites it — classify before relying on it |
-| `amakaflow-mvp-design-refresh/project/hifi/screens-v3-decide.jsx` | Unknown | no live ticket cites it — classify before relying on it |
-| `amakaflow-mvp-design-refresh/project/hifi/screens-v3-essentials.jsx` | Unknown | no live ticket cites it — classify before relying on it |
-| `amakaflow-mvp-design-refresh/project/hifi/screens-v3-secondary.jsx` | Unknown | no live ticket cites it — classify before relying on it |
-| `amakaflow-mvp-design-refresh/project/hifi/screens-watch.jsx` | Unknown | no live ticket cites it — classify before relying on it |
-| `amakaflow-mvp-design-refresh/project/hifi/screens-watchitem.jsx` | Legacy | superseded by screens-watchitem2 |
-| `amakaflow-mvp-design-refresh/project/hifi/screens-watchitem2.jsx` | Unknown | no live ticket cites it — classify before relying on it |
+`Look` links a rendered capture where one exists, so an entry can be
+recognised on sight. Motion rigs animate, so a still catches them
+mid-transition and can look emptier than they are.
+
+| Artifact | What it is | Look | Classification | Why |
+| --- | --- | --- | --- | --- |
+| `amakaflow-mvp-design-refresh/daily-driver-handoff/reference/screens-daily-driver.jsx` | — | — | Canonical | cited by a live contract ticket in the parity matrix |
+| `amakaflow-mvp-design-refresh/project/hifi/rig-actuals.html` | Completed sync & actuals — the honest log (rig) | [png](unknown-artifacts/rig-actuals.png) | Unknown | no live ticket cites it — classify before relying on it |
+| `amakaflow-mvp-design-refresh/project/hifi/rig-ai.html` | Create with AI — flow rework (rig) | [png](unknown-artifacts/rig-ai.png) | Unknown | no live ticket cites it — classify before relying on it |
+| `amakaflow-mvp-design-refresh/project/hifi/rig-builder3.html` | Builder v3 — build-from-scratch rework (rig) | — | Canonical | cited by a live contract ticket in the parity matrix |
+| `amakaflow-mvp-design-refresh/project/hifi/rig-collections.html` | Library collections — organize rework (rig) | — | Canonical | cited by a live contract ticket in the parity matrix |
+| `amakaflow-mvp-design-refresh/project/hifi/rig-detail.html` | Canonical workout detail — one anatomy, real durations (rig) | — | Canonical | cited by a live contract ticket in the parity matrix |
+| `amakaflow-mvp-design-refresh/project/hifi/rig-editsheet.html` | Exercise edit sheet v2 — aligned set goals (rig) | [png](unknown-artifacts/rig-editsheet.png) | Unknown | no live ticket cites it — classify before relying on it |
+| `amakaflow-mvp-design-refresh/project/hifi/rig-enhance2.html` | Make it watch-ready v2 — configurable enhance (rig) | [png](unknown-artifacts/rig-enhance2.png) | Unknown | no live ticket cites it — classify before relying on it |
+| `amakaflow-mvp-design-refresh/project/hifi/rig-friends.html` | Friends & workout sharing (rig) | — | Canonical | cited by a live contract ticket in the parity matrix |
+| `amakaflow-mvp-design-refresh/project/hifi/rig-motion.html` | DD Motion — it writes itself (rig) | [png](unknown-artifacts/rig-motion.png) | Unknown | no live ticket cites it — classify before relying on it |
+| `amakaflow-mvp-design-refresh/project/hifi/rig-send.html` | Send/Enhance flow — 7-screen redesign (rig) | — | Canonical | cited by a live contract ticket in the parity matrix |
+| `amakaflow-mvp-design-refresh/project/hifi/rig-sync2.html` | Sync v2 — map redesign, history, undo, Strava write-back (rig) | — | Canonical | cited by a live contract ticket in the parity matrix |
+| `amakaflow-mvp-design-refresh/project/hifi/rig-toast.html` | DD Toast — action confirmations (rig) | [png](unknown-artifacts/rig-toast.png) | Unknown | no live ticket cites it — classify before relying on it |
+| `amakaflow-mvp-design-refresh/project/hifi/rig-watch.html` | On your watches — watch manager (rig) | [png](unknown-artifacts/rig-watch.png) | Unknown | no live ticket cites it — classify before relying on it |
+| `amakaflow-mvp-design-refresh/project/hifi/rig-watchitem.html` | Watch item — edit readiness & replace (rig) | — | Legacy | superseded by rig-watchitem2 |
+| `amakaflow-mvp-design-refresh/project/hifi/rig-watchitem2.html` | Watch item sheet v2 — fidelity + honest wiring (rig) | — | Canonical | cited by a live contract ticket in the parity matrix |
+| `amakaflow-mvp-design-refresh/project/hifi/screens-actuals.jsx` | — | — | Legacy | superseded by screens-actuals3 |
+| `amakaflow-mvp-design-refresh/project/hifi/screens-actuals2.jsx` | — | — | Legacy | superseded by screens-actuals3 |
+| `amakaflow-mvp-design-refresh/project/hifi/screens-actuals3.jsx` | — | — | Canonical | cited by a live contract ticket in the parity matrix |
+| `amakaflow-mvp-design-refresh/project/hifi/screens-agent.jsx` | — | — | Unknown | no live ticket cites it — classify before relying on it |
+| `amakaflow-mvp-design-refresh/project/hifi/screens-ai.jsx` | — | — | Unknown | no live ticket cites it — classify before relying on it |
+| `amakaflow-mvp-design-refresh/project/hifi/screens-builder3.jsx` | — | — | Canonical | rendered by rig-builder3.html, which a live ticket cites |
+| `amakaflow-mvp-design-refresh/project/hifi/screens-collections.jsx` | — | — | Canonical | rendered by rig-collections.html, which a live ticket cites |
+| `amakaflow-mvp-design-refresh/project/hifi/screens-connections.jsx` | — | — | Unknown | no live ticket cites it — classify before relying on it |
+| `amakaflow-mvp-design-refresh/project/hifi/screens-detail.jsx` | — | — | Canonical | rendered by rig-detail.html, which a live ticket cites |
+| `amakaflow-mvp-design-refresh/project/hifi/screens-editsheet.jsx` | — | — | Unknown | no live ticket cites it — classify before relying on it |
+| `amakaflow-mvp-design-refresh/project/hifi/screens-enhance2.jsx` | — | — | Unknown | no live ticket cites it — classify before relying on it |
+| `amakaflow-mvp-design-refresh/project/hifi/screens-flow.jsx` | — | — | Unknown | no live ticket cites it — classify before relying on it |
+| `amakaflow-mvp-design-refresh/project/hifi/screens-friends.jsx` | — | — | Legacy | superseded by screens-friends3 |
+| `amakaflow-mvp-design-refresh/project/hifi/screens-friends2.jsx` | — | — | Legacy | superseded by screens-friends3 |
+| `amakaflow-mvp-design-refresh/project/hifi/screens-friends3.jsx` | — | — | Canonical | rendered by rig-friends.html, which a live ticket cites |
+| `amakaflow-mvp-design-refresh/project/hifi/screens-main.jsx` | — | — | Unknown | no live ticket cites it — classify before relying on it |
+| `amakaflow-mvp-design-refresh/project/hifi/screens-marketing.jsx` | — | — | Unknown | no live ticket cites it — classify before relying on it |
+| `amakaflow-mvp-design-refresh/project/hifi/screens-motion.jsx` | — | — | Unknown | no live ticket cites it — classify before relying on it |
+| `amakaflow-mvp-design-refresh/project/hifi/screens-send.jsx` | — | — | Canonical | rendered by rig-send.html, which a live ticket cites |
+| `amakaflow-mvp-design-refresh/project/hifi/screens-sync2.jsx` | — | — | Canonical | rendered by rig-sync2.html, which a live ticket cites |
+| `amakaflow-mvp-design-refresh/project/hifi/screens-toast.jsx` | — | — | Unknown | no live ticket cites it — classify before relying on it |
+| `amakaflow-mvp-design-refresh/project/hifi/screens-v2.jsx` | — | — | Unknown | no live ticket cites it — classify before relying on it |
+| `amakaflow-mvp-design-refresh/project/hifi/screens-v3-decide.jsx` | — | — | Unknown | no live ticket cites it — classify before relying on it |
+| `amakaflow-mvp-design-refresh/project/hifi/screens-v3-essentials.jsx` | — | — | Unknown | no live ticket cites it — classify before relying on it |
+| `amakaflow-mvp-design-refresh/project/hifi/screens-v3-secondary.jsx` | — | — | Unknown | no live ticket cites it — classify before relying on it |
+| `amakaflow-mvp-design-refresh/project/hifi/screens-watch.jsx` | — | — | Unknown | no live ticket cites it — classify before relying on it |
+| `amakaflow-mvp-design-refresh/project/hifi/screens-watchitem.jsx` | — | — | Legacy | superseded by screens-watchitem2 |
+| `amakaflow-mvp-design-refresh/project/hifi/screens-watchitem2.jsx` | — | — | Canonical | rendered by rig-watchitem2.html, which a live ticket cites |
 
 44 artifacts classified.
