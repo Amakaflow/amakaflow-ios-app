@@ -1,0 +1,11 @@
+appId: com.myamaka.AmakaFlowCompanion
+---
+- runFlow: collection.yaml
+# Member ids carry the workout's uuid, which is seed data. Match the first row
+# by pattern so the probe survives a reseed instead of pinning one workout.
+- tapOn:
+    id: "af_collection_member_.*"
+- extendedWaitUntil:
+    visible:
+      id: "af_workout_detail_screen"
+    timeout: 15000

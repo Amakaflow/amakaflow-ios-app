@@ -10,9 +10,12 @@
 # deterministic reachability check and wrong for capturing real data.
 appId: com.myamaka.AmakaFlowCompanion
 ---
+# Relaunch rather than attach: a previous probe can leave the app deep in a
+# stack where the tab bar is hidden, and every probe needs the same root.
+# stopApp restarts the process; without clearState the Clerk session survives.
 - launchApp:
     appId: com.myamaka.AmakaFlowCompanion
-    stopApp: false
+    stopApp: true
 - extendedWaitUntil:
     visible:
       id: "af_tabbar"
