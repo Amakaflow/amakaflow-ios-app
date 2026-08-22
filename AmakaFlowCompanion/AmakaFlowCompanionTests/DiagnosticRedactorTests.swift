@@ -32,6 +32,21 @@ final class DiagnosticRedactorTests: XCTestCase {
         XCTAssertFalse(projection.copyableText.contains("details-token"))
     }
 
+    func testBodyLikeDisplayTitleIsOmittedBeforeProjection() {
+        let bodyLikeTitle = #"{"customer":"Jane Athlete","health":{"hrv":42}}"#
+        let event = DiagnosticRedactor().redact(
+            category: .general,
+            severity: .info,
+            name: "general.event",
+            displayTitle: bodyLikeTitle,
+            message: "Safe message",
+            timestamp: Self.fixedDate
+        )
+
+        XCTAssertEqual(event.title, DiagnosticRedactor.omittedBodyMessage)
+        XCTAssertFalse(event.projectedDebugLogEntry.copyableText.contains("Jane Athlete"))
+    }
+
     func testAPIRedactionDropsBodiesQueriesAndSensitiveMetadataWhileKeepingCorrelationFields() {
         let event = DiagnosticRedactor().redact(
             category: .api,

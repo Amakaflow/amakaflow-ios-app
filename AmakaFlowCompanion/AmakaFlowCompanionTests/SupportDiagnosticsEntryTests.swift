@@ -69,14 +69,13 @@ final class SupportDiagnosticsEntryTests: XCTestCase {
         let firstEntry = Task { await triggerEntry(on: viewModel) }
         await accessGate.waitUntilEntered()
         let secondEntry = Task { await triggerEntry(on: viewModel) }
-        await Task.yield()
+        await secondEntry.value
 
         let accessCheckCount = await client.accessCheckCount
         XCTAssertEqual(accessCheckCount, 1, "A second tap sequence must not overlap the in-flight access check")
 
         await accessGate.release()
         await firstEntry.value
-        await secondEntry.value
     }
 
     func testPollingRefreshesAfterSixtySecondsAndDismissesRevokedSession() async {

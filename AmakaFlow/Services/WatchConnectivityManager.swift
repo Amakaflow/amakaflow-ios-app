@@ -148,7 +148,7 @@ class WatchConnectivityManager: NSObject, ObservableObject {
             }
 
             let outcome: WatchWorkoutSendOutcome = await withCheckedContinuation { continuation in
-                recordWatchTransfer(action: "stateUpdate", outcome: "dispatched")
+                recordWatchTransfer(action: "receiveWorkout", outcome: "dispatched")
                 session.sendMessage(
                     ["action": "receiveWorkout", "workout": workoutDict],
                     replyHandler: { reply in

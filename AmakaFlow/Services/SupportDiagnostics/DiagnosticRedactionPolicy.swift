@@ -35,6 +35,9 @@ nonisolated struct DiagnosticRedactionPolicy: Sendable {
         fallback: String,
         textSanitizer: DiagnosticTextSanitizer
     ) -> String {
+        guard !shouldOmitDiagnosticBody(value, metadata: [:]) else {
+            return DiagnosticRedactor.omittedBodyMessage
+        }
         let sanitized = textSanitizer.sanitize(value)
             .replacingOccurrences(of: "\n", with: " ")
             .trimmingCharacters(in: .whitespacesAndNewlines)
