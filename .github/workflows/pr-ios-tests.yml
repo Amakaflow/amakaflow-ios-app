@@ -101,6 +101,12 @@ jobs:
       - name: Flows do not assert past the sign-in screen
         run: python3 scripts/lint-maestro-reachability.py
 
+      # An unrun test file is the orphan pattern this epic keeps finding
+      # (AMA-2519). These cover the capture tool's BLOCKED paths, which are
+      # what stop a failed capture reporting success.
+      - name: Capture tool self-test
+        run: python3 scripts/test_capture_run.py
+
   detect-changes:
     name: Detect Changed Files
     # Pure git diff + grep + the affected-tests script (all ubuntu-safe) —

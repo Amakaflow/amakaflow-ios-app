@@ -24,6 +24,7 @@ from __future__ import annotations
 import argparse
 import json
 import pathlib
+import re
 import subprocess
 import sys
 
@@ -31,6 +32,9 @@ REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
 PROBE_DIR = REPO_ROOT / "e2e" / "maestro" / "identifier-truth"
 CAPTURES = REPO_ROOT / "docs" / "ui-captures"
 MANIFESTS = CAPTURES / "manifests"
+# A run id becomes a directory name. Without this, `../../x` writes evidence
+# outside docs/ui-captures.
+RUN_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
 
 
 def run(command: list[str], timeout: int) -> subprocess.CompletedProcess | None:
@@ -43,9 +47,14 @@ def run(command: list[str], timeout: int) -> subprocess.CompletedProcess | None:
         return None
 
 
-def head_sha() -> str:
+def head_sha() -> str | None:
+    """None when git cannot say. Evidence filed under an unverifiable build is
+    worse than no evidence: it cannot be tied back to what was running, and a
+    second failed run would overwrite the first under the same placeholder."""
     result = run(["git", "-C", str(REPO_ROOT), "rev-parse", "--short", "HEAD"], 30)
-    return result.stdout.strip() if result and result.returncode == 0 else "unknown"
+    if not result or result.returncode != 0 or not result.stdout.strip():
+        return None
+    return result.stdout.strip()
 
 
 def device_name(udid: str) -> str:
@@ -150,17 +159,31 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--udid", required=True)
     parser.add_argument("--run", required=True, help="run id, e.g. run-0-structure")
-    parser.add_argument("--screens", nargs="*")
+    parser.add_argument("--screens", nargs="+")
     args = parser.parse_args()
 
+    if not RUN_ID.match(args.run):
+        print(f"invalid --run {args.run!r}: use letters, digits, dot, dash, underscore", file=sys.stderr)
+        return 1
+
     sha = head_sha()
+    if sha is None:
+        print("cannot resolve HEAD — refusing to file evidence against an unknown build", file=sys.stderr)
+        return 1
+
     out_dir = CAPTURES / sha / args.run
     out_dir.mkdir(parents=True, exist_ok=True)
     MANIFESTS.mkdir(parents=True, exist_ok=True)
 
     flows = sorted(p for p in PROBE_DIR.glob("*.yaml") if not p.name.startswith("_"))
-    if args.screens:
+    if args.screens is not None:
         wanted = set(args.screens)
+        missing = sorted(wanted - {p.stem for p in flows})
+        if missing:
+            # Dropping an unknown name and exiting 0 would report a complete run
+            # while silently omitting a screen someone asked for.
+            print(f"no probe flow for: {', '.join(missing)}", file=sys.stderr)
+            return 1
         flows = [p for p in flows if p.stem in wanted]
     if not flows:
         print("no probe flows matched", file=sys.stderr)
