@@ -28,10 +28,9 @@ struct CoachChatView: View {
     @State private var route: CoachShellRoute?
     @FocusState private var isInputFocused: Bool
 
-    /// ContentView owns the custom AFTabBar via a parent safeAreaInset. On the
-    /// Coach surface that parent inset does not keep the composer above the tab
-    /// bar, so reserve the tab-bar lane locally (kept even while focused to
-    /// cover simulator/hardware-keyboard runs).
+    /// ContentView floats DDFloatingTabBar over the content in a ZStack, so
+    /// nothing insets the composer above it. Reserve the tab-bar lane locally
+    /// (kept even while focused to cover simulator/hardware-keyboard runs).
     private let tabBarClearance: CGFloat = 72
 
     private enum CoachShellRoute: Hashable {

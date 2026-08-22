@@ -126,6 +126,7 @@ private extension WorkoutDetailOrganizeChrome {
 
             shareTile
         }
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("af_detail_actions")
     }
 
