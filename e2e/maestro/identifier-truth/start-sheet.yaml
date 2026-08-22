@@ -1,0 +1,9 @@
+appId: com.myamaka.AmakaFlowCompanion
+---
+- runFlow: workout-detail.yaml
+- tapOn:
+    id: "af_workout_detail_start"
+- extendedWaitUntil:
+    visible:
+      id: "af_start_sheet"
+    timeout: 10000
