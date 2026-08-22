@@ -30,6 +30,7 @@ import sys
 REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
 PROBES = REPO_ROOT / "docs" / "ui-captures" / "identifier-truth"
 OUT_DIR = REPO_ROOT / "docs" / "product"
+CITATIONS = OUT_DIR / "artifact-citations.tsv"
 
 MATRIX_ROW = re.compile(r"^\|\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|")
 VERSIONED = re.compile(r"^(?P<stem>.*?)(?P<version>\d*)$")
@@ -95,6 +96,28 @@ def rendered_by_canonical(paths: list[pathlib.Path], cited: set[str]) -> dict[st
     return inherited
 
 
+def ticket_citations() -> dict[str, tuple[str, str]]:
+    """Artifacts a Linear ticket names, mapped to that ticket.
+
+    The parity matrix lists 19 surfaces and is not the only place a design is
+    cited. Most rigs are named by the ticket that commissioned them, in the
+    description or an attachment, and those tickets never reach the matrix.
+    Reading the matrix alone reported them as uncited.
+
+    Checked in rather than queried at run time so the classification is
+    reproducible offline and reviewable in a diff.
+    """
+    if not CITATIONS.is_file():
+        return {}
+    cited: dict[str, tuple[str, str]] = {}
+    for line in CITATIONS.read_text(encoding="utf-8").splitlines()[1:]:
+        parts = line.split("\t")
+        if len(parts) < 3 or not parts[0].strip():
+            continue
+        cited[parts[0].strip()] = (parts[1].strip(), parts[2].strip())
+    return cited
+
+
 def describe(path: pathlib.Path) -> str:
     """The rig's own <title>, which is what makes an entry recognisable.
 
@@ -114,6 +137,7 @@ def classify(
 ) -> list[tuple[str, str, str]]:
     """Canonical when a live ticket cites it, Legacy when a newer sibling exists."""
     inherited = rendered_by_canonical(paths, cited)
+    by_ticket = ticket_citations()
     by_stem: dict[str, list[tuple[int, pathlib.Path]]] = {}
     for path in paths:
         base = path.name.rsplit(".", 1)[0]
@@ -127,21 +151,25 @@ def classify(
         newest = max(version for version, _ in entries)
         for version, path in sorted(entries):
             name = str(path.relative_to(root))
-            if path.name.rsplit(".", 1)[0] in cited:
-                verdict = "Canonical"
-                why = "cited by a live contract ticket in the parity matrix"
-            elif version < newest:
-                # Supersession beats inheritance. A rig often renders several
-                # versions of a screen, so being referenced by a cited rig does
-                # not make an older version current.
+            if version < newest:
+                # Supersession beats every citation source. A newer sibling on
+                # disk is stronger evidence of what is current than an older
+                # ticket or a rig that renders several versions at once.
                 verdict = "Legacy"
                 why = f"superseded by {stem}{newest}"
+            elif path.name.rsplit(".", 1)[0] in cited:
+                verdict = "Canonical"
+                why = "cited by a live contract ticket in the parity matrix"
+            elif path.name in by_ticket:
+                ticket, state = by_ticket[path.name]
+                verdict = "Canonical"
+                why = f"cited by {ticket} ({state})"
             elif path.name in inherited:
                 verdict = "Canonical"
                 why = f"rendered by {inherited[path.name]}, which a live ticket cites"
             else:
                 verdict = "Unknown"
-                why = "no live ticket cites it — classify before relying on it"
+                why = "no ticket and no matrix row cites it — classify before relying on it"
             shot = OUT_DIR / "unknown-artifacts" / f"{path.stem}.png"
             look = (
                 f"[png](unknown-artifacts/{path.stem}.png)" if shot.is_file() else "—"
