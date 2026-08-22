@@ -56,9 +56,29 @@ class CaptureOutcomes(unittest.TestCase):
         # a file. Trusting the return code alone would file a CAPTURED row with
         # no image behind it.
         with mock.patch.object(capture_run, "run", side_effect=[ok(), ok()]):
-            row = capture_run.capture("udid", self.flow, self.tmp)
+            with mock.patch.object(capture_run, "settled", return_value={"today_tab"}):
+                row = capture_run.capture("udid", self.flow, self.tmp)
         self.assertEqual(row["status"], "BLOCKED")
         self.assertIn("screenshot", row["why"])
+
+    def test_screen_that_never_settles_is_blocked(self) -> None:
+        # A screen still loading satisfies its probe but must not be captured:
+        # this is how a spinner got filed as evidence for the seeded Library.
+        with mock.patch.object(capture_run, "run", return_value=ok()):
+            with mock.patch.object(capture_run, "settled", return_value=None):
+                row = capture_run.capture("udid", self.flow, self.tmp)
+        self.assertEqual(row["status"], "BLOCKED")
+        self.assertIn("loading", row["why"])
+
+    def test_settled_rejects_a_hierarchy_showing_a_spinner(self) -> None:
+        with mock.patch.object(capture_run, "identifiers", return_value={"af_loading_spinner"}):
+            with mock.patch.object(capture_run.time, "sleep", lambda _: None):
+                self.assertIsNone(capture_run.settled("udid", attempts=2, gap=0))
+
+    def test_settled_returns_a_stable_hierarchy(self) -> None:
+        with mock.patch.object(capture_run, "identifiers", return_value={"today_tab"}):
+            with mock.patch.object(capture_run.time, "sleep", lambda _: None):
+                self.assertEqual(capture_run.settled("udid", attempts=3, gap=0), {"today_tab"})
 
     def test_reached_screen_with_no_hierarchy_is_blocked(self) -> None:
         def fake_run(command, timeout):
@@ -67,10 +87,9 @@ class CaptureOutcomes(unittest.TestCase):
             return ok()
 
         with mock.patch.object(capture_run, "run", side_effect=fake_run):
-            with mock.patch.object(capture_run, "identifiers", return_value=None):
+            with mock.patch.object(capture_run, "settled", return_value=None):
                 row = capture_run.capture("udid", self.flow, self.tmp)
         self.assertEqual(row["status"], "BLOCKED")
-        self.assertIn("hierarchy", row["why"])
 
     def test_full_success_writes_both_artifacts(self) -> None:
         def fake_run(command, timeout):
@@ -79,7 +98,7 @@ class CaptureOutcomes(unittest.TestCase):
             return ok()
 
         with mock.patch.object(capture_run, "run", side_effect=fake_run):
-            with mock.patch.object(capture_run, "identifiers", return_value={"today_tab"}):
+            with mock.patch.object(capture_run, "settled", return_value={"today_tab"}):
                 row = capture_run.capture("udid", self.flow, self.tmp)
         self.assertEqual(row["status"], "CAPTURED")
         self.assertTrue((self.tmp / "today.png").is_file())
@@ -96,9 +115,15 @@ class Guards(unittest.TestCase):
         with mock.patch.object(capture_run, "run", return_value=failed()):
             self.assertIsNone(capture_run.head_sha())
 
-    def test_auth_mode_names_the_identity(self) -> None:
-        mode = capture_run.auth_mode()
-        self.assertTrue(mode.startswith("mock identity") or mode.startswith("real Clerk"))
+    def test_auth_mode_distinguishes_the_two_identities(self) -> None:
+        # The whole point of recording auth mode is that fixtures and the real
+        # seeded account prove different things. If both rendered the same
+        # string, a manifest could not tell them apart.
+        fixtures = capture_run.auth_mode("fixtures")
+        seeded = capture_run.auth_mode("seeded")
+        self.assertIn("mock identity", fixtures)
+        self.assertIn("real Clerk session", seeded)
+        self.assertNotEqual(fixtures, seeded)
 
 
 if __name__ == "__main__":

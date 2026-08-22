@@ -1,0 +1,24 @@
+# Attach to the already signed-in app on the AF-Baseline simulator.
+#
+# No clearState and no session flags on purpose. That simulator holds a
+# persisted real Clerk session for baseline+clerk_test@amakaflow.dev
+# (AMA-2501), and clearing state would destroy the one thing these probes
+# exist to use. stopApp: false keeps the running process.
+#
+# The identifier-truth probes under e2e/maestro/identifier-truth do the
+# opposite: they wipe state and inject a mock identity, which is right for a
+# deterministic reachability check and wrong for capturing real data.
+appId: com.myamaka.AmakaFlowCompanion
+---
+- launchApp:
+    appId: com.myamaka.AmakaFlowCompanion
+    stopApp: false
+- extendedWaitUntil:
+    visible:
+      id: "af_tabbar"
+    timeout: 30000
+- runFlow:
+    when:
+      visible: "Don't Allow"
+    commands:
+      - tapOn: "Don't Allow"
