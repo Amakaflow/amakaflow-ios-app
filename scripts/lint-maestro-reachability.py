@@ -41,11 +41,29 @@ AUTHED_ID_PREFIXES = ("af_library_", "af_workout_detail_", "af_start_", "af_toda
 SIGNIN_HELPER = "_lib/clerk-signin.yaml"
 
 
+class DuplicateKeyLoader(yaml.SafeLoader):
+    """`yaml.SafeLoader` keeps the last of a repeated key and says nothing.
+
+    A repeated launch argument is how the AF_ rename collapsed two distinct
+    flags into one name without any check noticing.
+    """
+
+    def construct_mapping(self, node, deep=False):
+        seen = set()
+        for key_node, _ in node.value:
+            key = self.construct_object(key_node, deep=deep)
+            if key in seen:
+                raise yaml.YAMLError(f"duplicate key {key!r}")
+            seen.add(key)
+        return super().construct_mapping(node, deep)
+
+
 def load_documents(path: pathlib.Path) -> list[object]:
     try:
-        return [doc for doc in yaml.safe_load_all(path.read_text()) if doc is not None]
+        documents = yaml.load_all(path.read_text(), Loader=DuplicateKeyLoader)
+        return [doc for doc in documents if doc is not None]
     except yaml.YAMLError as exc:
-        raise SystemExit(f"{path}: unparseable YAML: {exc}") from exc
+        raise SystemExit(f"{path}: {exc}") from exc
 
 
 def walk_strings(node: object):

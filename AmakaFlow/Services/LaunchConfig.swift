@@ -133,7 +133,7 @@ struct LaunchConfig: Equatable, Sendable {
            let milliseconds = Int(raw) {
             faults.insert(.watchItemReplaceSlow(milliseconds: milliseconds))
         }
-        if source.isTruthy("AF_DEMO_WATCH_MANAGER") || source.isTruthy("AF_DEMO_WATCH_MANAGER") {
+        if source.isTruthy("AF_DEMO_WATCH_MANAGER") {
             faults.insert(.watchManagerDemo)
         }
 
