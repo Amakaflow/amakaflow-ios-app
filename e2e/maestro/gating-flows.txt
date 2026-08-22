@@ -1,0 +1,37 @@
+# Flows whose failure blocks a merge.
+#
+# Membership is explicit and reviewable. Before AMA-2519 the set was implied
+# by a `for` loop and every invocation ended `|| true`, so the job exited 0
+# whatever happened and nothing could tell anyone the suite had gone red.
+#
+# A flow belongs here only when it passes reliably against a fresh CI
+# simulator. Adding one that does not is worse than leaving it out: a gate
+# that cries wolf gets ignored, which is the failure this ticket exists to
+# end. Everything not listed still runs warn-only and still uploads its
+# artifacts.
+#
+# Paths are relative to e2e/maestro and omit the .yaml suffix.
+
+# The AMA-2503 reachability probes. Each drives one screen and asserts it is
+# reachable by identifier. They are deterministic (fixtures, mock identity, no
+# network), they are the fastest flows in the suite, and they guard precisely
+# what the AMA-2505 capture runs depend on: that automation can still reach a
+# screen. Verified passing repeatedly on iPhone 17 Pro Max / iOS 26.1.
+identifier-truth/today
+identifier-truth/library
+identifier-truth/profile
+identifier-truth/workout-detail
+identifier-truth/start-sheet
+
+# Deliberately NOT gating yet, with the reason measured rather than assumed.
+#
+# save-and-end     fails on `Text matching regex: Start workout`
+# history-check    fails on `Text matching regex: More` — a tab that has not
+#                  existed since the three-tab IA landed
+#
+# AMA-1821 demoted these to warn-only and attributed it to missing sim
+# seeding. That is not what is wrong with them today: both assert against copy
+# and navigation the app no longer has. They need repair, not a gate.
+#
+# The five coach journeys stay warn-only: they depend on live LLM latency,
+# which is not a merge-blocking signal.
