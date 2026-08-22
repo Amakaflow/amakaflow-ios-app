@@ -16,6 +16,7 @@ appId: com.myamaka.AmakaFlowCompanion
 - tapOn:
     id: "af_library_search"
 - inputText: "Strength"
+- pressKey: Enter
 - extendedWaitUntil:
     visible:
       id: "af_library_results"
@@ -47,6 +48,7 @@ appId: com.myamaka.AmakaFlowCompanion
 - tapOn:
     id: "af_library_search"
 - inputText: "Strength"
+- pressKey: Enter
 - extendedWaitUntil:
     visible:
       id: "af_library_results"
