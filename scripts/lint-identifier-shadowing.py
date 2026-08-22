@@ -95,15 +95,22 @@ def display(path: pathlib.Path) -> str:
         return str(path)
 
 
+# Build output carries checkouts of dependencies, including directories whose
+# own names end in .swift, so an unfiltered rglob walks into them and dies.
+BUILD_DIRS = frozenset({"DerivedData", ".spm", "SourcePackages", "build", ".build"})
+
+
 def sources() -> list[pathlib.Path]:
     roots = [REPO_ROOT / "AmakaFlow", REPO_ROOT / "AmakaFlowCompanion"]
     found = []
     for root in roots:
         for path in root.rglob("*.swift"):
-            parts = set(path.parts)
-            if parts & {"Tests", "UITests"} or ".spm" in parts:
+            if not path.is_file():
                 continue
-            if "Tests" in path.parent.name or "UITests" in path.parent.name:
+            parts = set(path.parts)
+            if parts & BUILD_DIRS:
+                continue
+            if any("Tests" in part for part in path.parts[:-1]):
                 continue
             found.append(path)
     return sorted(found)
