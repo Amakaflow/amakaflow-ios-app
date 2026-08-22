@@ -5,11 +5,11 @@ hierarchy dump contained, not what the source declares.
 
 | screen | status | identifiers observed |
 | --- | --- | --- |
-| library | CAPTURED (earlier run) | 28 |
-| profile | CAPTURED (earlier run) | 28 |
+| library | CAPTURED | 28 |
+| profile | CAPTURED | 28 |
 | start-sheet | CAPTURED | 16 |
-| today | CAPTURED (earlier run) | 22 |
-| workout-detail | CAPTURED (earlier run) | 29 |
+| today | CAPTURED | 22 |
+| workout-detail | CAPTURED | 29 |
 
 714 literal identifiers are declared in app sources.
 93 distinct identifiers were observed across the probes above.

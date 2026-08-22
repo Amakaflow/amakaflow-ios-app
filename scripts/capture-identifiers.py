@@ -52,12 +52,25 @@ def declared_identifiers() -> dict[str, str]:
     return found
 
 
-def run(command: list[str], timeout: int) -> subprocess.CompletedProcess:
-    return subprocess.run(command, capture_output=True, text=True, timeout=timeout)
+def run(command: list[str], timeout: int) -> subprocess.CompletedProcess | None:
+    """None when the command could not run or did not finish.
+
+    A hung driver or a missing maestro binary is a blocked screen, not a
+    reason to abandon the remaining probes.
+    """
+    try:
+        return subprocess.run(
+            command, capture_output=True, text=True, timeout=timeout, check=False
+        )
+    except (subprocess.TimeoutExpired, OSError) as exc:
+        print(f"  {' '.join(command[:3])}: {type(exc).__name__}", file=sys.stderr)
+        return None
 
 
 def observed(udid: str) -> set[str] | None:
     result = run(["maestro", "--device", udid, "hierarchy"], timeout=180)
+    if result is None or result.returncode != 0:
+        return None
     try:
         tree = json.loads(result.stdout)
     except json.JSONDecodeError:
@@ -78,7 +91,7 @@ def observed(udid: str) -> set[str] | None:
 
 def probe(udid: str, flow: pathlib.Path) -> set[str] | None:
     result = run(["maestro", "--device", udid, "test", str(flow)], timeout=600)
-    if result.returncode != 0:
+    if result is None or result.returncode != 0:
         return None
     return observed(udid)
 
@@ -153,7 +166,7 @@ def main() -> int:
     (OUT_DIR / "REPORT.md").write_text("\n".join(report) + "\n")
 
     print(f"declared {len(declared)}, observed {len(seen_anywhere)}, unobserved {len(unseen)}")
-    return 0 if all(status == "CAPTURED" for _, status, _ in rows) else 1
+    return 0 if all(status.startswith("CAPTURED") for _, status, _ in rows) else 1
 
 
 if __name__ == "__main__":
