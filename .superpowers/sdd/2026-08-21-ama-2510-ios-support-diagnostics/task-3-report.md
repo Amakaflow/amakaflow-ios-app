@@ -527,3 +527,115 @@ Output: none. Exit code: 0.
 ### Concerns
 
 - xcodebuild still emits existing generated-code actor-isolation warnings and duplicate synchronized test build-file warnings outside this task scope.
+
+## Fix round 3
+
+### Implementation
+
+- Added `AMAKAFLOW_STRENGTH_AUTO_CAPTURE` to the privacy-safe allowlisted feature override output as `strength_auto_capture=enabled|disabled`.
+- Matched `StrengthAutoCaptureSettings` semantics for the environment override: `1` or case-insensitive `true` means enabled; any other present value means disabled.
+- Did not expose arbitrary environment keys or raw environment values.
+- Kept `SupportDiagnosticsProbes.swift` at 300 lines by compacting tiny pure formatting helpers without changing behavior.
+
+### Files changed
+
+- `AmakaFlow/Services/SupportDiagnostics/SupportDiagnosticsProbes.swift`
+- `AmakaFlowCompanion/AmakaFlowCompanionTests/SupportDiagnosticsProbeTests.swift`
+
+### RED evidence
+
+Focused missing-strength-env test before production fix:
+
+```bash
+SIM_NAME=$(xcrun simctl list devices available | awk '!found && match($0, /iPhone [^(]*/) {name = substr($0, RSTART, RLENGTH); sub(/[[:space:]]+$/, "", name); print name; found = 1}'); xcrun simctl boot "$SIM_NAME" || true; xcrun simctl bootstatus "$SIM_NAME" -b; xcodebuild test -project AmakaFlowCompanion/AmakaFlowCompanion.xcodeproj -scheme AmakaFlowCompanion -configuration Debug -destination "platform=iOS Simulator,name=$SIM_NAME" -derivedDataPath AmakaFlowCompanion/DerivedData -clonedSourcePackagesDirPath AmakaFlowCompanion/.spm -only-testing:AmakaFlowCompanionTests/SupportDiagnosticsProbeTests/testAllowlistedFeatureOverrideReaderCatchesMissingStrengthEnvironmentOverrideMutation -enableCodeCoverage NO CLERK_PUBLISHABLE_KEY_DEV="..." CLERK_PUBLISHABLE_KEY_STAGING="..." CLERK_PUBLISHABLE_KEY_PRODUCTION="..."
+```
+
+Output:
+
+```text
+Test case 'SupportDiagnosticsProbeTests.testAllowlistedFeatureOverrideReaderCatchesMissingStrengthEnvironmentOverrideMutation()' failed
+XCTAssertEqual failed: ("None") is not equal to ("strength_auto_capture=enabled")
+** TEST FAILED **
+```
+
+xcresult:
+
+```text
+AmakaFlowCompanion/DerivedData/Logs/Test/Test-AmakaFlowCompanion-2026.08.21_22-22-56--0500.xcresult
+```
+
+### GREEN evidence
+
+Focused missing-strength-env test after production fix:
+
+```text
+** TEST SUCCEEDED **
+Test case 'SupportDiagnosticsProbeTests.testAllowlistedFeatureOverrideReaderCatchesMissingStrengthEnvironmentOverrideMutation()' passed
+```
+
+xcresult:
+
+```text
+AmakaFlowCompanion/DerivedData/Logs/Test/Test-AmakaFlowCompanion-2026.08.21_22-25-58--0500.xcresult
+```
+
+Full probe tests:
+
+```bash
+SIM_NAME=$(xcrun simctl list devices available | awk '!found && match($0, /iPhone [^(]*/) {name = substr($0, RSTART, RLENGTH); sub(/[[:space:]]+$/, "", name); print name; found = 1}'); xcrun simctl boot "$SIM_NAME" || true; xcrun simctl bootstatus "$SIM_NAME" -b; xcodebuild test -project AmakaFlowCompanion/AmakaFlowCompanion.xcodeproj -scheme AmakaFlowCompanion -configuration Debug -destination "platform=iOS Simulator,name=$SIM_NAME" -derivedDataPath AmakaFlowCompanion/DerivedData -clonedSourcePackagesDirPath AmakaFlowCompanion/.spm -only-testing:AmakaFlowCompanionTests/SupportDiagnosticsProbeTests -enableCodeCoverage NO CLERK_PUBLISHABLE_KEY_DEV="..." CLERK_PUBLISHABLE_KEY_STAGING="..." CLERK_PUBLISHABLE_KEY_PRODUCTION="..."
+```
+
+Output:
+
+```text
+** TEST SUCCEEDED **
+... 12 Probe tests passed
+```
+
+xcresult:
+
+```text
+AmakaFlowCompanion/DerivedData/Logs/Test/Test-AmakaFlowCompanion-2026.08.21_22-28-01--0500.xcresult
+```
+
+### Static verification
+
+Line-count check:
+
+```bash
+wc -l AmakaFlow/Services/SupportDiagnostics/SupportDiagnosticsProbes.swift AmakaFlow/Services/SupportDiagnostics/SupportDiagnosticsEnvironmentProbes.swift AmakaFlow/Services/SupportDiagnostics/SupportDiagnosticsSystemProbes.swift
+```
+
+Output:
+
+```text
+     300 AmakaFlow/Services/SupportDiagnostics/SupportDiagnosticsProbes.swift
+     268 AmakaFlow/Services/SupportDiagnostics/SupportDiagnosticsEnvironmentProbes.swift
+     229 AmakaFlow/Services/SupportDiagnostics/SupportDiagnosticsSystemProbes.swift
+     797 total
+```
+
+SwiftLint/plutil/diff check:
+
+```bash
+swiftlint lint --strict --baseline .swiftlint-baseline.yml --use-alternative-excluding --quiet AmakaFlow/Services/SupportDiagnostics/SupportDiagnosticsProbes.swift && plutil -lint AmakaFlowCompanion/AmakaFlowCompanion.xcodeproj/project.pbxproj && git diff --check
+```
+
+Output:
+
+```text
+warning: Found a configuration for 'line_length' rule, but it is disabled in 'disabled_rules'.
+AmakaFlowCompanion/AmakaFlowCompanion.xcodeproj/project.pbxproj: OK
+```
+
+Exit code: 0.
+
+### Self-review
+
+- Confirmed the new reader path executes actual provider output rather than checking source text.
+- Confirmed only the allowlisted `AMAKAFLOW_STRENGTH_AUTO_CAPTURE` key is interpreted; unrelated environment keys are ignored.
+- Confirmed diagnostics renders only semantic enabled/disabled state and not raw environment values.
+
+### Concerns
+
+- Existing generated-code actor-isolation warnings and duplicate synchronized test build-file warnings remain outside this focused fix.

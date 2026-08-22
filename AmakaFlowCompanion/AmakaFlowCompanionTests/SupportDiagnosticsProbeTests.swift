@@ -253,6 +253,23 @@ final class SupportDiagnosticsProbeTests: XCTestCase {
         )
     }
 
+    func testAllowlistedFeatureOverrideReaderCatchesMissingStrengthEnvironmentOverrideMutation() async {
+        let reader = SupportDiagnosticsFeatureOverrideReader(
+            environment: [
+                "AMAKAFLOW_STRENGTH_AUTO_CAPTURE": "1",
+                "UNRELATED_SECRET_FLAG": "true"
+            ],
+            explicitStates: [:]
+        )
+
+        let overrides = await reader.state()
+
+        XCTAssertEqual(
+            SupportDiagnosticsSafeSummaries.featureOverrides(overrides),
+            "strength_auto_capture=enabled"
+        )
+    }
+
     func testApprovedReachabilityContractCatchesRemovedConfiguredAPIHealthProbeMutation() {
         XCTAssertEqual(
             SupportDiagnosticsProbes.approvedReachabilityServiceNames,

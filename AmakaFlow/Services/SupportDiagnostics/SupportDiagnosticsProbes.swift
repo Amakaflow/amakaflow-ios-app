@@ -201,6 +201,10 @@ nonisolated struct SupportDiagnosticsFeatureOverrideReader: Sendable {
 
     func state() async -> SupportDiagnosticsFeatureOverrideState {
         var overrides: [String] = []
+        if let value = environment["AMAKAFLOW_STRENGTH_AUTO_CAPTURE"] {
+            let isEnabled = Self.parseStrengthAutoCaptureOverride(value)
+            overrides.append("strength_auto_capture=\(isEnabled ? "enabled" : "disabled")")
+        }
         let allowlistedEnvironment = [
             "AMAKAFLOW_PROGRAM_WIZARD": "program_wizard",
             "AMAKAFLOW_PAYWALL_GATE": "paywall_gate",
@@ -228,6 +232,8 @@ nonisolated struct SupportDiagnosticsFeatureOverrideReader: Sendable {
             return nil
         }
     }
+
+    private static func parseStrengthAutoCaptureOverride(_ value: String) -> Bool { value == "1" || value.lowercased() == "true" }
 }
 
 nonisolated enum SupportDiagnosticsSafeSummaries {
@@ -287,11 +293,8 @@ nonisolated func supportDiagnosticsField(
     SupportDiagnosticsDisplayField(label: label, value: value)
 }
 
-nonisolated func supportDiagnosticsYesNo(_ value: Bool) -> String {
-    value ? "Yes" : "No"
-}
+nonisolated func supportDiagnosticsYesNo(_ value: Bool) -> String { value ? "Yes" : "No" }
 
 nonisolated func supportDiagnosticsFormatted(_ date: Date?) -> String {
-    guard let date else { return "None" }
-    return date.formatted(date: .abbreviated, time: .shortened)
+    date?.formatted(date: .abbreviated, time: .shortened) ?? "None"
 }
