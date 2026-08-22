@@ -377,6 +377,87 @@ final class DiagnosticEventStoreTests: XCTestCase {
     }
 
     @MainActor
+    func testDebugLogServiceCurrentNonAPIBodyLikeMessagesAreOmittedAcrossFacades() async throws {
+        let store = makeStore()
+        let redactor = DiagnosticRedactor()
+        let account = "body-redaction-account"
+        let authChanges = CurrentValueSubject<String?, Never>(account)
+        let service = DebugLogService(
+            store: store,
+            accountIdentifierProvider: { account },
+            accountIdentifierPublisher: { authChanges.eraseToAnyPublisher() }
+        )
+
+        service.log(
+            "General import failed",
+            details: """
+            {
+              "customer": "Jane Athlete",
+              "profile": {"name": "Jane Athlete"},
+              "health": {"hrv": 42},
+              "location": {"lat": 37.7, "lng": -122.4}
+            }
+            """,
+            metadata: ["Context": "manual import"]
+        )
+        service.logNetworkError(
+            error: NSError(
+                domain: "network",
+                code: 502,
+                userInfo: [
+                    NSLocalizedDescriptionKey: "Raw response body carried customer profile payload for Jane Athlete"
+                ]
+            ),
+            context: "sync"
+        )
+        service.logAuthError(
+            details: "Auth request body contained profile, health, and location payload for Jane Athlete",
+            context: "session refresh"
+        )
+        await service.waitForPendingWrites()
+
+        let events = try await store.snapshot(.account(redactor.hashAccountIdentifier(account)!))
+        XCTAssertEqual(Set(events.map(\.name)), ["auth.error", "network.error", "general.event"])
+        XCTAssertEqual(Set(events.map(\.message)), [DiagnosticRedactor.omittedBodyMessage])
+        XCTAssertEqual(Set(service.entries.map(\.details)), [DiagnosticRedactor.omittedBodyMessage])
+
+        let persistedText = events.map { event in
+            event.message + event.metadata.description
+        }.joined(separator: "\n")
+        let copyText = service.getAllEntriesAsText()
+        for unsafeValue in ["Jane Athlete", "\"customer\"", "\"profile\"", "\"health\"", "\"location\"", "37.7", "-122.4"] {
+            XCTAssertFalse(persistedText.contains(unsafeValue))
+            XCTAssertFalse(copyText.contains(unsafeValue))
+        }
+    }
+
+    @MainActor
+    func testDebugLogServiceCurrentSafeNonAPIMessageSurvivesSanitization() async throws {
+        let store = makeStore()
+        let redactor = DiagnosticRedactor()
+        let account = "safe-message-account"
+        let authChanges = CurrentValueSubject<String?, Never>(account)
+        let service = DebugLogService(
+            store: store,
+            accountIdentifierProvider: { account },
+            accountIdentifierPublisher: { authChanges.eraseToAnyPublisher() }
+        )
+
+        service.log(
+            "Sync retry scheduled",
+            details: "Workout sync retry scheduled after transient timeout",
+            metadata: ["Context": "background sync"]
+        )
+        await service.waitForPendingWrites()
+
+        let events = try await store.snapshot(.account(redactor.hashAccountIdentifier(account)!))
+        XCTAssertEqual(events.map(\.name), ["general.event"])
+        XCTAssertEqual(events.first?.message, "Workout sync retry scheduled after transient timeout")
+        XCTAssertEqual(service.entries.first?.details, "Workout sync retry scheduled after transient timeout")
+        XCTAssertTrue(service.getAllEntriesAsText().contains("Workout sync retry scheduled after transient timeout"))
+    }
+
+    @MainActor
     func testClearLogIsOrderedAfterEarlierPendingAppends() async throws {
         let store = makeStore(maxBytes: 100_000)
         let service = DebugLogService(store: store)

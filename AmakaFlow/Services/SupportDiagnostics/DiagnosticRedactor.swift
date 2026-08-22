@@ -42,8 +42,8 @@ nonisolated struct DiagnosticRedactor: Sendable {
             category: category,
             name: sanitizeIdentifier(sanitizeText(name), fallback: "diagnostic.event"),
             title: sanitizeDisplayTitle(displayTitle ?? name, fallback: name),
-            message: shouldOmitAPIMessage(message, metadata: metadata, category: category)
-                ? Self.omittedAPIResponseMessage
+            message: shouldOmitDiagnosticBody(message, metadata: metadata)
+                ? Self.omittedBodyMessage
                 : sanitizeText(message),
             metadata: sanitizedMetadata,
             requestID: sanitizeCorrelationID(requestID ?? sanitizedMetadata["request_id"] ?? sanitizedMetadata["requestId"]),
@@ -62,7 +62,7 @@ nonisolated struct DiagnosticRedactor: Sendable {
         let category = category(for: entry.type)
         let severity = severity(for: entry.type)
         let sanitizedMetadata = sanitizeMetadata(entry.metadata ?? [:], category: category)
-        let omitLegacyBody = shouldOmitLegacyBody(entry)
+        let omitLegacyBody = shouldOmitDiagnosticBody(entry.details, metadata: entry.metadata ?? [:])
         return DiagnosticEvent(
             id: entry.id,
             timestamp: entry.timestamp,
@@ -70,7 +70,7 @@ nonisolated struct DiagnosticRedactor: Sendable {
             category: category,
             name: stableEventName(for: entry.type),
             title: sanitizeDisplayTitle(entry.title, fallback: stableEventName(for: entry.type)),
-            message: omitLegacyBody ? Self.omittedAPIResponseMessage : sanitizeText(entry.details),
+            message: omitLegacyBody ? Self.omittedBodyMessage : sanitizeText(entry.details),
             metadata: sanitizedMetadata,
             requestID: sanitizeCorrelationID(sanitizedMetadata["request_id"] ?? sanitizedMetadata["requestId"]),
             sentryEventID: nil,
@@ -215,16 +215,11 @@ private extension DiagnosticRedactor {
         return String((sanitized.nilIfEmpty ?? fallback).prefix(Self.maxValueLength))
     }
 
-    private func shouldOmitAPIMessage(
+    private func shouldOmitDiagnosticBody(
         _ message: String,
-        metadata: [String: String],
-        category: DiagnosticEventCategory
+        metadata: [String: String]
     ) -> Bool {
-        category == .api && (hasBodySignal(in: metadata) || isBodyLike(message))
-    }
-
-    private func shouldOmitLegacyBody(_ entry: DebugLogEntry) -> Bool {
-        hasBodySignal(in: entry.metadata ?? [:]) || isBodyLike(entry.details)
+        hasBodySignal(in: metadata) || isBodyLike(message)
     }
 
     private func hasBodySignal(in metadata: [String: String]) -> Bool {
