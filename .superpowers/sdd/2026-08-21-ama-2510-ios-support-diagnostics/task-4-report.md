@@ -63,4 +63,4 @@ GREEN:
 
 ## Commit
 
-- Pending.
+- `0fb6bbe6` — `AMA-2510 Add redacted diagnostic event store`
