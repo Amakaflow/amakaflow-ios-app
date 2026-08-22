@@ -31,6 +31,8 @@ REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
 PROBES = REPO_ROOT / "docs" / "ui-captures" / "identifier-truth"
 OUT_DIR = REPO_ROOT / "docs" / "product"
 CITATIONS = OUT_DIR / "artifact-citations.tsv"
+DESIGN_STATUS = OUT_DIR / "screen-design-status.tsv"
+CAPTURES = REPO_ROOT / "docs" / "ui-captures"
 
 MATRIX_ROW = re.compile(r"^\|\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|")
 VERSIONED = re.compile(r"^(?P<stem>.*?)(?P<version>\d*)$")
@@ -55,6 +57,44 @@ def matrix_surfaces(matrix: pathlib.Path) -> list[dict[str, str]]:
             {"surface": surface, "target": target, "ticket": ticket, "verdict": verdict}
         )
     return rows
+
+
+def design_status() -> dict[str, dict[str, str]]:
+    """What each screen is meant to look like, and whether it is there yet.
+
+    Hand-maintained: this is the only place a person states intent. Without it
+    a capture of a screen awaiting redesign reads as a defect list, which is
+    how the run-1 onboarding observations nearly became tickets for a screen
+    that is about to be replaced.
+    """
+    if not DESIGN_STATUS.is_file():
+        return {}
+    rows: dict[str, dict[str, str]] = {}
+    for line in DESIGN_STATUS.read_text(encoding="utf-8").splitlines()[1:]:
+        if line.startswith("#") or not line.strip():
+            continue
+        parts = line.split("\t")
+        if len(parts) < 4:
+            continue
+        rows[parts[0].strip()] = {
+            "artifact": parts[1].strip(),
+            "ticket": parts[2].strip(),
+            "status": parts[3].strip(),
+            "note": parts[4].strip() if len(parts) > 4 else "",
+        }
+    return rows
+
+
+def captured_screens() -> dict[str, str]:
+    """Screens with a committed screenshot, mapped to where it lives."""
+    found: dict[str, str] = {}
+    if not CAPTURES.is_dir():
+        return found
+    for shot in sorted(CAPTURES.rglob("*.png")):
+        if "unknown-artifacts" in shot.parts:
+            continue
+        found.setdefault(shot.stem, str(shot.relative_to(REPO_ROOT)))
+    return found
 
 
 def probed_screens() -> dict[str, int]:
@@ -209,6 +249,8 @@ def main() -> int:
 
     surfaces = matrix_surfaces(matrix)
     probed = probed_screens()
+    captures = captured_screens()
+    intent = design_status()
     cited = {
         token
         for row in surfaces
@@ -228,22 +270,29 @@ def main() -> int:
         "probes. A surface with no inventory has not been reached by automation,",
         "which is a fact about our tooling, not a claim about the screen.",
         "",
-        "| Screen ID | Area | Route / entry | Runtime evidence | Design artifact | Contract | Status |",
+        "| Screen | Area | Evidence in app | Design of record | Ticket | Design status | Note |",
         "| --- | --- | --- | --- | --- | --- | --- |",
     ]
 
-    for name, count in probed.items():
+    for name in sorted(set(probed) | set(captures) | set(intent)):
+        design = intent.get(name, {})
+        evidence = []
+        if name in probed:
+            evidence.append(f"{probed[name]} identifiers")
+        if name in captures:
+            evidence.append(f"[screenshot]({pathlib.Path('../..') / captures[name]})")
         registry.append(
-            f"| `{name}` | runtime | probe `e2e/maestro/identifier-truth/{name}.yaml` "
-            f"| {count} identifiers observed | — | AMA-2503 | CAPTURED |"
+            f"| `{name}` | runtime | {'; '.join(evidence) or 'none'} "
+            f"| {design.get('artifact') or '—'} | {design.get('ticket') or '—'} "
+            f"| {design.get('status') or 'UNKNOWN'} | {design.get('note') or '—'} |"
         )
 
     for row in surfaces:
         if row["surface"].lower().replace(" ", "-") in probed:
             continue
         registry.append(
-            f"| {row['surface']} | design surface | — | none | {row['target']} "
-            f"| {row['ticket']} | TODO |"
+            f"| {row['surface']} | design surface | none | {row['target']} "
+            f"| {row['ticket']} | {row['verdict']} | from the parity matrix |"
         )
 
     registry += [

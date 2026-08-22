@@ -7,32 +7,39 @@ hand-edit the evidence columns; they are derived from files on disk.
 probes. A surface with no inventory has not been reached by automation,
 which is a fact about our tooling, not a claim about the screen.
 
-| Screen ID | Area | Route / entry | Runtime evidence | Design artifact | Contract | Status |
+| Screen | Area | Evidence in app | Design of record | Ticket | Design status | Note |
 | --- | --- | --- | --- | --- | --- | --- |
-| `library` | runtime | probe `e2e/maestro/identifier-truth/library.yaml` | 28 identifiers observed | — | AMA-2503 | CAPTURED |
-| `profile` | runtime | probe `e2e/maestro/identifier-truth/profile.yaml` | 28 identifiers observed | — | AMA-2503 | CAPTURED |
-| `start-sheet` | runtime | probe `e2e/maestro/identifier-truth/start-sheet.yaml` | 16 identifiers observed | — | AMA-2503 | CAPTURED |
-| `today` | runtime | probe `e2e/maestro/identifier-truth/today.yaml` | 22 identifiers observed | — | AMA-2503 | CAPTURED |
-| `workout-detail` | runtime | probe `e2e/maestro/identifier-truth/workout-detail.yaml` | 29 identifiers observed | — | AMA-2503 | CAPTURED |
-| Today shell / 3-tab IA | design surface | — | none | screens-daily-driver | DD proto | TODO |
-| Day scrubber + history | design surface | — | none | rig-sync2 p2 | AMA-2396 | TODO |
-| Which workout was this? (map v3) | design surface | — | none | rig-sync2 p1 | AMA-2396 | TODO |
-| Verified undo / ⋯ menu | design surface | — | none | rig-sync2 p4 | AMA-2396/2407 | TODO |
-| Write-back toggle + skip rules | design surface | — | none | rig-sync2 p5 | AMA-2396 | TODO |
-| Capture doors + "What did the class do?" | design surface | — | none | rig-matchbuild | shipped w/ 2396 | TODO |
-| Build-from-scratch shape picker | design surface | — | none | rig-builder3 | AMA-2372 | TODO |
-| Exercise picker (add/replace) | design surface | — | none | rig-exsearch (new, Aug 15) | AMA-2436 | TODO |
-| Editor (calm editor) | design surface | — | none | rig-editor2 / editsheet | AMA-2379 | TODO |
-| Workout detail (canonical anatomy) | design surface | — | none | rig-detail p1–5 | AMA-2395 | TODO |
-| Library collections | design surface | — | none | rig-collections | AMA-2376 | TODO |
-| Watch-ready sheet | design surface | — | none | rig-watchitem2 p1–5 | watch-item v2 fix | TODO |
-| Enrichment (warm-up etc.) sheet | design surface | — | none | rig-enhance3 p1–5 | AMA-2424/2425 + reducer ticket | TODO |
-| Watch step text | design surface | — | none | rig-watchtext p1–4 | — (unticketed) | TODO |
-| Logbook (grid/wheels/placement) | design surface | — | none | rig-logbook p1–4 | AMA-2426/2432 | TODO |
-| Friends (share/receive/manage) | design surface | — | none | rig-friends p1–9 (friends3) | AMA-2389/2390 | TODO |
-| Send/enhance push flow | design surface | — | none | rig-send p1–7 | partial | TODO |
-| Connections / device hub | design surface | — | none | screens-actuals3 | AMA-2387/2103 | TODO |
-| Profile hub / Settings | design surface | — | none | screens-daily-driver | — | TODO |
+| `collection` | runtime | [screenshot](../../docs/ui-captures/f47e38c7/run-3-library-seeded/collection.png) | rig-collections.html | AMA-2376 | UNKNOWN | same as library |
+| `history` | runtime | [screenshot](../../docs/ui-captures/f47e38c7/run-5-6-7-profile-routes/history.png) | rig-sync2.html | AMA-2396 | UNKNOWN | sync v2 shipped; confirm parity |
+| `library` | runtime | 28 identifiers; [screenshot](../../docs/ui-captures/6a750d5b/run-0-structure/library.png) | rig-collections.html | AMA-2376 | UNKNOWN | AMA-2376 shipped; needs confirming the shipped Library is the target |
+| `mental-model-gate` | runtime | [screenshot](../../docs/ui-captures/f47e38c7/run-1-auth/mental-model-gate.png) | — | — | REDESIGN_PENDING | same redesign as sign-in |
+| `permission-notifications` | runtime | [screenshot](../../docs/ui-captures/f47e38c7/run-1-auth/permission-notifications.png) | — | — | REDESIGN_PENDING | part of the onboarding sequence |
+| `profile` | runtime | 28 identifiers; [screenshot](../../docs/ui-captures/6a750d5b/run-0-structure/profile.png) | screens-daily-driver.jsx | — | UNKNOWN | parity matrix records no rig authority for Profile |
+| `settings` | runtime | [screenshot](../../docs/ui-captures/f47e38c7/run-5-6-7-profile-routes/settings.png) | — | — | UNKNOWN | no design of record identified |
+| `sign-in` | runtime | [screenshot](../../docs/ui-captures/f47e38c7/run-1-auth/sign-in.png) | — | — | REDESIGN_PENDING | David 2026-08-22: onboarding carries the old design, redesign due once the full design lands |
+| `sources` | runtime | [screenshot](../../docs/ui-captures/f47e38c7/run-5-6-7-profile-routes/sources.png) | rig-actuals.html | AMA-2387 | UNKNOWN | connections hub; rig-actuals is cited by AMA-2387 |
+| `start-sheet` | runtime | 16 identifiers; [screenshot](../../docs/ui-captures/6a750d5b/run-0-structure/start-sheet.png) | rig-send.html | AMA-2369 | UNKNOWN | send/enhance redesign only partially wired per the parity matrix |
+| `today` | runtime | 22 identifiers; [screenshot](../../docs/ui-captures/6a750d5b/run-0-structure/today.png) | screens-daily-driver.jsx | — | UNKNOWN | awaiting David's call on whether the shipped Today matches the design of record |
+| `workout-detail` | runtime | 29 identifiers; [screenshot](../../docs/ui-captures/6a750d5b/run-0-structure/workout-detail.png) | rig-detail.html | AMA-2395 | UNKNOWN | AMA-2395 shipped the canonical anatomy; confirm parity |
+| Today shell / 3-tab IA | design surface | none | screens-daily-driver | DD proto | ✅ | from the parity matrix |
+| Day scrubber + history | design surface | none | rig-sync2 p2 | AMA-2396 | ⏳ | from the parity matrix |
+| Which workout was this? (map v3) | design surface | none | rig-sync2 p1 | AMA-2396 | ✅ | from the parity matrix |
+| Verified undo / ⋯ menu | design surface | none | rig-sync2 p4 | AMA-2396/2407 | ⏳ | from the parity matrix |
+| Write-back toggle + skip rules | design surface | none | rig-sync2 p5 | AMA-2396 | ⏳ | from the parity matrix |
+| Capture doors + "What did the class do?" | design surface | none | rig-matchbuild | shipped w/ 2396 | ✅ | from the parity matrix |
+| Build-from-scratch shape picker | design surface | none | rig-builder3 | AMA-2372 | ✅ | from the parity matrix |
+| Exercise picker (add/replace) | design surface | none | rig-exsearch (new, Aug 15) | AMA-2436 | 🚧 | from the parity matrix |
+| Editor (calm editor) | design surface | none | rig-editor2 / editsheet | AMA-2379 | ⏳ | from the parity matrix |
+| Workout detail (canonical anatomy) | design surface | none | rig-detail p1–5 | AMA-2395 | ⚠️ | from the parity matrix |
+| Library collections | design surface | none | rig-collections | AMA-2376 | ⏳ | from the parity matrix |
+| Watch-ready sheet | design surface | none | rig-watchitem2 p1–5 | watch-item v2 fix | ⚠️ | from the parity matrix |
+| Enrichment (warm-up etc.) sheet | design surface | none | rig-enhance3 p1–5 | AMA-2424/2425 + reducer ticket | ⚠️ | from the parity matrix |
+| Watch step text | design surface | none | rig-watchtext p1–4 | — (unticketed) | 🚧 | from the parity matrix |
+| Logbook (grid/wheels/placement) | design surface | none | rig-logbook p1–4 | AMA-2426/2432 | 🚧 | from the parity matrix |
+| Friends (share/receive/manage) | design surface | none | rig-friends p1–9 (friends3) | AMA-2389/2390 | 🚧 | from the parity matrix |
+| Send/enhance push flow | design surface | none | rig-send p1–7 | partial | ⏳ | from the parity matrix |
+| Connections / device hub | design surface | none | screens-actuals3 | AMA-2387/2103 | ⏳ | from the parity matrix |
+| Profile hub / Settings | design surface | none | screens-daily-driver | — | ⏳ | from the parity matrix |
 
 5 rows carry runtime evidence. 19 design surfaces come from the parity matrix.
 

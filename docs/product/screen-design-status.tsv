@@ -1,0 +1,28 @@
+screen	design_artifact	design_ticket	status	note
+# What the app shows today vs the design it is meant to match.
+#
+# This file is hand-maintained. It is the one place a person states intent;
+# everything else in the registry is derived from files on disk.
+#
+# status values:
+#   CURRENT           the app matches the design of record
+#   REDESIGN_PENDING  a redesign is agreed but not shipped, so today's capture
+#                     is history rather than a defect list
+#   REDESIGN_SHIPPED  redesign is in the app; recapture and compare
+#   UNKNOWN           nobody has said which design governs this screen
+#
+# A screen marked REDESIGN_PENDING must not have its capture filed as bugs.
+# That is how the run-1 observations nearly became tickets for a screen that
+# is about to be replaced.
+sign-in	—	—	REDESIGN_PENDING	David 2026-08-22: onboarding carries the old design, redesign due once the full design lands
+mental-model-gate	—	—	REDESIGN_PENDING	same redesign as sign-in
+permission-notifications	—	—	REDESIGN_PENDING	part of the onboarding sequence
+today	screens-daily-driver.jsx	—	UNKNOWN	awaiting David's call on whether the shipped Today matches the design of record
+library	rig-collections.html	AMA-2376	UNKNOWN	AMA-2376 shipped; needs confirming the shipped Library is the target
+collection	rig-collections.html	AMA-2376	UNKNOWN	same as library
+workout-detail	rig-detail.html	AMA-2395	UNKNOWN	AMA-2395 shipped the canonical anatomy; confirm parity
+start-sheet	rig-send.html	AMA-2369	UNKNOWN	send/enhance redesign only partially wired per the parity matrix
+profile	screens-daily-driver.jsx	—	UNKNOWN	parity matrix records no rig authority for Profile
+history	rig-sync2.html	AMA-2396	UNKNOWN	sync v2 shipped; confirm parity
+sources	rig-actuals.html	AMA-2387	UNKNOWN	connections hub; rig-actuals is cited by AMA-2387
+settings	—	—	UNKNOWN	no design of record identified
