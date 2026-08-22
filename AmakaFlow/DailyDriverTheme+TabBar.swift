@@ -64,7 +64,12 @@ struct DDFloatingTabBar: View {
                 .shadow(color: Color.black.opacity(0.55), radius: 15, x: 0, y: 10)
         }
         .padding(.horizontal, 12)
+        // `children: .contain` is load-bearing. Without it this identifier
+        // collapses the subtree and today_tab, library_tab and profile_tab
+        // stop existing at runtime (AMA-2492).
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("af_tabbar")
+        .accessibilityLabel("Tab bar")
     }
 }
 

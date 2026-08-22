@@ -1,0 +1,9 @@
+appId: com.myamaka.AmakaFlowCompanion
+---
+- runFlow: _launch.yaml
+- tapOn:
+    id: "library_tab"
+- extendedWaitUntil:
+    visible:
+      id: "library_screen"
+    timeout: 10000

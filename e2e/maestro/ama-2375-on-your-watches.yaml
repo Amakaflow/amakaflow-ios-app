@@ -12,7 +12,6 @@ appId: com.myamaka.AmakaFlowCompanion
       AF_SKIP_APPLE_WATCH: "true"
       AF_USE_FIXTURES: "true"
       AF_DEMO_WATCH_MANAGER: "true"
-      AF_DEMO_WATCH_MANAGER: "true"
 - waitForAnimationToEnd:
     timeout: 5000
 - extendedWaitUntil:

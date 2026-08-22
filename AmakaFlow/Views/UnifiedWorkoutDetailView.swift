@@ -362,6 +362,7 @@ struct UnifiedWorkoutDetailView: View {
         .onChange(of: scenePhase) { phase in
             handleScenePhaseChange(phase)
         }
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("af_workout_detail_screen")
     }
 
@@ -451,6 +452,7 @@ struct UnifiedWorkoutDetailView: View {
                         .accessibilityHint("Changes how watches record it")
                         .accessibilityIdentifier("af_workout_detail_sport_chip")
                     }
+                    .accessibilityElement(children: .contain)
                     .accessibilityIdentifier("af_detail_pills")
 
                     if showSportDisagreementChip {
