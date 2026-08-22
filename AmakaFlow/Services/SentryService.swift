@@ -42,7 +42,7 @@ final class SentryService {
                 }
             }
         }
-        SupportDiagnosticsRuntimeState.shared.recordSentryEventID(eventID.sentryIdString)
+        recordDiagnosticEventID(eventID)
     }
 
     /// Capture an API error with endpoint and status code
@@ -57,7 +57,7 @@ final class SentryService {
             }
             scope.setTag(value: "api", key: "error_category")
         }
-        SupportDiagnosticsRuntimeState.shared.recordSentryEventID(eventID.sentryIdString)
+        recordDiagnosticEventID(eventID)
     }
 
     /// AMA-2308: social-import transport failures (false-offline triage).
@@ -76,7 +76,7 @@ final class SentryService {
             scope.setExtra(value: context.ingestorBase, key: "ingestor_base")
             scope.setLevel(SentryLevel.warning)
         }
-        SupportDiagnosticsRuntimeState.shared.recordSentryEventID(eventID.sentryIdString)
+        recordDiagnosticEventID(eventID)
     }
 
     /// Capture a Watch communication error
@@ -85,7 +85,7 @@ final class SentryService {
             scope.setTag(value: "watch_communication", key: "error_category")
             scope.setExtra(value: context, key: "context")
         }
-        SupportDiagnosticsRuntimeState.shared.recordSentryEventID(eventID.sentryIdString)
+        recordDiagnosticEventID(eventID)
     }
 
     /// Capture a Garmin communication error
@@ -94,7 +94,7 @@ final class SentryService {
             scope.setTag(value: "garmin_communication", key: "error_category")
             scope.setExtra(value: context, key: "context")
         }
-        SupportDiagnosticsRuntimeState.shared.recordSentryEventID(eventID.sentryIdString)
+        recordDiagnosticEventID(eventID)
     }
 
     /// Capture a workout engine error
@@ -108,7 +108,7 @@ final class SentryService {
                 scope.setExtra(value: step, key: "step_index")
             }
         }
-        SupportDiagnosticsRuntimeState.shared.recordSentryEventID(eventID.sentryIdString)
+        recordDiagnosticEventID(eventID)
     }
 
     // MARK: - Breadcrumbs
@@ -165,7 +165,7 @@ final class SentryService {
     /// Submit user feedback for a captured event
     func submitFeedback(comments: String, email: String? = nil, name: String? = nil) {
         let eventId = SentrySDK.capture(message: "User Feedback")
-        SupportDiagnosticsRuntimeState.shared.recordSentryEventID(eventId.sentryIdString)
+        recordDiagnosticEventID(eventId)
         let feedback = UserFeedback(eventId: eventId)
         feedback.comments = comments
         feedback.email = email ?? ""
@@ -179,6 +179,11 @@ final class SentryService {
         let eventID = SentrySDK.capture(message: message) { scope in
             scope.setExtra(value: logs, key: "debug_logs")
         }
+        recordDiagnosticEventID(eventID)
+    }
+
+    private func recordDiagnosticEventID(_ eventID: SentryId) {
+        guard eventID != .empty else { return }
         SupportDiagnosticsRuntimeState.shared.recordSentryEventID(eventID.sentryIdString)
     }
 }

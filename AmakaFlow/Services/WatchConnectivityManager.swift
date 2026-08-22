@@ -72,7 +72,6 @@ class WatchConnectivityManager: NSObject, ObservableObject {
     // MARK: - Debug Logging
 
     private func logWatchError(_ title: String, details: String, metadata: [String: String]? = nil) {
-        recordWatchTransfer(action: "watchError", outcome: "failed")
         Task { @MainActor in
             // Log to debug service
             DebugLogService.shared.logWatchError(title: title, details: details, metadata: metadata)
@@ -102,6 +101,7 @@ class WatchConnectivityManager: NSObject, ObservableObject {
             await MainActor.run {
                 lastError = WatchConnectivityError.sessionNotAvailable
             }
+            recordWatchTransfer(action: "receiveWorkout", outcome: "failed")
             logWatchError("Session not available", details: "WatchConnectivity not supported on this device")
             return .failed(.sessionNotAvailable)
         }
@@ -111,6 +111,7 @@ class WatchConnectivityManager: NSObject, ObservableObject {
             await MainActor.run {
                 lastError = WatchConnectivityError.sessionNotAvailable
             }
+            recordWatchTransfer(action: "receiveWorkout", outcome: "failed")
             logWatchError("Session not activated", details: "Activation state: \(session.activationState.rawValue)")
             return .failed(.sessionNotAvailable)
         }
@@ -120,6 +121,7 @@ class WatchConnectivityManager: NSObject, ObservableObject {
             await MainActor.run {
                 lastError = WatchConnectivityError.watchNotReachable
             }
+            recordWatchTransfer(action: "receiveWorkout", outcome: "failed")
             logWatchError("Watch app not installed", details: "Please install the watch app first")
             return .failed(.watchNotReachable)
         }
@@ -129,6 +131,7 @@ class WatchConnectivityManager: NSObject, ObservableObject {
             await MainActor.run {
                 lastError = WatchConnectivityError.watchNotReachable
             }
+            recordWatchTransfer(action: "receiveWorkout", outcome: "failed")
             logWatchError("Watch not reachable", details: "Make sure your watch is nearby and unlocked")
             return .failed(.watchNotReachable)
         }
@@ -145,6 +148,7 @@ class WatchConnectivityManager: NSObject, ObservableObject {
             }
 
             let outcome: WatchWorkoutSendOutcome = await withCheckedContinuation { continuation in
+                recordWatchTransfer(action: "stateUpdate", outcome: "dispatched")
                 session.sendMessage(
                     ["action": "receiveWorkout", "workout": workoutDict],
                     replyHandler: { reply in
@@ -186,6 +190,7 @@ class WatchConnectivityManager: NSObject, ObservableObject {
             await MainActor.run {
                 lastError = error
             }
+            recordWatchTransfer(action: "receiveWorkout", outcome: "failed")
             logWatchError("Encode workout failed", details: error.localizedDescription, metadata: ["Workout": workout.name])
             return .failed(.encodingFailed)
         }
@@ -261,7 +266,6 @@ class WatchConnectivityManager: NSObject, ObservableObject {
                         self.recordWatchTransfer(action: "stateUpdate", outcome: "failed")
                     }
                 )
-                recordWatchTransfer(action: "stateUpdate", outcome: "sent")
                 print("⌚️ sendState: Sent message (watch reachable)")
             } else {
                 print("⌚️ sendState: Watch not reachable, only used applicationContext")
@@ -274,6 +278,7 @@ class WatchConnectivityManager: NSObject, ObservableObject {
     func sendAck(_ ack: CommandAck) {
         guard let session = session, session.isReachable else { return }
 
+        recordWatchTransfer(action: "commandAck", outcome: "dispatched")
         session.sendMessage(
             [
                 "action": "commandAck",
@@ -287,7 +292,6 @@ class WatchConnectivityManager: NSObject, ObservableObject {
                 self.recordWatchTransfer(action: "commandAck", outcome: "failed")
             }
         )
-        recordWatchTransfer(action: "commandAck", outcome: "sent")
     }
 
     /// AMA-2420 — push Experimental Strength auto-capture flag to the Watch.
@@ -301,11 +305,11 @@ class WatchConnectivityManager: NSObject, ObservableObject {
         _ = session.transferUserInfo(payload)
         recordWatchTransfer(action: "experimentalFlags", outcome: "queued")
         if session.isReachable {
+            recordWatchTransfer(action: "experimentalFlags", outcome: "dispatched")
             session.sendMessage(payload, replyHandler: nil) { error in
                 print("⌚️ Failed to send experimentalFlags: \(error)")
                 self.recordWatchTransfer(action: "experimentalFlags", outcome: "failed")
             }
-            recordWatchTransfer(action: "experimentalFlags", outcome: "sent")
         }
     }
 }
@@ -589,11 +593,11 @@ extension WatchConnectivityManager: WCSessionDelegate {
             return
         }
         let action = message["action"] as? String ?? "unknown"
+        recordWatchTransfer(action: action, outcome: "dispatched")
         session.sendMessage(message, replyHandler: nil, errorHandler: { error in
             print("⌚️ Failed to send watch message: \(error)")
             self.recordWatchTransfer(action: action, outcome: "failed")
         })
-        recordWatchTransfer(action: action, outcome: "sent")
     }
 
     private func handleConflictAction(action: String, message: String) {
@@ -663,11 +667,11 @@ extension WatchConnectivityManager: WCSessionDelegate {
             var message: [String: Any] = ["action": "dayStateResponse", "dayState": dict]
             if let requestId { message["requestId"] = requestId }
 
+            recordWatchTransfer(action: "dayStateResponse", outcome: "dispatched")
             session.sendMessage(message, replyHandler: nil, errorHandler: { error in
                 print("⌚️ Failed to push day state to watch: \(error)")
                 self.recordWatchTransfer(action: "dayStateResponse", outcome: "failed")
             })
-            recordWatchTransfer(action: "dayStateResponse", outcome: "sent")
         } catch {
             print("⌚️ Failed to encode day state for watch: \(error)")
             recordWatchTransfer(action: "dayStateResponse", outcome: "failed")

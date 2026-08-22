@@ -3,7 +3,7 @@ import XCTest
 
 @MainActor
 final class SupportDiagnosticsSessionTests: XCTestCase {
-    func testCheckAndStartAuthorizesOnlyAfterSessionAuditSucceeds() async {
+    func testCheckAndStartAuthorizesOnlyAfterSessionAuditSucceeds() async throws {
         let access = authorizedAccess()
         let client = StubSupportDiagnosticsAccessClient(
             accessResult: .success(access),
@@ -17,10 +17,11 @@ final class SupportDiagnosticsSessionTests: XCTestCase {
 
         await session.checkAndStart()
 
-        XCTAssertEqual(session.state, .authorized(access.authorization!))
+        let authorization = try XCTUnwrap(access.authorization, "The enabled fixture must contain authorization")
+        XCTAssertEqual(session.state, .authorized(authorization), "A successful audit must authorize the returned grant")
         XCTAssertEqual(client.startedSessions, [
             .init(idempotencyKey: "stable-session-key", requestID: "request-123")
-        ])
+        ], "Session start must forward one stable idempotency key and request ID")
     }
 
     func testCheckAndStartKeepsDisabledAccountLockedWithoutStartingAudit() async {
@@ -32,8 +33,8 @@ final class SupportDiagnosticsSessionTests: XCTestCase {
 
         await session.checkAndStart()
 
-        XCTAssertEqual(session.state, .locked(.notGranted))
-        XCTAssertTrue(client.startedSessions.isEmpty)
+        XCTAssertEqual(session.state, .locked(.notGranted), "A disabled grant must remain locked")
+        XCTAssertTrue(client.startedSessions.isEmpty, "Disabled access must not start an audit session")
     }
 
     func testCheckAndStartRejectsGrantExpiredAtServerTime() async {
@@ -53,8 +54,8 @@ final class SupportDiagnosticsSessionTests: XCTestCase {
 
         await session.checkAndStart()
 
-        XCTAssertEqual(session.state, .locked(.expired))
-        XCTAssertTrue(client.startedSessions.isEmpty)
+        XCTAssertEqual(session.state, .locked(.expired), "A grant expired at server time must remain locked")
+        XCTAssertTrue(client.startedSessions.isEmpty, "Expired access must not start an audit session")
     }
 
     func testCheckAndStartFailsClosedWhenSessionAuditCannotStart() async {
@@ -66,8 +67,28 @@ final class SupportDiagnosticsSessionTests: XCTestCase {
 
         await session.checkAndStart()
 
-        XCTAssertEqual(session.state, .failed(.sessionStartFailed))
-        XCTAssertFalse(session.isAuthorized)
+        XCTAssertEqual(session.state, .failed(.sessionStartFailed), "Audit transport failure must fail closed")
+        XCTAssertFalse(session.isAuthorized, "An audit transport failure must not authorize diagnostics")
+    }
+
+    func testCheckAndStartRejectsUnsuccessfulSessionAuditEvent() async {
+        let client = StubSupportDiagnosticsAccessClient(
+            accessResult: .success(authorizedAccess()),
+            sessionResult: .success(sessionEvent(outcome: .failed))
+        )
+        let session = SupportDiagnosticsSession(client: client)
+
+        await session.checkAndStart()
+
+        XCTAssertEqual(
+            session.state,
+            .failed(.sessionStartFailed),
+            "A failed session-start audit event must not authorize diagnostics"
+        )
+        XCTAssertFalse(
+            session.isAuthorized,
+            "Diagnostics must remain locked when the server reports a failed session audit"
+        )
     }
 
     func testRetryingSessionAuditReusesOneIdempotencyKey() async {
@@ -86,7 +107,8 @@ final class SupportDiagnosticsSessionTests: XCTestCase {
 
         XCTAssertEqual(
             client.startedSessions.map(\.idempotencyKey),
-            ["session-key", "session-key"]
+            ["session-key", "session-key"],
+            "Retries must reuse the original idempotency key"
         )
     }
 
@@ -101,8 +123,8 @@ final class SupportDiagnosticsSessionTests: XCTestCase {
 
         await session.refreshAccess()
 
-        XCTAssertEqual(session.state, .failed(.accessCheckFailed))
-        XCTAssertFalse(session.isAuthorized)
+        XCTAssertEqual(session.state, .failed(.accessCheckFailed), "A failed refresh must revoke the open session")
+        XCTAssertFalse(session.isAuthorized, "Refresh failure must fail closed")
     }
 
     func testResetImmediatelyLocksAuthorizedSession() async {
@@ -115,7 +137,54 @@ final class SupportDiagnosticsSessionTests: XCTestCase {
 
         session.reset(reason: .signedOut)
 
-        XCTAssertEqual(session.state, .locked(.signedOut))
+        XCTAssertEqual(session.state, .locked(.signedOut), "Sign-out reset must lock an authorized session immediately")
+    }
+
+    func testResetPreventsPendingAccessCheckFromReauthorizingSession() async {
+        let client = GatedSupportDiagnosticsAccessClient(
+            access: authorizedAccess(),
+            sessionEvent: sessionEvent()
+        )
+        let session = SupportDiagnosticsSession(client: client)
+        let accessCheck = Task { await session.checkAndStart() }
+        while await client.fetchCount == 0 {
+            await Task.yield()
+        }
+
+        session.reset(reason: .signedOut)
+        await client.releaseFetch()
+        await accessCheck.value
+
+        XCTAssertEqual(
+            session.state,
+            .locked(.signedOut),
+            "A completed access request must not override a newer sign-out lock"
+        )
+    }
+
+    func testResetPreventsPendingRefreshFromReauthorizingSession() async {
+        let client = GatedSupportDiagnosticsAccessClient(
+            access: authorizedAccess(),
+            sessionEvent: sessionEvent(),
+            isFetchReleased: true
+        )
+        let session = SupportDiagnosticsSession(client: client)
+        await session.checkAndStart()
+        await client.blockFetch()
+        let refresh = Task { await session.refreshAccess() }
+        while await client.fetchCount < 2 {
+            await Task.yield()
+        }
+
+        session.reset(reason: .accountChanged)
+        await client.releaseFetch()
+        await refresh.value
+
+        XCTAssertEqual(
+            session.state,
+            .locked(.accountChanged),
+            "A completed refresh must not override a newer account-change lock"
+        )
     }
 
     private func authorizedAccess() -> SupportDiagnosticsAccess {
@@ -140,11 +209,13 @@ final class SupportDiagnosticsSessionTests: XCTestCase {
         )
     }
 
-    private func sessionEvent() -> SupportDiagnosticsAuditEvent {
+    private func sessionEvent(
+        outcome: SupportDiagnosticsAuditOutcome = .succeeded
+    ) -> SupportDiagnosticsAuditEvent {
         SupportDiagnosticsAuditEvent(
             auditID: UUID(uuidString: "f17f2970-e829-438f-8591-d72d6f1eeae5")!,
             eventType: .sessionStarted,
-            outcome: .succeeded,
+            outcome: outcome,
             createdAt: date("2026-08-21T20:00:01Z")
         )
     }
@@ -187,4 +258,44 @@ private final class StubSupportDiagnosticsAccessClient: SupportDiagnosticsAccess
 
 private enum StubError: Error {
     case transport
+}
+
+private actor GatedSupportDiagnosticsAccessClient: SupportDiagnosticsAccessProviding {
+    private let access: SupportDiagnosticsAccess
+    private let sessionEvent: SupportDiagnosticsAuditEvent
+    private var isFetchReleased: Bool
+    private(set) var fetchCount = 0
+
+    init(
+        access: SupportDiagnosticsAccess,
+        sessionEvent: SupportDiagnosticsAuditEvent,
+        isFetchReleased: Bool = false
+    ) {
+        self.access = access
+        self.sessionEvent = sessionEvent
+        self.isFetchReleased = isFetchReleased
+    }
+
+    func fetchAccess() async throws -> SupportDiagnosticsAccess {
+        fetchCount += 1
+        while !isFetchReleased {
+            await Task.yield()
+        }
+        return access
+    }
+
+    func startSession(
+        idempotencyKey: String,
+        requestID: String?
+    ) async throws -> SupportDiagnosticsAuditEvent {
+        sessionEvent
+    }
+
+    func blockFetch() {
+        isFetchReleased = false
+    }
+
+    func releaseFetch() {
+        isFetchReleased = true
+    }
 }

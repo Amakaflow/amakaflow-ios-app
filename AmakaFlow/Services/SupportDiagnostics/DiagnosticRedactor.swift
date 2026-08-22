@@ -28,12 +28,17 @@ nonisolated struct DiagnosticRedactor: Sendable {
         timestamp: Date = Date()
     ) -> DiagnosticEvent {
         let sanitizedMetadata = policy.sanitizeMetadata(metadata, category: category, textSanitizer: textSanitizer)
+        let sanitizedName = policy.sanitizeIdentifier(sanitizeText(name), fallback: "diagnostic.event")
         return DiagnosticEvent(
             timestamp: timestamp,
             severity: severity,
             category: category,
-            name: policy.sanitizeIdentifier(sanitizeText(name), fallback: "diagnostic.event"),
-            title: policy.sanitizeDisplayTitle(displayTitle ?? name, fallback: name, textSanitizer: textSanitizer),
+            name: sanitizedName,
+            title: policy.sanitizeDisplayTitle(
+                displayTitle ?? name,
+                fallback: sanitizedName,
+                textSanitizer: textSanitizer
+            ),
             message: policy.shouldOmitDiagnosticBody(message, metadata: metadata)
                 ? Self.omittedBodyMessage
                 : sanitizeText(message),

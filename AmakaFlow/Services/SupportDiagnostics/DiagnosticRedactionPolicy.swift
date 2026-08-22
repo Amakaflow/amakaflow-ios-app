@@ -106,7 +106,10 @@ nonisolated struct DiagnosticRedactionPolicy: Sendable {
         if ["response", "request", "raw_response", "response_body", "request_body"].contains(lowercased) {
             return true
         }
-        return sensitiveKeyFragments.contains { lowercased.contains($0) }
+        let tokens = Set(lowercased.split { character in
+            !character.isLetter && !character.isNumber && character != "_"
+        }.map(String.init))
+        return sensitiveKeyFragments.contains { tokens.contains($0) }
     }
 
     private func hasBodySignal(in metadata: [String: String]) -> Bool {
@@ -134,7 +137,9 @@ nonisolated struct DiagnosticRedactionPolicy: Sendable {
         if trimmed.hasPrefix("{") || trimmed.hasPrefix("[") {
             return true
         }
-        let lowercased = trimmed.lowercased()
+        let tokens = Set(trimmed.lowercased().split { character in
+            !character.isLetter && !character.isNumber && character != "_"
+        }.map(String.init))
         return [
             "access_token",
             "refresh_token",
@@ -146,7 +151,7 @@ nonisolated struct DiagnosticRedactionPolicy: Sendable {
             "payload",
             "response_body",
             "request_body"
-        ].contains { lowercased.contains($0) }
+        ].contains { tokens.contains($0) }
     }
 
     private func normalizedPath(_ value: String) -> String {

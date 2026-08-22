@@ -83,7 +83,6 @@ class DebugLogService: ObservableObject {
 
     @Published var entries: [DebugLogEntry] = []
 
-    var pendingWriteTasks: [Task<Void, Never>] = []
     var writeTail: Task<Void, Never>?
     var accountLoadTask: Task<Void, Never>?
     var migrationTask: Task<Void, Never>?
@@ -134,6 +133,10 @@ class DebugLogService: ObservableObject {
         error: Error? = nil,
         requestID: String? = nil
     ) {
+        // Response bodies are intentionally never persisted. They can contain customer,
+        // authentication, health, or location data; callers may pass one for API
+        // compatibility, but diagnostics record only safe status and error summaries.
+        _ = response
         var metadata: [String: String] = [
             "Endpoint": endpoint,
             "Method": method
@@ -151,58 +154,50 @@ class DebugLogService: ObservableObject {
         let details = error?.localizedDescription
             ?? statusCode.map { "HTTP \($0) response omitted from diagnostics" }
             ?? "API request failed"
-        let event = redactor.redact(
+        record(
             category: .api,
             severity: .error,
             name: "api.request.failed",
             displayTitle: "\(method) \(endpoint) failed",
             message: details,
             metadata: metadata,
-            requestID: requestID,
-            accountIdentifier: accountIdentifierProvider()
+            requestID: requestID
         )
-        addEvent(event)
     }
 
     /// Log an API success (optional, for debugging)
     func logAPISuccess(endpoint: String, method: String = "GET", statusCode: Int) {
-        let event = redactor.redact(
+        record(
             category: .api,
             severity: .info,
             name: "api.request.succeeded",
             displayTitle: "\(method) \(endpoint)",
             message: "Status: \(statusCode)",
-            metadata: ["Endpoint": endpoint, "Method": method, "Status": "\(statusCode)"],
-            accountIdentifier: accountIdentifierProvider()
+            metadata: ["Endpoint": endpoint, "Method": method, "Status": "\(statusCode)"]
         )
-        addEvent(event)
     }
 
     /// Log a Watch connectivity error
     func logWatchError(title: String, details: String, metadata: [String: String]? = nil) {
-        let event = redactor.redact(
+        record(
             category: .watch,
             severity: .error,
             name: "watch.error",
             displayTitle: title,
             message: details,
-            metadata: metadata ?? [:],
-            accountIdentifier: accountIdentifierProvider()
+            metadata: metadata ?? [:]
         )
-        addEvent(event)
     }
 
     /// Log a Watch connectivity event
     func logWatchEvent(title: String, details: String) {
-        let event = redactor.redact(
+        record(
             category: .watch,
             severity: .info,
             name: "watch.event",
             displayTitle: title,
-            message: details,
-            accountIdentifier: accountIdentifierProvider()
+            message: details
         )
-        addEvent(event)
     }
 
     /// Log a workout completion error
@@ -215,58 +210,50 @@ class DebugLogService: ObservableObject {
             metadata["Context"] = context
         }
 
-        let event = redactor.redact(
+        record(
             category: .completion,
             severity: .error,
             name: "completion.failed",
             displayTitle: "Completion failed",
             message: error.localizedDescription,
-            metadata: metadata,
-            accountIdentifier: accountIdentifierProvider()
+            metadata: metadata
         )
-        addEvent(event)
     }
 
     /// Log a network error
     func logNetworkError(error: Error, context: String? = nil) {
-        let event = redactor.redact(
+        record(
             category: .network,
             severity: .warning,
             name: "network.error",
             displayTitle: "Network error",
             message: error.localizedDescription,
-            metadata: context.map { ["Context": $0] } ?? [:],
-            accountIdentifier: accountIdentifierProvider()
+            metadata: context.map { ["Context": $0] } ?? [:]
         )
-        addEvent(event)
     }
 
     /// Log an authentication error
     func logAuthError(details: String, context: String? = nil) {
-        let event = redactor.redact(
+        record(
             category: .auth,
             severity: .error,
             name: "auth.error",
             displayTitle: "Authentication error",
             message: details,
-            metadata: context.map { ["Context": $0] } ?? [:],
-            accountIdentifier: accountIdentifierProvider()
+            metadata: context.map { ["Context": $0] } ?? [:]
         )
-        addEvent(event)
     }
 
     /// Log a general debug message
     func log(_ title: String, details: String, metadata: [String: String]? = nil) {
-        let event = redactor.redact(
+        record(
             category: .general,
             severity: .info,
             name: "general.event",
             displayTitle: title,
             message: details,
-            metadata: metadata ?? [:],
-            accountIdentifier: accountIdentifierProvider()
+            metadata: metadata ?? [:]
         )
-        addEvent(event)
     }
 
     /// Clear all log entries
@@ -294,5 +281,28 @@ class DebugLogService: ObservableObject {
         }
 
         return text
+    }
+
+    private func record(
+        category: DiagnosticEventCategory,
+        severity: DiagnosticEventSeverity,
+        name: String,
+        displayTitle: String,
+        message: String,
+        metadata: [String: String] = [:],
+        requestID: String? = nil
+    ) {
+        addEvent(
+            redactor.redact(
+                category: category,
+                severity: severity,
+                name: name,
+                displayTitle: displayTitle,
+                message: message,
+                metadata: metadata,
+                requestID: requestID,
+                accountIdentifier: accountIdentifierProvider()
+            )
+        )
     }
 }

@@ -31,14 +31,14 @@ final class SupportDiagnosticsAccessClientTests: XCTestCase {
 
         let access = try await client.fetchAccess()
 
-        XCTAssertEqual(access.role, .viewer)
-        XCTAssertEqual(access.capabilities, [.statusRead, .logsRead])
-        XCTAssertEqual(access.grantID?.uuidString.lowercased(), "3b48344d-3d70-4e36-8750-e3caa43f97dc")
-        let request = try XCTUnwrap(MockURLProtocol.interceptedRequests.first)
-        XCTAssertEqual(request.httpMethod, "GET")
-        XCTAssertEqual(request.url?.absoluteString, "https://mobile.test/v1/support-diagnostics/access")
-        XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer clerk-token")
-        XCTAssertEqual(request.value(forHTTPHeaderField: "X-AmakaFlow-App-Version"), "2.4.0 (241)")
+        XCTAssertEqual(access.role, .viewer, "The access response must preserve the supported viewer role")
+        XCTAssertEqual(access.capabilities, [.statusRead, .logsRead], "Unknown capabilities must be ignored")
+        XCTAssertEqual(access.grantID?.uuidString.lowercased(), "3b48344d-3d70-4e36-8750-e3caa43f97dc", "The grant ID must decode unchanged")
+        let request = try XCTUnwrap(MockURLProtocol.interceptedRequests.first, "Access fetch must issue one request")
+        XCTAssertEqual(request.httpMethod, "GET", "Access fetch must use GET")
+        XCTAssertEqual(request.url?.absoluteString, "https://mobile.test/v1/support-diagnostics/access", "Access fetch must use the versioned endpoint")
+        XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer clerk-token", "Access fetch must authenticate with Clerk")
+        XCTAssertEqual(request.value(forHTTPHeaderField: "X-AmakaFlow-App-Version"), "2.4.0 (241)", "Access fetch must identify the app build")
     }
 
     func testFetchAccessPreservesDisabledContract() async throws {
@@ -55,10 +55,10 @@ final class SupportDiagnosticsAccessClientTests: XCTestCase {
 
         let access = try await makeClient().fetchAccess()
 
-        XCTAssertFalse(access.enabled)
-        XCTAssertNil(access.grantID)
-        XCTAssertNil(access.role)
-        XCTAssertTrue(access.capabilities.isEmpty)
+        XCTAssertFalse(access.enabled, "The disabled contract must remain disabled")
+        XCTAssertNil(access.grantID, "Disabled access must not invent a grant ID")
+        XCTAssertNil(access.role, "Disabled access must not invent a role")
+        XCTAssertTrue(access.capabilities.isEmpty, "Disabled access must expose no capabilities")
     }
 
     func testStartSessionSendsIdempotencyAndCorrelationHeaders() async throws {
@@ -76,13 +76,17 @@ final class SupportDiagnosticsAccessClientTests: XCTestCase {
             requestID: "request-123"
         )
 
-        XCTAssertEqual(event.eventType, .sessionStarted)
-        XCTAssertEqual(event.outcome, .succeeded)
-        let request = try XCTUnwrap(MockURLProtocol.interceptedRequests.first)
-        XCTAssertEqual(request.httpMethod, "POST")
-        XCTAssertEqual(request.url?.absoluteString, "https://mobile.test/v1/support-diagnostics/sessions/start")
-        XCTAssertEqual(request.value(forHTTPHeaderField: "Idempotency-Key"), "session-key")
-        XCTAssertEqual(request.value(forHTTPHeaderField: "X-Request-ID"), "request-123")
+        XCTAssertEqual(event.eventType, .sessionStarted, "Session start must decode the audit event type")
+        XCTAssertEqual(event.outcome, .succeeded, "Session start must decode the audit outcome")
+        let request = try XCTUnwrap(MockURLProtocol.interceptedRequests.first, "Session start must issue one request")
+        XCTAssertEqual(request.httpMethod, "POST", "Session start must use POST")
+        XCTAssertEqual(
+            request.url?.absoluteString,
+            "https://mobile.test/v1/support-diagnostics/sessions/start",
+            "Session start must use the versioned endpoint"
+        )
+        XCTAssertEqual(request.value(forHTTPHeaderField: "Idempotency-Key"), "session-key", "Session start must send its idempotency key")
+        XCTAssertEqual(request.value(forHTTPHeaderField: "X-Request-ID"), "request-123", "Session start must send its correlation ID")
     }
 
     func testFetchAccessRejectsUnauthorizedResponseWithoutDecodingDependencyBody() async throws {

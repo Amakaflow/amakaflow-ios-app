@@ -38,16 +38,10 @@ nonisolated struct ConfiguredHostsProbe: SupportDiagnosticsProbe {
     func run() async throws -> [SupportDiagnosticsDisplayField] {
         await MainActor.run {
             let environment = AppEnvironment.current
-            return [
-                supportDiagnosticsField("Environment", environment.rawValue),
-                supportDiagnosticsField("Mobile BFF", host(from: environment.mobileBFFURL)),
-                supportDiagnosticsField("Mapper API", host(from: environment.mapperAPIURL)),
-                supportDiagnosticsField("Ingestor API", host(from: environment.ingestorAPIURL)),
-                supportDiagnosticsField("Calendar API", host(from: environment.calendarAPIURL)),
-                supportDiagnosticsField("Chat API", host(from: environment.chatAPIURL)),
-                supportDiagnosticsField("MCP API", host(from: environment.mcpAPIURL)),
-                supportDiagnosticsField("Strava API", host(from: environment.stravaAPIURL))
-            ]
+            return [supportDiagnosticsField("Environment", environment.rawValue)]
+                + supportDiagnosticsServiceEndpoints(environment: environment).map {
+                    supportDiagnosticsField($0.name, host(from: $0.baseURL))
+                }
         }
     }
 }
@@ -187,7 +181,7 @@ private nonisolated func host(from urlString: String) -> String {
     return host
 }
 
-private nonisolated struct SupportDiagnosticsServiceEndpoint: Sendable {
+nonisolated struct SupportDiagnosticsServiceEndpoint: Sendable {
     let name: String
     let baseURL: String
 }
@@ -198,7 +192,7 @@ private nonisolated struct IndexedServiceFields: Sendable {
 }
 
 @MainActor
-private func supportDiagnosticsServiceEndpoints(
+func supportDiagnosticsServiceEndpoints(
     environment: AppEnvironment
 ) -> [SupportDiagnosticsServiceEndpoint] {
     [
@@ -226,17 +220,42 @@ private nonisolated func checkHealth(
     let url = base.appending(path: "health")
     var request = URLRequest(url: url)
     request.httpMethod = "HEAD"
-    request.timeoutInterval = 1
-    let started = Date()
+    // Leave one second for the probe runner to collect and classify the result
+    // before its four-second hard deadline cancels the group.
+    request.timeoutInterval = 3
+    let clock = ContinuousClock()
+    let started = clock.now
 
     do {
         let (_, response) = try await URLSession.shared.data(for: request)
         guard let httpResponse = response as? HTTPURLResponse else {
-            return healthFields(name: endpoint.name, host: host, outcome: "Network unavailable", started: started)
+            return healthFields(
+                name: endpoint.name,
+                host: host,
+                outcome: "Network unavailable",
+                elapsed: started.duration(to: clock.now)
+            )
         }
-        return healthFields(name: endpoint.name, host: host, outcome: "HTTP \(httpResponse.statusCode)", started: started)
+        return healthFields(
+            name: endpoint.name,
+            host: host,
+            outcome: "HTTP \(httpResponse.statusCode)",
+            elapsed: started.duration(to: clock.now)
+        )
+    } catch let error as URLError {
+        return healthFields(
+            name: endpoint.name,
+            host: host,
+            outcome: "Network unavailable (\(error.errorCode))",
+            elapsed: started.duration(to: clock.now)
+        )
     } catch {
-        return healthFields(name: endpoint.name, host: host, outcome: "Network unavailable", started: started)
+        return healthFields(
+            name: endpoint.name,
+            host: host,
+            outcome: "Network unavailable",
+            elapsed: started.duration(to: clock.now)
+        )
     }
 }
 
@@ -244,13 +263,14 @@ private nonisolated func healthFields(
     name: String,
     host: String,
     outcome: String,
-    started: Date
+    elapsed: Duration
 ) -> [SupportDiagnosticsDisplayField] {
-    let elapsed = Int(Date().timeIntervalSince(started) * 1_000)
+    let elapsedMilliseconds = elapsed.components.seconds * 1_000
+        + elapsed.components.attoseconds / 1_000_000_000_000_000
     return [
         supportDiagnosticsField("\(name) host", host),
         supportDiagnosticsField("\(name) outcome", outcome),
-        supportDiagnosticsField("\(name) latency", "\(elapsed) ms")
+        supportDiagnosticsField("\(name) latency", "\(elapsedMilliseconds) ms")
     ]
 }
 

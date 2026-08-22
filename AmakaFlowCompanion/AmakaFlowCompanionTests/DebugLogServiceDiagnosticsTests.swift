@@ -164,7 +164,8 @@ final class DebugLogServiceDiagnosticsTests: DiagnosticEventStoreTestCase {
         )
         await service.waitForPendingWrites()
 
-        let events = try await store.snapshot(.account(redactor.hashAccountIdentifier(account)!))
+        let accountHash = try XCTUnwrap(redactor.hashAccountIdentifier(account))
+        let events = try await store.snapshot(.account(accountHash))
         XCTAssertEqual(Set(events.map(\.name)), ["auth.error", "network.error", "general.event"])
         XCTAssertEqual(Set(events.map(\.message)), [DiagnosticRedactor.omittedBodyMessage])
         XCTAssertEqual(Set(service.entries.map(\.details)), [DiagnosticRedactor.omittedBodyMessage])
@@ -198,7 +199,8 @@ final class DebugLogServiceDiagnosticsTests: DiagnosticEventStoreTestCase {
         )
         await service.waitForPendingWrites()
 
-        let events = try await store.snapshot(.account(redactor.hashAccountIdentifier(account)!))
+        let accountHash = try XCTUnwrap(redactor.hashAccountIdentifier(account))
+        let events = try await store.snapshot(.account(accountHash))
         XCTAssertEqual(events.map(\.name), ["general.event"])
         XCTAssertEqual(events.first?.message, "Workout sync retry scheduled after transient timeout")
         XCTAssertEqual(service.entries.first?.details, "Workout sync retry scheduled after transient timeout")
@@ -208,7 +210,13 @@ final class DebugLogServiceDiagnosticsTests: DiagnosticEventStoreTestCase {
     @MainActor
     func testClearLogIsOrderedAfterEarlierPendingAppends() async throws {
         let store = makeStore(maxBytes: 100_000)
-        let service = DebugLogService(store: store)
+        let account = "clear-log-account"
+        let authChanges = CurrentValueSubject<String?, Never>(account)
+        let service = DebugLogService(
+            store: store,
+            accountIdentifierProvider: { account },
+            accountIdentifierPublisher: { authChanges.eraseToAnyPublisher() }
+        )
 
         for index in 0..<200 {
             service.log(

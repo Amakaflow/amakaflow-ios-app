@@ -34,6 +34,9 @@ struct DiagnosticBundlePreviewView: View {
             }
         }
         .navigationTitle("Export Preview")
+        .scrollContentBackground(.hidden)
+        .background(DailyDriver.screenBackground)
+        .tint(DailyDriver.lime)
         .refreshable {
             await loadSnapshot()
         }
@@ -75,14 +78,17 @@ struct DiagnosticBundlePreviewView: View {
     private func metadataSection(_ preview: DiagnosticBundlePreview) -> some View {
         Section {
             LabeledContent("Events", value: "\(preview.eventCount)")
+                .monospacedDigit()
             if let timeRange = preview.timeRange {
                 LabeledContent("First event", value: timeRange.start.formatted(date: .abbreviated, time: .standard))
+                    .monospacedDigit()
                 LabeledContent("Last event", value: timeRange.end.formatted(date: .abbreviated, time: .standard))
+                    .monospacedDigit()
             } else {
                 LabeledContent("Time range", value: "No events")
             }
             if let errorMessage {
-                LabeledContent("Safe error", value: errorMessage)
+                LabeledContent("Status", value: displayMessage(for: errorMessage))
             }
         } header: {
             Text("Preview metadata")
@@ -139,6 +145,9 @@ struct DiagnosticBundlePreviewView: View {
             snapshot = nil
             loadedToken = token
             errorMessage = "BUNDLE_PREVIEW_UNAVAILABLE"
+            #if DEBUG
+            print("[SupportDiagnostics] BUNDLE_PREVIEW_UNAVAILABLE")
+            #endif
         }
     }
 
@@ -156,5 +165,11 @@ struct DiagnosticBundlePreviewView: View {
         snapshot = nil
         loadedToken = nil
         errorMessage = nil
+    }
+
+    private func displayMessage(for safeErrorCode: String) -> String {
+        safeErrorCode == "BUNDLE_PREVIEW_UNAVAILABLE"
+            ? "The preview could not be loaded. Pull to refresh and try again."
+            : "Diagnostics are temporarily unavailable."
     }
 }

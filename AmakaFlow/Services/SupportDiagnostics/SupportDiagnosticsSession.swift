@@ -33,6 +33,7 @@ final class SupportDiagnosticsSession: ObservableObject {
     private let idempotencyKeyProvider: IdempotencyKeyProvider
     private let requestIDProvider: RequestIDProvider
     private var sessionIdempotencyKey: String?
+    private var operationGeneration = 0
 
     init(
         client: any SupportDiagnosticsAccessProviding,
@@ -50,16 +51,19 @@ final class SupportDiagnosticsSession: ObservableObject {
     }
 
     func checkAndStart() async {
+        let generation = beginOperation()
         state = .checking
 
         let access: SupportDiagnosticsAccess
         do {
             access = try await client.fetchAccess()
         } catch {
+            guard operationGeneration == generation else { return }
             state = .failed(.accessCheckFailed)
             return
         }
 
+        guard operationGeneration == generation else { return }
         guard access.enabled else {
             state = .locked(.notGranted)
             return
@@ -72,19 +76,29 @@ final class SupportDiagnosticsSession: ObservableObject {
         let idempotencyKey = sessionIdempotencyKey ?? idempotencyKeyProvider()
         sessionIdempotencyKey = idempotencyKey
         do {
-            _ = try await client.startSession(
+            let auditEvent = try await client.startSession(
                 idempotencyKey: idempotencyKey,
                 requestID: requestIDProvider()
             )
+            guard operationGeneration == generation else { return }
+            guard auditEvent.eventType == .sessionStarted,
+                  auditEvent.outcome == .succeeded
+            else {
+                state = .failed(.sessionStartFailed)
+                return
+            }
             state = .authorized(authorization)
         } catch {
+            guard operationGeneration == generation else { return }
             state = .failed(.sessionStartFailed)
         }
     }
 
     func refreshAccess() async {
+        let generation = beginOperation()
         do {
             let access = try await client.fetchAccess()
+            guard operationGeneration == generation else { return }
             guard access.enabled else {
                 state = .locked(.notGranted)
                 return
@@ -95,12 +109,19 @@ final class SupportDiagnosticsSession: ObservableObject {
             }
             state = .authorized(authorization)
         } catch {
+            guard operationGeneration == generation else { return }
             state = .failed(.accessCheckFailed)
         }
     }
 
     func reset(reason: SupportDiagnosticsLockReason) {
+        operationGeneration += 1
         sessionIdempotencyKey = nil
         state = .locked(reason)
+    }
+
+    private func beginOperation() -> Int {
+        operationGeneration += 1
+        return operationGeneration
     }
 }

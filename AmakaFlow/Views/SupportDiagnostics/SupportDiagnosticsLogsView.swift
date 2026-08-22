@@ -34,6 +34,9 @@ struct SupportDiagnosticsLogsView: View {
             }
         }
         .navigationTitle("Logs")
+        .scrollContentBackground(.hidden)
+        .background(DailyDriver.screenBackground)
+        .tint(DailyDriver.lime)
         .refreshable {
             await loadEvents()
         }
@@ -63,8 +66,9 @@ struct SupportDiagnosticsLogsView: View {
     private func summarySection(eventCount: Int) -> some View {
         Section {
             LabeledContent("Events", value: "\(eventCount)")
+                .monospacedDigit()
             if let errorMessage {
-                LabeledContent("Safe error", value: errorMessage)
+                LabeledContent("Status", value: displayMessage(for: errorMessage))
             }
         } footer: {
             Text("Only account-scoped, already-redacted structured diagnostics are shown.")
@@ -118,6 +122,9 @@ struct SupportDiagnosticsLogsView: View {
             events = []
             loadedToken = token
             errorMessage = "LOGS_UNAVAILABLE"
+            #if DEBUG
+            print("[SupportDiagnostics] LOGS_UNAVAILABLE")
+            #endif
         }
     }
 
@@ -136,6 +143,12 @@ struct SupportDiagnosticsLogsView: View {
         loadedToken = nil
         errorMessage = nil
     }
+
+    private func displayMessage(for safeErrorCode: String) -> String {
+        safeErrorCode == "LOGS_UNAVAILABLE"
+            ? "Logs could not be loaded. Pull to refresh and try again."
+            : "Diagnostics are temporarily unavailable."
+    }
 }
 
 private struct DiagnosticEventSection: View {
@@ -144,6 +157,7 @@ private struct DiagnosticEventSection: View {
     var body: some View {
         Section(event.title) {
             LabeledContent("Timestamp", value: event.timestamp.formatted(date: .abbreviated, time: .standard))
+                .monospacedDigit()
             LabeledContent("Severity", value: event.severity.rawValue)
             LabeledContent("Category", value: event.category.rawValue)
             LabeledContent("Stable name", value: event.name)

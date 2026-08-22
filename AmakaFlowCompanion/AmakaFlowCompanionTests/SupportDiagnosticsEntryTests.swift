@@ -58,23 +58,23 @@ final class SupportDiagnosticsEntryTests: XCTestCase {
     }
 
     func testSecondTapSequenceDoesNotStartOverlappingAccessCheck() async {
+        let accessGate = DiagnosticsAccessGate()
         let client = EntrySupportDiagnosticsClient(
             accessResults: [.success(authorizedAccess()), .success(authorizedAccess())],
             sessionResults: [.success(sessionEvent()), .success(sessionEvent())],
-            accessDelay: .milliseconds(200)
+            accessGate: accessGate
         )
         let viewModel = makeViewModel(client: client)
 
         let firstEntry = Task { await triggerEntry(on: viewModel) }
-        while await client.accessCheckCount == 0 {
-            await Task.yield()
-        }
+        await accessGate.waitUntilEntered()
         let secondEntry = Task { await triggerEntry(on: viewModel) }
-        try? await Task<Never, Never>.sleep(for: .milliseconds(30))
+        await Task.yield()
 
         let accessCheckCount = await client.accessCheckCount
-        XCTAssertEqual(accessCheckCount, 1)
+        XCTAssertEqual(accessCheckCount, 1, "A second tap sequence must not overlap the in-flight access check")
 
+        await accessGate.release()
         await firstEntry.value
         await secondEntry.value
     }
@@ -219,25 +219,23 @@ private actor RecordingDiagnosticsSleeper {
 private actor EntrySupportDiagnosticsClient: SupportDiagnosticsAccessProviding {
     private var accessResults: [Result<SupportDiagnosticsAccess, EntryStubError>]
     private var sessionResults: [Result<SupportDiagnosticsAuditEvent, EntryStubError>]
-    private let accessDelay: Duration?
+    private let accessGate: DiagnosticsAccessGate?
     private(set) var accessCheckCount = 0
     private(set) var sessionStartCount = 0
 
     init(
         accessResults: [Result<SupportDiagnosticsAccess, EntryStubError>],
         sessionResults: [Result<SupportDiagnosticsAuditEvent, EntryStubError>],
-        accessDelay: Duration? = nil
+        accessGate: DiagnosticsAccessGate? = nil
     ) {
         self.accessResults = accessResults
         self.sessionResults = sessionResults
-        self.accessDelay = accessDelay
+        self.accessGate = accessGate
     }
 
     func fetchAccess() async throws -> SupportDiagnosticsAccess {
         accessCheckCount += 1
-        if let accessDelay {
-            try await Task<Never, Never>.sleep(for: accessDelay)
-        }
+        await accessGate?.enterAndWait()
         return try accessResults.removeFirst().get()
     }
 
@@ -247,6 +245,32 @@ private actor EntrySupportDiagnosticsClient: SupportDiagnosticsAccessProviding {
     ) async throws -> SupportDiagnosticsAuditEvent {
         sessionStartCount += 1
         return try sessionResults.removeFirst().get()
+    }
+}
+
+private actor DiagnosticsAccessGate {
+    private var hasEntered = false
+    private var isReleased = false
+    private var entryWaiters: [CheckedContinuation<Void, Never>] = []
+    private var releaseWaiters: [CheckedContinuation<Void, Never>] = []
+
+    func waitUntilEntered() async {
+        guard !hasEntered else { return }
+        await withCheckedContinuation { entryWaiters.append($0) }
+    }
+
+    func enterAndWait() async {
+        hasEntered = true
+        entryWaiters.forEach { $0.resume() }
+        entryWaiters = []
+        guard !isReleased else { return }
+        await withCheckedContinuation { releaseWaiters.append($0) }
+    }
+
+    func release() {
+        isReleased = true
+        releaseWaiters.forEach { $0.resume() }
+        releaseWaiters = []
     }
 }
 

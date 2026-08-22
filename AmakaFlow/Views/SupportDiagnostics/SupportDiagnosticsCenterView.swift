@@ -10,6 +10,9 @@ struct SupportDiagnosticsCenterView: View {
                 capabilitySection
             }
             .navigationTitle("Support Diagnostics")
+            .scrollContentBackground(.hidden)
+            .background(DailyDriver.screenBackground)
+            .tint(DailyDriver.lime)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") {
@@ -31,6 +34,7 @@ struct SupportDiagnosticsCenterView: View {
                 LabeledContent("Role", value: authorization.role.rawValue.capitalized)
                 if let expiresAt = authorization.expiresAt {
                     LabeledContent("Expires", value: expiresAt.formatted(date: .abbreviated, time: .shortened))
+                        .monospacedDigit()
                 }
             }
         }
@@ -55,7 +59,7 @@ struct SupportDiagnosticsCenterView: View {
     private func statusRow(authorization: SupportDiagnosticsAuthorization) -> some View {
         if authorization.capabilities.contains(.statusRead) {
             NavigationLink {
-                SupportDiagnosticsStatusView(authorization: authorization)
+                SupportDiagnosticsStatusView(viewModel: viewModel)
             } label: {
                 capabilityLabel(
                     title: "Status",
@@ -160,9 +164,6 @@ private struct SupportDiagnosticsLifecycleModifier: ViewModifier {
             .environmentObject(viewModel)
             .task(id: accountID) {
                 viewModel.updateAccount(isAuthenticated ? accountID : nil)
-            }
-            .onChange(of: accountID) { _, newAccountID in
-                viewModel.updateAccount(isAuthenticated ? newAccountID : nil)
             }
             .onChange(of: isAuthenticated) { _, authenticated in
                 viewModel.updateAccount(authenticated ? accountID : nil)

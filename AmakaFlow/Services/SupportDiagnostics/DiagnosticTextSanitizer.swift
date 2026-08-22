@@ -14,7 +14,7 @@ nonisolated struct DiagnosticTextSanitizer: Sendable {
             with: "$1\(DiagnosticRedactor.redacted)"
         )
         sanitized = replace(
-            pattern: #"\b[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{6,}\b"#,
+            pattern: #"\beyJ[A-Za-z0-9_-]{7,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{6,}\b"#,
             in: sanitized,
             with: DiagnosticRedactor.redacted
         )
@@ -81,7 +81,10 @@ nonisolated struct DiagnosticTextSanitizer: Sendable {
         options: NSRegularExpression.Options = [],
         with replacement: String
     ) -> String {
-        guard let expression = try? NSRegularExpression(pattern: pattern, options: options) else {
+        guard let expression = DiagnosticRegularExpressionCache.shared.expression(
+            pattern: pattern,
+            options: options
+        ) else {
             return text
         }
         let range = NSRange(text.startIndex..<text.endIndex, in: text)
@@ -94,7 +97,10 @@ nonisolated struct DiagnosticTextSanitizer: Sendable {
         options: NSRegularExpression.Options = [],
         transform: (String) -> String
     ) -> String {
-        guard let expression = try? NSRegularExpression(pattern: pattern, options: options) else {
+        guard let expression = DiagnosticRegularExpressionCache.shared.expression(
+            pattern: pattern,
+            options: options
+        ) else {
             return text
         }
         let matches = expression.matches(in: text, options: [], range: NSRange(text.startIndex..<text.endIndex, in: text))
@@ -104,5 +110,27 @@ nonisolated struct DiagnosticTextSanitizer: Sendable {
             result.replaceSubrange(range, with: transform(String(result[range])))
         }
         return result
+    }
+}
+
+private nonisolated final class DiagnosticRegularExpressionCache: @unchecked Sendable {
+    static let shared = DiagnosticRegularExpressionCache()
+
+    private let lock = NSLock()
+    private var expressions: [String: NSRegularExpression] = [:]
+
+    func expression(
+        pattern: String,
+        options: NSRegularExpression.Options
+    ) -> NSRegularExpression? {
+        let key = "\(options.rawValue):\(pattern)"
+        return lock.withLock {
+            if let cached = expressions[key] { return cached }
+            guard let expression = try? NSRegularExpression(pattern: pattern, options: options) else {
+                return nil
+            }
+            expressions[key] = expression
+            return expression
+        }
     }
 }

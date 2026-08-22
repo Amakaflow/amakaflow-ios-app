@@ -125,7 +125,13 @@ final class DiagnosticEventStoreTests: DiagnosticEventStoreTestCase {
         let enforcingStore = makeStore(maxBytes: 1_200)
         let names = try await enforcingStore.snapshot(.unscopedForMigrationOnly).map(\.name)
 
-        XCTAssertEqual(names, ["oversized-3"])
+        XCTAssertFalse(names.isEmpty, "Retention must keep the newest event when it fits")
+        XCTAssertEqual(names.first, "oversized-3", "Retention must preserve the newest event")
+        XCTAssertEqual(
+            names,
+            Array(["oversized-3", "oversized-2", "oversized-1"].prefix(names.count)),
+            "Size eviction must retain a newest-first suffix without assuming encoder byte counts"
+        )
         let bytes = try Data(contentsOf: enforcingStore.eventsFileURL).count
         XCTAssertLessThanOrEqual(bytes, 1_200)
     }
@@ -156,7 +162,13 @@ final class DiagnosticEventStoreTests: DiagnosticEventStoreTestCase {
         let names = try await store.snapshot(.unscopedForMigrationOnly).map(\.name)
         XCTAssertFalse(names.contains("too-old"))
         XCTAssertFalse(names.contains("newer-1"))
-        XCTAssertEqual(names, ["newer-3", "newer-2"])
+        XCTAssertFalse(names.isEmpty, "Size retention must keep at least the newest fitting event")
+        XCTAssertEqual(names.first, "newer-3", "The newest retained event must survive")
+        XCTAssertEqual(
+            names,
+            Array(["newer-3", "newer-2", "newer-1"].prefix(names.count)),
+            "Eviction must remove oldest events first without depending on JSON encoder overhead"
+        )
         let bytes = try Data(contentsOf: store.eventsFileURL).count
         XCTAssertLessThanOrEqual(bytes, 1_200)
     }
@@ -188,7 +200,18 @@ final class DiagnosticEventStoreTests: DiagnosticEventStoreTestCase {
         try await store.append(event("protected", at: now))
 
         let protection = try await store.persistedFileProtection()
-        XCTAssertEqual(protection, .completeUntilFirstUserAuthentication)
+        #if targetEnvironment(simulator)
+        XCTAssertNil(
+            protection,
+            "The simulator filesystem should report that iOS data-protection attributes are unavailable"
+        )
+        #else
+        XCTAssertEqual(
+            protection,
+            .completeUntilFirstUserAuthentication,
+            "The assertion must read the persisted filesystem attribute rather than cached state"
+        )
+        #endif
     }
 
     func testAccountSeparationStoresOnlyOneWayHashesAndAllowsSameCorrelationAcrossAccounts() async throws {

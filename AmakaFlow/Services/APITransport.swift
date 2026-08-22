@@ -44,7 +44,6 @@ final class DefaultAPIObservabilityLogger: APIObservabilityLogging {
     private init() {}
 
     func log(_ event: APILogEvent) {
-        SupportDiagnosticsRuntimeState.shared.recordRequestID(event.serverRequestId ?? event.requestId)
         let status = event.statusCode.map(String.init) ?? "none"
         let errorType = event.errorType ?? "none"
         let serverRequestId = event.serverRequestId ?? "none"
@@ -54,6 +53,7 @@ final class DefaultAPIObservabilityLogger: APIObservabilityLogging {
         )
 
         if event.phase == .fail {
+            SupportDiagnosticsRuntimeState.shared.recordRequestID(event.serverRequestId ?? event.requestId)
             addSentryBreadcrumb(for: event, status: status, errorType: errorType)
         }
 
@@ -74,7 +74,7 @@ final class DefaultAPIObservabilityLogger: APIObservabilityLogging {
                     statusCode: event.statusCode,
                     response: nil,
                     error: nil,
-                    requestID: event.requestId
+                    requestID: event.serverRequestId ?? event.requestId
                 )
             case .empty:
                 break

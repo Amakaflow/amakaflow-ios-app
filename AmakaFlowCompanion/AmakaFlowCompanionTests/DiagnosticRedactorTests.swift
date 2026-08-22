@@ -109,5 +109,107 @@ final class DiagnosticRedactorTests: XCTestCase {
         XCTAssertFalse(event.message.contains("secret=value"))
     }
 
+    func testKnownSecretRuleRedactsWithoutCookieMasking() {
+        let event = DiagnosticRedactor().redact(
+            category: .general,
+            severity: .error,
+            name: "general.event",
+            message: "Credential clerk_secret_12345 failed",
+            timestamp: Self.fixedDate
+        )
+
+        XCTAssertFalse(event.message.contains("clerk_secret_12345"), "Known secret formats must be removed independently")
+        XCTAssertTrue(event.message.contains(DiagnosticRedactor.redacted), "Known secrets must use the stable redaction marker")
+    }
+
+    func testEmailRuleRedactsWithoutCookieMasking() {
+        let event = DiagnosticRedactor().redact(
+            category: .general,
+            severity: .error,
+            name: "general.event",
+            message: "Contact jane@example.com",
+            timestamp: Self.fixedDate
+        )
+
+        XCTAssertFalse(event.message.contains("jane@example.com"), "Email addresses must be removed independently")
+        XCTAssertTrue(event.message.contains(DiagnosticRedactor.redactedEmail), "Emails must use the stable email marker")
+    }
+
+    func testURLQueryRuleRedactsValuesWithoutCookieMasking() {
+        let event = DiagnosticRedactor().redact(
+            category: .general,
+            severity: .error,
+            name: "general.event",
+            message: "Request https://example.test/path?secret=value",
+            timestamp: Self.fixedDate
+        )
+
+        XCTAssertFalse(event.message.contains("secret=value"), "URL query values must be removed independently")
+        XCTAssertTrue(event.message.contains(DiagnosticRedactor.redactedQuery), "Queries must use the stable query marker")
+    }
+
+    func testBodySignalsMatchWholeTokensWithoutHidingUnrelatedWords() {
+        let safeEvent = DiagnosticRedactor().redact(
+            category: .general,
+            severity: .info,
+            name: "general.event",
+            message: "The healthcheck completed and customerization remained enabled",
+            metadata: ["Context": "tokenizer responseTime bodyguard"],
+            timestamp: Self.fixedDate
+        )
+        let unsafeEvent = DiagnosticRedactor().redact(
+            category: .general,
+            severity: .warning,
+            name: "general.event",
+            message: "A response_body was received",
+            timestamp: Self.fixedDate
+        )
+
+        XCTAssertEqual(
+            safeEvent.message,
+            "The healthcheck completed and customerization remained enabled",
+            "Unrelated words containing sensitive fragments must remain visible"
+        )
+        XCTAssertEqual(
+            unsafeEvent.message,
+            DiagnosticRedactor.omittedBodyMessage,
+            "An exact response_body token must trigger body omission"
+        )
+        XCTAssertEqual(
+            safeEvent.metadata["Context"],
+            "tokenizer responseTime bodyguard",
+            "Metadata keys and safe values must not be rejected by substring matches"
+        )
+    }
+
+    func testJWTDetectionRequiresEncodedJSONHeaderPrefix() {
+        let jwt = "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1c2VyIn0.signature"
+        let version = "abcdefghij.klmnopqrst.uvwxyz"
+        let event = DiagnosticRedactor().redact(
+            category: .general,
+            severity: .info,
+            name: "general.event",
+            message: "jwt \(jwt) version \(version)",
+            timestamp: Self.fixedDate
+        )
+
+        XCTAssertFalse(event.message.contains(jwt), "JWT-shaped secrets must be redacted")
+        XCTAssertTrue(event.message.contains(version), "Benign dotted identifiers must remain visible")
+    }
+
+    func testUnsafeNameDoesNotReappearAsDisplayTitleFallback() {
+        let event = DiagnosticRedactor().redact(
+            category: .general,
+            severity: .info,
+            name: "jane@example.com",
+            displayTitle: "",
+            message: "Safe message",
+            timestamp: Self.fixedDate
+        )
+
+        XCTAssertFalse(event.title.contains("jane@example.com"), "The raw name must never bypass title redaction")
+        XCTAssertEqual(event.title, event.name, "An empty display title must fall back to the sanitized event name")
+    }
+
     private static let fixedDate = Date(timeIntervalSince1970: 1_777_000_000)
 }

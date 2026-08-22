@@ -39,10 +39,8 @@ nonisolated struct QueuesProbe: SupportDiagnosticsProbe {
 
     func run() async throws -> [SupportDiagnosticsDisplayField] {
         do {
-            let summary = try await MainActor.run {
-                try AppDependencies.current.syncQueueRepository.summary()
-            }
-            let oldestAge = try await oldestSyncQueueAge()
+            let reading = try await syncQueueReading()
+            let summary = reading.summary
             let completionCount = await MainActor.run {
                 WorkoutCompletionService.shared.pendingCount
             }
@@ -52,7 +50,7 @@ nonisolated struct QueuesProbe: SupportDiagnosticsProbe {
                 supportDiagnosticsField("Sync in flight", String(summary.inFlightCount)),
                 supportDiagnosticsField("Sync failed", String(summary.failedCount)),
                 supportDiagnosticsField("Sync poison", String(summary.poisonCount)),
-                supportDiagnosticsField("Oldest sync queue age", oldestAge ?? "None"),
+                supportDiagnosticsField("Oldest sync queue age", reading.oldestAge ?? "None"),
                 supportDiagnosticsField("Last sync attempt", supportDiagnosticsFormatted(summary.lastAttemptedAt)),
                 supportDiagnosticsField(
                     "Last safe sync error",
@@ -73,8 +71,8 @@ nonisolated struct DatabaseHealthProbe: SupportDiagnosticsProbe {
 
     func run() async throws -> [SupportDiagnosticsDisplayField] {
         do {
-            let result = try await MainActor.run {
-                try AppDatabase.shared.dbQueue.read { database in
+            let databaseQueue = await MainActor.run { AppDatabase.shared.dbQueue }
+            let result = try await databaseQueue.read { database in
                     let schemaVersion = try Int.fetchOne(database, sql: "PRAGMA user_version") ?? 0
                     let hasMigrationTable = try Int.fetchOne(
                         database,
@@ -92,17 +90,22 @@ nonisolated struct DatabaseHealthProbe: SupportDiagnosticsProbe {
                         sql: "SELECT COUNT(*) FROM grdb_migrations"
                     ) ?? 0
                     let migrationHealth = hasMigrationTable == 0 ? "Missing migration table" : "Readable"
-                    return (schemaVersion, hasMigrationTable, tables, migrations, migrationHealth)
-                }
+                    return DatabaseHealthReading(
+                        schemaVersion: schemaVersion,
+                        hasMigrationTable: hasMigrationTable != 0,
+                        tableCount: tables,
+                        migrationCount: migrations,
+                        migrationHealth: migrationHealth
+                    )
             }
 
             return [
                 supportDiagnosticsField("Database readable", "Yes"),
-                supportDiagnosticsField("Local schema version", String(result.0)),
-                supportDiagnosticsField("Migration table", result.1 == 0 ? "Missing" : "Present"),
-                supportDiagnosticsField("Applied migrations", String(result.3)),
-                supportDiagnosticsField("Migration health", result.4),
-                supportDiagnosticsField("Schema tables", String(result.2))
+                supportDiagnosticsField("Local schema version", String(result.schemaVersion)),
+                supportDiagnosticsField("Migration table", result.hasMigrationTable ? "Present" : "Missing"),
+                supportDiagnosticsField("Applied migrations", String(result.migrationCount)),
+                supportDiagnosticsField("Migration health", result.migrationHealth),
+                supportDiagnosticsField("Schema tables", String(result.tableCount))
             ]
         } catch {
             throw SupportDiagnosticsProbeError(code: .databaseUnavailable)
@@ -201,9 +204,47 @@ private nonisolated func authorizationDescription(
     }
 }
 
-@MainActor
-private func oldestSyncQueueAge(now: Date = Date()) throws -> String? {
-    try AppDatabase.shared.dbQueue.read { database in
+private nonisolated struct DatabaseHealthReading: Sendable {
+    let schemaVersion: Int
+    let hasMigrationTable: Bool
+    let tableCount: Int
+    let migrationCount: Int
+    let migrationHealth: String
+}
+
+private nonisolated struct SyncQueueReading: Sendable {
+    let summary: SyncQueueSummary
+    let oldestAge: String?
+}
+
+private nonisolated func syncQueueReading(now: Date = Date()) async throws -> SyncQueueReading {
+    let databaseQueue = await MainActor.run { AppDatabase.shared.dbQueue }
+    return try await databaseQueue.read { database in
+        let pending = try Int.fetchOne(
+            database,
+            sql: "SELECT COUNT(*) FROM sync_queue WHERE status = ?",
+            arguments: [SyncQueueStatus.pending.rawValue]
+        ) ?? 0
+        let inFlight = try Int.fetchOne(
+            database,
+            sql: "SELECT COUNT(*) FROM sync_queue WHERE status = ?",
+            arguments: [SyncQueueStatus.inFlight.rawValue]
+        ) ?? 0
+        let failed = try Int.fetchOne(
+            database,
+            sql: "SELECT COUNT(*) FROM sync_queue WHERE status = ?",
+            arguments: [SyncQueueStatus.failed.rawValue]
+        ) ?? 0
+        let poison = try Int.fetchOne(
+            database,
+            sql: "SELECT COUNT(*) FROM sync_queue WHERE status = ?",
+            arguments: [SyncQueueStatus.poison.rawValue]
+        ) ?? 0
+        let lastAttempt = try Date.fetchOne(database, sql: "SELECT MAX(last_attempted_at) FROM sync_queue")
+        let latestError = try String.fetchOne(
+            database,
+            sql: "SELECT error_reason FROM sync_queue WHERE error_reason IS NOT NULL ORDER BY updated_at DESC LIMIT 1"
+        )
         let oldest = try Date.fetchOne(
             database,
             sql: """
@@ -216,14 +257,22 @@ private func oldestSyncQueueAge(now: Date = Date()) throws -> String? {
                 SyncQueueStatus.poison.rawValue
             ]
         )
-        guard let oldest else { return nil }
-        let age = max(0, Int(now.timeIntervalSince(oldest)))
-        if age < 60 {
-            return "\(age)s"
+        let oldestAge = oldest.map { oldestDate -> String in
+            let age = max(0, Int(now.timeIntervalSince(oldestDate)))
+            if age < 60 { return "\(age)s" }
+            if age < 3_600 { return "\(age / 60)m" }
+            return "\(age / 3_600)h"
         }
-        if age < 3_600 {
-            return "\(age / 60)m"
-        }
-        return "\(age / 3_600)h"
+        return SyncQueueReading(
+            summary: SyncQueueSummary(
+                pendingCount: pending,
+                inFlightCount: inFlight,
+                failedCount: failed,
+                poisonCount: poison,
+                lastAttemptedAt: lastAttempt,
+                latestError: latestError
+            ),
+            oldestAge: oldestAge
+        )
     }
 }

@@ -5,7 +5,6 @@ extension DebugLogService {
     func waitForPendingWrites() async {
         let tail = writeTail
         let accountLoadTask = accountLoadTask
-        pendingWriteTasks = []
         await tail?.value
         await accountLoadTask?.value
     }
@@ -42,11 +41,9 @@ extension DebugLogService {
         guard currentAccountHash == accountHash else { return [] }
         let events = try await diagnosticSnapshotReader(.account(accountHash))
         let postSnapshotAccountIdentifier = accountIdentifierProvider()
-        guard redactor.hashAccountIdentifier(postSnapshotAccountIdentifier) == accountHash else {
-            accountIdentifierDidChange(postSnapshotAccountIdentifier)
-            return []
-        }
-        guard currentAccountHash == accountHash else {
+        guard redactor.hashAccountIdentifier(postSnapshotAccountIdentifier) == accountHash,
+              currentAccountHash == accountHash
+        else {
             accountIdentifierDidChange(postSnapshotAccountIdentifier)
             return []
         }
@@ -69,7 +66,9 @@ extension DebugLogService {
         }
 
         // Print only the already-redacted projection for local Xcode debugging.
+        #if DEBUG
         print("[DebugLog] \(entry.type.rawValue): \(entry.title) - \(entry.details)")
+        #endif
     }
 
     func enqueueWrite(_ operation: @escaping @Sendable () async throws -> Void) {
@@ -79,11 +78,14 @@ extension DebugLogService {
             do {
                 try await operation()
             } catch {
-                print("[DebugLogService] Failed to persist diagnostic event")
+                let persistenceError = error as NSError
+                print(
+                    "[DebugLogService] Failed to persist diagnostic event "
+                        + "(domain=\(persistenceError.domain), code=\(persistenceError.code))"
+                )
             }
         }
         writeTail = task
-        pendingWriteTasks.append(task)
     }
 
     func bindAccountState() {

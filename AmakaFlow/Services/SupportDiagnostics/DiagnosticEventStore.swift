@@ -18,7 +18,6 @@ actor DiagnosticEventStore {
     private let redactor: DiagnosticRedactor
     private let encoder: JSONEncoder
     private let decoder: JSONDecoder
-    private var lastAppliedFileProtection: FileProtectionType?
 
     init(
         rootURL: URL? = nil,
@@ -98,24 +97,30 @@ actor DiagnosticEventStore {
         completeLegacyMigration()
     }
 
+    /// Actor isolation is the barrier: awaiting this method guarantees all earlier
+    /// calls submitted to the store have completed before the caller continues.
     func waitForPendingWrites() async {}
 
     func persistedFileProtection() throws -> FileProtectionType? {
         let attributes = try fileManager.attributesOfItem(atPath: eventsFileURL.path)
-        return attributes[.protectionKey] as? FileProtectionType ?? lastAppliedFileProtection
+        return attributes[.protectionKey] as? FileProtectionType
     }
 
     private func retained(_ events: [DiagnosticEvent]) throws -> [DiagnosticEvent] {
         let cutoff = now().addingTimeInterval(-Self.retentionInterval)
-        var retained = events
+        let encodedEvents = try events
             .filter { $0.timestamp >= cutoff }
             .sorted { $0.timestamp < $1.timestamp }
+            .map { event in (event, try encoder.encode(event).count + 1) }
+        var totalBytes = encodedEvents.reduce(0) { $0 + $1.1 }
+        var firstRetainedIndex = 0
 
-        while encodedSize(retained) > maxBytes, !retained.isEmpty {
-            retained.removeFirst()
+        while totalBytes > maxBytes, firstRetainedIndex < encodedEvents.count {
+            totalBytes -= encodedEvents[firstRetainedIndex].1
+            firstRetainedIndex += 1
         }
 
-        return retained
+        return encodedEvents.dropFirst(firstRetainedIndex).map(\.0)
     }
 
     private func cleanupRetentionIfNeeded() throws -> [DiagnosticEvent] {
@@ -125,12 +130,6 @@ actor DiagnosticEventStore {
             try persist(retainedEvents)
         }
         return retainedEvents
-    }
-
-    private func encodedSize(_ events: [DiagnosticEvent]) -> Int {
-        events.reduce(0) { partial, event in
-            partial + ((try? encoder.encode(event).count) ?? 0) + 1
-        }
     }
 
     private func loadEvents() throws -> [DiagnosticEvent] {
@@ -158,7 +157,7 @@ actor DiagnosticEventStore {
     private func ensureDirectory() throws {
         let directory = eventsFileURL.deletingLastPathComponent()
         try fileManager.createDirectory(at: directory, withIntermediateDirectories: true)
-        try? fileManager.setAttributes(
+        try fileManager.setAttributes(
             [.protectionKey: FileProtectionType.completeUntilFirstUserAuthentication],
             ofItemAtPath: directory.path
         )
@@ -169,7 +168,6 @@ actor DiagnosticEventStore {
             [.protectionKey: FileProtectionType.completeUntilFirstUserAuthentication],
             ofItemAtPath: eventsFileURL.path
         )
-        lastAppliedFileProtection = .completeUntilFirstUserAuthentication
     }
 
     private func completeLegacyMigration() {

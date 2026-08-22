@@ -171,4 +171,21 @@ final class WatchConnectivityManagerBehaviorTests: XCTestCase {
 
         XCTAssertFalse(mock.sendMessageCalled, "sendAck must not deliver when watch is unreachable")
     }
+
+    func testSendAck_inlineFailureIsNotOverwrittenByDispatchedOutcome() {
+        SupportDiagnosticsRuntimeState.shared.resetForTests()
+        defer { SupportDiagnosticsRuntimeState.shared.resetForTests() }
+        let mock = MockWatchSession()
+        mock.isReachable = true
+        mock.sendMessageError = URLError(.notConnectedToInternet)
+        let manager = WatchConnectivityManager(session: mock)
+
+        manager.sendAck(CommandAck(commandId: "cmd-fail", status: .error, errorCode: "OFFLINE"))
+
+        XCTAssertEqual(
+            SupportDiagnosticsRuntimeState.shared.lastWatchTransferState(),
+            .recorded(action: "commandAck", outcome: "failed"),
+            "An inline Watch send failure must remain the latest diagnostics outcome"
+        )
+    }
 }

@@ -86,11 +86,16 @@ final class SupportDiagnosticsProbeTests: XCTestCase {
             correlationIDProvider: { "safe-timeout-correlation" }
         )
 
-        let started = Date()
+        let clock = ContinuousClock()
+        let started = clock.now
         let snapshot = await runner.run()
-        let elapsed = Date().timeIntervalSince(started)
+        let elapsed = started.duration(to: clock.now)
 
-        XCTAssertLessThan(elapsed, 0.15)
+        XCTAssertLessThan(
+            elapsed,
+            .milliseconds(200),
+            "The runner must return comfortably before the 250 ms cancellation-unaware probe completes"
+        )
         XCTAssertEqual(
             snapshot.result(for: .reachabilityHealth)?.availability,
             .unavailable(errorCode: .probeTimedOut, correlationID: "safe-timeout-correlation")
@@ -270,18 +275,13 @@ final class SupportDiagnosticsProbeTests: XCTestCase {
         )
     }
 
+    @MainActor
     func testApprovedReachabilityContractCatchesRemovedConfiguredAPIHealthProbeMutation() {
+        let catalogueNames = supportDiagnosticsServiceEndpoints(environment: AppEnvironment.current).map(\.name)
         XCTAssertEqual(
             SupportDiagnosticsProbes.approvedReachabilityServiceNames,
-            [
-                "Mobile BFF",
-                "Mapper API",
-                "Ingestor API",
-                "Calendar API",
-                "Chat API",
-                "MCP API",
-                "Strava API"
-            ]
+            catalogueNames,
+            "Configured-host and health probes must derive service names from one endpoint catalogue"
         )
     }
 

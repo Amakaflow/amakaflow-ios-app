@@ -2,15 +2,10 @@ import CryptoKit
 import Foundation
 
 nonisolated enum SupportDiagnosticsProbes {
-    static let approvedReachabilityServiceNames = [
-        "Mobile BFF",
-        "Mapper API",
-        "Ingestor API",
-        "Calendar API",
-        "Chat API",
-        "MCP API",
-        "Strava API"
-    ]
+    @MainActor
+    static var approvedReachabilityServiceNames: [String] {
+        supportDiagnosticsServiceEndpoints(environment: AppEnvironment.current).map(\.name)
+    }
 
     static func live(
         authorization: SupportDiagnosticsAuthorization,
@@ -134,8 +129,10 @@ nonisolated final class SupportDiagnosticsRuntimeState: @unchecked Sendable {
 
     func recordWatchTransfer(action: String, outcome: String) {
         guard !action.isEmpty, !outcome.isEmpty else { return }
+        let safeAction = SupportDiagnosticsSafeSummaries.displayIdentifier(action)
+        let safeOutcome = SupportDiagnosticsSafeSummaries.displayIdentifier(outcome)
         lock.withLock {
-            watchTransferState = .recorded(action: action, outcome: outcome)
+            watchTransferState = .recorded(action: safeAction, outcome: safeOutcome)
         }
     }
 
@@ -249,7 +246,7 @@ nonisolated enum SupportDiagnosticsSafeSummaries {
         case .noneRecorded:
             return "None recorded"
         case .recorded(let action, let outcome):
-            return "\(sanitizedToken(action)): \(sanitizedToken(outcome))"
+            return "\(String(sanitizedToken(action).prefix(96))): \(String(sanitizedToken(outcome).prefix(96)))"
         }
     }
 

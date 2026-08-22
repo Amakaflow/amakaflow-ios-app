@@ -4006,6 +4006,7 @@ private struct CoachKnowledgeResolveView: View {
         .environmentObject(GarminConnectManager.shared)
         .environmentObject(PairingService.shared)
         .environmentObject(WorkoutsViewModel())
+        .environmentObject(SubscriptionAccessViewModel())
         .environmentObject(SupportDiagnosticsViewModel.live())
         .preferredColorScheme(.dark)
 }
