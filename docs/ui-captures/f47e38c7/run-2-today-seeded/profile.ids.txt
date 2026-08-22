@@ -1,0 +1,26 @@
+3 of 3 Wi-Fi bars
+af_library_fab
+af_profile_connect_sources_entry
+af_profile_friends_row
+af_profile_identity
+af_profile_settings_entry
+af_profile_summaries
+af_profile_summary_calendar
+af_profile_summary_streak
+af_profile_summary_totals
+af_profile_summary_week
+af_profile_sync_history_entry
+af_tabbar
+bookmark
+chevron.right
+clock.arrow.circlepath
+figure.cooldown
+figure.run
+library_tab
+link
+person.2.fill
+person.crop.circle.fill
+profile_screen
+profile_tab
+sun.max
+today_tab

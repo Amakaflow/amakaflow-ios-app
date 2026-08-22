@@ -1,0 +1,9 @@
+appId: com.myamaka.AmakaFlowCompanion
+---
+- runFlow: _attach.yaml
+- tapOn:
+    id: "profile_tab"
+- extendedWaitUntil:
+    visible:
+      id: "profile_screen"
+    timeout: 10000

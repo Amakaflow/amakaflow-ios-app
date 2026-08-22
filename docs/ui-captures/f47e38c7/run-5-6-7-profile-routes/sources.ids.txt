@@ -1,0 +1,14 @@
+3 of 3 Wi-Fi bars
+BackButton
+_TtGC7SwiftUI32NavigationStackHosting
+af_actuals_connect_garmin
+af_actuals_connect_strava
+af_actuals_source_row_appleHealth
+af_actuals_source_row_garmin
+af_actuals_source_row_strava
+af_actuals_strava_writeback_entry
+applewatch
+arrow.triangle.2.circlepath
+chevron.right
+figure.run
+profile_screen

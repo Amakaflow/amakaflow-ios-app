@@ -1,0 +1,15 @@
+appId: com.myamaka.AmakaFlowCompanion
+---
+- runFlow: _attach.yaml
+- tapOn:
+    id: "library_tab"
+- extendedWaitUntil:
+    visible:
+      id: "af_collection_card_uncategorized"
+    timeout: 15000
+- tapOn:
+    id: "af_collection_card_uncategorized"
+- extendedWaitUntil:
+    visible:
+      id: "af_collection_detail"
+    timeout: 15000

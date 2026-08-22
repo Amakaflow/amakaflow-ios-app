@@ -27,9 +27,13 @@ import pathlib
 import re
 import subprocess
 import sys
+import time
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
-PROBE_DIR = REPO_ROOT / "e2e" / "maestro" / "identifier-truth"
+PROBE_DIRS = {
+    "fixtures": REPO_ROOT / "e2e" / "maestro" / "identifier-truth",
+    "seeded": REPO_ROOT / "e2e" / "maestro" / "seeded",
+}
 CAPTURES = REPO_ROOT / "docs" / "ui-captures"
 MANIFESTS = CAPTURES / "manifests"
 # A run id becomes a directory name. Without this, `../../x` writes evidence
@@ -45,6 +49,22 @@ def run(command: list[str], timeout: int) -> subprocess.CompletedProcess | None:
     except (subprocess.TimeoutExpired, OSError) as exc:
         print(f"  {' '.join(command[:3])}: {type(exc).__name__}", file=sys.stderr)
         return None
+
+
+def build_sha(explicit: str | None) -> tuple[str, str] | None:
+    """The build the evidence belongs to, and how confident we are in it.
+
+    The app does not embed its git SHA yet, and HEAD moves whenever anything
+    is committed between runs. Filing captures under HEAD therefore names a
+    build the running binary may not have come from — run 3 was filed under a
+    commit made after its own build. Pass --build-sha when you know it.
+    """
+    if explicit:
+        return explicit, "build the app was compiled from, supplied explicitly"
+    sha = head_sha()
+    if sha is None:
+        return None
+    return sha, "checkout HEAD at capture time — verify it matches the build"
 
 
 def head_sha() -> str | None:
@@ -72,7 +92,7 @@ def device_name(udid: str) -> str:
     return udid
 
 
-def auth_mode() -> str:
+def auth_mode(probes: str) -> str:
     """Which identity produced this evidence, because it bounds what it proves.
 
     The probes use AF_SESSION_IDENTITY, a mock identity with no backend token,
@@ -81,9 +101,11 @@ def auth_mode() -> str:
     specifies for the data-bearing runs, and a manifest that did not say so
     would overstate what was audited.
     """
-    launch = (PROBE_DIR / "_launch.yaml").read_text(encoding="utf-8", errors="replace")
-    if "AF_SESSION_CLERK_EMAIL" in launch:
-        return "real Clerk session (design-capture account)"
+    if probes == "seeded":
+        return "persisted real Clerk session, baseline+clerk_test@amakaflow.dev"
+    launch = (PROBE_DIRS["fixtures"] / "_launch.yaml").read_text(
+        encoding="utf-8", errors="replace"
+    )
     if "AF_SESSION_IDENTITY" in launch:
         return "mock identity + fixtures — NOT the seeded staging account"
     return "unknown"
@@ -117,6 +139,33 @@ def failing_step(output: str) -> str:
     return "probe did not complete"
 
 
+def settled(udid: str, attempts: int = 6, gap: float = 2.0) -> set[str] | None:
+    """Wait until the hierarchy stops changing, then return it.
+
+    A screen can satisfy its probe while still loading: the root marker exists
+    before the content does. Screenshotting at that moment files a spinner as
+    evidence, which is the exact failure this whole audit exists to catch — and
+    it did happen, on the seeded Library, before this guard existed.
+
+    Two identical consecutive dumps mean the screen stopped changing. None
+    means it never settled, which is a BLOCKED capture, not a CAPTURED one.
+    """
+    previous: set[str] | None = None
+    for _ in range(attempts):
+        current = identifiers(udid)
+        if current is None:
+            return None
+        if previous is not None and current == previous and not loading(current):
+            return current
+        previous = current
+        time.sleep(gap)
+    return None
+
+
+def loading(names: set[str]) -> bool:
+    return any("loading" in name.lower() or "spinner" in name.lower() for name in names)
+
+
 def capture(udid: str, flow: pathlib.Path, out_dir: pathlib.Path) -> dict:
     result = run(["maestro", "--device", udid, "test", str(flow)], timeout=600)
     if result is None:
@@ -128,6 +177,14 @@ def capture(udid: str, flow: pathlib.Path, out_dir: pathlib.Path) -> dict:
             "why": failing_step(result.stdout + result.stderr),
         }
 
+    names = settled(udid)
+    if names is None:
+        return {
+            "screen": flow.stem,
+            "status": "BLOCKED",
+            "why": "screen reached but never finished loading",
+        }
+
     shot = out_dir / f"{flow.stem}.png"
     taken = run(["xcrun", "simctl", "io", udid, "screenshot", str(shot)], 120)
     if taken is None or taken.returncode != 0 or not shot.is_file():
@@ -135,14 +192,6 @@ def capture(udid: str, flow: pathlib.Path, out_dir: pathlib.Path) -> dict:
             "screen": flow.stem,
             "status": "BLOCKED",
             "why": "screen reached but screenshot failed",
-        }
-
-    names = identifiers(udid)
-    if names is None:
-        return {
-            "screen": flow.stem,
-            "status": "BLOCKED",
-            "why": "screen reached but hierarchy dump failed",
         }
 
     (out_dir / f"{flow.stem}.ids.txt").write_text(
@@ -160,22 +209,34 @@ def main() -> int:
     parser.add_argument("--udid", required=True)
     parser.add_argument("--run", required=True, help="run id, e.g. run-0-structure")
     parser.add_argument("--screens", nargs="+")
+    parser.add_argument(
+        "--build-sha",
+        help="git sha the running app was built from; defaults to HEAD",
+    )
+    parser.add_argument(
+        "--probes",
+        choices=sorted(PROBE_DIRS),
+        default="fixtures",
+        help="fixtures = mock identity, seeded = persisted real session",
+    )
     args = parser.parse_args()
 
     if not RUN_ID.match(args.run):
         print(f"invalid --run {args.run!r}: use letters, digits, dot, dash, underscore", file=sys.stderr)
         return 1
 
-    sha = head_sha()
-    if sha is None:
+    resolved = build_sha(args.build_sha)
+    if resolved is None:
         print("cannot resolve HEAD — refusing to file evidence against an unknown build", file=sys.stderr)
         return 1
+    sha, provenance = resolved
 
     out_dir = CAPTURES / sha / args.run
     out_dir.mkdir(parents=True, exist_ok=True)
     MANIFESTS.mkdir(parents=True, exist_ok=True)
 
-    flows = sorted(p for p in PROBE_DIR.glob("*.yaml") if not p.name.startswith("_"))
+    probe_dir = PROBE_DIRS[args.probes]
+    flows = sorted(p for p in probe_dir.glob("*.yaml") if not p.name.startswith("_"))
     if args.screens is not None:
         wanted = set(args.screens)
         missing = sorted(wanted - {p.stem for p in flows})
@@ -199,10 +260,10 @@ def main() -> int:
     manifest = [
         f"# Capture manifest — {args.run}",
         "",
-        f"- build: `{sha}`",
+        f"- build: `{sha}` ({provenance})",
         f"- device: {device_name(args.udid)}",
         f"- artifacts: `docs/ui-captures/{sha}/{args.run}/`",
-        f"- auth: {auth_mode()}",
+        f"- auth: {auth_mode(args.probes)}",
         "",
         "Navigation is by accessibility identifier, not screen coordinates, so a",
         "screen that cannot be reached is recorded BLOCKED rather than",
